@@ -4,15 +4,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#041122">
-    <meta name="description" content="BlueFox Odyssey V0.16.13">
-    <title>BlueFox Odyssey V0.16.13</title>
+    <meta name="description" content="BlueFox Odyssey V0.16.14">
+    <title>BlueFox Odyssey V0.16.14</title>
     <link rel="stylesheet" href="./game.css">
     <link rel="stylesheet" href="./journal.css">
     <link rel="stylesheet" href="./engine/exploration-hud.css">
     <link rel="stylesheet" href="./engine/ui-enhancements.css">
   </head>
   <body>
+    <div id="file-protocol-warning" hidden>
+      <strong>Lancement direct incompatible avec les textures 3D</strong>
+      <span>Fermez cet onglet puis double-cliquez sur LANCER_BLUEFOX.bat.</span>
+    </div>
     <div id="root"></div>
+    <script>
+      if (location.protocol === "file:") {
+        const warning = document.getElementById("file-protocol-warning");
+        warning.hidden = false;
+        Object.assign(warning.style, {
+          position: "fixed",
+          zIndex: "99999",
+          inset: "18px 18px auto",
+          padding: "16px 20px",
+          border: "1px solid rgba(103,225,255,.55)",
+          borderRadius: "12px",
+          color: "#e7faff",
+          background: "rgba(3,14,29,.96)",
+          fontFamily: "Segoe UI, sans-serif",
+          textAlign: "center",
+          boxShadow: "0 12px 40px rgba(0,0,0,.55)"
+        });
+        warning.querySelector("strong").style.display = "block";
+        warning.querySelector("span").style.display = "block";
+        warning.querySelector("span").style.marginTop = "6px";
+      }
+    </script>
     <script src="./map-assets.js"></script>
     <script src="./Images/images-catalog.js"></script>
     <script src="./engine/bluefox3d-core.js"></script>

@@ -1,4 +1,4 @@
-BLUEFOX ODYSSEY V0.16.13 — HABILLAGE ET CONNAISSANCES
+BLUEFOX ODYSSEY V0.16.14 — LANCEMENT WEBGL LOCAL
 
 INSTALLATION DES MISES À JOUR SANS IMAGES
 =========================================
@@ -11,7 +11,7 @@ Pour installer une mise à jour :
 2. extraire le ZIP à la racine du jeu, à côté du dossier Images ;
 3. accepter le remplacement des fichiers de code ;
 4. ne pas supprimer le dossier Images ;
-5. lancer index.html.
+5. double-cliquer sur LANCER_BLUEFOX.bat.
 
 Le jeu charge les scènes et les plateaux avec des chemins locaux relatifs :
 ./Images/NomDuFichier.png
@@ -19,18 +19,28 @@ Le jeu charge les scènes et les plateaux avec des chemins locaux relatifs :
 Après l'ajout ou le retrait d'images, lancer GENERER_CATALOGUE_IMAGES.bat.
 Le catalogue sera reconstruit depuis le contenu réel du dossier local.
 
-Si les images ne sont pas visibles :
+Si des fichiers ont été ajoutés ou renommés :
 1. vérifier que Images est exactement à côté de index.html ;
 2. double-cliquer sur VERIFIER_ET_REPARER_IMAGES.bat ;
-3. laisser l'outil reconstruire le catalogue et ouvrir le jeu.
+3. fermer l'onglet ouvert directement ;
+4. lancer ensuite LANCER_BLUEFOX.bat.
 
 Lancement :
 1. Décompresser entièrement l'archive.
-2. Double-cliquer sur index.html.
-3. Utiliser Chrome, Edge ou Firefox avec WebGL activé.
+2. Conserver le dossier Images à côté de index.html.
+3. Double-cliquer sur LANCER_BLUEFOX.bat.
+4. Garder la petite fenêtre du lanceur ouverte pendant le jeu.
+5. Utiliser Chrome, Edge ou Firefox avec WebGL activé.
 
-Cette version contient localement le moteur, le modèle BlueFox V0.13 et les
-images nécessaires. Elle ne télécharge aucune dépendance au lancement.
+IMPORTANT :
+L'ouverture directe de index.html utilise le protocole file://. Les vignettes
+CSS peuvent alors apparaître tandis que WebGL refuse les mêmes fichiers comme
+textures 3D. Le lanceur utilise uniquement l'adresse locale 127.0.0.1 et ne
+nécessite aucune connexion Internet.
+
+Cette version contient localement le moteur et le modèle BlueFox. Les images
+de biome restent dans le dossier Images de l'utilisateur. Aucune dépendance
+n'est téléchargée au lancement.
 
 Fonctions présentes :
 - monde 3D à deux biomes ;
@@ -476,6 +486,18 @@ Ajouts V0.16.13 :
 - BlueFox ne choisit jamais seul une première exploration inconnue ;
 - première découverte autorisée en partie active, même sans connexion Internet ;
 - ZIP de mise à jour toujours livré sans images de biome.
+
+Ajouts V0.16.14 :
+- cause du défaut de textures identifiée : restrictions WebGL en file:// ;
+- lanceur Windows LANCER_BLUEFOX.bat ajouté ;
+- mini-serveur HTTP strictement local intégré en PowerShell ;
+- aucune installation de Node, Python ou serveur permanent nécessaire ;
+- ouverture automatique sur 127.0.0.1 avec recherche d'un port libre ;
+- types PNG, JPG, WEBP, GLB, JavaScript et CSS servis correctement ;
+- cache désactivé pendant les tests pour afficher immédiatement les correctifs ;
+- avertissement visible si index.html est encore ouvert directement ;
+- fonctionnement entièrement hors ligne conservé ;
+- ZIP toujours livré sans les images du dossier Images.
 
 Si le navigateur bloque WebGL, l'interface reste accessible sur le décor
 illustré mais le personnage 3D ne peut pas être affiché.
