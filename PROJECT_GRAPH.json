@@ -2,7 +2,7 @@
   "generator": {
     "name": "generate_project_index.py",
     "version": "4.0",
-    "generated_utc": "2026-07-27T15:01:03+00:00"
+    "generated_utc": "2026-07-27T18:57:31+00:00"
   },
   "file_graph": {
     "nodes": [
@@ -70,6 +70,13 @@
         "importance_score": 2.14
       },
       {
+        "path": "engine/camera-controller.js",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 2.13
+      },
+      {
         "path": "engine/exploration-hud.css",
         "category": "Texte / Code",
         "incoming_count": 0,
@@ -98,18 +105,25 @@
         "importance_score": 1.21
       },
       {
-        "path": "engine/camera-controller.js",
-        "category": "Texte / Code",
-        "incoming_count": 0,
-        "outgoing_count": 0,
-        "importance_score": 1.2
-      },
-      {
         "path": "tools/bluefox-local-server.ps1",
         "category": "Texte / Code",
         "incoming_count": 0,
         "outgoing_count": 0,
         "importance_score": 0.83
+      },
+      {
+        "path": "docs/ARCHITECTURE_TECHNIQUE.md",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.54
+      },
+      {
+        "path": "docs/CONVENTIONS_MAPS_IMAGES.md",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.45
       },
       {
         "path": "index.html",
@@ -119,11 +133,39 @@
         "importance_score": 0.44
       },
       {
+        "path": "docs/MASTER_BLUEFOX_ODYSSEY.md",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.42
+      },
+      {
+        "path": "docs/PLAN_TESTS_V0.16.20.md",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.42
+      },
+      {
+        "path": "docs/DEV_HISTORIQUE.md",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.37
+      },
+      {
         "path": "engine/bluefox3d-core.js",
         "category": "Texte / Code",
         "incoming_count": 0,
         "outgoing_count": 0,
         "importance_score": 0.36
+      },
+      {
+        "path": "docs/ROADMAP_TODO.md",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.34
       },
       {
         "path": "assets/maps/CONVENTION_IMAGES.txt",
@@ -175,6 +217,13 @@
         "importance_score": 0.09
       },
       {
+        "path": "docs/README.md",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.09
+      },
+      {
         "path": "GENERER_CATALOGUE_IMAGES.bat",
         "category": "Texte / Code",
         "incoming_count": 0,
@@ -194,6 +243,20 @@
         "incoming_count": 0,
         "outgoing_count": 0,
         "importance_score": 0.01
+      },
+      {
+        "path": "Savegarde BFO.txt",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.01
+      },
+      {
+        "path": "Cahier_des_Charges_BlueFox_Odyssey.docx",
+        "category": "Autre",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
       },
       {
         "path": "Images/.2Jungle envahissant les ruines d’une civilisation.png.HQIbXc",
@@ -975,6 +1038,13 @@
       {
         "path": "Images/Capsule.png",
         "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Savegarde BFO",
+        "category": "Sans extension",
         "incoming_count": 0,
         "outgoing_count": 0,
         "importance_score": 0.0

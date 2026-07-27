@@ -1,25 +1,26 @@
 # Index du projet — 00 EXECUTABLE_BFO V2
 
-_Généré automatiquement par la version 4.0, le 27/07/2026 à 17:01:03._
+_Généré automatiquement par la version 4.0, le 27/07/2026 à 20:57:31._
 
 ## Vue d'ensemble
 
-- Fichiers analysés : **143**
+- Fichiers analysés : **153**
 - Scripts Godot : **0**
 - Scènes Godot : **0**
-- Taille totale : **351.98 Mo**
-- Lignes de texte/code : **9130**
+- Taille totale : **352.04 Mo**
+- Lignes de texte/code : **9666**
 - Dépendances résolues : **0**
 - TODO/FIXME/BUG/HACK : **0**
-- Fichiers repris depuis le cache : **0**
+- Fichiers repris depuis le cache : **152**
 
 ## Répartition par catégorie
 
 | Catégorie | Nombre |
 |---|---:|
 | Asset | 112 |
-| Autre | 2 |
-| Texte / Code | 29 |
+| Autre | 3 |
+| Sans extension | 1 |
+| Texte / Code | 37 |
 
 ## Scripts les plus volumineux
 
@@ -43,6 +44,14 @@ _Généré automatiquement par la version 4.0, le 27/07/2026 à 17:01:03._
 │   └── style.css
 ├── data
 │   └── config.json
+├── docs
+│   ├── ARCHITECTURE_TECHNIQUE.md
+│   ├── CONVENTIONS_MAPS_IMAGES.md
+│   ├── DEV_HISTORIQUE.md
+│   ├── MASTER_BLUEFOX_ODYSSEY.md
+│   ├── PLAN_TESTS_V0.16.20.md
+│   ├── README.md
+│   └── ROADMAP_TODO.md
 ├── engine
 │   ├── bluefox3d-core.js
 │   ├── camera-controller.js
@@ -176,6 +185,7 @@ _Généré automatiquement par la version 4.0, le 27/07/2026 à 17:01:03._
 │   ├── bluefox-local-server.ps1
 │   ├── generer-catalogue-images.mjs
 │   └── generer-catalogue-images.ps1
+├── Cahier_des_Charges_BlueFox_Odyssey.docx
 ├── game.css
 ├── game.js
 ├── generate_project_index.py
@@ -185,6 +195,8 @@ _Généré automatiquement par la version 4.0, le 27/07/2026 à 17:01:03._
 ├── LANCER_BLUEFOX.bat
 ├── map-assets.js
 ├── README_LANCEMENT.txt
+├── Savegarde BFO
+├── Savegarde BFO.txt
 └── VERIFIER_ET_REPARER_IMAGES.bat
 ```
 
@@ -194,10 +206,18 @@ _Généré automatiquement par la version 4.0, le 27/07/2026 à 17:01:03._
 |---|---|---:|---:|---|
 | `assets/Capsule.png` | Asset | 4.04 Mo |  | `acd36c2f492c` |
 | `assets/maps/CONVENTION_IMAGES.txt` | Texte / Code | 1.43 Ko | 36 | `1d85ec48a212` |
+| `Cahier_des_Charges_BlueFox_Odyssey.docx` | Autre | 39.34 Ko |  | `f2f0342c6238` |
 | `css/style.css` | Texte / Code | 1.74 Ko | 23 | `0657c77a150f` |
 | `data/config.json` | Texte / Code | 238 o | 16 | `084ccad2e5d5` |
+| `docs/ARCHITECTURE_TECHNIQUE.md` | Texte / Code | 2.70 Ko | 81 | `c1fc1abf1007` |
+| `docs/CONVENTIONS_MAPS_IMAGES.md` | Texte / Code | 1.99 Ko | 68 | `49bf1aa36303` |
+| `docs/DEV_HISTORIQUE.md` | Texte / Code | 1.81 Ko | 56 | `c7682ae872b1` |
+| `docs/MASTER_BLUEFOX_ODYSSEY.md` | Texte / Code | 2.58 Ko | 63 | `6beab31614bf` |
+| `docs/PLAN_TESTS_V0.16.20.md` | Texte / Code | 2.21 Ko | 63 | `ca51836d973b` |
+| `docs/README.md` | Texte / Code | 597 o | 14 | `6f47097001b5` |
+| `docs/ROADMAP_TODO.md` | Texte / Code | 1.78 Ko | 51 | `b6d6ea674214` |
 | `engine/bluefox3d-core.js` | Texte / Code | 1.77 Ko | 54 | `1892fa108b85` |
-| `engine/camera-controller.js` | Texte / Code | 6.12 Ko | 180 | `5f619f0294d6` |
+| `engine/camera-controller.js` | Texte / Code | 10.76 Ko | 319 | `176765db1a1b` |
 | `engine/character-controller.js` | Texte / Code | 16.55 Ko | 455 | `968ec00b3ea5` |
 | `engine/exploration-hud.css` | Texte / Code | 4.00 Ko | 204 | `5d25cab40d8d` |
 | `engine/map-registry.js` | Texte / Code | 27.96 Ko | 791 | `1433552a028a` |
@@ -322,8 +342,8 @@ _Généré automatiquement par la version 4.0, le 27/07/2026 à 17:01:03._
 | `Images/8Marais flottant extraterrestre.png` | Asset | 2.97 Mo |  | `c71f32256287` |
 | `Images/9Steppe de verre et failles turquoise.png` | Asset | 2.92 Mo |  | `99922a715def` |
 | `Images/Capsule.png` | Asset | 3.60 Mo |  | `58bf27fd8dd0` |
-| `Images/images-catalog.js` | Texte / Code | 6.97 Ko | 1 | `b78dec801883` |
-| `Images/images.txt` | Texte / Code | 189 o | 5 | `73238f4246da` |
+| `Images/images-catalog.js` | Texte / Code | 6.97 Ko | 1 | `a70ba1e60c7f` |
+| `Images/images.txt` | Texte / Code | 184 o | 5 | `be7299a51ca0` |
 | `Images/LISEZ_MOI.txt` | Texte / Code | 744 o | 19 | `c118addbebcb` |
 | `index.html` | Texte / Code | 2.75 Ko | 66 | `f0c678f0e130` |
 | `journal.css` | Texte / Code | 3.10 Ko | 189 | `5a30758a9a51` |
@@ -331,6 +351,8 @@ _Généré automatiquement par la version 4.0, le 27/07/2026 à 17:01:03._
 | `LANCER_BLUEFOX.bat` | Texte / Code | 346 o | 14 | `7a601de333db` |
 | `map-assets.js` | Texte / Code | 5.25 Ko | 182 | `bee57a05f453` |
 | `README_LANCEMENT.txt` | Texte / Code | 31.08 Ko | 566 | `6bde91727932` |
+| `Savegarde BFO` | Sans extension | 31 o |  | `e7fe429319ba` |
+| `Savegarde BFO.txt` | Texte / Code | 31 o | 1 | `e7fe429319ba` |
 | `tools/bluefox-local-server.ps1` | Texte / Code | 4.01 Ko | 124 | `65c200da8992` |
 | `tools/generer-catalogue-images.mjs` | Autre | 980 o |  | `3831daf6799e` |
 | `tools/generer-catalogue-images.ps1` | Texte / Code | 931 o | 27 | `ce4595a9a342` |

@@ -2,7 +2,7 @@
   "generator": {
     "name": "generate_project_index.py",
     "version": "4.0",
-    "generated_utc": "2026-07-27T15:01:03+00:00"
+    "generated_utc": "2026-07-27T18:57:31+00:00"
   },
   "purpose": "Mémoire technique compacte destinée à aider une IA à comprendre rapidement l'architecture du projet et à choisir les bons fichiers.",
   "project": {
@@ -17,10 +17,10 @@
       "input_actions": []
     },
     "statistics": {
-      "files": 143,
+      "files": 153,
       "scripts": 0,
       "scenes": 0,
-      "lines": 9130,
+      "lines": 9666,
       "resolved_dependencies": 0,
       "resolved_function_calls": 0,
       "todo_count": 0
