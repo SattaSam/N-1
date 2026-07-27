@@ -702,6 +702,7 @@
       }
 
       this.currentPanoramaAsset = asset;
+      if (this.panorama) this.panorama.visible = false;
       const candidates =
         global.BLUEFOX_MAP_ASSETS?.imageUrlCandidates?.(asset) || [asset];
 
@@ -716,6 +717,7 @@
         this.panoramaTexture = extendedTexture;
         this.panorama.material.map = extendedTexture;
         this.panorama.material.needsUpdate = true;
+        this.panorama.visible = true;
 
         // La texture source n'est plus utilisée après création du canvas.
         if (sourceTexture !== extendedTexture) sourceTexture.dispose();
@@ -1276,6 +1278,8 @@
       this.applyBiomeAtmosphere(definition);
       this.currentZoneIndex = -1;
       this.pendingZoneExploration = null;
+      // Évite que l’ancien plateau reste superposé au nouveau (z-fighting).
+      previousMap?.group?.removeFromParent();
       previousMap?.dispose();
       if (announce) {
         if (mapId === "crystal" || mapId === "jungle") {

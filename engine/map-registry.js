@@ -784,6 +784,9 @@
         });
       },
       dispose() {
+        // Retirer réellement l’ancienne map de la scène avant de libérer ses ressources.
+        // disposeObject() seul ne détache pas le groupe et Three.js peut le réafficher.
+        group.removeFromParent();
         BF.disposeObject(group);
       }
     };
