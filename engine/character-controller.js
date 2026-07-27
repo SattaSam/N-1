@@ -24,7 +24,8 @@
       this.heading = 0;
       this.speed = 0;
       this.radius = 0.64;
-      this.maxSpeed = 2.75;
+      this.maxSpeed = 3.55;
+      this.playerSprintUntil = 0;
       this.acceleration = 5.2;
       this.deceleration = 7.5;
       this.turnSpeed = 9;
@@ -36,7 +37,7 @@
       this.stuckTime = 0;
       this.lastDistance = Infinity;
       this.failedReplans = 0;
-      this.maxFrameTravel = 0.16;
+      this.maxFrameTravel = 0.22;
       this.actionLockUntil = 0;
       this.interactionSequence = null;
       clips.forEach((clip) => this.actions.set(clip.name, mixer.clipAction(clip)));
@@ -154,6 +155,12 @@
       this.velocity.set(0, 0, 0);
       this.stuckTime = 0;
       this.failedReplans = 0;
+      this.playerSprintUntil = 0;
+    }
+
+    setPlayerSprint(durationSeconds = 18) {
+      this.playerSprintUntil =
+        performance.now() + Math.max(2, durationSeconds) * 1000;
     }
 
     cancelInteraction() {
@@ -353,7 +360,9 @@
         const arrival = distance < this.arrivalRadius
           ? this.THREE.MathUtils.smoothstep(distance, this.stopRadius, this.arrivalRadius)
           : 1;
-        const desiredSpeed = this.maxSpeed * arrival;
+        const playerSprint = performance.now() < this.playerSprintUntil;
+        const desiredSpeed =
+          this.maxSpeed * (playerSprint ? 1.3 : 1) * arrival;
         const lambda = desiredSpeed > this.speed ? this.acceleration : this.deceleration;
         this.speed = BF.damp(this.speed, desiredSpeed, lambda, dt);
         this.velocity.lerp(this.desiredDirection, 1 - Math.exp(-7 * dt)).normalize();
@@ -413,7 +422,10 @@
 
       const actionLocked = performance.now() < this.actionLockUntil;
       const walk = this.findClip(["Walk", "Walk_V1"]);
-      const run = this.findClip(["Run", "Run_fast", "Walk", "Walk_V1"]);
+      const playerSprint = performance.now() < this.playerSprintUntil;
+      const run = playerSprint
+        ? this.findClip(["Run_fast", "Run", "Walk", "Walk_V1"])
+        : this.findClip(["Run", "Run_fast", "Walk", "Walk_V1"]);
       const idle = this.findClip(["Idle", "Idle_V2", "Idle_V1"]);
       const locomotion = this.updateLocomotionState();
       if (!actionLocked) {
@@ -423,9 +435,15 @@
         );
       }
       if (this.currentAction && this.speed > 0.22) {
-        const referenceSpeed = locomotion === "run" ? 2.9 : 2.3;
+        const referenceSpeed = locomotion === "run"
+          ? (playerSprint ? 2.35 : 2.5)
+          : 2.25;
         this.currentAction.setEffectiveTimeScale(
-          BF.clamp(this.speed / referenceSpeed, 0.72, 1.2)
+          BF.clamp(
+            this.speed / referenceSpeed,
+            0.72,
+            playerSprint ? 1.65 : 1.5
+          )
         );
       }
       this.root.position.y = 0;

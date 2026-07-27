@@ -1,4 +1,4 @@
-BLUEFOX ODYSSEY V0.16.14 — LANCEMENT WEBGL LOCAL
+BLUEFOX ODYSSEY V0.16.20 — LANCEMENT WEBGL LOCAL
 
 INSTALLATION DES MISES À JOUR SANS IMAGES
 =========================================
@@ -498,6 +498,69 @@ Ajouts V0.16.14 :
 - avertissement visible si index.html est encore ouvert directement ;
 - fonctionnement entièrement hors ligne conservé ;
 - ZIP toujours livré sans les images du dossier Images.
+
+Ajouts V0.16.15 :
+- panorama central non étiré, courbure limitée aux côtés ;
+- une image de plateau correspond à une zone de 54 x 54 ;
+- la surface d'une map grandit réellement avec son nombre de zones ;
+- bandes colorées entre les zones supprimées ;
+- éclairage neutralisé pour préserver les couleurs des textures ;
+- retour à la base fonctionnel depuis le HUD et Planète ;
+- mémoire des découvertes protégée contre l'ancienne interface ;
+- chargement des premières explorations procédurales sécurisé ;
+- cycle de 20 h réparti en 15 h de jour et 5 h de nuit.
+
+Ajouts V0.16.16 :
+- distinction stricte entre décors N... et textures de plateau 0N_x ;
+- association N ↔ 0N prioritaire, avec repli déterministe autorisé ;
+- une Zone joueur correspond désormais à une Map complète ;
+- les 1 à 6 subdivisions internes sont nommées plateaux techniques ;
+- panorama élargi sans noir avec grossissement progressif des bordures ;
+- protection contre l'emploi d'une texture 0N_x comme panorama ;
+- portails recalés presque au bord réel de la Map, quelle que soit sa taille ;
+- chaque Zone possède un retour et une continuation d'exploration non révélée.
+
+Ajouts V0.16.17 :
+- panorama résolu directement depuis le numéro réel de la Map active ;
+- changement de Map enregistré avant le chargement de son décor ;
+- impossibilité renforcée d'utiliser une image 0N_x comme décor ;
+- nom et numéro de Zone du HUD synchronisés avec le moteur ;
+- portails Nord/Sud parallèles aux bords Est-Ouest ;
+- portails Est/Ouest tournés de 90 degrés et parallèles aux bords Nord-Sud.
+- panorama plus réactif lors des rotations rapides de caméra ;
+- image de décor élargie, légèrement incurvée et davantage étirée aux bords ;
+- couverture périphérique renforcée pour supprimer les zones noires restantes.
+
+Ajouts V0.16.18 :
+- suppression automatique des anciens service workers et caches du jeu ;
+- paramètres de version ajoutés à tous les scripts et feuilles de style ;
+- port local aléatoire à chaque lancement pour isoler les anciennes versions ;
+- attribution des décors désormais testée sans possibilité de réutiliser
+  silencieusement un ancien moteur depuis le cache du navigateur.
+
+Ajouts V0.16.19 :
+- état unique de Zone diffusé par le moteur 3D à toute l'interface ;
+- synchronisation immédiate du nom, du numéro, du décor et des menus ;
+- cyclorama vertical conservant presque toute la hauteur du décor source ;
+- bas du décor incurvé vers le plateau pour renforcer la profondeur ;
+- courbures horizontale et verticale combinées ;
+- recul maximal de caméra augmenté de 18 à 26 unités.
+- vitesse maximale de BlueFox augmentée avec une accélération mesurée ;
+- animation Run accélérée pour rester cohérente avec le déplacement.
+- une direction acceptée sur demande du joueur active temporairement Run_fast ;
+- vitesse de déplacement majorée pendant ce trajet volontaire.
+- suivi du décor légèrement adouci pendant les rotations de caméra.
+
+Ajouts V0.16.20 :
+- bord inférieur du décor recalé au niveau du plateau ;
+- décor presque entièrement visible au recul maximal ;
+- largeur accrue et étirement progressif renforcé à droite et à gauche ;
+- courbure périphérique plus ample, centre préservé ;
+- panorama recentré doucement derrière la position suivie ;
+- recul caméra porté à 34 unités et conservé en mode ancré ;
+- pivot relevé progressivement en vue stratégique pour voir le haut du décor ;
+- course autonome nettement accélérée ;
+- Run_fast plus visible avec vitesse majorée de 30 % sur instruction acceptée.
 
 Si le navigateur bloque WebGL, l'interface reste accessible sur le décor
 illustré mais le personnage 3D ne peut pas être affiché.

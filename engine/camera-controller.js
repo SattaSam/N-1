@@ -28,7 +28,7 @@
       controls.enableDamping = true;
       controls.dampingFactor = 0.08;
       controls.minDistance = 4.5;
-      controls.maxDistance = 18;
+      controls.maxDistance = 34;
       controls.minPolarAngle = 0.45;
       controls.maxPolarAngle = Math.PI * 0.47;
 
@@ -117,7 +117,7 @@
       const distance = finite
         ? this.camera.position.distanceTo(characterPosition)
         : Infinity;
-      if (!finite || distance < 3.6 || distance > 24) {
+      if (!finite || distance < 3.6 || distance > 42) {
         this.recoverCamera();
         return;
       }
@@ -129,7 +129,16 @@
       const position = this.character.root.position;
       const now = performance.now();
       this.ensureHealthy(now);
-      this.followTarget.set(position.x, 1.15, position.z);
+      const horizontalDistance = Math.hypot(
+        this.camera.position.x - position.x,
+        this.camera.position.z - position.z
+      );
+      const strategicView = BF.clamp((horizontalDistance - 10) / 24, 0, 1);
+      this.followTarget.set(
+        position.x,
+        1.15 + strategicView * 10.5,
+        position.z
+      );
       const characterDelta = position.clone().sub(this.previousCharacterPosition);
 
       if (this.mode === "free-follow" && !this.userInteracting) {
@@ -146,10 +155,11 @@
         now - this.lastUserInput > this.followDelay
       ) {
         const heading = this.character.heading;
+        const followDistance = BF.clamp(horizontalDistance, 7.5, 34);
         this.desiredCamera.set(
-          position.x - Math.sin(heading) * 8,
-          6.2,
-          position.z - Math.cos(heading) * 8
+          position.x - Math.sin(heading) * followDistance,
+          4.75 + followDistance * 0.18,
+          position.z - Math.cos(heading) * followDistance
         );
         this.camera.position.lerp(this.desiredCamera, 1 - Math.exp(-1.8 * dt));
       }

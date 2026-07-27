@@ -2,9 +2,10 @@ $ErrorActionPreference = "Stop"
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $listener = $null
-$port = 8765
+$port = 0
 
-foreach ($candidate in 8765..8780) {
+foreach ($attempt in 1..32) {
+    $candidate = Get-Random -Minimum 49152 -Maximum 60000
     try {
         $listener = [System.Net.Sockets.TcpListener]::new(
             [System.Net.IPAddress]::Loopback,
@@ -19,7 +20,7 @@ foreach ($candidate in 8765..8780) {
 }
 
 if ($null -eq $listener) {
-    throw "Aucun port local disponible entre 8765 et 8780."
+    throw "Aucun port local temporaire n'a pu etre ouvert."
 }
 
 $mimeTypes = @{

@@ -130,10 +130,22 @@
       alien: { ground: 0x5b526f, accent: 0xc795ff }
     };
     const registered = [];
+    const allTerrains = catalog.maps
+      .flatMap((map) => map.terrains || [])
+      .concat(catalog.orphanTerrains || []);
+    const terrainUrlsFor = (catalogMap) => {
+      const preferred = (catalogMap.terrains || []).slice(0, 6);
+      if (preferred.length) return preferred.map((terrain) => terrain.url);
+      if (!allTerrains.length) return [];
+      const fallback = allTerrains[
+        (catalogMap.number * 7919 + 137) % allTerrains.length
+      ];
+      return [fallback.url];
+    };
     catalog.maps.forEach((catalogMap) => {
-      const terrainUrls = catalogMap.terrains
-        .slice(0, 6)
-        .map((terrain) => terrain.url);
+      // N... est le décor panoramique. Les 0N_x sont privilégiés pour
+      // les plateaux, mais un autre 0M_x peut servir de repli.
+      const terrainUrls = terrainUrlsFor(catalogMap);
       const profile = inferBiomeProfile(catalogMap.name);
       const traits = inferBiomeTraits(catalogMap.name);
       const description = biomeDescription(catalogMap.name, profile, traits);
@@ -148,9 +160,8 @@
         existingMap.terrainUrls = terrainUrls;
         existingMap.terrainUrl =
           terrainUrls[0] || catalogMap.scene.url;
-        existingMap.zones = terrainUrls.length
-          ? terrainUrls.map((unused, index) => `Zone ${index + 1}`)
-          : ["Zone principale"];
+        existingMap.zones = [`Zone ${catalogMap.number}`];
+        existingMap.plateauCount = Math.max(1, terrainUrls.length);
         existingMap.profile = profile;
         existingMap.traits = traits;
         existingMap.description = description;
@@ -166,9 +177,8 @@
         id: catalogMap.id,
         number: catalogMap.number,
         name: catalogMap.name || `Biome ${catalogMap.number}`,
-        zones: terrainUrls.length
-          ? terrainUrls.map((unused, index) => `Zone ${index + 1}`)
-          : ["Zone principale"],
+        zones: [`Zone ${catalogMap.number}`],
+        plateauCount: Math.max(1, terrainUrls.length),
         terrainUrls,
         terrainUrl: terrainUrls[0] || catalogMap.scene.url,
         sceneUrl: catalogMap.scene.url,
@@ -216,11 +226,11 @@
   const zoneLayout = (count) => {
     const layouts = {
       1: [[0, 0]],
-      2: [[0, 13], [0, -13]],
-      3: [[-13, 10], [13, 10], [0, -12]],
-      4: [[-13, 13], [13, 13], [-13, -13], [13, -13]],
-      5: [[-14, 14], [14, 14], [0, 0], [-14, -14], [14, -14]],
-      6: [[-16, 15], [0, 15], [16, 15], [-16, -15], [0, -15], [16, -15]]
+      2: [[0, 27], [0, -27]],
+      3: [[-54, 0], [0, 0], [54, 0]],
+      4: [[-27, 27], [27, 27], [-27, -27], [27, -27]],
+      5: [[-54, 27], [0, 27], [54, 27], [-27, -27], [27, -27]],
+      6: [[-54, 27], [0, 27], [54, 27], [-54, -27], [0, -27], [54, -27]]
     };
     return layouts[BF.clamp(count, 1, 6)] || layouts[1];
   };
@@ -278,29 +288,29 @@
     texture.wrapT = THREE.ClampToEdgeWrapping;
     texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
 
+    const positions = zoneLayout(terrainSources.length);
+    const minX = Math.min(...positions.map(([x]) => x)) - 27;
+    const maxX = Math.max(...positions.map(([x]) => x)) + 27;
+    const minZ = Math.min(...positions.map(([, z]) => z)) - 27;
+    const maxZ = Math.max(...positions.map(([, z]) => z)) + 27;
     const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(60, 60),
+      new THREE.PlaneGeometry(maxX - minX, maxZ - minZ),
       new THREE.MeshStandardMaterial({
-        map: texture,
-        color: 0xffffff,
-        roughness: 0.9,
+        color: definition.palette.ground,
+        roughness: 1,
         metalness: 0.02
       })
     );
     ground.name = "WalkableGround";
     ground.rotation.x = -Math.PI / 2;
+    ground.position.set((minX + maxX) * 0.5, -0.018, (minZ + maxZ) * 0.5);
     ground.receiveShadow = true;
     ground.userData.walkable = true;
     group.add(ground);
 
     const zoneRegions = [];
-    if (definition.terrainUrls?.length) {
-      const positions = zoneLayout(terrainSources.length);
-      const zoneSize = terrainSources.length <= 2
-        ? 25
-        : terrainSources.length <= 4
-          ? 22
-          : 17.5;
+    if (terrainSources.length) {
+      const zoneSize = 54;
       terrainSources.forEach((source, index) => {
         const zoneTexture = loadTexture(source, `plateau ${index + 1}`);
         zoneTexture.colorSpace = THREE.SRGBColorSpace;
@@ -315,28 +325,23 @@
             roughness: 0.92,
             metalness: 0.01,
             polygonOffset: true,
-            polygonOffsetFactor: -1
+            polygonOffsetFactor: -1,
+            emissive: 0x000000
           })
         );
         const [x, z] = positions[index];
         zone.name = `Zone:${index + 1}`;
         zone.rotation.x = -Math.PI / 2;
-        zone.position.set(x, 0.012, z);
+        zone.position.set(x, 0.008, z);
+        zone.userData.walkable = true;
         zone.receiveShadow = true;
         group.add(zone);
         zoneRegions.push({
           index,
-          name: definition.zones[index] || `Zone ${index + 1}`,
+          name: `Plateau ${index + 1}`,
           center: new THREE.Vector3(x, 0, z),
           radius: zoneSize * 0.62
         });
-      });
-    } else {
-      zoneRegions.push({
-        index: 0,
-        name: definition.zones[0] || "Zone principale",
-        center: new THREE.Vector3(0, 0, 0),
-        radius: 30
       });
     }
 
@@ -355,32 +360,7 @@
           end: { x: zone.center.x, z: zone.center.z }
         });
       });
-      internalZonePaths.forEach(({ start, end }, index) => {
-        const dx = end.x - start.x;
-        const dz = end.z - start.z;
-        const length = Math.hypot(dx, dz);
-        const path = new THREE.Mesh(
-          new THREE.BoxGeometry(2.35, 0.028, length),
-          new THREE.MeshStandardMaterial({
-            color: definition.palette.ground,
-            emissive: definition.palette.accent,
-            emissiveIntensity: 0.08,
-            roughness: 1,
-            metalness: 0,
-            transparent: true,
-            opacity: 0.78
-          })
-        );
-        path.name = `ZonePath:${index + 1}`;
-        path.position.set(
-          (start.x + end.x) * 0.5,
-          0.018,
-          (start.z + end.z) * 0.5
-        );
-        path.rotation.y = Math.atan2(dx, dz);
-        path.receiveShadow = true;
-        group.add(path);
-      });
+      // Les zones se touchent bord à bord : aucun ruban coloré n'est rendu au sol.
     }
 
     const colliders = [];
@@ -388,6 +368,26 @@
     const animatedObjects = [];
     const random = new Random(definition.seed);
     const profile = definition.profile || "alien";
+    const resolvedExits = Object.fromEntries(
+      Object.entries(definition.exits).map(([direction, exit]) => {
+        const resolved = { ...exit };
+        if (direction === "north") {
+          resolved.z = minZ + 1.2;
+          resolved.x = BF.clamp(exit.x || 0, minX + 4, maxX - 4);
+        } else if (direction === "south") {
+          resolved.z = maxZ - 1.2;
+          resolved.x = BF.clamp(exit.x || 0, minX + 4, maxX - 4);
+        } else if (direction === "east") {
+          resolved.x = maxX - 1.2;
+          resolved.z = BF.clamp(exit.z || 0, minZ + 4, maxZ - 4);
+        } else if (direction === "west") {
+          resolved.x = minX + 1.2;
+          resolved.z = BF.clamp(exit.z || 0, minZ + 4, maxZ - 4);
+        }
+        return [direction, resolved];
+      })
+    );
+    definition.runtimeExits = resolvedExits;
     const landmarks = definition.id === "crystal"
       ? [
           ["arch", -10, -8, 0, 0.25],
@@ -410,14 +410,14 @@
         : [];
     const reservedPoints = [
       { ...definition.entry, clearance: 4.2 },
-      ...Object.values(definition.exits).map((exit) => ({
+      ...Object.values(resolvedExits).map((exit) => ({
         ...exit,
         clearance: 4.2
       })),
       ...landmarks.map(([, x, z]) => ({ x, z, clearance: 1.8 }))
     ];
     const protectedCorridors = [
-      ...Object.values(definition.exits).map((exit) => ({
+      ...Object.values(resolvedExits).map((exit) => ({
         start: definition.entry,
         end: exit
       })),
@@ -451,11 +451,13 @@
       );
     const randomPosition = (minimumDistance, maximumDistance, radius) => {
       for (let attempt = 0; attempt < 72; attempt += 1) {
+        const region = zoneRegions[Math.floor(random.next() * zoneRegions.length)] ||
+          { center: { x: 0, z: 0 } };
         const angle = random.next() * Math.PI * 2;
         const distance = minimumDistance +
-          random.next() * (maximumDistance - minimumDistance);
-        const x = Math.cos(angle) * distance;
-        const z = Math.sin(angle) * distance;
+          random.next() * (Math.min(maximumDistance, 25) - minimumDistance);
+        const x = region.center.x + Math.cos(angle) * distance;
+        const z = region.center.z + Math.sin(angle) * distance;
         if (!isReserved(x, z, radius) && !isOccupied(x, z, radius)) {
           return { x, z };
         }
@@ -683,9 +685,13 @@
     });
 
     const gates = [];
-    Object.entries(definition.exits).forEach(([direction, exit]) => {
+    Object.entries(resolvedExits).forEach(([direction, exit]) => {
       const gate = new THREE.Group();
       gate.position.set(exit.x, 0, exit.z);
+      // Le plan du portail reste parallèle au bord du plateau :
+      // Nord/Sud suivent X ; Est/Ouest suivent Z.
+      gate.rotation.y =
+        direction === "east" || direction === "west" ? Math.PI / 2 : 0;
       gate.userData.exit = { ...exit, direction };
       gate.userData.triggerRadius = 2.35;
 
@@ -740,6 +746,9 @@
       gates,
       zoneRegions,
       internalZonePaths,
+      bounds: Math.max(
+        Math.abs(minX), Math.abs(maxX), Math.abs(minZ), Math.abs(maxZ)
+      ),
       update(elapsed) {
         animatedObjects.forEach(({ root, type, phase }) => {
           const pulse = Math.sin(elapsed * 1.25 + phase);

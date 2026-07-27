@@ -305,12 +305,12 @@
     const mapId = currentMapId(panel);
     const definition = mapData[mapId];
     const mapDefinition = global.BlueFox3D?.maps?.[mapId];
-    const zoneIndex = global.BlueFox3D?.currentEngine?.currentZoneIndex || 0;
-    const zoneName = mapDefinition?.zones?.[zoneIndex] || "Zone principale";
-    const exploredZones = [...(global.BlueFox3D?.discoveredZones || [])]
-      .filter((key) => key.startsWith(`${mapId}:`)).length;
-    const totalZones = Math.max(1, mapDefinition?.zones?.length || 1);
-    const cardKey = `${mapId}:${zoneIndex}:${exploredZones}`;
+    const zoneName = `Zone ${mapDefinition?.number || 1}`;
+    const plateauCount = Math.max(
+      1,
+      mapDefinition?.plateauCount || mapDefinition?.terrainUrls?.length || 1
+    );
+    const cardKey = `${mapId}:${plateauCount}`;
     let card = panel.querySelector(".planet-current-zone");
     if (!card) {
       card = document.createElement("section");
@@ -329,7 +329,7 @@
     const description = document.createElement("p");
     description.textContent =
       mapDefinition?.description ||
-      `${mapDefinition?.name || definition.name} — ${exploredZones}/${totalZones} zone${totalZones > 1 ? "s" : ""} explorée${exploredZones > 1 ? "s" : ""}.`;
+      `${mapDefinition?.name || definition.name} — Zone composée de ${plateauCount} plateau${plateauCount > 1 ? "x" : ""}.`;
     const viewpoint = document.createElement("p");
     const strong = document.createElement("b");
     strong.textContent = "Point de vue de BlueFox :";
@@ -340,6 +340,18 @@
     image.className = "planet-current-image";
     applySceneImage(image, mapId);
     card.append(text, image);
+    let returnButton = card.querySelector(".planet-return-base");
+    if (!returnButton) {
+      returnButton = document.createElement("button");
+      returnButton.type = "button";
+      returnButton.className = "planet-return-base";
+      returnButton.textContent = "Demander le retour à la base";
+      returnButton.addEventListener("click", () => {
+        global.dispatchEvent(new CustomEvent("bluefox:return-base"));
+        panel.querySelector(".drawer-close")?.click();
+      });
+      text.appendChild(returnButton);
+    }
   }
 
   function setCatalogDetail(panel, catalogMap) {
@@ -563,6 +575,25 @@
   }
 
   function scan() {
+    const activeMap = global.BlueFox3D?.currentEngine?.currentMapId;
+    const activeDefinition = global.BlueFox3D?.maps?.[activeMap];
+    const location = document.querySelector(".brand-block strong");
+    if (location && activeDefinition) {
+      const expectedLocation =
+        `${activeDefinition.name} · Zone ${activeDefinition.number || 1}`;
+      if (location.textContent !== expectedLocation) {
+        location.textContent = expectedLocation;
+      }
+    }
+    document.querySelectorAll(".intent-bar button").forEach((button) => {
+      if (button.dataset.bluefoxReturnBound) return;
+      button.dataset.bluefoxReturnBound = "true";
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        global.dispatchEvent(new CustomEvent("bluefox:return-base"));
+      }, true);
+    });
     document.querySelectorAll(".mission-card").forEach(enhanceMission);
     document.querySelectorAll(".full-screen-panel").forEach((panel) => {
       if (panel.querySelector(".planet-layout")) enhancePlanet(panel);
@@ -580,11 +611,16 @@
   }
 
   const observer = new MutationObserver(scheduleScan);
-  observer.observe(document.documentElement, { childList: true, subtree: true });
+  observer.observe(document.documentElement, {
+    childList: true,
+    characterData: true,
+    subtree: true
+  });
+  global.addEventListener("bluefox:map-state", scheduleScan);
   global.addEventListener("bluefox:scene-images", refreshSceneImages);
   global.addEventListener("bluefox:image-catalog", scheduleScan);
   global.addEventListener("bluefox:discovery-changed", scheduleScan);
   global.addEventListener("bluefox:zone-discovery-changed", scheduleScan);
-  window.setInterval(scheduleScan, 5000);
+  window.setInterval(scheduleScan, 350);
   scan();
 })(window);

@@ -191,7 +191,9 @@
     restoreDiscovery() {
       try {
         const memories = JSON.parse(
-          localStorage.getItem("bluefox_discovered_maps_v1") || "[]"
+          localStorage.getItem("bluefox_engine_discovered_maps_v2") ||
+          localStorage.getItem("bluefox_discovered_maps_v1") ||
+          "[]"
         );
         memories.forEach((map) => this.discoveredMaps.add(map.id));
       } catch {
@@ -256,6 +258,45 @@
       return true;
     }
 
+    ensureMapContinuation(mapId) {
+      const definition = BF.maps[mapId];
+      if (!definition || Object.keys(definition.exits).length !== 1) return;
+      const opposites = {
+        north: "south", south: "north", east: "west", west: "east"
+      };
+      const returnDirection = Object.keys(definition.exits)[0];
+      const preferredDirection = opposites[returnDirection];
+      const directions = [
+        preferredDirection,
+        "north", "east", "south", "west"
+      ].filter((value, index, list) =>
+        value && list.indexOf(value) === index && !definition.exits[value]
+      );
+      const usedTargets = new Set(
+        this.generatedTopology.flatMap((link) => [link.from, link.to])
+      );
+      for (const direction of directions) {
+        const opposite = opposites[direction];
+        const destination = Object.values(BF.maps)
+          .filter((map) =>
+            map.id !== mapId &&
+            !this.discoveredMaps.has(map.id) &&
+            !usedTargets.has(map.id) &&
+            !map.exits[opposite]
+          )
+          .sort((left, right) => left.number - right.number)[0];
+        if (!destination) continue;
+        const link = { from: mapId, direction, to: destination.id };
+        if (!this.applyGeneratedLink(link)) continue;
+        this.generatedTopology.push(link);
+        localStorage.setItem(
+          "bluefox_generated_topology_v1",
+          JSON.stringify(this.generatedTopology)
+        );
+        break;
+      }
+    }
+
     saveDiscovery() {
       const previous = (() => {
         try {
@@ -277,6 +318,10 @@
       }));
       localStorage.setItem(
         "bluefox_discovered_maps_v1",
+        JSON.stringify(memories)
+      );
+      localStorage.setItem(
+        "bluefox_engine_discovered_maps_v2",
         JSON.stringify(memories)
       );
       global.BlueFox3D.discoveredMaps = this.discoveredMaps;
@@ -328,16 +373,44 @@
 
     createPanorama() {
       const { THREE } = this;
-      const geometry = new THREE.CylinderGeometry(72, 72, 34, 64, 1, true);
+      const geometry = new THREE.PlaneGeometry(320, 100, 80, 16);
+      const position = geometry.attributes.position;
+      const uv = geometry.attributes.uv;
+      for (let index = 0; index < position.count; index += 1) {
+        const x = position.getX(index);
+        const y = position.getY(index);
+        const normalized = Math.abs(x) / 160;
+        const edge = Math.max(0, (normalized - 0.55) / 0.45);
+        const vertical = BF.clamp((y + 50) / 100, 0, 1);
+        const lowerCurve = Math.pow(1 - vertical, 2);
+        position.setY(index, vertical * 48);
+        position.setZ(
+          index,
+          -78 +
+          normalized * normalized * 8 +
+          edge * edge * 42 +
+          lowerCurve * 43
+        );
+        const t = x / 320 + 0.5;
+        const u = t < 0.26
+          ? (t / 0.26) * 0.06
+          : t > 0.74
+            ? 0.94 + ((t - 0.74) / 0.26) * 0.06
+            : 0.06 + ((t - 0.26) / 0.48) * 0.88;
+        uv.setX(index, u);
+      }
+      position.needsUpdate = true;
+      uv.needsUpdate = true;
+      geometry.computeVertexNormals();
       const material = new THREE.MeshBasicMaterial({
-        side: THREE.BackSide,
+        side: THREE.DoubleSide,
         fog: false,
         depthWrite: false,
         toneMapped: false
       });
       this.panorama = new THREE.Mesh(geometry, material);
       this.panorama.name = "BiomePanorama";
-      this.panorama.position.y = 8;
+      this.panorama.position.y = 0.3;
       this.panorama.renderOrder = -10;
       this.scene.add(this.panorama);
     }
@@ -419,9 +492,22 @@
       this.destinationMarkerStartedAt = performance.now();
     }
 
-    setPanorama(asset) {
+    setPanorama(asset, definition = BF.maps[this.currentMapId]) {
       if (this.panoramaTexture) this.panoramaTexture.dispose();
       const loader = new this.THREE.TextureLoader();
+      const catalogMap = global.BLUEFOX_MAP_ASSETS?.catalog?.maps?.find(
+        (map) => map.number === definition?.number
+      );
+      // Source autoritaire : l'image N... portant le même numéro que la Map.
+      asset = catalogMap?.scene?.url || definition?.sceneUrl || asset;
+      const filename = String(asset || "").split("/").pop();
+      const isTerrain = Boolean(
+        global.BLUEFOX_MAP_ASSETS?.parseTerrain?.({ name: filename })
+      );
+      if (isTerrain) {
+        asset = catalogMap?.scene?.url || definition?.sceneUrl || asset;
+      }
+      this.currentPanoramaAsset = asset;
       const candidates =
         global.BLUEFOX_MAP_ASSETS?.imageUrlCandidates?.(asset) || [asset];
       let panoramaTexture;
@@ -582,10 +668,11 @@
       const minuteOfDay = Math.floor(totalMinutes % minutesPerDay);
       const hour = Math.floor(minuteOfDay / 60);
       const minute = minuteOfDay % 60;
-      const isNight = hour < 5 || hour >= 16;
+      // Cycle de 20 h : 15 h de jour et seulement 5 h de nuit.
+      const isNight = hour < 2 || hour >= 17;
       const daylight = isNight
         ? 0
-        : Math.sin(((minuteOfDay - 5 * 60) / (11 * 60)) * Math.PI);
+        : Math.sin(((minuteOfDay - 2 * 60) / (15 * 60)) * Math.PI);
 
       const block = document.querySelector(".day-block");
       if (block) {
@@ -612,14 +699,14 @@
         1
       );
       this.sun.intensity = BF.damp(this.sun.intensity, 0.45 + daylight * 3.8, 2, 1);
-      this.fill.intensity = BF.damp(this.fill.intensity, isNight ? 12 : 7, 2, 1);
+      this.fill.intensity = BF.damp(this.fill.intensity, isNight ? 1.7 : 0.75, 2, 1);
       if (this.biomeParticles && this.biomeParticleSettings) {
         this.biomeParticles.material.opacity =
           this.biomeParticleSettings.baseOpacity * (isNight ? 1.15 : 0.78);
       }
       this.renderer.toneMappingExposure = BF.damp(
         this.renderer.toneMappingExposure,
-        isNight ? 0.82 : 1.14,
+        isNight ? 0.88 : 1.06,
         2,
         1
       );
@@ -659,6 +746,7 @@
         this.handlePointer(event);
       };
       this.onNavigate = (event) => this.handleNavigationSuggestion(event.detail);
+      this.onReturnBase = () => this.returnToBase();
       this.onPathPlanned = (event) => this.updatePathVisual(event.detail);
       this.onNavigationFailed = () => {
         this.navigationFailures += 1;
@@ -701,9 +789,46 @@
       this.renderer.domElement.addEventListener("pointerdown", this.onPointerDown);
       this.renderer.domElement.addEventListener("pointerup", this.onPointerUp);
       global.addEventListener("bluefox:navigate", this.onNavigate);
+      global.addEventListener("bluefox:return-base", this.onReturnBase);
       global.addEventListener("bluefox:path-planned", this.onPathPlanned);
       global.addEventListener("bluefox:navigation-failed", this.onNavigationFailed);
       document.addEventListener("visibilitychange", this.onVisibilityChange);
+    }
+
+    async returnToBase() {
+      if (this.transitioning) return;
+      if (this.currentMapId === "crystal") {
+        const camp = new this.THREE.Vector3(0, 0, 8);
+        this.pendingInteraction = null;
+        this.pendingGate = null;
+        this.character.setTarget(camp);
+        this.showWorldMarker(camp);
+        this.callbacks.onStatus("BlueFox revient vers le refuge.");
+        return;
+      }
+      this.transitioning = true;
+      this.character.enabled = false;
+      this.character.stop();
+      this.transitionElement.classList.add("active");
+      this.callbacks.onStatus("BlueFox utilise les passages mémorisés pour revenir à la base.");
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 340));
+        await this.loadMap("crystal", null, true);
+        const camp = new this.THREE.Vector3(0, 0, 8);
+        this.character.root.position.copy(camp);
+        this.character.setTarget(camp);
+        this.character.lastSafePosition.copy(camp);
+        this.savePosition();
+        await new Promise((resolve) => setTimeout(resolve, 220));
+        this.cameraController.resetBehindCharacter(true);
+      } catch (error) {
+        console.error("Échec du retour à la base", error);
+        this.callbacks.onStatus("Le retour a échoué. BlueFox reste dans la zone actuelle.");
+      } finally {
+        this.transitionElement.classList.remove("active");
+        this.character.enabled = true;
+        this.transitioning = false;
+      }
     }
 
     handlePointer(event) {
@@ -728,8 +853,9 @@
 
       const point = new this.THREE.Vector3();
       if (!this.raycaster.ray.intersectPlane(this.groundPlane, point)) return;
-      point.x = BF.clamp(point.x, -27, 27);
-      point.z = BF.clamp(point.z, -27, 27);
+      const mapBounds = this.currentMap?.bounds || 27;
+      point.x = BF.clamp(point.x, -mapBounds, mapBounds);
+      point.z = BF.clamp(point.z, -mapBounds, mapBounds);
       this.pendingInteraction = null;
       this.pendingZoneExploration = null;
       this.character.cancelInteraction();
@@ -787,6 +913,7 @@
       );
       if (!gate) return;
       this.pendingGate = gate;
+      this.character.setPlayerSprint(24);
       this.character.setTarget(gate.position);
       this.showWorldMarker(gate.position);
       const frenchDirection = {
@@ -812,6 +939,7 @@
         );
         if (gate) {
           this.pendingGate = gate;
+          this.character.setPlayerSprint(24);
           this.character.setTarget(gate.position);
           this.showWorldMarker(gate.position);
           this.callbacks.onStatus(
@@ -826,6 +954,7 @@
         0,
         BF.clamp(detail.z || 0, -27, 27)
       );
+      this.character.setPlayerSprint(16);
       this.character.setTarget(target);
       this.showWorldMarker(target);
     }
@@ -855,7 +984,8 @@
           0,
           anchor.position.z + Math.sin(angle) * approachDistance
         );
-        if (Math.abs(point.x) > 26.6 || Math.abs(point.z) > 26.6) continue;
+        const mapBounds = (this.currentMap?.bounds || 27) - 0.4;
+        if (Math.abs(point.x) > mapBounds || Math.abs(point.z) > mapBounds) continue;
         const clear = colliders.every((collider) =>
           point.distanceTo(collider.position) >=
             this.character.radius + collider.radius + 0.16
@@ -912,6 +1042,7 @@
     async loadMap(mapId, entry, announce = true) {
       const definition = BF.maps[mapId];
       if (!definition) throw new Error(`Map inconnue: ${mapId}`);
+      this.ensureMapContinuation(mapId);
       const previousMap = this.currentMap;
       const nextMap = BF.buildMap(
         this.THREE,
@@ -921,15 +1052,36 @@
       );
       this.scene.add(nextMap.group);
       this.currentMap = nextMap;
-      this.character?.setColliders(nextMap.colliders);
-      this.setPanorama(definition.sceneUrl || this.assets[definition.sceneAsset]);
-      this.applyBiomeAtmosphere(definition);
       this.currentMapId = mapId;
+      global.dispatchEvent(new CustomEvent("bluefox:map-state", {
+        detail: {
+          mapId,
+          number: definition.number || 1,
+          name: definition.name,
+          sceneUrl:
+            global.BLUEFOX_MAP_ASSETS?.catalog?.maps?.find(
+              (map) => map.number === definition.number
+            )?.scene?.url ||
+            definition.sceneUrl ||
+            this.assets[definition.sceneAsset]
+        }
+      }));
+      if (this.character?.pathPlanner) {
+        this.character.pathPlanner.bounds = nextMap.bounds || 27;
+      }
+      this.character?.setColliders(nextMap.colliders);
+      this.setPanorama(
+        definition.sceneUrl || this.assets[definition.sceneAsset],
+        definition
+      );
+      this.applyBiomeAtmosphere(definition);
       this.currentZoneIndex = -1;
       this.pendingZoneExploration = null;
       previousMap?.dispose();
       if (announce) {
-        this.callbacks.onMapChange(mapId);
+        if (mapId === "crystal" || mapId === "jungle") {
+          this.callbacks.onMapChange(mapId);
+        }
         this.callbacks.onAction(`Map chargée : ${definition.name}.`);
       }
       this.updateCurrentZone(performance.now(), true);
@@ -950,13 +1102,13 @@
         },
         forest: {
           sky: 0x071b19, fog: 0x163c35, density: 0.014,
-          hemiSky: 0x8fffd5, hemiGround: 0x172b25,
-          sun: 0xb8ffd9, fill: 0x4effb4
+          hemiSky: 0xd8eee4, hemiGround: 0x27312e,
+          sun: 0xfff4dc, fill: 0xb9d8ca
         },
         ruins: {
           sky: 0x091a20, fog: 0x183b39, density: 0.012,
-          hemiSky: 0x9ee8d4, hemiGround: 0x263a35,
-          sun: 0xd0f5df, fill: 0x63ffc2
+          hemiSky: 0xd7e9e1, hemiGround: 0x303734,
+          sun: 0xfff1d7, fill: 0xb9d2c7
         },
         aquatic: {
           sky: 0x06182b, fog: 0x0b4260, density: 0.016,
@@ -1159,20 +1311,25 @@
       });
       if (!force && nearest.index === this.currentZoneIndex) return;
       this.currentZoneIndex = nearest.index;
-      const zoneKey = `${this.currentMapId}:${nearest.index}`;
+      const zoneKey = `${this.currentMapId}:map`;
       if (!this.discoveredZones.has(zoneKey)) {
         this.discoveredZones.add(zoneKey);
         this.saveZoneDiscovery();
-        this.callbacks.onAction(`Nouvelle zone explorée : ${nearest.name}.`);
+        this.callbacks.onAction(
+          `Nouvelle zone explorée : ${this.currentMap.definition.name}.`
+        );
       }
       if (this.pendingZoneExploration?.index === nearest.index) {
         this.callbacks.onStatus(
-          `BlueFox commence l’étude de ${nearest.name}.`
+          `BlueFox commence l’étude du plateau ${nearest.index + 1}.`
         );
         this.pendingZoneExploration = null;
         this.lastAutonomyAt = now - 5000;
       }
-      this.callbacks.onZoneChange(this.currentMapId, nearest.name);
+      this.callbacks.onZoneChange(
+        this.currentMapId,
+        `Zone ${this.currentMap.definition.number || 1}`
+      );
     }
 
     canDiscoverMap(mapId) {
@@ -1181,7 +1338,7 @@
     }
 
     safeEntryPosition(targetMap, previousMapId, requestedEntry) {
-      const entries = Object.entries(targetMap.exits);
+      const entries = Object.entries(targetMap.runtimeExits || targetMap.exits);
       const matched = entries.find(([direction, candidate]) =>
         direction === requestedEntry || candidate.targetMap === previousMapId
       );
@@ -1242,7 +1399,9 @@
         if (isNew) {
           this.discoveredMaps.add(exit.targetMap);
           this.saveDiscovery();
-          this.callbacks.onMapDiscovered(exit.targetMap);
+          if (exit.targetMap === "crystal" || exit.targetMap === "jungle") {
+            this.callbacks.onMapDiscovered(exit.targetMap);
+          }
         }
         this.pendingGate = null;
         this.gateCooldownUntil = performance.now() + 2600;
@@ -1679,8 +1838,20 @@
         );
         this.panorama.rotation.y = BF.dampAngle(
           this.panorama.rotation.y,
-          cameraAngle * 0.085,
-          1.4,
+          cameraAngle,
+          3.2,
+          dt
+        );
+        this.panorama.position.x = BF.damp(
+          this.panorama.position.x,
+          this.controls.target.x,
+          1.35,
+          dt
+        );
+        this.panorama.position.z = BF.damp(
+          this.panorama.position.z,
+          this.controls.target.z,
+          1.35,
           dt
         );
       }
@@ -1708,13 +1879,14 @@
 
     getDiagnostics() {
       return {
-        version: "0.16.14",
+        version: "0.16.20",
         map: this.currentMapId,
         biomeProfile: this.currentAtmosphereProfile,
         biomeParticles: this.biomeParticleSettings?.count || 0,
         performanceQuality: this.performanceQuality,
         measuredFps: this.measuredFps,
         missingImages: [...this.missingImageUrls],
+        panoramaAsset: this.currentPanoramaAsset,
         generatedTopology: this.generatedTopology.length,
         transitioning: this.transitioning,
         transitionsCompleted: this.completedTransitions,
@@ -1748,6 +1920,7 @@
       this.renderer.domElement.removeEventListener("pointerdown", this.onPointerDown);
       this.renderer.domElement.removeEventListener("pointerup", this.onPointerUp);
       global.removeEventListener("bluefox:navigate", this.onNavigate);
+      global.removeEventListener("bluefox:return-base", this.onReturnBase);
       global.removeEventListener("bluefox:path-planned", this.onPathPlanned);
       global.removeEventListener("bluefox:navigation-failed", this.onNavigationFailed);
       global.removeEventListener("bluefox:image-missing", this.onMissingImage);
