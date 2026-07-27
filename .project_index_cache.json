@@ -1,6 +1,6 @@
 {
   "version": "4.0",
-  "generated_utc": "2026-07-27T18:57:31+00:00",
+  "generated_utc": "2026-07-27T22:38:32+00:00",
   "files": {
     "assets/Capsule.png": {
       "size_bytes": 4240931,
@@ -250,19 +250,19 @@
       }
     },
     "engine/camera-controller.js": {
-      "size_bytes": 11018,
-      "modified_utc": "2026-07-27T18:54:40+00:00",
-      "sha1_12": "176765db1a1b",
+      "size_bytes": 12857,
+      "modified_utc": "2026-07-27T22:05:05+00:00",
+      "sha1_12": "83946bdb8807",
       "data": {
         "path": "engine/camera-controller.js",
         "name": "camera-controller.js",
         "extension": ".js",
-        "size_bytes": 11018,
-        "size_human": "10.76 Ko",
-        "modified_utc": "2026-07-27T18:54:40+00:00",
-        "line_count": 319,
+        "size_bytes": 12857,
+        "size_human": "12.56 Ko",
+        "modified_utc": "2026-07-27T22:05:05+00:00",
+        "line_count": 359,
         "category": "Texte / Code",
-        "sha1_12": "176765db1a1b",
+        "sha1_12": "83946bdb8807",
         "cached": false,
         "gdscript": null,
         "scene": null
@@ -364,20 +364,20 @@
       }
     },
     "engine/ui-enhancements.css": {
-      "size_bytes": 12742,
-      "modified_utc": "2026-07-27T17:54:18+00:00",
-      "sha1_12": "6d2eb9c63495",
+      "size_bytes": 13761,
+      "modified_utc": "2026-07-27T22:33:49+00:00",
+      "sha1_12": "c58860382c54",
       "data": {
         "path": "engine/ui-enhancements.css",
         "name": "ui-enhancements.css",
         "extension": ".css",
-        "size_bytes": 12742,
-        "size_human": "12.44 Ko",
-        "modified_utc": "2026-07-27T17:54:18+00:00",
-        "line_count": 632,
+        "size_bytes": 13761,
+        "size_human": "13.44 Ko",
+        "modified_utc": "2026-07-27T22:33:49+00:00",
+        "line_count": 680,
         "category": "Texte / Code",
-        "sha1_12": "6d2eb9c63495",
-        "cached": true,
+        "sha1_12": "c58860382c54",
+        "cached": false,
         "gdscript": null,
         "scene": null
       }
@@ -402,20 +402,20 @@
       }
     },
     "engine/world-engine.js": {
-      "size_bytes": 77531,
-      "modified_utc": "2026-07-27T17:54:18+00:00",
-      "sha1_12": "f9fc6635532a",
+      "size_bytes": 83970,
+      "modified_utc": "2026-07-27T22:05:05+00:00",
+      "sha1_12": "f68e3890fe1e",
       "data": {
         "path": "engine/world-engine.js",
         "name": "world-engine.js",
         "extension": ".js",
-        "size_bytes": 77531,
-        "size_human": "75.71 Ko",
-        "modified_utc": "2026-07-27T17:54:18+00:00",
-        "line_count": 1958,
+        "size_bytes": 83970,
+        "size_human": "82.00 Ko",
+        "modified_utc": "2026-07-27T22:05:05+00:00",
+        "line_count": 2157,
         "category": "Texte / Code",
-        "sha1_12": "f9fc6635532a",
-        "cached": true,
+        "sha1_12": "f68e3890fe1e",
+        "cached": false,
         "gdscript": null,
         "scene": null
       }
@@ -2625,20 +2625,20 @@
       }
     },
     "Images/images-catalog.js": {
-      "size_bytes": 7137,
-      "modified_utc": "2026-07-27T17:54:18+00:00",
-      "sha1_12": "a70ba1e60c7f",
+      "size_bytes": 7138,
+      "modified_utc": "2026-07-27T19:36:11+00:00",
+      "sha1_12": "b78dec801883",
       "data": {
         "path": "Images/images-catalog.js",
         "name": "images-catalog.js",
         "extension": ".js",
-        "size_bytes": 7137,
+        "size_bytes": 7138,
         "size_human": "6.97 Ko",
-        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "modified_utc": "2026-07-27T19:36:11+00:00",
         "line_count": 1,
         "category": "Texte / Code",
-        "sha1_12": "a70ba1e60c7f",
-        "cached": true,
+        "sha1_12": "b78dec801883",
+        "cached": false,
         "gdscript": null,
         "scene": null
       }

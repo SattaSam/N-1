@@ -630,3 +630,51 @@
     width: 92px;
   }
 }
+
+/* PATCH E — Panneaux HUD presque transparents, léger flou, couleur d'origine au survol */
+.brand-block,
+.day-block,
+.meters,
+.mission-card,
+.action-feed,
+.intent-bar {
+  transition: background .2s ease, box-shadow .2s ease, backdrop-filter .2s ease;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+}
+
+.brand-block,
+.day-block,
+.meters {
+  background: rgba(3, 14, 29, .16) !important;
+}
+
+.mission-card {
+  background: linear-gradient(160deg, rgba(5, 22, 43, .18), rgba(3, 12, 26, .16)) !important;
+}
+
+.action-feed,
+.intent-bar {
+  background: rgba(3, 14, 29, .18) !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .brand-block:hover,
+  .day-block:hover,
+  .meters:hover {
+    background: rgba(3, 14, 29, .70) !important;
+  }
+
+  .mission-card:hover {
+    background: linear-gradient(160deg, #05162beb, #030c1ae6) !important;
+  }
+
+  .action-feed:hover {
+    background: #030e1de0 !important;
+  }
+
+  .intent-bar:hover {
+    background: #030e1dd6 !important;
+  }
+}
+

@@ -2,7 +2,7 @@
   "generator": {
     "name": "generate_project_index.py",
     "version": "4.0",
-    "generated_utc": "2026-07-27T18:57:31+00:00"
+    "generated_utc": "2026-07-27T22:38:32+00:00"
   },
   "file_graph": {
     "nodes": [
@@ -32,7 +32,7 @@
         "category": "Texte / Code",
         "incoming_count": 0,
         "outgoing_count": 0,
-        "importance_score": 4.21
+        "importance_score": 4.53
       },
       {
         "path": "engine/ui-enhancements.js",
@@ -63,18 +63,18 @@
         "importance_score": 3.03
       },
       {
+        "path": "engine/camera-controller.js",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 2.39
+      },
+      {
         "path": "js/game.js",
         "category": "Texte / Code",
         "incoming_count": 0,
         "outgoing_count": 0,
         "importance_score": 2.14
-      },
-      {
-        "path": "engine/camera-controller.js",
-        "category": "Texte / Code",
-        "incoming_count": 0,
-        "outgoing_count": 0,
-        "importance_score": 2.13
       },
       {
         "path": "engine/exploration-hud.css",

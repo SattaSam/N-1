@@ -1,17 +1,17 @@
 # Index du projet — 00 EXECUTABLE_BFO V2
 
-_Généré automatiquement par la version 4.0, le 27/07/2026 à 20:57:31._
+_Généré automatiquement par la version 4.0, le 28/07/2026 à 00:38:32._
 
 ## Vue d'ensemble
 
 - Fichiers analysés : **153**
 - Scripts Godot : **0**
 - Scènes Godot : **0**
-- Taille totale : **352.04 Mo**
-- Lignes de texte/code : **9666**
+- Taille totale : **352.05 Mo**
+- Lignes de texte/code : **9953**
 - Dépendances résolues : **0**
 - TODO/FIXME/BUG/HACK : **0**
-- Fichiers repris depuis le cache : **152**
+- Fichiers repris depuis le cache : **149**
 
 ## Répartition par catégorie
 
@@ -217,15 +217,15 @@ _Généré automatiquement par la version 4.0, le 27/07/2026 à 20:57:31._
 | `docs/README.md` | Texte / Code | 597 o | 14 | `6f47097001b5` |
 | `docs/ROADMAP_TODO.md` | Texte / Code | 1.78 Ko | 51 | `b6d6ea674214` |
 | `engine/bluefox3d-core.js` | Texte / Code | 1.77 Ko | 54 | `1892fa108b85` |
-| `engine/camera-controller.js` | Texte / Code | 10.76 Ko | 319 | `176765db1a1b` |
+| `engine/camera-controller.js` | Texte / Code | 12.56 Ko | 359 | `83946bdb8807` |
 | `engine/character-controller.js` | Texte / Code | 16.55 Ko | 455 | `968ec00b3ea5` |
 | `engine/exploration-hud.css` | Texte / Code | 4.00 Ko | 204 | `5d25cab40d8d` |
 | `engine/map-registry.js` | Texte / Code | 27.96 Ko | 791 | `1433552a028a` |
 | `engine/object-library.js` | Texte / Code | 13.03 Ko | 459 | `e98d6a2de9d3` |
 | `engine/path-planner.js` | Texte / Code | 6.67 Ko | 200 | `c08d6b6728bc` |
-| `engine/ui-enhancements.css` | Texte / Code | 12.44 Ko | 632 | `6d2eb9c63495` |
+| `engine/ui-enhancements.css` | Texte / Code | 13.44 Ko | 680 | `c58860382c54` |
 | `engine/ui-enhancements.js` | Texte / Code | 24.07 Ko | 626 | `9e72690d617d` |
-| `engine/world-engine.js` | Texte / Code | 75.71 Ko | 1958 | `f9fc6635532a` |
+| `engine/world-engine.js` | Texte / Code | 82.00 Ko | 2157 | `f68e3890fe1e` |
 | `game.css` | Texte / Code | 15.35 Mo |  | `c2241538116c` |
 | `game.js` | Texte / Code | 27.60 Mo |  | `7641e1a795d5` |
 | `generate_project_index.py` | Texte / Code | 61.98 Ko | 1944 | `36949852cb8a` |
@@ -342,7 +342,7 @@ _Généré automatiquement par la version 4.0, le 27/07/2026 à 20:57:31._
 | `Images/8Marais flottant extraterrestre.png` | Asset | 2.97 Mo |  | `c71f32256287` |
 | `Images/9Steppe de verre et failles turquoise.png` | Asset | 2.92 Mo |  | `99922a715def` |
 | `Images/Capsule.png` | Asset | 3.60 Mo |  | `58bf27fd8dd0` |
-| `Images/images-catalog.js` | Texte / Code | 6.97 Ko | 1 | `a70ba1e60c7f` |
+| `Images/images-catalog.js` | Texte / Code | 6.97 Ko | 1 | `b78dec801883` |
 | `Images/images.txt` | Texte / Code | 184 o | 5 | `be7299a51ca0` |
 | `Images/LISEZ_MOI.txt` | Texte / Code | 744 o | 19 | `c118addbebcb` |
 | `index.html` | Texte / Code | 2.75 Ko | 66 | `f0c678f0e130` |

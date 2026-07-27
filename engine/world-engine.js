@@ -373,45 +373,76 @@
 
     createPanorama() {
       const { THREE } = this;
-      const geometry = new THREE.PlaneGeometry(320, 100, 80, 16);
+
+      // Grand panneau incurvé conservant la perspective actuelle.
+      // Les dimensions sont légèrement augmentées pour couvrir le champ maximal
+      // sans transformer la structure générale du décor.
+      const panoramaWidth = 400;
+      const panoramaHeight = 136;
+      const geometry = new THREE.PlaneGeometry(
+        panoramaWidth,
+        panoramaHeight,
+        96,
+        22
+      );
       const position = geometry.attributes.position;
       const uv = geometry.attributes.uv;
+
       for (let index = 0; index < position.count; index += 1) {
         const x = position.getX(index);
         const y = position.getY(index);
-        const normalized = Math.abs(x) / 160;
-        const edge = Math.max(0, (normalized - 0.55) / 0.45);
-        const vertical = BF.clamp((y + 50) / 100, 0, 1);
-        const lowerCurve = Math.pow(1 - vertical, 2);
-        position.setY(index, vertical * 48);
+        const normalized = Math.abs(x) / (panoramaWidth * 0.5);
+        const edge = Math.max(0, (normalized - 0.52) / 0.48);
+        const vertical = BF.clamp(
+          (y + panoramaHeight * 0.5) / panoramaHeight,
+          0,
+          1
+        );
+        const upperLean = Math.pow(vertical, 2);
+
+        // Le panneau descend sous le plateau et monte largement au-dessus
+        // de la limite visible de la caméra.
+        position.setY(index, -19 + vertical * 94);
+
+        // Inclinaison inversée par rapport au PATCH B1 : la base reste en retrait
+        // tandis que le haut avance progressivement vers la caméra.
+        // La courbure latérale du B1 est conservée sans autre modification.
         position.setZ(
           index,
-          -78 +
-          normalized * normalized * 8 +
-          edge * edge * 42 +
-          lowerCurve * 43
+          -88 +
+          upperLean * 34 -
+          normalized * normalized * 4 -
+          edge * edge * 44
         );
-        const t = x / 320 + 0.5;
-        const u = t < 0.26
-          ? (t / 0.26) * 0.06
-          : t > 0.74
-            ? 0.94 + ((t - 0.74) / 0.26) * 0.06
-            : 0.06 + ((t - 0.26) / 0.48) * 0.88;
+
+        // 96 % de la texture restent consacrés à l'image normale.
+        // Les 2 % extérieurs de chaque côté sont réservés aux pixels étirés.
+        const t = x / panoramaWidth + 0.5;
+        const u = t < 0.24
+          ? (t / 0.24) * 0.02
+          : t > 0.76
+            ? 0.98 + ((t - 0.76) / 0.24) * 0.02
+            : 0.02 + ((t - 0.24) / 0.52) * 0.96;
         uv.setX(index, u);
       }
+
       position.needsUpdate = true;
       uv.needsUpdate = true;
       geometry.computeVertexNormals();
+      geometry.computeBoundingSphere();
+
       const material = new THREE.MeshBasicMaterial({
         side: THREE.DoubleSide,
         fog: false,
         depthWrite: false,
         toneMapped: false
       });
+
       this.panorama = new THREE.Mesh(geometry, material);
       this.panorama.name = "BiomePanorama";
-      this.panorama.position.y = 0.3;
+      this.panorama.position.y = 0;
       this.panorama.renderOrder = -10;
+      this.panorama.frustumCulled = false;
       this.scene.add(this.panorama);
     }
 
@@ -492,60 +523,228 @@
       this.destinationMarkerStartedAt = performance.now();
     }
 
+    createExtendedPanoramaTexture(image) {
+      const { THREE } = this;
+      const sourceWidth = Math.max(1, image.naturalWidth || image.width || 1);
+      const sourceHeight = Math.max(1, image.naturalHeight || image.height || 1);
+
+      // PATCH A V16.21 : cadrage vertical conservé.
+      // Le haut de l'image reste intact et les 9 % inférieurs sont retirés
+      // afin de laisser davantage de place au ciel.
+      const visibleSourceHeight = Math.max(
+        1,
+        Math.round(sourceHeight * 0.91)
+      );
+
+      // PATCH C V16.21 : extension latérale progressive.
+      // Les marges sont plus larges que dans la V16.20 et ne sont plus
+      // remplies par une simple colonne de pixels étirée uniformément.
+      const sideFill = Math.max(24, Math.round(sourceWidth * 0.075));
+      const topFill = Math.max(4, Math.round(sourceHeight * 0.012));
+      const bottomFill = Math.max(12, sourceHeight - visibleSourceHeight);
+
+      const canvas = document.createElement("canvas");
+      canvas.width = sourceWidth + sideFill * 2;
+      canvas.height = visibleSourceHeight + topFill + bottomFill;
+      const context = canvas.getContext("2d", { alpha: false });
+
+      if (!context) {
+        const fallback = new THREE.Texture(image);
+        fallback.needsUpdate = true;
+        fallback.colorSpace = THREE.SRGBColorSpace;
+        fallback.wrapS = THREE.ClampToEdgeWrapping;
+        fallback.wrapT = THREE.ClampToEdgeWrapping;
+        return fallback;
+      }
+
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = "high";
+
+      // Partie centrale : largeur complète, haut conservé, bas recadré.
+      context.drawImage(
+        image,
+        0,
+        0,
+        sourceWidth,
+        visibleSourceHeight,
+        sideFill,
+        topFill,
+        sourceWidth,
+        visibleSourceHeight
+      );
+
+      // Étire progressivement une petite bande située au bord de l'image.
+      // Les bandes restent fines près de la jonction puis deviennent plus
+      // larges vers l'extérieur, ce qui évite l'effet de colonne répétée.
+      const drawProgressiveSide = (isLeft) => {
+        const strips = 36;
+        const sourceBand = Math.max(8, Math.round(sourceWidth * 0.045));
+
+        for (let index = 0; index < strips; index += 1) {
+          const t0 = index / strips;
+          const t1 = (index + 1) / strips;
+          const eased0 = Math.pow(t0, 1.7);
+          const eased1 = Math.pow(t1, 1.7);
+
+          const destinationStart = Math.round(sideFill * t0);
+          const destinationEnd = Math.round(sideFill * t1);
+          const destinationWidth = Math.max(1, destinationEnd - destinationStart);
+
+          // À la jonction, on prélève presque le pixel extérieur. En allant
+          // vers le bord du canvas, on utilise progressivement une zone plus
+          // profonde du bord de l'image, puis on l'étire davantage.
+          const sampleDepth = Math.max(1, Math.round(sourceBand * (eased1 - eased0)));
+          const sampleOffset = Math.round(sourceBand * eased0);
+
+          const sourceX = isLeft
+            ? Math.min(sourceWidth - 1, sampleOffset)
+            : Math.max(0, sourceWidth - sampleOffset - sampleDepth);
+
+          const destinationX = isLeft
+            ? sideFill - destinationEnd
+            : sideFill + sourceWidth + destinationStart;
+
+          context.drawImage(
+            image,
+            sourceX,
+            0,
+            sampleDepth,
+            visibleSourceHeight,
+            destinationX,
+            topFill,
+            destinationWidth,
+            visibleSourceHeight
+          );
+        }
+
+        // Fusion légère au raccord pour rendre la transition imperceptible.
+        const seamWidth = Math.max(6, Math.round(sourceWidth * 0.006));
+        const gradient = context.createLinearGradient(
+          isLeft ? sideFill - seamWidth : sideFill + sourceWidth,
+          0,
+          isLeft ? sideFill : sideFill + sourceWidth + seamWidth,
+          0
+        );
+        gradient.addColorStop(0, "rgba(0,0,0,0)");
+        gradient.addColorStop(1, "rgba(0,0,0,0.18)");
+        context.save();
+        context.globalCompositeOperation = "source-over";
+        context.fillStyle = gradient;
+        context.fillRect(
+          isLeft ? sideFill - seamWidth : sideFill + sourceWidth,
+          topFill,
+          seamWidth,
+          visibleSourceHeight
+        );
+        context.restore();
+      };
+
+      drawProgressiveSide(true);
+      drawProgressiveSide(false);
+
+      // Haut : première ligne de l'image centrale et des extensions.
+      context.drawImage(
+        canvas,
+        0,
+        topFill,
+        canvas.width,
+        1,
+        0,
+        0,
+        canvas.width,
+        topFill
+      );
+
+      // Bas : dernière ligne de la zone conservée.
+      const visibleBottomY = topFill + visibleSourceHeight - 1;
+      context.drawImage(
+        canvas,
+        0,
+        visibleBottomY,
+        canvas.width,
+        1,
+        0,
+        topFill + visibleSourceHeight,
+        canvas.width,
+        bottomFill
+      );
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      texture.minFilter = THREE.LinearMipmapLinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.generateMipmaps = true;
+      texture.anisotropy = Math.min(
+        8,
+        this.renderer?.capabilities?.getMaxAnisotropy?.() || 1
+      );
+      texture.needsUpdate = true;
+      return texture;
+    }
+
     setPanorama(asset, definition = BF.maps[this.currentMapId]) {
-      if (this.panoramaTexture) this.panoramaTexture.dispose();
       const loader = new this.THREE.TextureLoader();
       const catalogMap = global.BLUEFOX_MAP_ASSETS?.catalog?.maps?.find(
         (map) => map.number === definition?.number
       );
+
       // Source autoritaire : l'image N... portant le même numéro que la Map.
       asset = catalogMap?.scene?.url || definition?.sceneUrl || asset;
       const filename = String(asset || "").split("/").pop();
       const isTerrain = Boolean(
         global.BLUEFOX_MAP_ASSETS?.parseTerrain?.({ name: filename })
       );
+
       if (isTerrain) {
         asset = catalogMap?.scene?.url || definition?.sceneUrl || asset;
       }
+
       this.currentPanoramaAsset = asset;
       const candidates =
         global.BLUEFOX_MAP_ASSETS?.imageUrlCandidates?.(asset) || [asset];
-      let panoramaTexture;
+
+      const applyTexture = (sourceTexture) => {
+        if (!sourceTexture?.image) return;
+
+        const extendedTexture = this.createExtendedPanoramaTexture(
+          sourceTexture.image
+        );
+
+        if (this.panoramaTexture) this.panoramaTexture.dispose();
+        this.panoramaTexture = extendedTexture;
+        this.panorama.material.map = extendedTexture;
+        this.panorama.material.needsUpdate = true;
+
+        // La texture source n'est plus utilisée après création du canvas.
+        if (sourceTexture !== extendedTexture) sourceTexture.dispose();
+      };
+
       const attempt = (index) => {
         const candidate = candidates[index];
-        const loadedTexture = loader.load(
+        loader.load(
           candidate,
-          (texture) => {
-            if (panoramaTexture && texture !== panoramaTexture) {
-              panoramaTexture.image = texture.image;
-              panoramaTexture.needsUpdate = true;
-            }
-          },
+          applyTexture,
           undefined,
           () => {
             if (index + 1 < candidates.length) {
               attempt(index + 1);
-            } else {
-              global.dispatchEvent(new CustomEvent("bluefox:image-missing", {
-                detail: {
-                  source: asset,
-                  role: "scène panoramique",
-                  mapId: this.currentMapId
-                }
-              }));
+              return;
             }
+
+            global.dispatchEvent(new CustomEvent("bluefox:image-missing", {
+              detail: {
+                source: asset,
+                role: "scène panoramique",
+                mapId: this.currentMapId
+              }
+            }));
           }
         );
-        if (!panoramaTexture) panoramaTexture = loadedTexture;
       };
+
       attempt(0);
-      this.panoramaTexture = panoramaTexture;
-      this.panoramaTexture.colorSpace = this.THREE.SRGBColorSpace;
-      this.panoramaTexture.wrapS = this.THREE.RepeatWrapping;
-      this.panoramaTexture.wrapT = this.THREE.ClampToEdgeWrapping;
-      this.panoramaTexture.repeat.set(1, 1);
-      this.panorama.material.map = this.panoramaTexture;
-      this.panorama.material.needsUpdate = true;
     }
 
     createTransitionElement() {
