@@ -1,0 +1,1021 @@
+{
+  "generator": {
+    "name": "generate_project_index.py",
+    "version": "4.0",
+    "generated_utc": "2026-07-27T15:01:03+00:00"
+  },
+  "file_graph": {
+    "nodes": [
+      {
+        "path": "engine/world-engine.js",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 10.0
+      },
+      {
+        "path": "generate_project_index.py",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 10.0
+      },
+      {
+        "path": "engine/map-registry.js",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 5.27
+      },
+      {
+        "path": "engine/ui-enhancements.css",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 4.21
+      },
+      {
+        "path": "engine/ui-enhancements.js",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 4.17
+      },
+      {
+        "path": "README_LANCEMENT.txt",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 3.77
+      },
+      {
+        "path": "engine/object-library.js",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 3.06
+      },
+      {
+        "path": "engine/character-controller.js",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 3.03
+      },
+      {
+        "path": "js/game.js",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 2.14
+      },
+      {
+        "path": "engine/exploration-hud.css",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 1.36
+      },
+      {
+        "path": "engine/path-planner.js",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 1.33
+      },
+      {
+        "path": "journal.css",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 1.26
+      },
+      {
+        "path": "map-assets.js",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 1.21
+      },
+      {
+        "path": "engine/camera-controller.js",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 1.2
+      },
+      {
+        "path": "tools/bluefox-local-server.ps1",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.83
+      },
+      {
+        "path": "index.html",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.44
+      },
+      {
+        "path": "engine/bluefox3d-core.js",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.36
+      },
+      {
+        "path": "assets/maps/CONVENTION_IMAGES.txt",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.24
+      },
+      {
+        "path": "tools/generer-catalogue-images.ps1",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.18
+      },
+      {
+        "path": "VERIFIER_ET_REPARER_IMAGES.bat",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.17
+      },
+      {
+        "path": "css/style.css",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.15
+      },
+      {
+        "path": "Images/LISEZ_MOI.txt",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.13
+      },
+      {
+        "path": "data/config.json",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.11
+      },
+      {
+        "path": "LANCER_BLUEFOX.bat",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.09
+      },
+      {
+        "path": "GENERER_CATALOGUE_IMAGES.bat",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.08
+      },
+      {
+        "path": "Images/images.txt",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.03
+      },
+      {
+        "path": "Images/images-catalog.js",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.01
+      },
+      {
+        "path": "Images/.2Jungle envahissant les ruines d’une civilisation.png.HQIbXc",
+        "category": "Autre",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/010_1.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/010_2.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/010_3.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/011_1.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/011_2.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/011_3.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/012-1.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/012-2.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/012_2.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/013_1.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/013_2.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/013_3.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/014-1.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/014_2.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/014_3.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/015_1.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/015_2.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/016_1.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/016_2.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/016_3.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/017_1.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/017_2.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/017_3.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/017_4.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/018_1.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/018_2.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/018_3.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/019_1.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/019_2.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/019_3.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/01_1.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/01_2.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/01_3.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/020-1.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/020_2.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/020_3.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/021_1.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/021_2.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/022_1.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/022_2.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/023_1.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/023_2.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/023_3.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/023_4.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/024_1.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/024_2.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/024_3.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/024_4.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/025_1.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/025_2.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/025_3.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/026_2.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/026_3.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/026_4.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/026_5.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/027-2.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/027_1.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/027_3.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/027_5.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/02_1.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/02_2.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/03_1.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/03_2.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/04_1.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/04_2.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/04_3.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/05_1.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/05_2.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/05_3.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/05_4.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/06_1.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/06_2.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/07_1.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/07_2.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/07_3.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/08_1.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/08_2.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/08_3.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/08_4.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/09_1.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/09_2.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/09_3.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/10Landes vitrifiées aux herbes rouges et mousses pâles.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/11Plaine rocheuse à végétation éparse.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/12Désert cristallin au sol craquelé .png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/13Monde cristallin monumental.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/14Désert magnétique aux roches en lévitation.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/15Désert de dunes extraterrestres.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/16Désert aride avec oasis opaline.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/17Monde volcanique et rivières de lave.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/18Banquise fracturée et cavernes de glace.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/19Toundra extraterrestre enneigée.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/1Jungle extraterrestre bioluminescente.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/20Archipel tropical extraterrestre.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/21Côte tropicale et grandes plages .png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/22Côte de galets et falaises sombres.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/23Monde sous-marin bioluminescent.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/24Mégalopole extraterrestre abandonnée et reconquise par la nature.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/25Îles flottantes et cascades aériennes.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/26BisZone de Magetisme.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/26Zone de magnetisme.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/27Zone de curiosity.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/2Jungle envahissant les ruines d’une civilisation.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/3Forêt fongique aux champignons géants.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/4Savane.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/5Prairie céladon aux végétaux en voiles2.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/6Forêt d’ambre aux arbres et racines luminescentes.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/7Marais d’ambre et végétation aquatique.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/8Marais flottant extraterrestre.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/9Steppe de verre et failles turquoise.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "Images/Capsule.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "assets/Capsule.png",
+        "category": "Asset",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "game.css",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "game.js",
+        "category": "Texte / Code",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      },
+      {
+        "path": "tools/generer-catalogue-images.mjs",
+        "category": "Autre",
+        "incoming_count": 0,
+        "outgoing_count": 0,
+        "importance_score": 0.0
+      }
+    ],
+    "edges": [],
+    "outgoing": {},
+    "incoming": {},
+    "unresolved": {}
+  },
+  "function_graph": {
+    "definitions": {},
+    "edges": [],
+    "unresolved_calls": {}
+  }
+}

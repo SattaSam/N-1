@@ -1,0 +1,88 @@
+{
+  "generator": {
+    "name": "generate_project_index.py",
+    "version": "4.0",
+    "generated_utc": "2026-07-27T15:01:03+00:00"
+  },
+  "purpose": "Mémoire technique compacte destinée à aider une IA à comprendre rapidement l'architecture du projet et à choisir les bons fichiers.",
+  "project": {
+    "entry_points": {
+      "main_scene": null,
+      "autoloads": {}
+    },
+    "godot": {
+      "project_name": "00 EXECUTABLE_BFO V2",
+      "rendering_method": null,
+      "features": [],
+      "input_actions": []
+    },
+    "statistics": {
+      "files": 143,
+      "scripts": 0,
+      "scenes": 0,
+      "lines": 9130,
+      "resolved_dependencies": 0,
+      "resolved_function_calls": 0,
+      "todo_count": 0
+    },
+    "critical_files": [
+      {
+        "path": "engine/world-engine.js",
+        "category": "Texte / Code",
+        "importance_score": 10.0,
+        "reasons": [
+          "script volumineux (1958 lignes)"
+        ]
+      },
+      {
+        "path": "generate_project_index.py",
+        "category": "Texte / Code",
+        "importance_score": 10.0,
+        "reasons": [
+          "script volumineux (1944 lignes)"
+        ]
+      },
+      {
+        "path": "engine/map-registry.js",
+        "category": "Texte / Code",
+        "importance_score": 5.27,
+        "reasons": [
+          "script volumineux (791 lignes)"
+        ]
+      },
+      {
+        "path": "engine/ui-enhancements.css",
+        "category": "Texte / Code",
+        "importance_score": 4.21,
+        "reasons": [
+          "script volumineux (632 lignes)"
+        ]
+      },
+      {
+        "path": "engine/ui-enhancements.js",
+        "category": "Texte / Code",
+        "importance_score": 4.17,
+        "reasons": [
+          "script volumineux (626 lignes)"
+        ]
+      },
+      {
+        "path": "README_LANCEMENT.txt",
+        "category": "Texte / Code",
+        "importance_score": 3.77,
+        "reasons": [
+          "script volumineux (566 lignes)"
+        ]
+      }
+    ],
+    "systems": {},
+    "recommended_read_order": [
+      "engine/world-engine.js",
+      "generate_project_index.py",
+      "engine/map-registry.js",
+      "engine/ui-enhancements.css",
+      "engine/ui-enhancements.js",
+      "README_LANCEMENT.txt"
+    ]
+  }
+}
