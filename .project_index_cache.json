@@ -1,6 +1,6 @@
 {
   "version": "4.0",
-  "generated_utc": "2026-07-27T22:38:32+00:00",
+  "generated_utc": "2026-07-28T17:36:55+00:00",
   "files": {
     "assets/Capsule.png": {
       "size_bytes": 4240931,
@@ -136,20 +136,77 @@
       }
     },
     "docs/DEV_HISTORIQUE.md": {
-      "size_bytes": 1851,
-      "modified_utc": "2026-07-27T17:54:18+00:00",
-      "sha1_12": "c7682ae872b1",
+      "size_bytes": 1434,
+      "modified_utc": "2026-07-27T23:41:19+00:00",
+      "sha1_12": "ee3b3bc21fca",
       "data": {
         "path": "docs/DEV_HISTORIQUE.md",
         "name": "DEV_HISTORIQUE.md",
         "extension": ".md",
-        "size_bytes": 1851,
-        "size_human": "1.81 Ko",
-        "modified_utc": "2026-07-27T17:54:18+00:00",
-        "line_count": 56,
+        "size_bytes": 1434,
+        "size_human": "1.40 Ko",
+        "modified_utc": "2026-07-27T23:41:19+00:00",
+        "line_count": 48,
         "category": "Texte / Code",
-        "sha1_12": "c7682ae872b1",
-        "cached": true,
+        "sha1_12": "ee3b3bc21fca",
+        "cached": false,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "docs/ETAT_REPRISE.md": {
+      "size_bytes": 453,
+      "modified_utc": "2026-07-27T23:41:19+00:00",
+      "sha1_12": "1b8380ae0b83",
+      "data": {
+        "path": "docs/ETAT_REPRISE.md",
+        "name": "ETAT_REPRISE.md",
+        "extension": ".md",
+        "size_bytes": 453,
+        "size_human": "453 o",
+        "modified_utc": "2026-07-27T23:41:19+00:00",
+        "line_count": 20,
+        "category": "Texte / Code",
+        "sha1_12": "1b8380ae0b83",
+        "cached": false,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "docs/GENERER_CATALOGUE_IMAGES.bat": {
+      "size_bytes": 280,
+      "modified_utc": "2026-07-27T17:54:14+00:00",
+      "sha1_12": "fadac198efcd",
+      "data": {
+        "path": "docs/GENERER_CATALOGUE_IMAGES.bat",
+        "name": "GENERER_CATALOGUE_IMAGES.bat",
+        "extension": ".bat",
+        "size_bytes": 280,
+        "size_human": "280 o",
+        "modified_utc": "2026-07-27T17:54:14+00:00",
+        "line_count": 12,
+        "category": "Texte / Code",
+        "sha1_12": "fadac198efcd",
+        "cached": false,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "docs/MASTER.md": {
+      "size_bytes": 1597,
+      "modified_utc": "2026-07-27T23:41:19+00:00",
+      "sha1_12": "893218555fda",
+      "data": {
+        "path": "docs/MASTER.md",
+        "name": "MASTER.md",
+        "extension": ".md",
+        "size_bytes": 1597,
+        "size_human": "1.56 Ko",
+        "modified_utc": "2026-07-27T23:41:19+00:00",
+        "line_count": 43,
+        "category": "Texte / Code",
+        "sha1_12": "893218555fda",
+        "cached": false,
         "gdscript": null,
         "scene": null
       }
@@ -263,7 +320,7 @@
         "line_count": 359,
         "category": "Texte / Code",
         "sha1_12": "83946bdb8807",
-        "cached": false,
+        "cached": true,
         "gdscript": null,
         "scene": null
       }
@@ -307,20 +364,20 @@
       }
     },
     "engine/map-registry.js": {
-      "size_bytes": 28628,
-      "modified_utc": "2026-07-27T17:54:18+00:00",
-      "sha1_12": "1433552a028a",
+      "size_bytes": 44255,
+      "modified_utc": "2026-07-28T17:32:02+00:00",
+      "sha1_12": "75858f09cf6f",
       "data": {
         "path": "engine/map-registry.js",
         "name": "map-registry.js",
         "extension": ".js",
-        "size_bytes": 28628,
-        "size_human": "27.96 Ko",
-        "modified_utc": "2026-07-27T17:54:18+00:00",
-        "line_count": 791,
+        "size_bytes": 44255,
+        "size_human": "43.22 Ko",
+        "modified_utc": "2026-07-28T17:32:02+00:00",
+        "line_count": 1213,
         "category": "Texte / Code",
-        "sha1_12": "1433552a028a",
-        "cached": true,
+        "sha1_12": "75858f09cf6f",
+        "cached": false,
         "gdscript": null,
         "scene": null
       }
@@ -377,7 +434,7 @@
         "line_count": 680,
         "category": "Texte / Code",
         "sha1_12": "c58860382c54",
-        "cached": false,
+        "cached": true,
         "gdscript": null,
         "scene": null
       }
@@ -402,19 +459,19 @@
       }
     },
     "engine/world-engine.js": {
-      "size_bytes": 83970,
-      "modified_utc": "2026-07-27T22:05:05+00:00",
-      "sha1_12": "f68e3890fe1e",
+      "size_bytes": 84910,
+      "modified_utc": "2026-07-28T17:22:06+00:00",
+      "sha1_12": "23b98430d621",
       "data": {
         "path": "engine/world-engine.js",
         "name": "world-engine.js",
         "extension": ".js",
-        "size_bytes": 83970,
-        "size_human": "82.00 Ko",
-        "modified_utc": "2026-07-27T22:05:05+00:00",
-        "line_count": 2157,
+        "size_bytes": 84910,
+        "size_human": "82.92 Ko",
+        "modified_utc": "2026-07-28T17:22:06+00:00",
+        "line_count": 2178,
         "category": "Texte / Code",
-        "sha1_12": "f68e3890fe1e",
+        "sha1_12": "23b98430d621",
         "cached": false,
         "gdscript": null,
         "scene": null
@@ -440,20 +497,20 @@
       }
     },
     "game.js": {
-      "size_bytes": 28940280,
-      "modified_utc": "2026-07-27T17:54:14+00:00",
-      "sha1_12": "7641e1a795d5",
+      "size_bytes": 28940314,
+      "modified_utc": "2026-07-27T23:03:53+00:00",
+      "sha1_12": "2d54296f8add",
       "data": {
         "path": "game.js",
         "name": "game.js",
         "extension": ".js",
-        "size_bytes": 28940280,
+        "size_bytes": 28940314,
         "size_human": "27.60 Mo",
-        "modified_utc": "2026-07-27T17:54:14+00:00",
+        "modified_utc": "2026-07-27T23:03:53+00:00",
         "line_count": null,
         "category": "Texte / Code",
-        "sha1_12": "7641e1a795d5",
-        "cached": true,
+        "sha1_12": "2d54296f8add",
+        "cached": false,
         "gdscript": null,
         "scene": null
       }
@@ -472,25 +529,6 @@
         "line_count": 1944,
         "category": "Texte / Code",
         "sha1_12": "36949852cb8a",
-        "cached": true,
-        "gdscript": null,
-        "scene": null
-      }
-    },
-    "GENERER_CATALOGUE_IMAGES.bat": {
-      "size_bytes": 280,
-      "modified_utc": "2026-07-27T17:54:14+00:00",
-      "sha1_12": "fadac198efcd",
-      "data": {
-        "path": "GENERER_CATALOGUE_IMAGES.bat",
-        "name": "GENERER_CATALOGUE_IMAGES.bat",
-        "extension": ".bat",
-        "size_bytes": 280,
-        "size_human": "280 o",
-        "modified_utc": "2026-07-27T17:54:14+00:00",
-        "line_count": 12,
-        "category": "Texte / Code",
-        "sha1_12": "fadac198efcd",
         "cached": true,
         "gdscript": null,
         "scene": null
@@ -2638,7 +2676,7 @@
         "line_count": 1,
         "category": "Texte / Code",
         "sha1_12": "b78dec801883",
-        "cached": false,
+        "cached": true,
         "gdscript": null,
         "scene": null
       }
@@ -2714,25 +2752,6 @@
         "line_count": 189,
         "category": "Texte / Code",
         "sha1_12": "5a30758a9a51",
-        "cached": true,
-        "gdscript": null,
-        "scene": null
-      }
-    },
-    "js/game.js": {
-      "size_bytes": 9603,
-      "modified_utc": "2026-07-27T17:54:18+00:00",
-      "sha1_12": "51b1b1570bdc",
-      "data": {
-        "path": "js/game.js",
-        "name": "game.js",
-        "extension": ".js",
-        "size_bytes": 9603,
-        "size_human": "9.38 Ko",
-        "modified_utc": "2026-07-27T17:54:18+00:00",
-        "line_count": 321,
-        "category": "Texte / Code",
-        "sha1_12": "51b1b1570bdc",
         "cached": true,
         "gdscript": null,
         "scene": null
@@ -2829,6 +2848,25 @@
         "category": "Texte / Code",
         "sha1_12": "e7fe429319ba",
         "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "TODO.md": {
+      "size_bytes": 1516,
+      "modified_utc": "2026-07-28T16:17:09+00:00",
+      "sha1_12": "4e8381533b71",
+      "data": {
+        "path": "TODO.md",
+        "name": "TODO.md",
+        "extension": ".md",
+        "size_bytes": 1516,
+        "size_human": "1.48 Ko",
+        "modified_utc": "2026-07-28T16:17:09+00:00",
+        "line_count": 47,
+        "category": "Texte / Code",
+        "sha1_12": "4e8381533b71",
+        "cached": false,
         "gdscript": null,
         "scene": null
       }

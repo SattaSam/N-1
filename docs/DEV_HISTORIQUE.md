@@ -1,56 +1,48 @@
-# Historique de développement condensé
+# BLUEFOX ODYSSEY — DEV HISTORIQUE
 
-## V0.14.x
+## Session du 2026-07-28
 
-- Bibliothèque 3D modulaire et collisions adaptées.
-- Caméra deux modes, boussole et horloge.
-- Harvest, passages Nord/Sud et cycle de 20 h.
-- Menu Planète responsive et mission rétractable.
-- Autonomie continue derrière les menus.
-- Pathfinding et séparation activité/intention/dialogues.
-- Stabilisation du menu Planète, boussole et transitions.
+### Fichiers reçus
+- `bluefox3d-core.js`
+- `map-registry(3).js`
+- `world-engine(8).js`
 
-## V0.15.x
+### Analyse
+Les points principaux du rendu des zones se trouvent dans `map-registry.js` :
+- chargement des textures ;
+- `zoneLayout()` ;
+- création du sol global ;
+- taille actuelle des zones ;
+- matériaux des plateaux ;
+- placement des régions.
 
-- Root motion neutralisé.
-- Bibliothèque de biomes enrichie.
-- Génération spatiale sans superposition.
-- Catalogue d’images évolutif et pipeline local.
-- Futurs biomes intégrés à Planète.
-- Harvest Heavy puis Medium.
-- Approche des ressources selon leurs collisions.
-- Mémoire persistante des découvertes.
-- Approche multipoint des ressources.
-- Journal temporel et émotionnel.
+`world-engine.js` porte notamment :
+- création du renderer ;
+- éclairage et tone mapping ;
+- gestion de scène ;
+- chargement et changement de map ;
+- panorama ;
+- nettoyage à vérifier lors des transitions.
 
-## V0.16.13 à V0.16.18
+`bluefox3d-core.js` contient notamment :
+- fonctions utilitaires ;
+- `disposeObject()` ;
+- destruction des géométries, matériaux et textures ;
+- retrait de l’objet parent.
 
-- Images locales exclues des ZIP.
-- Catalogue généré depuis `Images`.
-- Lancement WebGL par serveur HTTP local.
-- Cache neutralisé et port aléatoire.
-- Topologie procédurale pour les terres inconnues.
-- Zone actuelle et quatre voisines dans Planète.
-- Retour à la base rendu fonctionnel.
-- Cycle réglé sur 15 h de jour et 5 h de nuit.
-- Une texture par plateau et surface proportionnelle.
-- Portails recalés sur les bordures.
+### Décisions prises
+- amélioration du terrain sans refonte lourde ;
+- réduction cible d’environ 10 % ;
+- transitions simples ;
+- optimisation des textures et UV ;
+- modification fichier par fichier ;
+- livraison de chaque fichier dans un ZIP séparé.
 
-## V0.16.19
+### Incident de session
+Un ZIP précédemment annoncé ne doit pas être considéré comme un livrable technique validé.
+Aucune modification terrain complète n’a été intégrée pendant cette session.
 
-- Source unique d’état pour la Zone.
-- Cyclorama horizontal et vertical.
-- Recul caméra augmenté.
-- Course et `Run_fast` différenciés.
-- Analyse des 27 associations locales décor/texture.
-
-## V0.16.20
-
-- Bord inférieur du décor aligné au plateau.
-- Bords latéraux davantage étirés et incurvés.
-- Panorama recentré doucement derrière le plateau.
-- Recul caméra porté à 34 unités et conservé.
-- Pivot relevé progressivement au dézoom.
-- Course autonome rendue nettement plus visible.
-- Sprint accepté porté à +30 % avec `Run_fast`.
-
+### État de clôture
+- aucun des trois fichiers sources n’est considéré comme modifié ;
+- travail terrain reporté ;
+- prochaine reprise : `map-registry.js` en premier.

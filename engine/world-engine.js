@@ -684,7 +684,7 @@
       return texture;
     }
 
-    setPanorama(asset, definition = BF.maps[this.currentMapId]) {
+    async setPanorama(asset, definition = BF.maps[this.currentMapId]) {
       const loader = new this.THREE.TextureLoader();
       const catalogMap = global.BLUEFOX_MAP_ASSETS?.catalog?.maps?.find(
         (map) => map.number === definition?.number
@@ -702,51 +702,68 @@
       }
 
       this.currentPanoramaAsset = asset;
-      if (this.panorama) this.panorama.visible = false;
+      const requestedAsset = asset;
+
+      // Retire immédiatement l'ancien panorama afin qu'aucune image résiduelle
+      // ne puisse réapparaître pendant le chargement asynchrone de la suivante.
+      if (this.panorama) {
+        this.panorama.visible = false;
+        this.panorama.material.map = null;
+        this.panorama.material.needsUpdate = true;
+      }
+      if (this.panoramaTexture) {
+        this.panoramaTexture.dispose();
+        this.panoramaTexture = null;
+      }
+
       const candidates =
         global.BLUEFOX_MAP_ASSETS?.imageUrlCandidates?.(asset) || [asset];
 
-      const applyTexture = (sourceTexture) => {
-        if (!sourceTexture?.image) return;
+      const loadCandidate = (candidate) => new Promise((resolve, reject) => {
+        loader.load(candidate, resolve, undefined, reject);
+      });
 
-        const extendedTexture = this.createExtendedPanoramaTexture(
-          sourceTexture.image
-        );
+      for (const candidate of candidates) {
+        try {
+          const sourceTexture = await loadCandidate(candidate);
 
-        if (this.panoramaTexture) this.panoramaTexture.dispose();
-        this.panoramaTexture = extendedTexture;
-        this.panorama.material.map = extendedTexture;
-        this.panorama.material.needsUpdate = true;
-        this.panorama.visible = true;
-
-        // La texture source n'est plus utilisée après création du canvas.
-        if (sourceTexture !== extendedTexture) sourceTexture.dispose();
-      };
-
-      const attempt = (index) => {
-        const candidate = candidates[index];
-        loader.load(
-          candidate,
-          applyTexture,
-          undefined,
-          () => {
-            if (index + 1 < candidates.length) {
-              attempt(index + 1);
-              return;
-            }
-
-            global.dispatchEvent(new CustomEvent("bluefox:image-missing", {
-              detail: {
-                source: asset,
-                role: "scène panoramique",
-                mapId: this.currentMapId
-              }
-            }));
+          // Ignore une réponse devenue obsolète si une autre map a été demandée.
+          if (this.currentPanoramaAsset !== requestedAsset) {
+            sourceTexture?.dispose?.();
+            return false;
           }
-        );
-      };
+          if (!sourceTexture?.image) {
+            sourceTexture?.dispose?.();
+            continue;
+          }
 
-      attempt(0);
+          const extendedTexture = this.createExtendedPanoramaTexture(
+            sourceTexture.image
+          );
+
+          this.panoramaTexture = extendedTexture;
+          this.panorama.material.map = extendedTexture;
+          this.panorama.material.needsUpdate = true;
+          this.panorama.visible = true;
+
+          // La texture source n'est plus utilisée après création du canvas.
+          if (sourceTexture !== extendedTexture) sourceTexture.dispose();
+          return true;
+        } catch {
+          // Essaie le chemin candidat suivant.
+        }
+      }
+
+      if (this.currentPanoramaAsset === requestedAsset) {
+        global.dispatchEvent(new CustomEvent("bluefox:image-missing", {
+          detail: {
+            source: asset,
+            role: "scène panoramique",
+            mapId: this.currentMapId
+          }
+        }));
+      }
+      return false;
     }
 
     createTransitionElement() {
@@ -1271,7 +1288,7 @@
         this.character.pathPlanner.bounds = nextMap.bounds || 27;
       }
       this.character?.setColliders(nextMap.colliders);
-      this.setPanorama(
+      await this.setPanorama(
         definition.sceneUrl || this.assets[definition.sceneAsset],
         definition
       );

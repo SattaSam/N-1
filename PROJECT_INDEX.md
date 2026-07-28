@@ -1,17 +1,17 @@
 # Index du projet — 00 EXECUTABLE_BFO V2
 
-_Généré automatiquement par la version 4.0, le 28/07/2026 à 00:38:32._
+_Généré automatiquement par la version 4.0, le 28/07/2026 à 19:36:55._
 
 ## Vue d'ensemble
 
-- Fichiers analysés : **153**
+- Fichiers analysés : **155**
 - Scripts Godot : **0**
 - Scènes Godot : **0**
-- Taille totale : **352.05 Mo**
-- Lignes de texte/code : **9953**
+- Taille totale : **352.06 Mo**
+- Lignes de texte/code : **10177**
 - Dépendances résolues : **0**
 - TODO/FIXME/BUG/HACK : **0**
-- Fichiers repris depuis le cache : **149**
+- Fichiers repris depuis le cache : **147**
 
 ## Répartition par catégorie
 
@@ -20,7 +20,7 @@ _Généré automatiquement par la version 4.0, le 28/07/2026 à 00:38:32._
 | Asset | 112 |
 | Autre | 3 |
 | Sans extension | 1 |
-| Texte / Code | 37 |
+| Texte / Code | 39 |
 
 ## Scripts les plus volumineux
 
@@ -48,6 +48,9 @@ _Généré automatiquement par la version 4.0, le 28/07/2026 à 00:38:32._
 │   ├── ARCHITECTURE_TECHNIQUE.md
 │   ├── CONVENTIONS_MAPS_IMAGES.md
 │   ├── DEV_HISTORIQUE.md
+│   ├── ETAT_REPRISE.md
+│   ├── GENERER_CATALOGUE_IMAGES.bat
+│   ├── MASTER.md
 │   ├── MASTER_BLUEFOX_ODYSSEY.md
 │   ├── PLAN_TESTS_V0.16.20.md
 │   ├── README.md
@@ -179,8 +182,6 @@ _Généré automatiquement par la version 4.0, le 28/07/2026 à 00:38:32._
 │   ├── images-catalog.js
 │   ├── images.txt
 │   └── LISEZ_MOI.txt
-├── js
-│   └── game.js
 ├── tools
 │   ├── bluefox-local-server.ps1
 │   ├── generer-catalogue-images.mjs
@@ -189,7 +190,6 @@ _Généré automatiquement par la version 4.0, le 28/07/2026 à 00:38:32._
 ├── game.css
 ├── game.js
 ├── generate_project_index.py
-├── GENERER_CATALOGUE_IMAGES.bat
 ├── index.html
 ├── journal.css
 ├── LANCER_BLUEFOX.bat
@@ -197,6 +197,7 @@ _Généré automatiquement par la version 4.0, le 28/07/2026 à 00:38:32._
 ├── README_LANCEMENT.txt
 ├── Savegarde BFO
 ├── Savegarde BFO.txt
+├── TODO.md
 └── VERIFIER_ET_REPARER_IMAGES.bat
 ```
 
@@ -211,7 +212,10 @@ _Généré automatiquement par la version 4.0, le 28/07/2026 à 00:38:32._
 | `data/config.json` | Texte / Code | 238 o | 16 | `084ccad2e5d5` |
 | `docs/ARCHITECTURE_TECHNIQUE.md` | Texte / Code | 2.70 Ko | 81 | `c1fc1abf1007` |
 | `docs/CONVENTIONS_MAPS_IMAGES.md` | Texte / Code | 1.99 Ko | 68 | `49bf1aa36303` |
-| `docs/DEV_HISTORIQUE.md` | Texte / Code | 1.81 Ko | 56 | `c7682ae872b1` |
+| `docs/DEV_HISTORIQUE.md` | Texte / Code | 1.40 Ko | 48 | `ee3b3bc21fca` |
+| `docs/ETAT_REPRISE.md` | Texte / Code | 453 o | 20 | `1b8380ae0b83` |
+| `docs/GENERER_CATALOGUE_IMAGES.bat` | Texte / Code | 280 o | 12 | `fadac198efcd` |
+| `docs/MASTER.md` | Texte / Code | 1.56 Ko | 43 | `893218555fda` |
 | `docs/MASTER_BLUEFOX_ODYSSEY.md` | Texte / Code | 2.58 Ko | 63 | `6beab31614bf` |
 | `docs/PLAN_TESTS_V0.16.20.md` | Texte / Code | 2.21 Ko | 63 | `ca51836d973b` |
 | `docs/README.md` | Texte / Code | 597 o | 14 | `6f47097001b5` |
@@ -220,16 +224,15 @@ _Généré automatiquement par la version 4.0, le 28/07/2026 à 00:38:32._
 | `engine/camera-controller.js` | Texte / Code | 12.56 Ko | 359 | `83946bdb8807` |
 | `engine/character-controller.js` | Texte / Code | 16.55 Ko | 455 | `968ec00b3ea5` |
 | `engine/exploration-hud.css` | Texte / Code | 4.00 Ko | 204 | `5d25cab40d8d` |
-| `engine/map-registry.js` | Texte / Code | 27.96 Ko | 791 | `1433552a028a` |
+| `engine/map-registry.js` | Texte / Code | 43.22 Ko | 1213 | `75858f09cf6f` |
 | `engine/object-library.js` | Texte / Code | 13.03 Ko | 459 | `e98d6a2de9d3` |
 | `engine/path-planner.js` | Texte / Code | 6.67 Ko | 200 | `c08d6b6728bc` |
 | `engine/ui-enhancements.css` | Texte / Code | 13.44 Ko | 680 | `c58860382c54` |
 | `engine/ui-enhancements.js` | Texte / Code | 24.07 Ko | 626 | `9e72690d617d` |
-| `engine/world-engine.js` | Texte / Code | 82.00 Ko | 2157 | `f68e3890fe1e` |
+| `engine/world-engine.js` | Texte / Code | 82.92 Ko | 2178 | `23b98430d621` |
 | `game.css` | Texte / Code | 15.35 Mo |  | `c2241538116c` |
-| `game.js` | Texte / Code | 27.60 Mo |  | `7641e1a795d5` |
+| `game.js` | Texte / Code | 27.60 Mo |  | `2d54296f8add` |
 | `generate_project_index.py` | Texte / Code | 61.98 Ko | 1944 | `36949852cb8a` |
-| `GENERER_CATALOGUE_IMAGES.bat` | Texte / Code | 280 o | 12 | `fadac198efcd` |
 | `Images/.2Jungle envahissant les ruines d’une civilisation.png.HQIbXc` | Autre | 1.35 Mo |  | `3553632a3311` |
 | `Images/010_1.png` | Asset | 2.49 Mo |  | `e24ad30d49a4` |
 | `Images/010_2.png` | Asset | 3.35 Mo |  | `3e3364cab015` |
@@ -347,12 +350,12 @@ _Généré automatiquement par la version 4.0, le 28/07/2026 à 00:38:32._
 | `Images/LISEZ_MOI.txt` | Texte / Code | 744 o | 19 | `c118addbebcb` |
 | `index.html` | Texte / Code | 2.75 Ko | 66 | `f0c678f0e130` |
 | `journal.css` | Texte / Code | 3.10 Ko | 189 | `5a30758a9a51` |
-| `js/game.js` | Texte / Code | 9.38 Ko | 321 | `51b1b1570bdc` |
 | `LANCER_BLUEFOX.bat` | Texte / Code | 346 o | 14 | `7a601de333db` |
 | `map-assets.js` | Texte / Code | 5.25 Ko | 182 | `bee57a05f453` |
 | `README_LANCEMENT.txt` | Texte / Code | 31.08 Ko | 566 | `6bde91727932` |
 | `Savegarde BFO` | Sans extension | 31 o |  | `e7fe429319ba` |
 | `Savegarde BFO.txt` | Texte / Code | 31 o | 1 | `e7fe429319ba` |
+| `TODO.md` | Texte / Code | 1.48 Ko | 47 | `4e8381533b71` |
 | `tools/bluefox-local-server.ps1` | Texte / Code | 4.01 Ko | 124 | `65c200da8992` |
 | `tools/generer-catalogue-images.mjs` | Autre | 980 o |  | `3831daf6799e` |
 | `tools/generer-catalogue-images.ps1` | Texte / Code | 931 o | 27 | `ce4595a9a342` |
