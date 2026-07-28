@@ -249,10 +249,204 @@
           }
         }));
       };
-    const loadTexture = (source, role) => {
+
+    const maxTerrainAnisotropy = Math.min(
+      8,
+      renderer.capabilities.getMaxAnisotropy()
+    );
+
+    const configureTerrainTexture = (texture) => {
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      texture.generateMipmaps = true;
+      texture.minFilter = THREE.LinearMipmapLinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.anisotropy = maxTerrainAnisotropy;
+      texture.needsUpdate = true;
+      return texture;
+    };
+
+    const createTerrainTransitionTexture = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1024;
+      canvas.height = 1024;
+      const texture = new THREE.CanvasTexture(canvas);
+      configureTerrainTexture(texture);
+      texture.userData.isTerrainTransitionTexture = true;
+      return texture;
+    };
+
+    const seededNoise = (x, y, seed) => {
+      let value = (
+        Math.imul(x + 1, 374761393) ^
+        Math.imul(y + 1, 668265263) ^
+        Math.imul(seed + 1, 1442695041)
+      ) >>> 0;
+      value = Math.imul(value ^ (value >>> 13), 1274126177) >>> 0;
+      return ((value ^ (value >>> 16)) >>> 0) / 4294967295;
+    };
+
+    const updateTerrainTransitionTexture = (
+      terrainTexture,
+      image,
+      textureSeed
+    ) => {
+      if (!terrainTexture?.image || !image) return;
+
+      const canvas = terrainTexture.image;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (!context) return;
+
+      const size = canvas.width;
+      const coreRatio = 49 / 55.1;
+      const inset = Math.round((size - size * coreRatio) * 0.5);
+      const coreSize = size - inset * 2;
+      const sourceWidth = image.naturalWidth || image.width;
+      const sourceHeight = image.naturalHeight || image.height;
+      const edgeSource = Math.max(
+        2,
+        Math.round(Math.min(sourceWidth, sourceHeight) * 0.022)
+      );
+
+      const drawExtendedImage = (filter = "none") => {
+        context.save();
+        context.filter = filter;
+
+        context.drawImage(
+          image, 0, 0, sourceWidth, sourceHeight,
+          inset, inset, coreSize, coreSize
+        );
+
+        context.drawImage(
+          image, 0, 0, sourceWidth, edgeSource,
+          inset, 0, coreSize, inset
+        );
+        context.drawImage(
+          image, 0, sourceHeight - edgeSource, sourceWidth, edgeSource,
+          inset, size - inset, coreSize, inset
+        );
+        context.drawImage(
+          image, 0, 0, edgeSource, sourceHeight,
+          0, inset, inset, coreSize
+        );
+        context.drawImage(
+          image, sourceWidth - edgeSource, 0, edgeSource, sourceHeight,
+          size - inset, inset, inset, coreSize
+        );
+
+        context.drawImage(
+          image, 0, 0, edgeSource, edgeSource,
+          0, 0, inset, inset
+        );
+        context.drawImage(
+          image, sourceWidth - edgeSource, 0, edgeSource, edgeSource,
+          size - inset, 0, inset, inset
+        );
+        context.drawImage(
+          image, 0, sourceHeight - edgeSource, edgeSource, edgeSource,
+          0, size - inset, inset, inset
+        );
+        context.drawImage(
+          image,
+          sourceWidth - edgeSource,
+          sourceHeight - edgeSource,
+          edgeSource,
+          edgeSource,
+          size - inset,
+          size - inset,
+          inset,
+          inset
+        );
+
+        context.restore();
+      };
+
+      context.clearRect(0, 0, size, size);
+      drawExtendedImage();
+
+      const blurSteps = 7;
+      for (let step = 1; step <= blurSteps; step += 1) {
+        const outerProgress = step / blurSteps;
+        const outerInset = Math.round(inset * (1 - outerProgress));
+        const innerInset = Math.round(
+          inset * (1 - (step - 1) / blurSteps)
+        );
+
+        context.save();
+        context.beginPath();
+        context.rect(outerInset, outerInset, size - outerInset * 2, size - outerInset * 2);
+        context.rect(innerInset, innerInset, size - innerInset * 2, size - innerInset * 2);
+        context.clip("evenodd");
+        drawExtendedImage(`blur(${(outerProgress * 5.4).toFixed(2)}px)`);
+        context.restore();
+      }
+
+      context.drawImage(
+        image, 0, 0, sourceWidth, sourceHeight,
+        inset, inset, coreSize, coreSize
+      );
+
+      const pixels = context.getImageData(0, 0, size, size);
+      const data = pixels.data;
+      const coreMin = inset;
+      const coreMax = size - inset - 1;
+
+      for (let y = 0; y < size; y += 1) {
+        for (let x = 0; x < size; x += 1) {
+          const offset = (y * size + x) * 4;
+          const insideCore =
+            x >= coreMin && x <= coreMax &&
+            y >= coreMin && y <= coreMax;
+
+          if (insideCore) {
+            data[offset + 3] = 255;
+            continue;
+          }
+
+          const distanceX =
+            x < coreMin ? coreMin - x :
+              x > coreMax ? x - coreMax : 0;
+          const distanceY =
+            y < coreMin ? coreMin - y :
+              y > coreMax ? y - coreMax : 0;
+          const distance = Math.max(distanceX, distanceY);
+          const progress = Math.min(1, distance / Math.max(1, inset));
+
+          const broadNoise = seededNoise(
+            Math.floor(x / 11),
+            Math.floor(y / 11),
+            textureSeed
+          );
+          const fineNoise = seededNoise(x, y, textureSeed + 1013);
+          const irregularity =
+            (broadNoise - 0.5) * 0.18 +
+            (fineNoise - 0.5) * 0.08;
+
+          const outerOpacity = 0.22;
+          const opacity = BF.clamp(
+            1 - progress * (1 - outerOpacity) + irregularity,
+            0.25,
+            1
+          );
+
+          const colorNoise = Math.round((fineNoise - 0.5) * 10);
+          data[offset] = BF.clamp(data[offset] + colorNoise, 0, 255);
+          data[offset + 1] = BF.clamp(data[offset + 1] + colorNoise, 0, 255);
+          data[offset + 2] = BF.clamp(data[offset + 2] + colorNoise, 0, 255);
+          data[offset + 3] = Math.round(data[offset + 3] * opacity);
+        }
+      }
+
+      context.putImageData(pixels, 0, 0);
+      terrainTexture.needsUpdate = true;
+    };
+
+    const loadTexture = (source, role, onReady) => {
       const candidates =
         global.BLUEFOX_MAP_ASSETS?.imageUrlCandidates?.(source) || [source];
       let targetTexture;
+
       const attempt = (index) => {
         const candidate = candidates[index];
         const loadedTexture = loader.load(
@@ -260,8 +454,12 @@
           (texture) => {
             if (targetTexture && texture !== targetTexture) {
               targetTexture.image = texture.image;
-              targetTexture.needsUpdate = true;
             }
+
+            const resolvedTexture = configureTerrainTexture(
+              targetTexture || texture
+            );
+            onReady?.(resolvedTexture);
           },
           undefined,
           () => {
@@ -272,21 +470,22 @@
             }
           }
         );
-        if (!targetTexture) targetTexture = loadedTexture;
+
+        if (!targetTexture) {
+          targetTexture = configureTerrainTexture(loadedTexture);
+        }
       };
+
       attempt(0);
       return targetTexture;
     };
+
     const terrainSources = (definition.terrainUrls?.length
       ? definition.terrainUrls
       : [definition.terrainUrl || assets[definition.terrainAsset]]
     ).slice(0, 6);
     const terrainSource = terrainSources[0];
-    const texture = loadTexture(terrainSource, "plateau principal");
-    texture.colorSpace = THREE.SRGBColorSpace;
-    texture.wrapS = THREE.ClampToEdgeWrapping;
-    texture.wrapT = THREE.ClampToEdgeWrapping;
-    texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    loadTexture(terrainSource, "plateau principal");
 
     const positions = zoneLayout(terrainSources.length);
     const minX = Math.min(...positions.map(([x]) => x)) - 27;
@@ -311,28 +510,43 @@
     const zoneRegions = [];
     if (terrainSources.length) {
       const zoneSize = 54;
+      const terrainTextureSize = 55.1;
+
       terrainSources.forEach((source, index) => {
-        const zoneTexture = loadTexture(source, `plateau ${index + 1}`);
-        zoneTexture.colorSpace = THREE.SRGBColorSpace;
-        zoneTexture.wrapS = THREE.ClampToEdgeWrapping;
-        zoneTexture.wrapT = THREE.ClampToEdgeWrapping;
-        zoneTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+        const zoneTexture = createTerrainTransitionTexture();
+        loadTexture(
+          source,
+          `plateau ${index + 1}`,
+          (loadedTexture) => {
+            updateTerrainTransitionTexture(
+              zoneTexture,
+              loadedTexture.image,
+              definition.seed + index * 7919
+            );
+          }
+        );
+        const [x, z] = positions[index];
+
         const zone = new THREE.Mesh(
-          new THREE.PlaneGeometry(zoneSize, zoneSize),
+          new THREE.PlaneGeometry(terrainTextureSize, terrainTextureSize),
           new THREE.MeshStandardMaterial({
             map: zoneTexture,
             color: 0xffffff,
-            roughness: 0.92,
-            metalness: 0.01,
+            transparent: true,
+            opacity: 1,
+            depthWrite: false,
+            roughness: 1,
+            metalness: 0,
             polygonOffset: true,
             polygonOffsetFactor: -1,
+            polygonOffsetUnits: -1,
             emissive: 0x000000
           })
         );
-        const [x, z] = positions[index];
         zone.name = `Zone:${index + 1}`;
         zone.rotation.x = -Math.PI / 2;
         zone.position.set(x, 0.008, z);
+        zone.renderOrder = 2 + index;
         zone.userData.walkable = true;
         zone.receiveShadow = true;
         group.add(zone);
@@ -360,7 +574,7 @@
           end: { x: zone.center.x, z: zone.center.z }
         });
       });
-      // Les zones se touchent bord à bord : aucun ruban coloré n'est rendu au sol.
+      // Les extensions 55,1 × 55,1 se chevauchent légèrement entre zones voisines.
     }
 
     const colliders = [];
@@ -398,15 +612,15 @@
         ]
       : definition.id === "jungle"
         ? [
-          ["arch", 0, -8, 1, 0],
-          ["arch", 15, 10, 0, 0.7],
-          ["stele", -13, -11, 0, 0.2],
-          ["stele", 11, -16, 1, -0.3],
-          ["tree", -18, 14, 1, 0.8],
-          ["tree", 18, 17, 0, -0.5],
-          ["tree", -20, -17, 1, 0.4],
-          ["pool", -7, 12, 1, 0]
-        ]
+            ["arch", 0, -8, 1, 0],
+            ["arch", 15, 10, 0, 0.7],
+            ["stele", -13, -11, 0, 0.2],
+            ["stele", 11, -16, 1, -0.3],
+            ["tree", -18, 14, 1, 0.8],
+            ["tree", 18, 17, 0, -0.5],
+            ["tree", -20, -17, 1, 0.4],
+            ["pool", -7, 12, 1, 0]
+          ]
         : [];
     const reservedPoints = [
       { ...definition.entry, clearance: 4.2 },
@@ -637,11 +851,11 @@
         ]
       : definition.id === "jungle"
         ? [
-          ["spore", 9],
-          ["frond", 8],
-          ["debris", 7],
-          ["needle", 3]
-        ]
+            ["spore", 9],
+            ["frond", 8],
+            ["debris", 7],
+            ["needle", 3]
+          ]
         : [...biomeProfile.decorations, ...traitDecorations];
     biomeDecorations.forEach(([type, count], familyIndex) => {
       for (let index = 0; index < count; index += 1) {
