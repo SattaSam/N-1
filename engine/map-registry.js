@@ -9,8 +9,9 @@
       number: 1,
       name: "Plaine des Cristaux",
       zones: ["Abri et épave"],
-      terrainAsset: "terrainCrystal",
-      sceneAsset: "sceneCrystal",
+      terrainUrls: ["./Images/04_1.png"],
+      terrainUrl: "./Images/04_1.png",
+      sceneUrl: "./Images/4Savane.png",
       entry: { x: 0, z: 20 },
       exits: {
         north: { x: 0, z: -26, targetMap: "jungle", targetEntry: "south" }
@@ -211,18 +212,6 @@
     }
   }
 
-  const segmentDistanceSquared = (start, end, x, z) => {
-    const dx = end.x - start.x;
-    const dz = end.z - start.z;
-    const lengthSquared = dx * dx + dz * dz;
-    const t = lengthSquared > 0
-      ? BF.clamp(((x - start.x) * dx + (z - start.z) * dz) / lengthSquared, 0, 1)
-      : 0;
-    const offsetX = x - (start.x + dx * t);
-    const offsetZ = z - (start.z + dz * t);
-    return offsetX * offsetX + offsetZ * offsetZ;
-  };
-
   const zoneLayout = (count) => {
     const layouts = {
       1: [[0, 0]],
@@ -238,7 +227,14 @@
   BF.buildMap = function buildMap(THREE, definition, assets, renderer) {
     const group = new THREE.Group();
     group.name = `Map:${definition.id}`;
+
+    // La map ne devient visible qu'une fois toutes ses textures de plateau prêtes.
+    // Cela empêche l'affichage transitoire d'une ancienne image ou d'un canevas
+    // partiellement rempli pendant le chargement initial.
+    group.visible = false;
+
     const loader = new THREE.TextureLoader();
+    const pendingTextureLoads = [];
     const reportMissingTexture = (source, role) => {
         global.dispatchEvent?.(new CustomEvent("bluefox:image-missing", {
           detail: {
@@ -445,38 +441,49 @@
     const loadTexture = (source, role, onReady) => {
       const candidates =
         global.BLUEFOX_MAP_ASSETS?.imageUrlCandidates?.(source) || [source];
-      let targetTexture;
 
-      const attempt = (index) => {
-        const candidate = candidates[index];
-        const loadedTexture = loader.load(
-          candidate,
-          (texture) => {
-            if (targetTexture && texture !== targetTexture) {
-              targetTexture.image = texture.image;
-            }
+      // Texture volontairement vide : aucune ancienne image ne peut être
+      // réaffichée pendant le chargement ou le décodage du nouveau fichier.
+      const targetTexture = configureTerrainTexture(new THREE.Texture());
+      targetTexture.image = null;
+      targetTexture.needsUpdate = false;
 
-            const resolvedTexture = configureTerrainTexture(
-              targetTexture || texture
-            );
-            onReady?.(resolvedTexture);
-          },
-          undefined,
-          () => {
-            if (index + 1 < candidates.length) {
-              attempt(index + 1);
-            } else {
+      const ready = new Promise((resolve) => {
+        const attempt = (index) => {
+          const candidate = candidates[index];
+
+          loader.load(
+            candidate,
+            (loadedTexture) => {
+              targetTexture.image = loadedTexture.image;
+              configureTerrainTexture(targetTexture);
+              targetTexture.needsUpdate = true;
+
+              try {
+                onReady?.(targetTexture);
+              } finally {
+                if (loadedTexture !== targetTexture) loadedTexture.dispose();
+                resolve(true);
+              }
+            },
+            undefined,
+            () => {
+              if (index + 1 < candidates.length) {
+                attempt(index + 1);
+                return;
+              }
+
               reportMissingTexture(source, role);
+              resolve(false);
             }
-          }
-        );
+          );
+        };
 
-        if (!targetTexture) {
-          targetTexture = configureTerrainTexture(loadedTexture);
-        }
-      };
+        attempt(0);
+      });
 
-      attempt(0);
+      pendingTextureLoads.push(ready);
+      targetTexture.userData.ready = ready;
       return targetTexture;
     };
 
@@ -484,9 +491,6 @@
       ? definition.terrainUrls
       : [definition.terrainUrl || assets[definition.terrainAsset]]
     ).slice(0, 6);
-    const terrainSource = terrainSources[0];
-    loadTexture(terrainSource, "plateau principal");
-
     const positions = zoneLayout(terrainSources.length);
     const minX = Math.min(...positions.map(([x]) => x)) - 27;
     const maxX = Math.max(...positions.map(([x]) => x)) + 27;
@@ -637,470 +641,27 @@
       })),
       ...internalZonePaths
     ];
-    const occupied = [];
-    const placementRadius = {
-      rock: 1.15,
-      crystal: 1.05,
-      fiber: 0.82,
-      needle: 0.46,
-      frond: 0.42,
-      spore: 0.5,
-      debris: 0.72,
-      tree: 1.25,
-      arch: 2.2,
-      stele: 1.05,
-      pool: 1.7
-    };
-
-    // RÈGLES DE PLACEMENT V16.22 — répartition probabiliste par volume.
-    // Les obstacles privilégient le contour global de la map. Le contour de
-    // chaque plateau reste une préférence secondaire, surtout pour les petits
-    // et moyens volumes. La zone centrale reste toujours possible.
-    const placementVolume = {
-      tree: "large",
-      arch: "large",
-      pool: "large",
-      rock: "medium",
-      stele: "medium",
-      crystal: "medium",
-      fiber: "small",
-      needle: "small",
-      frond: "small",
-      spore: "small",
-      debris: "small"
-    };
-    const placementPreferences = {
-      // Le centre reste moins dense que les contours, mais n'est plus visuellement vide.
-      large: { mapEdge: 0.68, plateauEdge: 0.20, center: 0.12 },
-      medium: { mapEdge: 0.48, plateauEdge: 0.30, center: 0.22 },
-      small: { mapEdge: 0.27, plateauEdge: 0.41, center: 0.32 }
-    };
-    const isReserved = (x, z, radius) =>
-      reservedPoints.some((point) =>
-        Math.hypot(x - point.x, z - point.z) < radius + point.clearance
-      ) ||
-      protectedCorridors.some(({ start, end }) =>
-        segmentDistanceSquared(start, end, x, z) <
-          (radius + 1.45) * (radius + 1.45)
-      );
-    const isOccupied = (x, z, radius) =>
-      occupied.some((item) =>
-        Math.hypot(x - item.x, z - item.z) < radius + item.radius + 0.28
-      );
-    const randomPosition = (
-      minimumDistance,
-      maximumDistance,
-      radius,
-      type = "frond"
-    ) => {
-      const volume = placementVolume[type] || "small";
-      const preferences = placementPreferences[volume];
-      const mapEdgeBand = volume === "large" ? 9.5 : volume === "medium" ? 8 : 6.5;
-      const plateauEdgeBand = volume === "large" ? 5.5 : volume === "medium" ? 7 : 8.5;
-      const outerSafety = Math.max(1.8, radius + 0.65);
-
-      for (let attempt = 0; attempt < 96; attempt += 1) {
-        const region = zoneRegions[Math.floor(random.next() * zoneRegions.length)] ||
-          { center: { x: 0, z: 0 } };
-        const roll = random.next();
-        let x;
-        let z;
-
-        if (roll < preferences.mapEdge) {
-          // Contour extérieur global : priorité aux angles et renfoncements,
-          // sans former de bordure continue grâce au tirage aléatoire.
-          const side = Math.floor(random.next() * 4);
-          const edgeDepth = outerSafety + random.next() * Math.max(0.5, mapEdgeBand - outerSafety);
-          const cornerBias = random.next() < 0.46;
-          const alongX = cornerBias
-            ? (random.next() < 0.5 ? minX + outerSafety + random.next() * 10 : maxX - outerSafety - random.next() * 10)
-            : minX + outerSafety + random.next() * Math.max(1, maxX - minX - outerSafety * 2);
-          const alongZ = cornerBias
-            ? (random.next() < 0.5 ? minZ + outerSafety + random.next() * 10 : maxZ - outerSafety - random.next() * 10)
-            : minZ + outerSafety + random.next() * Math.max(1, maxZ - minZ - outerSafety * 2);
-
-          if (side === 0) {
-            x = alongX;
-            z = minZ + edgeDepth;
-          } else if (side === 1) {
-            x = alongX;
-            z = maxZ - edgeDepth;
-          } else if (side === 2) {
-            x = minX + edgeDepth;
-            z = alongZ;
-          } else {
-            x = maxX - edgeDepth;
-            z = alongZ;
-          }
-        } else if (roll < preferences.mapEdge + preferences.plateauEdge) {
-          // Contour d'un plateau : probabilité faible pour les gros volumes,
-          // plus forte pour les volumes moyens et petits.
-          const side = Math.floor(random.next() * 4);
-          const halfPlateau = 27;
-          const depth = outerSafety + random.next() * Math.max(0.5, plateauEdgeBand - outerSafety);
-          const along = -halfPlateau + outerSafety +
-            random.next() * Math.max(1, halfPlateau * 2 - outerSafety * 2);
-          if (side === 0) {
-            x = region.center.x + along;
-            z = region.center.z - halfPlateau + depth;
-          } else if (side === 1) {
-            x = region.center.x + along;
-            z = region.center.z + halfPlateau - depth;
-          } else if (side === 2) {
-            x = region.center.x - halfPlateau + depth;
-            z = region.center.z + along;
-          } else {
-            x = region.center.x + halfPlateau - depth;
-            z = region.center.z + along;
-          }
-        } else {
-          // Le centre n'est jamais interdit : il reste simplement moins probable.
-          const angle = random.next() * Math.PI * 2;
-          const maxDistance = Math.min(maximumDistance, 25);
-          const distance = minimumDistance +
-            random.next() * Math.max(0.5, maxDistance - minimumDistance);
-          x = region.center.x + Math.cos(angle) * distance;
-          z = region.center.z + Math.sin(angle) * distance;
-        }
-
-        if (
-          x < minX + outerSafety || x > maxX - outerSafety ||
-          z < minZ + outerSafety || z > maxZ - outerSafety
-        ) continue;
-        if (!isReserved(x, z, radius) && !isOccupied(x, z, radius)) {
-          return { x, z };
-        }
-      }
-      return null;
-    };
-
-    const placeObject = (type, x, z, variant = 0, rotation = 0) => {
-      const object = BF.ObjectLibrary.create(THREE, type, definition.palette, variant);
-      object.root.position.set(x, 0, z);
-      object.root.rotation.y = rotation;
-      object.root.userData.libraryType = type;
-      group.add(object.root);
-      occupied.push({
-        x,
-        z,
-        radius: placementRadius[type] || 0.7
-      });
-      animatedObjects.push({
-        root: object.root,
-        type,
-        phase: random.next() * Math.PI * 2
-      });
-      if (object.hitbox) interactables.push(object.hitbox);
-      if (object.hitbox && object.colliders.length) {
-        object.hitbox.userData.interactionRadius = Math.max(
-          ...object.colliders.map((collider) => collider.radius)
-        );
-      }
-      object.colliders.forEach((collider) => {
-        const position = collider.offset.clone().applyAxisAngle(
-          new THREE.Vector3(0, 1, 0),
-          rotation
-        ).add(object.root.position);
-        colliders.push({
-          position,
-          radius: collider.radius,
-          owner: object.root
-        });
-      });
-      return object;
-    };
-
-    const biomeProfiles = {
-      volcanic: {
-        rocks: 18, resources: ["crystal", "crystal", "fiber"],
-        decorations: [["needle", 8], ["debris", 8], ["spore", 2]],
-        landmark: [
-          ["rock", -1.25, 0.25, 2],
-          ["rock", 1.1, 0.5, 1],
-          ["needle", 0, -0.45, 2],
-          ["debris", 0.2, 1.25, 0]
-        ]
-      },
-      frozen: {
-        rocks: 11, resources: ["crystal", "crystal", "fiber"],
-        decorations: [["needle", 11], ["frond", 3], ["spore", 4]],
-        landmark: [
-          ["needle", 0, 0, 2],
-          ["needle", -1.15, 0.8, 1],
-          ["needle", 1.2, 0.65, 0],
-          ["rock", 0.15, 1.55, 1]
-        ]
-      },
-      forest: {
-        rocks: 7, resources: ["fiber", "fiber", "crystal"],
-        decorations: [["frond", 11], ["spore", 9], ["needle", 2]],
-        landmark: [
-          ["tree", 0, 0, 1],
-          ["spore", -1.45, 0.85, 2],
-          ["spore", 1.35, 0.9, 1],
-          ["frond", 0.25, -1.45, 2]
-        ]
-      },
-      ruins: {
-        rocks: 9, resources: ["crystal", "fiber"],
-        decorations: [["debris", 12], ["frond", 5], ["spore", 4]],
-        landmark: [
-          ["stele", 0, 0, 1],
-          ["debris", -1.25, 0.8, 2],
-          ["debris", 1.3, 0.65, 1],
-          ["debris", 0.2, -1.25, 0]
-        ]
-      },
-      aquatic: {
-        rocks: 9, resources: ["fiber", "fiber", "crystal"],
-        decorations: [["spore", 11], ["frond", 9], ["needle", 3]],
-        landmark: [
-          ["pool", 0, 0, 1],
-          ["spore", -1.8, 0.9, 2],
-          ["spore", 1.75, 0.8, 1],
-          ["frond", 0.15, -1.9, 2]
-        ]
-      },
-      desert: {
-        rocks: 15, resources: ["crystal", "fiber"],
-        decorations: [["needle", 9], ["debris", 7], ["frond", 2]],
-        landmark: [
-          ["stele", 0, 0, 0],
-          ["rock", -1.45, 0.85, 2],
-          ["rock", 1.5, 0.7, 1],
-          ["debris", 0.35, -1.35, 2]
-        ]
-      },
-      crystalline: {
-        rocks: 12, resources: ["crystal", "crystal", "fiber"],
-        decorations: [["needle", 10], ["frond", 5], ["debris", 4]],
-        landmark: [
-          ["needle", 0, 0, 2],
-          ["needle", -1.35, 0.75, 1],
-          ["needle", 1.4, 0.7, 0],
-          ["stele", 0.15, 1.65, 1]
-        ]
-      },
-      alien: {
-        rocks: 10, resources: ["crystal", "fiber"],
-        decorations: [["frond", 7], ["spore", 6], ["needle", 5], ["debris", 4]],
-        landmark: [
-          ["stele", 0, 0, 1],
-          ["pool", 0, 1.8, 0],
-          ["spore", -1.7, -0.7, 2],
-          ["needle", 1.65, -0.65, 1]
-        ]
-      }
-    };
-    const biomeProfile = biomeProfiles[profile] || biomeProfiles.alien;
-    const traitIds = new Set((definition.traits || []).map((trait) => trait.id));
-    const rockCount =
-      biomeProfile.rocks +
-      (traitIds.has("magnetic") ? 4 : 0) +
-      (traitIds.has("floating") ? 2 : 0) -
-      (traitIds.has("wetland") ? 2 : 0);
-    const resourcePattern = traitIds.has("fungal")
-      ? ["fiber", "fiber", "crystal"]
-      : traitIds.has("lava") || traitIds.has("glass")
-        ? ["crystal", "crystal", "fiber"]
-        : biomeProfile.resources;
-    const traitDecorations = [
-      ...(traitIds.has("bioluminescent") ? [["spore", 3]] : []),
-      ...(traitIds.has("fungal") ? [["spore", 4]] : []),
-      ...(traitIds.has("urban") ? [["debris", 5]] : []),
-      ...(traitIds.has("wetland") ? [["frond", 3]] : []),
-      ...(traitIds.has("glass") ? [["needle", 3]] : [])
-    ];
-
-    // V16.23 — Micro-scènes d'obstacles.
-    // Les zones à forte probabilité reçoivent des amas irréguliers plutôt que
-    // des rochers isolés. Les variantes volumineuses sont majoritaires.
-    // V16.24 — Budget renforcé pour les obstacles permanents.
-    // Environ ×1,9 à ×2,35 du budget de base, proportionnel au nombre de plateaux.
-    // Le supplément reste principalement périphérique grâce aux préférences V16.23.
-    const plateauObstacleBoost = Math.max(0, zoneRegions.length - 1) * 2;
-    const obstacleBudget = Math.max(
-      rockCount + plateauObstacleBoost,
-      Math.round(rockCount * (1.9 + random.next() * 0.45)) + plateauObstacleBoost
-    );
-    let placedRocks = 0;
-    let clusterGuard = 0;
-    while (placedRocks < obstacleBudget && clusterGuard < obstacleBudget * 5) {
-      clusterGuard += 1;
-      const center = randomPosition(7, 27, placementRadius.rock, "rock");
-      if (!center) continue;
-
-      const remaining = obstacleBudget - placedRocks;
-      const clusterSize = Math.min(
-        remaining,
-        random.next() < 0.10 ? 1 : 4 + Math.floor(random.next() * 5)
-      );
-      const clusterRotation = random.next() * Math.PI * 2;
-
-      for (let member = 0; member < clusterSize; member += 1) {
-        const isAnchor = member === 0;
-        const distance = isAnchor ? 0 : 1.45 + random.next() * 3.4;
-        const angle = clusterRotation + random.next() * Math.PI * 2;
-        const x = center.x + Math.cos(angle) * distance;
-        const z = center.z + Math.sin(angle) * distance;
-        const radius = placementRadius.rock;
-        if (!isAnchor && (isReserved(x, z, radius) || isOccupied(x, z, radius))) continue;
-
-        // En amas : environ 75 % de gros volumes, puis moyens et petits.
-        const volumeRoll = random.next();
-        const variant = isAnchor || volumeRoll < 0.75
-          ? 2
-          : volumeRoll < 0.93 ? 1 : 0;
-        const object = placeObject(
-          "rock",
-          x,
-          z,
-          variant,
-          random.next() * Math.PI * 2
-        );
-        // Amplifie la masse visuelle sans attendre la future bibliothèque.
-        const scaleBase = variant === 2
-          ? 1.28 + random.next() * 0.34
-          : variant === 1 ? 1.08 + random.next() * 0.22
-          : 0.88 + random.next() * 0.18;
-        object.root.scale.multiplyScalar(scaleBase);
-        object.root.userData.microScene = "rock-cluster";
-        object.root.userData.permanentObstacle = true;
-        placedRocks += 1;
-        if (placedRocks >= obstacleBudget) break;
-      }
+    if (!BF.ObjectSpawner) {
+      throw new Error("buildMap nécessite ObjectSpawner.");
     }
-
-    // Ressources : ×1,5 à ×2,5 par rapport à l'ancien budget,
-    // sans jamais dépasser +150 % au total sur une map.
-    const legacyResourceCount = Math.min(12, 8 + zoneRegions.length);
-    const resourceMultiplier = 1.5 + random.next();
-    const resourceCount = Math.min(
-      Math.floor(legacyResourceCount * 2.5),
-      Math.max(
-        Math.ceil(legacyResourceCount * 1.5),
-        Math.round(legacyResourceCount * resourceMultiplier)
-      )
-    );
-
-    let placedResources = 0;
-    let resourceGuard = 0;
-    while (placedResources < resourceCount && resourceGuard < resourceCount * 6) {
-      resourceGuard += 1;
-      const kind = resourcePattern[placedResources % resourcePattern.length];
-      const center = randomPosition(3.5, 24, placementRadius[kind], kind);
-      if (!center) continue;
-
-      const remaining = resourceCount - placedResources;
-      const clusterSize = Math.min(
-        remaining,
-        random.next() < 0.42 ? 1 : 2 + Math.floor(random.next() * 3)
-      );
-      const rotation = random.next() * Math.PI * 2;
-
-      for (let member = 0; member < clusterSize; member += 1) {
-        const memberKind = resourcePattern[(placedResources + member) % resourcePattern.length];
-        const isAnchor = member === 0;
-        const distance = isAnchor ? 0 : 1.3 + random.next() * 2.6;
-        const angle = rotation + random.next() * Math.PI * 2;
-        const x = center.x + Math.cos(angle) * distance;
-        const z = center.z + Math.sin(angle) * distance;
-        const radius = placementRadius[memberKind];
-        if (!isAnchor && (isReserved(x, z, radius) || isOccupied(x, z, radius))) continue;
-
-        const object = placeObject(
-          memberKind,
-          x,
-          z,
-          (placedResources + member) % 3,
-          random.next() * Math.PI * 2
-        );
-        object.root.userData.microScene = "resource-cluster";
-        placedResources += 1;
-        if (placedResources >= resourceCount) break;
-      }
-    }
-
-    const biomeDecorations = definition.id === "crystal"
-      ? [
-          ["needle", 9],
-          ["frond", 7],
-          ["debris", 3]
-        ]
-      : definition.id === "jungle"
-        ? [
-            ["spore", 9],
-            ["frond", 8],
-            ["debris", 7],
-            ["needle", 3]
-          ]
-        : [...biomeProfile.decorations, ...traitDecorations];
-    biomeDecorations.forEach(([type, count], familyIndex) => {
-      // Petits décors : +50 à +100 %, avec davantage de présence au centre.
-      const densityMultiplier = 1.5 + random.next() * 0.5;
-      const denseCount = Math.round(count * densityMultiplier);
-      let placed = 0;
-      let guard = 0;
-
-      while (placed < denseCount && guard < denseCount * 5) {
-        guard += 1;
-        const center = randomPosition(2.5, 27, placementRadius[type], type);
-        if (!center) continue;
-        const remaining = denseCount - placed;
-        const clusterSize = Math.min(
-          remaining,
-          random.next() < 0.48 ? 1 : 2 + Math.floor(random.next() * 4)
-        );
-        const rotation = random.next() * Math.PI * 2;
-
-        for (let member = 0; member < clusterSize; member += 1) {
-          const isAnchor = member === 0;
-          const distance = isAnchor ? 0 : 0.9 + random.next() * 2.5;
-          const angle = rotation + random.next() * Math.PI * 2;
-          const x = center.x + Math.cos(angle) * distance;
-          const z = center.z + Math.sin(angle) * distance;
-          const radius = placementRadius[type];
-          if (!isAnchor && (isReserved(x, z, radius) || isOccupied(x, z, radius))) continue;
-
-          const object = placeObject(
-            type,
-            x,
-            z,
-            (placed + familyIndex + member) % 3,
-            random.next() * Math.PI * 2
-          );
-          object.root.userData.microScene = "ambient-cluster";
-          placed += 1;
-          if (placed >= denseCount) break;
-        }
-      }
+    const objectSpawner = new BF.ObjectSpawner({
+      THREE,
+      scene: group,
+      palette: definition.palette,
+      random: () => random.next()
     });
-
-    if (!landmarks.length && biomeProfile.landmark) {
-      const landmarkCount = Math.min(2, Math.max(1, Math.ceil(zoneRegions.length / 3)));
-      for (let landmarkIndex = 0; landmarkIndex < landmarkCount; landmarkIndex += 1) {
-        const center = randomPosition(9, 25, 4.2, "stele");
-        if (!center) continue;
-        const rotation = random.next() * Math.PI * 2;
-        const cosine = Math.cos(rotation);
-        const sine = Math.sin(rotation);
-        biomeProfile.landmark.forEach(([type, offsetX, offsetZ, variant]) => {
-          const x = center.x + offsetX * cosine - offsetZ * sine;
-          const z = center.z + offsetX * sine + offsetZ * cosine;
-          const object = placeObject(
-            type,
-            x,
-            z,
-            variant,
-            rotation + random.next() * 0.45
-          );
-          object.root.userData.biomeLandmark = profile;
-        });
-      }
-    }
-
-    landmarks.forEach(([type, x, z, variant, rotation]) => {
-      placeObject(type, x, z, variant, rotation);
+    objectSpawner.populateMap({
+      definition,
+      group,
+      zoneRegions,
+      bounds: { minX, maxX, minZ, maxZ },
+      resolvedExits,
+      internalZonePaths,
+      landmarks,
+      colliders,
+      interactables,
+      animatedObjects,
+      random
     });
 
     const gates = [];
@@ -1156,10 +717,16 @@
       gates.push(gate);
     });
 
+    const ready = Promise.all(pendingTextureLoads).then(() => {
+      group.visible = true;
+      return true;
+    });
+
     return {
       definition,
       group,
       ground,
+      ready,
       colliders,
       interactables,
       gates,

@@ -1,0 +1,129 @@
+(function (global) {
+  "use strict";
+
+  const BF = global.BlueFox3D = global.BlueFox3D || {};
+
+  const BIOMES = Object.freeze({
+    default: Object.freeze({
+      id: "default", budget: 34, density: 1,
+      weights: Object.freeze({ rock: 1.4, needle: 1.2, frond: 1, crystal: 0.55, fiber: 0.45, tree: 0.35, spore: 0.25, debris: 0.15 }),
+      requiredTags: Object.freeze([]), forbiddenTags: Object.freeze([])
+    }),
+    forest: Object.freeze({
+      id: "forest", budget: 46, density: 1.15,
+      weights: Object.freeze({ tree: 2.6, frond: 2.2, fiber: 1.5, spore: 1.1, rock: 0.8, crystal: 0.35, pool: 0.25, debris: 0.2 }),
+      requiredTags: Object.freeze([]), forbiddenTags: Object.freeze([])
+    }),
+    jungle: Object.freeze({
+      id: "jungle", budget: 54, density: 1.3,
+      weights: Object.freeze({ tree: 2.8, frond: 2.5, fiber: 1.8, spore: 1.6, pool: 0.35, rock: 0.5, crystal: 0.25 }),
+      requiredTags: Object.freeze(["plant"]), forbiddenTags: Object.freeze([])
+    }),
+    swamp: Object.freeze({
+      id: "swamp", budget: 42, density: 1.05,
+      weights: Object.freeze({ pool: 1.8, spore: 1.8, frond: 1.7, fiber: 1.2, tree: 0.65, rock: 0.35 }),
+      requiredTags: Object.freeze([]), forbiddenTags: Object.freeze([])
+    }),
+    ruins: Object.freeze({
+      id: "ruins", budget: 48, density: 1,
+      weights: Object.freeze({ debris: 2.8, stele: 0.75, arch: 0.28, rock: 0.9, needle: 0.7, crystal: 0.25, frond: 0.35 }),
+      requiredTags: Object.freeze([]), forbiddenTags: Object.freeze([])
+    }),
+    desert: Object.freeze({
+      id: "desert", budget: 32, density: 0.75,
+      weights: Object.freeze({ rock: 2.1, needle: 1.7, debris: 0.75, stele: 0.22, arch: 0.08, crystal: 0.35 }),
+      requiredTags: Object.freeze([]), forbiddenTags: Object.freeze(["plant"])
+    }),
+    mountain: Object.freeze({
+      id: "mountain", budget: 38, density: 0.85,
+      weights: Object.freeze({ rock: 2.7, needle: 1.2, crystal: 0.65, debris: 0.4, stele: 0.18, arch: 0.06 }),
+      requiredTags: Object.freeze([]), forbiddenTags: Object.freeze([])
+    }),
+    cave: Object.freeze({
+      id: "cave", budget: 36, density: 0.9,
+      weights: Object.freeze({ needle: 2.2, crystal: 1.2, spore: 1.15, pool: 0.35, rock: 1.4 }),
+      requiredTags: Object.freeze([]), forbiddenTags: Object.freeze(["tree"])
+    }),
+    coast: Object.freeze({
+      id: "coast", budget: 36, density: 0.9,
+      weights: Object.freeze({ rock: 1.6, pool: 0.9, frond: 0.75, needle: 0.55, debris: 0.3 }),
+      requiredTags: Object.freeze([]), forbiddenTags: Object.freeze([])
+    }),
+    tundra: Object.freeze({
+      id: "tundra", budget: 28, density: 0.7,
+      weights: Object.freeze({ rock: 1.7, frond: 0.8, needle: 0.9, crystal: 0.45 }),
+      requiredTags: Object.freeze([]), forbiddenTags: Object.freeze(["spore"])
+    })
+  });
+
+  const aliases = Object.freeze({ woodland: "forest", rainforest: "jungle", marsh: "swamp", ruin: "ruins", mountains: "mountain" });
+  const resolveId = (biome) => aliases[String(biome || "default").toLowerCase()] || String(biome || "default").toLowerCase();
+
+  // Profils exacts du peuplement V16.24. Ils décrivent quoi générer ;
+  // ObjectSpawner reste seul responsable de la création et du placement.
+  const MAP_PROFILES = Object.freeze({
+    volcanic: Object.freeze({ rocks: 18, resources: Object.freeze(["crystal", "crystal", "fiber"]), decorations: Object.freeze([Object.freeze(["needle", 8]), Object.freeze(["debris", 8]), Object.freeze(["spore", 2])]) }),
+    frozen: Object.freeze({ rocks: 11, resources: Object.freeze(["crystal", "crystal", "fiber"]), decorations: Object.freeze([Object.freeze(["needle", 11]), Object.freeze(["frond", 3]), Object.freeze(["spore", 4])]) }),
+    forest: Object.freeze({ rocks: 7, resources: Object.freeze(["fiber", "fiber", "crystal"]), decorations: Object.freeze([Object.freeze(["frond", 11]), Object.freeze(["spore", 9]), Object.freeze(["needle", 2])]) }),
+    ruins: Object.freeze({ rocks: 9, resources: Object.freeze(["crystal", "fiber"]), decorations: Object.freeze([Object.freeze(["debris", 12]), Object.freeze(["frond", 5]), Object.freeze(["spore", 4])]) }),
+    aquatic: Object.freeze({ rocks: 9, resources: Object.freeze(["fiber", "fiber", "crystal"]), decorations: Object.freeze([Object.freeze(["spore", 11]), Object.freeze(["frond", 9]), Object.freeze(["needle", 3])]) }),
+    desert: Object.freeze({ rocks: 15, resources: Object.freeze(["crystal", "fiber"]), decorations: Object.freeze([Object.freeze(["needle", 9]), Object.freeze(["debris", 7]), Object.freeze(["frond", 2])]) }),
+    crystalline: Object.freeze({ rocks: 12, resources: Object.freeze(["crystal", "crystal", "fiber"]), decorations: Object.freeze([Object.freeze(["needle", 10]), Object.freeze(["frond", 5]), Object.freeze(["debris", 4])]) }),
+    alien: Object.freeze({ rocks: 10, resources: Object.freeze(["crystal", "fiber"]), decorations: Object.freeze([Object.freeze(["frond", 7]), Object.freeze(["spore", 6]), Object.freeze(["needle", 5]), Object.freeze(["debris", 4])]) })
+  });
+
+  BF.BiomeRules = Object.freeze({
+    data: BIOMES,
+    mapProfiles: MAP_PROFILES,
+    get(biome) { return BIOMES[resolveId(biome)] || BIOMES.default; },
+    exists(biome) { return Boolean(BIOMES[resolveId(biome)]); },
+    getWeight(biome, type) { return this.get(biome).weights[type] || 0; },
+    allows(biome, definition) {
+      const rule = this.get(biome);
+      if (!definition || definition.status !== "active") return false;
+      if (!definition.biomes.includes("all") && !definition.biomes.includes(rule.id)) return false;
+      const tags = definition.spawn?.tags || [];
+      if (rule.requiredTags.length && !rule.requiredTags.some((tag) => tags.includes(tag))) return false;
+      if (rule.forbiddenTags.some((tag) => tags.includes(tag) || definition.type === tag)) return false;
+      return (rule.weights[definition.type] || 0) > 0;
+    },
+    candidates(biome) {
+      if (!BF.ObjectLibrary) throw new Error("BiomeRules nécessite ObjectLibrary.");
+      const rule = this.get(biome);
+      return BF.ObjectLibrary.list({ status: "active" })
+        .filter((definition) => this.allows(rule.id, definition))
+        .map((definition) => Object.freeze({ definition, weight: (rule.weights[definition.type] || 0) * definition.spawn.rarityWeight }));
+    },
+    getMapProfile(profile) {
+      return MAP_PROFILES[profile] || MAP_PROFILES.alien;
+    },
+    getMapPopulation(definition) {
+      const profileId = definition.profile || "alien";
+      const profile = this.getMapProfile(profileId);
+      const traitIds = new Set((definition.traits || []).map((trait) => trait.id));
+      const rockCount =
+        profile.rocks +
+        (traitIds.has("magnetic") ? 4 : 0) +
+        (traitIds.has("floating") ? 2 : 0) -
+        (traitIds.has("wetland") ? 2 : 0);
+      const resourcePattern = traitIds.has("fungal")
+        ? ["fiber", "fiber", "crystal"]
+        : traitIds.has("lava") || traitIds.has("glass")
+          ? ["crystal", "crystal", "fiber"]
+          : [...profile.resources];
+      const traitDecorations = [
+        ...(traitIds.has("bioluminescent") ? [["spore", 3]] : []),
+        ...(traitIds.has("fungal") ? [["spore", 4]] : []),
+        ...(traitIds.has("urban") ? [["debris", 5]] : []),
+        ...(traitIds.has("wetland") ? [["frond", 3]] : []),
+        ...(traitIds.has("glass") ? [["needle", 3]] : [])
+      ];
+      const decorations = definition.id === "crystal"
+        ? [["needle", 9], ["frond", 7], ["debris", 3]]
+        : definition.id === "jungle"
+          ? [["spore", 9], ["frond", 8], ["debris", 7], ["needle", 3]]
+          : [...profile.decorations.map((entry) => [...entry]), ...traitDecorations];
+      return { profileId, rockCount, resourcePattern, decorations };
+    }
+  });
+})(window);

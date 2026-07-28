@@ -1,48 +1,70 @@
-# BLUEFOX ODYSSEY — DEV HISTORIQUE
+# BlueFox Odyssey — Historique de développement
 
-## Session du 2026-07-28
-
-### Fichiers reçus
-- `bluefox3d-core.js`
-- `map-registry(3).js`
-- `world-engine(8).js`
+## 28 juillet 2026 — Consolidation du terrain
 
 ### Analyse
-Les points principaux du rendu des zones se trouvent dans `map-registry.js` :
-- chargement des textures ;
-- `zoneLayout()` ;
-- création du sol global ;
-- taille actuelle des zones ;
-- matériaux des plateaux ;
-- placement des régions.
 
-`world-engine.js` porte notamment :
-- création du renderer ;
-- éclairage et tone mapping ;
-- gestion de scène ;
-- chargement et changement de map ;
-- panorama ;
-- nettoyage à vérifier lors des transitions.
+Les responsabilités du terrain ont été confirmées :
 
-`bluefox3d-core.js` contient notamment :
-- fonctions utilitaires ;
-- `disposeObject()` ;
-- destruction des géométries, matériaux et textures ;
-- retrait de l’objet parent.
+- `map-registry.js` : chargement des textures, implantation des plateaux,
+  limites de Map, sorties et destruction de la Map ;
+- `world-engine.js` : scène, transitions, panorama et autonomie ;
+- `bluefox3d-core.js` : utilitaires et nettoyage partagé.
 
-### Décisions prises
+### Décisions conservées
+
 - amélioration du terrain sans refonte lourde ;
-- réduction cible d’environ 10 % ;
-- transitions simples ;
-- optimisation des textures et UV ;
-- modification fichier par fichier ;
-- livraison de chaque fichier dans un ZIP séparé.
+- textures nettes, transitions discrètes et UV maîtrisés ;
+- retrait complet de l’ancienne Map ;
+- petits livrables testables ;
+- aucune modification de gameplay cachée dans un correctif visuel.
 
-### Incident de session
-Un ZIP précédemment annoncé ne doit pas être considéré comme un livrable technique validé.
-Aucune modification terrain complète n’a été intégrée pendant cette session.
+Un ancien ZIP terrain annoncé pendant cette phase n’était pas un livrable
+validé. Cette consigne de prudence reste applicable.
 
-### État de clôture
-- aucun des trois fichiers sources n’est considéré comme modifié ;
-- travail terrain reporté ;
-- prochaine reprise : `map-registry.js` en premier.
+## 28 juillet 2026 — Refonte du raccordement catalogue
+
+### Objectif
+
+Retirer de `map-registry.js` toute génération d’objets et rendre le catalogue
+extensible sans modifier le registre des Maps.
+
+### Architecture adoptée
+
+- `object-library.js` devient le Catalogue Universel des Objets.
+- `biome-rules.js` porte profils, budgets, ressources et décorations.
+- `micro-scenes.js` porte amas procéduraux et landmarks.
+- `object-spawner.js` génère, place et raccorde collisions, interactables et animations.
+- `map-registry.js` fournit uniquement le contexte de Map.
+
+Les densités, budgets, placements et collisions historiques ont été conservés
+dans la refonte.
+
+### Incident et cause
+
+La première archive refondue cassait le lancement : `index.html` chargeait
+`object-library.js` puis directement `map-registry.js`. Les modules
+`biome-rules.js`, `micro-scenes.js` et `object-spawner.js` n’étaient jamais
+chargés.
+
+### Correction
+
+L’ordre de chargement a été corrigé :
+
+```text
+object-library.js
+→ biome-rules.js
+→ micro-scenes.js
+→ object-spawner.js
+→ map-registry.js
+```
+
+La syntaxe des scripts, la validité des définitions, les profils de biome,
+les modèles de micro-scènes et l’ordre du chargeur ont été vérifiés.
+
+### Statut de clôture
+
+- documentation consolidée ;
+- `map-registry.js` déclaré fichier architectural protégé ;
+- ancienne consigne « reprendre par map-registry.js » annulée ;
+- lancement complet et plan de tests encore requis avant validation du point Git.

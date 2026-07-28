@@ -437,23 +437,476 @@
     };
   };
 
-  BF.ObjectLibrary = {
-    create(THREE, type, palette, variant = 0) {
-      const factories = {
-        crystal: crystalCluster,
-        fiber: fiberPlant,
-        rock: alienRock,
-        tree: alienTree,
-        stele: ancientStele,
-        arch: traversableArch,
-        pool: luminousPool,
-        needle: crystalNeedles,
-        frond: groundFronds,
-        spore: sporeFan,
-        debris: ruinDebris
-      };
-      if (!factories[type]) throw new Error(`Type d'objet 3D inconnu : ${type}`);
-      return factories[type](THREE, palette, variant);
-    }
+  const RAW_OBJECT_LIBRARY = {
+    crystal: Object.freeze({
+      id: "RES-CRYS-M-001",
+      type: "crystal",
+      label: "Amas de cristaux",
+      category: "resources",
+      subtype: "crystal_cluster",
+      size: "M",
+      rarity: "common",
+      status: "active",
+      biomes: ["all"],
+      placement: Object.freeze({
+        edgeWeight: 0.25,
+        centerWeight: 0.75,
+        minSlope: 0,
+        maxSlope: 35
+      }),
+      gameplay: Object.freeze({
+        interactive: true,
+        collectable: true,
+        destructible: false,
+        obstacle: true
+      }),
+      ai: Object.freeze({
+        curiosity: 0.95,
+        harvestPriority: 1,
+        danger: 0
+      }),
+      build: crystalCluster
+    }),
+
+    fiber: Object.freeze({
+      id: "RES-FIBR-S-001",
+      type: "fiber",
+      label: "Plante fibreuse",
+      category: "resources",
+      subtype: "fiber_plant",
+      size: "S",
+      rarity: "common",
+      status: "active",
+      biomes: ["forest", "jungle", "swamp"],
+      placement: Object.freeze({
+        edgeWeight: 0.4,
+        centerWeight: 0.6,
+        minSlope: 0,
+        maxSlope: 30
+      }),
+      gameplay: Object.freeze({
+        interactive: true,
+        collectable: true,
+        destructible: true,
+        obstacle: false
+      }),
+      ai: Object.freeze({
+        curiosity: 0.65,
+        harvestPriority: 0.8,
+        danger: 0
+      }),
+      build: fiberPlant
+    }),
+
+    rock: Object.freeze({
+      id: "NAT-ROCK-M-001",
+      type: "rock",
+      label: "Roche extraterrestre",
+      category: "natural_decor",
+      subtype: "alien_rock",
+      size: "M",
+      rarity: "common",
+      status: "active",
+      biomes: ["all"],
+      placement: Object.freeze({
+        edgeWeight: 0.55,
+        centerWeight: 0.45,
+        minSlope: 0,
+        maxSlope: 50
+      }),
+      gameplay: Object.freeze({
+        interactive: false,
+        collectable: false,
+        destructible: false,
+        obstacle: true
+      }),
+      ai: Object.freeze({
+        curiosity: 0,
+        harvestPriority: 0,
+        danger: 0
+      }),
+      build: alienRock
+    }),
+
+    tree: Object.freeze({
+      id: "NAT-TREE-L-001",
+      type: "tree",
+      label: "Arbre extraterrestre",
+      category: "natural_decor",
+      subtype: "alien_tree",
+      size: "L",
+      rarity: "common",
+      status: "active",
+      biomes: ["forest", "jungle"],
+      placement: Object.freeze({
+        edgeWeight: 0.35,
+        centerWeight: 0.65,
+        minSlope: 0,
+        maxSlope: 28
+      }),
+      gameplay: Object.freeze({
+        interactive: false,
+        collectable: false,
+        destructible: false,
+        obstacle: true
+      }),
+      ai: Object.freeze({
+        curiosity: 0.1,
+        harvestPriority: 0,
+        danger: 0
+      }),
+      build: alienTree
+    }),
+
+    stele: Object.freeze({
+      id: "RUI-STEL-L-001",
+      type: "stele",
+      label: "Stèle ancienne",
+      category: "ruins",
+      subtype: "ancient_stele",
+      size: "L",
+      rarity: "rare",
+      status: "active",
+      biomes: ["ruins", "desert", "mountain"],
+      placement: Object.freeze({
+        edgeWeight: 0.15,
+        centerWeight: 0.85,
+        minSlope: 0,
+        maxSlope: 20
+      }),
+      gameplay: Object.freeze({
+        interactive: false,
+        collectable: false,
+        destructible: false,
+        obstacle: true
+      }),
+      ai: Object.freeze({
+        curiosity: 1,
+        harvestPriority: 0,
+        danger: 0
+      }),
+      build: ancientStele
+    }),
+
+    arch: Object.freeze({
+      id: "RUI-ARCH-XL-001",
+      type: "arch",
+      label: "Arche traversable",
+      category: "ruins",
+      subtype: "traversable_arch",
+      size: "XL",
+      rarity: "rare",
+      status: "active",
+      biomes: ["ruins", "desert", "forest", "mountain"],
+      placement: Object.freeze({
+        edgeWeight: 0.25,
+        centerWeight: 0.75,
+        minSlope: 0,
+        maxSlope: 12
+      }),
+      gameplay: Object.freeze({
+        interactive: false,
+        collectable: false,
+        destructible: false,
+        obstacle: true,
+        traversable: true
+      }),
+      ai: Object.freeze({
+        curiosity: 0.9,
+        harvestPriority: 0,
+        danger: 0
+      }),
+      build: traversableArch
+    }),
+
+    pool: Object.freeze({
+      id: "NAT-POOL-L-001",
+      type: "pool",
+      label: "Bassin lumineux",
+      category: "natural_decor",
+      subtype: "luminous_pool",
+      size: "L",
+      rarity: "uncommon",
+      status: "active",
+      biomes: ["swamp", "forest", "cave", "coast"],
+      placement: Object.freeze({
+        edgeWeight: 0.2,
+        centerWeight: 0.8,
+        minSlope: 0,
+        maxSlope: 6
+      }),
+      gameplay: Object.freeze({
+        interactive: false,
+        collectable: false,
+        destructible: false,
+        obstacle: false,
+        discoverable: true
+      }),
+      ai: Object.freeze({
+        curiosity: 0.85,
+        harvestPriority: 0,
+        danger: 0.1
+      }),
+      build: luminousPool
+    }),
+
+    needle: Object.freeze({
+      id: "NAT-NEDL-S-001",
+      type: "needle",
+      label: "Aiguilles cristallines",
+      category: "natural_decor",
+      subtype: "crystal_needles",
+      size: "S",
+      rarity: "common",
+      status: "active",
+      biomes: ["all"],
+      placement: Object.freeze({
+        edgeWeight: 0.45,
+        centerWeight: 0.55,
+        minSlope: 0,
+        maxSlope: 40
+      }),
+      gameplay: Object.freeze({
+        interactive: false,
+        collectable: false,
+        destructible: false,
+        obstacle: false
+      }),
+      ai: Object.freeze({
+        curiosity: 0.2,
+        harvestPriority: 0,
+        danger: 0
+      }),
+      build: crystalNeedles
+    }),
+
+    frond: Object.freeze({
+      id: "NAT-FRND-S-001",
+      type: "frond",
+      label: "Frondes de sol",
+      category: "natural_decor",
+      subtype: "ground_fronds",
+      size: "S",
+      rarity: "common",
+      status: "active",
+      biomes: ["forest", "jungle", "swamp", "tundra"],
+      placement: Object.freeze({
+        edgeWeight: 0.5,
+        centerWeight: 0.5,
+        minSlope: 0,
+        maxSlope: 32
+      }),
+      gameplay: Object.freeze({
+        interactive: false,
+        collectable: false,
+        destructible: false,
+        obstacle: false
+      }),
+      ai: Object.freeze({
+        curiosity: 0.05,
+        harvestPriority: 0,
+        danger: 0
+      }),
+      build: groundFronds
+    }),
+
+    spore: Object.freeze({
+      id: "NAT-SPOR-S-001",
+      type: "spore",
+      label: "Éventail à spores",
+      category: "natural_decor",
+      subtype: "spore_fan",
+      size: "S",
+      rarity: "uncommon",
+      status: "active",
+      biomes: ["forest", "jungle", "swamp", "cave"],
+      placement: Object.freeze({
+        edgeWeight: 0.55,
+        centerWeight: 0.45,
+        minSlope: 0,
+        maxSlope: 28
+      }),
+      gameplay: Object.freeze({
+        interactive: false,
+        collectable: false,
+        destructible: false,
+        obstacle: false
+      }),
+      ai: Object.freeze({
+        curiosity: 0.35,
+        harvestPriority: 0,
+        danger: 0
+      }),
+      build: sporeFan
+    }),
+
+    debris: Object.freeze({
+      id: "RUI-DEBR-S-001",
+      type: "debris",
+      label: "Débris de ruines",
+      category: "ruins",
+      subtype: "ruin_debris",
+      size: "S",
+      rarity: "common",
+      status: "active",
+      biomes: ["ruins", "desert", "forest", "mountain"],
+      placement: Object.freeze({
+        edgeWeight: 0.65,
+        centerWeight: 0.35,
+        minSlope: 0,
+        maxSlope: 36
+      }),
+      gameplay: Object.freeze({
+        interactive: false,
+        collectable: false,
+        destructible: false,
+        obstacle: false
+      }),
+      ai: Object.freeze({
+        curiosity: 0.45,
+        harvestPriority: 0,
+        danger: 0
+      }),
+      build: ruinDebris
+    })
   };
+
+
+  const SIZE_RADIUS = Object.freeze({ XS: 0.25, S: 0.5, M: 0.9, L: 1.5, XL: 2.4 });
+  const RARITY_WEIGHT = Object.freeze({ common: 1, uncommon: 0.55, rare: 0.22, epic: 0.08, legendary: 0.02 });
+
+  const SPAWN_OVERRIDES = Object.freeze({
+    crystal: { spawnCost: 3, maxPerZone: 5, minDistance: 2.2, tags: ["resource", "mineral", "glowing"], lootTable: "crystal_basic", harvestTime: 4.5 },
+    fiber: { spawnCost: 2, maxPerZone: 7, minDistance: 1.4, tags: ["resource", "plant", "fiber"], lootTable: "fiber_basic", harvestTime: 3 },
+    rock: { spawnCost: 2, maxPerZone: 12, minDistance: 1.3, tags: ["decor", "mineral", "obstacle"] },
+    tree: { spawnCost: 5, maxPerZone: 8, minDistance: 3.2, tags: ["decor", "plant", "obstacle", "landmark"] },
+    stele: { spawnCost: 8, maxPerZone: 2, minDistance: 6, tags: ["ruin", "discovery", "landmark"], discoverable: true },
+    arch: { spawnCost: 12, maxPerZone: 1, minDistance: 10, tags: ["ruin", "landmark", "traversable"], discoverable: true },
+    pool: { spawnCost: 8, maxPerZone: 2, minDistance: 7, tags: ["decor", "liquid", "glowing", "discovery"], discoverable: true },
+    needle: { spawnCost: 1, maxPerZone: 18, minDistance: 0.7, tags: ["decor", "mineral", "glowing"] },
+    frond: { spawnCost: 1, maxPerZone: 22, minDistance: 0.55, tags: ["decor", "plant", "ground_cover"] },
+    spore: { spawnCost: 1, maxPerZone: 14, minDistance: 0.8, tags: ["decor", "plant", "spore", "glowing"] },
+    debris: { spawnCost: 1, maxPerZone: 16, minDistance: 0.75, tags: ["ruin", "decor", "ground_cover"] }
+  });
+
+  // Valeurs historiques utilisées par le générateur de cartes V16.24.
+  // Elles restent distinctes des profils de spawn génériques : les modifier
+  // changerait les espacements, les collisions et la disposition des maps.
+  const MAP_PLACEMENT = Object.freeze({
+    rock: Object.freeze({ radius: 1.15, volume: "medium" }),
+    crystal: Object.freeze({ radius: 1.05, volume: "medium" }),
+    fiber: Object.freeze({ radius: 0.82, volume: "small" }),
+    needle: Object.freeze({ radius: 0.46, volume: "small" }),
+    frond: Object.freeze({ radius: 0.42, volume: "small" }),
+    spore: Object.freeze({ radius: 0.5, volume: "small" }),
+    debris: Object.freeze({ radius: 0.72, volume: "small" }),
+    tree: Object.freeze({ radius: 1.25, volume: "large" }),
+    arch: Object.freeze({ radius: 2.2, volume: "large" }),
+    stele: Object.freeze({ radius: 1.05, volume: "medium" }),
+    pool: Object.freeze({ radius: 1.7, volume: "large" })
+  });
+
+  const freezeDefinition = (definition) => {
+    const overrides = SPAWN_OVERRIDES[definition.type] || {};
+    const radius = SIZE_RADIUS[definition.size] || SIZE_RADIUS.M;
+    const spawn = Object.freeze({
+      spawnCost: overrides.spawnCost ?? Math.max(1, Math.round(radius * 3)),
+      rarityWeight: RARITY_WEIGHT[definition.rarity] ?? 1,
+      minDistance: overrides.minDistance ?? radius * 2,
+      maxPerZone: overrides.maxPerZone ?? 8,
+      preferredNeighbors: Object.freeze([...(overrides.preferredNeighbors || [])]),
+      avoidNeighbors: Object.freeze([...(overrides.avoidNeighbors || [])]),
+      tags: Object.freeze([...(overrides.tags || [])])
+    });
+    const gameplay = Object.freeze({
+      ...definition.gameplay,
+      discoverable: overrides.discoverable ?? definition.gameplay.discoverable ?? false,
+      harvestTime: overrides.harvestTime ?? null,
+      lootTable: overrides.lootTable ?? null
+    });
+    return Object.freeze({ ...definition, placement: Object.freeze({ ...definition.placement }), gameplay, ai: Object.freeze({ ...definition.ai }), spawn });
+  };
+
+  const OBJECT_LIBRARY = Object.freeze(
+    Object.fromEntries(Object.entries(RAW_OBJECT_LIBRARY).map(([type, definition]) => [type, freezeDefinition(definition)]))
+  );
+
+  const OBJECT_INDEX_BY_ID = Object.freeze(
+    Object.values(OBJECT_LIBRARY).reduce((index, definition) => {
+      index[definition.id] = definition;
+      return index;
+    }, {})
+  );
+
+  BF.ObjectLibrary = Object.freeze({
+    schemaVersion: 2,
+    data: OBJECT_LIBRARY,
+
+    get(type) {
+      return OBJECT_LIBRARY[type] || null;
+    },
+
+    getById(id) {
+      return OBJECT_INDEX_BY_ID[id] || null;
+    },
+
+    exists(type) {
+      return Object.prototype.hasOwnProperty.call(OBJECT_LIBRARY, type);
+    },
+
+    list(filters = {}) {
+      const entries = Object.values(OBJECT_LIBRARY);
+      return entries.filter((definition) => {
+        if (filters.category && definition.category !== filters.category) return false;
+        if (filters.size && definition.size !== filters.size) return false;
+        if (filters.rarity && definition.rarity !== filters.rarity) return false;
+        if (filters.status && definition.status !== filters.status) return false;
+        if (filters.biome && !definition.biomes.includes("all") && !definition.biomes.includes(filters.biome)) return false;
+        return true;
+      });
+    },
+
+    getSpawnProfile(type) {
+      return OBJECT_LIBRARY[type]?.spawn || null;
+    },
+
+    getMapPlacement(type) {
+      return MAP_PLACEMENT[type] || Object.freeze({ radius: 0.7, volume: "small" });
+    },
+
+    listByTag(tag) {
+      return Object.values(OBJECT_LIBRARY).filter((definition) => definition.spawn.tags.includes(tag));
+    },
+
+    validate() {
+      const ids = new Set();
+      const errors = [];
+      Object.values(OBJECT_LIBRARY).forEach((definition) => {
+        if (!definition.id || !definition.type || typeof definition.build !== "function") errors.push(`Définition invalide : ${definition.type || "inconnue"}`);
+        if (ids.has(definition.id)) errors.push(`Identifiant dupliqué : ${definition.id}`);
+        ids.add(definition.id);
+      });
+      return Object.freeze({ valid: errors.length === 0, errors: Object.freeze(errors) });
+    },
+
+    create(THREE, type, palette, variant = 0) {
+      const definition = OBJECT_LIBRARY[type];
+      if (!definition) throw new Error(`Type d'objet 3D inconnu : ${type}`);
+
+      const instance = definition.build(THREE, palette, variant);
+      instance.catalogId = definition.id;
+      instance.definition = definition;
+
+      if (instance.root) {
+        instance.root.userData.objectType = definition.type;
+        instance.root.userData.catalogId = definition.id;
+        instance.root.userData.category = definition.category;
+        instance.root.userData.subtype = definition.subtype;
+        instance.root.userData.size = definition.size;
+        instance.root.userData.rarity = definition.rarity;
+      }
+
+      return instance;
+    }
+  });
 })(window);

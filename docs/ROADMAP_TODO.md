@@ -1,51 +1,62 @@
-# Roadmap et TODO
+# BlueFox Odyssey — Roadmap et TODO
 
-## Priorité immédiate — atteindre 75 % de stabilité 3D
+Mise à jour : **28 juillet 2026**  
+Cette page est la **seule TODO active**.
 
-- Tester la V0.16.20 pendant plusieurs cycles de déplacement.
-- Enchaîner au moins dix transitions de Zone.
-- Tester Maps de 1, 2, 4 et 6 plateaux.
-- Vérifier le cyclorama sur écran 16:9, tablette et smartphone.
-- Mesurer les blocages près des portails, ressources et arches.
-- Confirmer les clips `Run`, `Run_fast`, `Harvest_Heavy` et
-  `Harvest_Medium` sur le GLB final.
+## P0 — Valider le point de sauvegarde catalogue
 
-## Génération des Zones
+- [ ] Installer `index.html` et les cinq modules catalogue corrigés.
+- [ ] Lancer le jeu avec `LANCER_BLUEFOX.bat`.
+- [ ] Vérifier l’absence d’erreur avant l’affichage de la première Map.
+- [ ] Contrôler objets, ressources, collisions et interactables.
+- [ ] Enchaîner au moins dix transitions de Zone.
+- [ ] Tester des Maps de 1, 2, 4 et 6 plateaux.
+- [ ] Vérifier qu’une ancienne Map disparaît totalement.
+- [ ] Effectuer le point Git seulement après validation.
 
-- Diversifier les dispositions de 3, 5 et 6 plateaux.
-- Adapter la densité d’objets à la surface réelle.
-- Analyser les indices textuels des noms de biomes.
-- Étendre les règles de décor selon les profils de biome.
-- Garantir un corridor praticable entre chaque portail.
-- Conserver une graine stable par Zone.
+## P1 — Atteindre 75 % de stabilité du socle 3D
 
-## Gameplay
+- [ ] Vérifier le cyclorama sur 16:9, tablette et smartphone.
+- [ ] Mesurer les blocages près des portails, ressources et arches.
+- [ ] Confirmer `Run`, `Run_fast`, `Harvest_Heavy` et `Harvest_Medium`.
+- [ ] Vérifier le recul maximal, le recentrage et le suivi libre.
+- [ ] Valider l’affichage portrait, notamment 4:5 en 1250 × 1562.
 
-- Construction réelle du premier refuge.
-- Projets prioritaires et besoins associés.
-- Alimentation et repos avec effets mesurés.
-- Recherche et connaissances persistantes.
-- Créatures et protocole de contact.
-- Conséquences graduelles des choix du joueur.
+## P2 — Enrichir le catalogue sans toucher à MapRegistry
 
-## Narration
+- [ ] Ajouter progressivement de nouvelles familles dans `object-library.js`.
+- [ ] Étendre les profils dans `biome-rules.js`.
+- [ ] Ajouter des compositions dans `micro-scenes.js`.
+- [ ] Tester chaque ajout sur au moins deux biomes.
+- [ ] Maintenir une graine stable par Zone.
+- [ ] Garantir les corridors entre portails.
 
-- Enrichir les connaissances de biome uniquement après découverte.
-- Produire des synthèses liées aux observations réelles.
-- Développer les émotions selon les traits du joueur.
-- Ajouter événements, rencontres et souvenirs marquants.
-- Faire évoluer le Journal sans texte générique incohérent.
+## P3 — Gameplay
 
-## Interface
+- [ ] Construction réelle du premier refuge.
+- [ ] Projets prioritaires et besoins associés.
+- [ ] Alimentation et repos avec effets mesurés.
+- [ ] Recherche et connaissances persistantes.
+- [ ] Créatures et protocole de contact.
+- [ ] Conséquences graduelles des choix du joueur.
 
-- Finaliser le globe Planète.
-- Tester les polices et panneaux sur petit écran.
-- Conserver toutes les informations accessibles sans surcharge.
-- Ajouter une indication discrète du fichier de décor chargé en mode diagnostic.
+## P4 — Narration et interface
+
+- [ ] Enrichir les connaissances seulement après découverte.
+- [ ] Produire des synthèses liées aux observations réelles.
+- [ ] Développer émotions, événements et souvenirs.
+- [ ] Finaliser le globe Planète.
+- [ ] Tester polices, panneaux et menus scrollables sur petits écrans.
+- [ ] Ajouter le nom du décor chargé en mode diagnostic.
+
+## Hors priorité immédiate
+
+- APK Android à reconstruire depuis la V0.16.20 validée, jamais depuis V16.14.
+- Refonte lourde du terrain ou shaders complexes.
+- Modification de `map-registry.js` pour ajouter des objets.
 
 ## Estimations prudentes
 
-- Socle 3D actuel avant test V0.16.20 : **environ 72 %**.
-- Objectif du prochain jalon : **75 %**.
+- Socle 3D avant validation du raccordement : **environ 72 %**.
+- Prochain jalon : **75 %**.
 - Jeu complet envisagé : **environ 22 %**.
-

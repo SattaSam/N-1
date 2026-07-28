@@ -8,5 +8,7 @@ if errorlevel 1 (
   exit /b 1
 )
 echo.
-echo Le catalogue est pret. Vous pouvez lancer index.html.
+echo Le catalogue est pret.
+echo Lancez maintenant BlueFox avec LANCER_BLUEFOX.bat.
+echo Ne lancez pas index.html directement.
 pause

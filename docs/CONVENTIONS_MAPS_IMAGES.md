@@ -1,10 +1,16 @@
-# Conventions Maps, Zones et images
+# BlueFox Odyssey — Conventions Maps, images et objets
 
-## Convention de nommage
+## Vocabulaire
+
+- Une **Zone** est une Map complète visible par le joueur.
+- Une **Map** contient de 1 à 6 **plateaux** carrés.
+- Un plateau n’est jamais présenté comme une Zone distincte.
+
+## Nommage des images
 
 ### Décors panoramiques
 
-Une image dont le nom commence directement par un nombre est un décor :
+Un nom commençant directement par un nombre désigne un décor :
 
 ```text
 1Jungle extraterrestre bioluminescente.png
@@ -14,7 +20,7 @@ Une image dont le nom commence directement par un nombre est un décor :
 
 ### Textures de plateau
 
-Une image commençant par `0` est une texture carrée de plateau :
+Un nom commençant par `0` désigne une texture carrée :
 
 ```text
 01_1.png
@@ -29,40 +35,50 @@ Les séparateurs `_` et `-` sont acceptés.
 
 Le décor `N…` utilise prioritairement les textures `0N_x`.
 
-Exemples :
-
 | Zone | Décor | Textures prioritaires |
 | --- | --- | --- |
 | 1 | `1…` | `01_1`, `01_2`, `01_3` |
 | 2 | `2…` | `02_1`, `02_2` |
 | 10 | `10…` | `010_1`, `010_2`, `010_3` |
 
-Cette association est préférentielle, pas obligatoire. En l’absence de texture
-correspondante, le générateur peut sélectionner une autre texture cataloguée
-de manière déterministe. Un fichier `0N_x` ne doit jamais devenir un décor.
+Cette association est préférentielle. Sans texture correspondante, le
+générateur peut sélectionner une texture cataloguée de façon déterministe. Un
+fichier `0N_x` ne doit jamais devenir un décor.
 
-## Composition d’une Zone
+## Composition et topologie
 
-- Une Zone est une Map complète.
-- Elle contient de 1 à 6 plateaux 1/1.
-- Chaque image de texture utilisée correspond à un plateau.
+- Chaque texture utilisée correspond à un plateau.
 - Ajouter un plateau agrandit réellement la surface jouable.
-- Les plateaux internes ne sont pas annoncés comme des Zones séparées.
-
-## Topologie
-
-- Les directions possibles sont Nord, Sud, Est et Ouest.
-- Les portails sont presque au bord extérieur de la Map.
+- Les directions sont Nord, Sud, Est et Ouest.
+- Les portails restent près du bord extérieur.
 - Un portail Nord/Sud est parallèle au bord Est–Ouest.
 - Un portail Est/Ouest est parallèle au bord Nord–Sud.
-- Une nouvelle Zone possède une liaison retour vers la précédente.
-- Elle conserve également une continuation vers une future Zone inconnue.
-- Cette future Zone reste masquée tant qu’elle n’a pas été explorée.
+- Une nouvelle Zone conserve un retour vers la précédente.
+- Une continuation inconnue reste masquée jusqu’à sa découverte.
+- Un corridor praticable doit relier les points d’entrée et de sortie.
 
-## Reconstruction du catalogue
+## Catalogue d’objets
+
+- `object-library.js` est la source unique de définition des objets.
+- `biome-rules.js` décide dans quels biomes et avec quels budgets ils apparaissent.
+- `micro-scenes.js` compose les amas et landmarks.
+- `object-spawner.js` applique placement, collisions et interactions.
+- `map-registry.js` ne contient aucune génération ni définition d’objet.
+
+Pour ajouter un objet :
+
+1. créer sa définition complète dans `object-library.js` ;
+2. l’ajouter à `biome-rules.js` seulement s’il doit être généré automatiquement ;
+3. l’ajouter à `micro-scenes.js` seulement s’il participe à une composition ;
+4. ne modifier `object-spawner.js` que pour une nouvelle mécanique générale ;
+5. ne pas modifier `map-registry.js`.
+
+Les densités, budgets, rayons, corridors et collisions sont des paramètres de
+gameplay : toute modification doit être intentionnelle et testée.
+
+## Reconstruction du catalogue d’images
 
 1. Placer `Images` à côté de `index.html`.
 2. Exécuter `GENERER_CATALOGUE_IMAGES.bat`.
 3. Si nécessaire, exécuter `VERIFIER_ET_REPARER_IMAGES.bat`.
-4. Lancer le jeu par `LANCER_BLUEFOX.bat`.
-
+4. Lancer le jeu avec `LANCER_BLUEFOX.bat`.
