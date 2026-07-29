@@ -1,9 +1,45 @@
 # BlueFox Odyssey — État de reprise
 
-Date : **29 juillet 2026**  
-Base : **V0.16.20 + refonte catalogue + correctifs cumulatifs**
+Date : **30 juillet 2026**
+
+Base : **V0.16.20 + correctifs cumulatifs + Sprint M0 Fondation IA**
 
 ## Point exact
+
+Le Sprint M0 ajoute une première fondation de missions persistantes avec les
+modules suivants :
+
+- `engine/mission-types.js` ;
+- `engine/mission-tree.js` ;
+- `engine/mission-memory.js` ;
+- `engine/mission-planner.js` ;
+- `engine/mission-manager.js` ;
+- `engine/action-bridge.js`.
+
+Le raccordement est limité à `index.html` et `engine/world-engine.js`.
+`engine/character-controller.js` et `engine/path-planner.js` sont restés
+strictement inchangés.
+
+Les tests de syntaxe, de progression de l’arbre, de prérequis, de sérialisation
+et de reconstruction du ZIP sont réussis. Le comportement doit maintenant être
+validé dans le navigateur.
+
+Le paquet cumulatif de reprise est :
+
+`BlueFox_Odyssey_V0.16.20_M0_CUMULATIF.zip`
+
+### Test express M0
+
+1. Lancer `LANCER_BLUEFOX.bat`.
+2. Attendre que BlueFox commence seul à explorer ou collecter.
+3. Vérifier qu’il explore un plateau, collecte des cristaux et des fibres, puis
+   effectue une recherche.
+4. Ouvrir la console avec `F12` et exécuter
+   `BlueFox3D.getMissionState()`.
+5. Rafraîchir la page et vérifier que les valeurs `progress` ne reviennent pas
+   à zéro.
+6. Continuer à utiliser la caméra et les menus pendant les actions pour
+   détecter toute régression du moteur historique.
 
 La génération des objets a été extraite de `engine/map-registry.js` et répartie
 entre :
@@ -44,14 +80,13 @@ devient l’unique base locale de reprise avant le prochain point Git.
 
 ## Reprendre ici
 
-1. Sauvegarder le projet actuel.
-2. Copier les quatre fichiers du paquet cumulatif dans le dossier `engine`
-   existant, sans supprimer ce dossier.
-3. Lancer uniquement `LANCER_BLUEFOX.bat`.
-4. Vérifier que le jeu atteint la première Map sans erreur.
-5. Exécuter les sections catalogue, portails et carte Planète de
+1. Décompresser le paquet cumulatif M0 dans un nouveau dossier.
+2. Lancer uniquement `LANCER_BLUEFOX.bat`.
+3. Vérifier que le jeu atteint la première Map sans erreur.
+4. Exécuter le test express M0 ci-dessus.
+5. Contrôler ensuite les sections catalogue, portails et carte Planète de
    `PLAN_TESTS_V0.16.20.md`.
-6. Si les tests passent, effectuer le point Git et considérer ce jeu
+6. Si tous les tests passent, effectuer le point Git et considérer ce jeu
    documentaire comme la référence stable.
 7. Si un test échoue, conserver la première erreur de console et corriger le
    module responsable sans réintroduire la génération dans `map-registry.js`.

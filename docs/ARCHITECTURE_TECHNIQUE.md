@@ -160,3 +160,13 @@ Principales clés locales :
 - `bluefox_odyssey_save_v1`
 
 Les Maps procédurales sont régénérées à partir de leurs définitions et graines.
+# Extension M0 — Fondation IA
+
+La couche de missions M0 est composée de six modules indépendants chargés avant
+`world-engine.js`. Elle observe l’état réel de la map, choisit une action
+réalisable, l’exécute par l’API publique de `WorldEngine`, puis ne valide la
+progression qu’au retour d’un hook d’achèvement réel. La mémoire locale
+`bluefox_mission_memory_m0_v1` permet une reprise sans modifier les sauvegardes
+historiques du monde.
+
+Référence détaillée : `docs/SPRINT_M0_FONDATION_IA.md`.

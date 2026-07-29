@@ -1,7 +1,8 @@
 # Documents de référence — BlueFox Odyssey
 
-Référence logicielle : **V0.16.20 + correctifs cumulatifs**  
-Point documentaire : **29 juillet 2026 — portails et carte Planète**
+Référence logicielle : **V0.16.20 + Sprint M0 Fondation IA**
+
+Point documentaire : **30 juillet 2026 — fondation du système de missions**
 
 ## Documents faisant autorité
 
@@ -12,6 +13,7 @@ Point documentaire : **29 juillet 2026 — portails et carte Planète**
 5. [ROADMAP_TODO.md](ROADMAP_TODO.md) — seule liste de tâches active.
 6. [PLAN_TESTS_V0.16.20.md](PLAN_TESTS_V0.16.20.md) — validation fonctionnelle avant promotion du point de sauvegarde.
 7. [DEV_HISTORIQUE.md](DEV_HISTORIQUE.md) — décisions, incidents et livraisons.
+8. [SPRINT_M0_FONDATION_IA.md](SPRINT_M0_FONDATION_IA.md) — architecture et test express du premier système de missions.
 
 ## Fichiers de compatibilité
 

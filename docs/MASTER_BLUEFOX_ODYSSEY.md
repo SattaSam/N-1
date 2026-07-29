@@ -1,7 +1,9 @@
 # BlueFox Odyssey — Document maître
 
-Version logicielle de référence : **V0.16.20 + correctifs cumulatifs**  
-Point documentaire : **29 juillet 2026 — portails et carte Planète**  
+Version logicielle de référence : **V0.16.20 + Sprint M0 Fondation IA**
+
+Point documentaire : **30 juillet 2026 — fondation du système de missions**
+
 Statut : **candidat à valider dans le jeu avant le prochain point Git**
 
 ## Vision
@@ -36,6 +38,23 @@ Journal ou le menu Planète.
 6. La découverte enrichit Planète, le Journal et les connaissances.
 7. BlueFox revient au refuge sur demande ou selon ses besoins.
 
+## Fondation IA de missions — M0
+
+Le moteur dispose désormais d’un premier arbre de mission hiérarchique
+persistant. Une mission peut contenir des sous-objectifs, des prérequis, un
+volume d’actions à accomplir et une progression sauvegardée.
+
+Le premier scénario technique `foundation` demande :
+
+1. d’explorer un plateau ;
+2. de collecter deux cristaux ;
+3. de collecter deux fibres ;
+4. d’effectuer une recherche après les deux collectes.
+
+Cette couche ne remplace pas l’autonomie existante. Elle propose une action
+uniquement lorsque le moteur est libre et laisse l’autonomie historique
+reprendre si aucune action de mission n’est réalisable.
+
 ## Informations affichées
 
 - **En ce moment** : activité instantanée.
@@ -63,6 +82,9 @@ L’ajout ordinaire d’un objet ne doit pas nécessiter de modification de
 ## État connu
 
 - Base PC : **V0.16.20**.
+- Fondation IA M0 intégrée : **contrôles statiques et cycle logique réussis,
+  validation en jeu requise**.
+- `CharacterController` et `PathPlanner` sont inchangés par M0.
 - Ancienne base mobile/APK V16.14 : **obsolète**.
 - Refonte catalogue : dépendances raccordées dans `index.html`, cohérence
   syntaxique vérifiée, **test de lancement réel encore requis**.

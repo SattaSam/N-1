@@ -99,3 +99,11 @@ les modèles de micro-scènes et l’ordre du chargeur ont été vérifiés.
 - `map-registry.js` déclaré fichier architectural protégé ;
 - ancienne consigne « reprendre par map-registry.js » annulée ;
 - lancement complet et plan de tests encore requis avant validation du point Git.
+# 2026-07-30 — Sprint M0 Fondation IA
+
+- Ajout du vocabulaire de missions, de l’arbre hiérarchique, de la mémoire
+  persistante, du planificateur, du pont d’actions et du gestionnaire.
+- Raccordement minimal dans `index.html` et `world-engine.js`.
+- Validation sur achèvement réel des collectes, explorations et routines.
+- Conservation intégrale de `character-controller.js` et `path-planner.js`.
+- Exposition de `BlueFox3D.getMissionState()` pour le test et le diagnostic.

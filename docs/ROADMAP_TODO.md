@@ -1,9 +1,19 @@
 # BlueFox Odyssey — Roadmap et TODO
 
-Mise à jour : **29 juillet 2026**  
+Mise à jour : **30 juillet 2026**
+
 Cette page est la **seule TODO active**.
 
 ## P0 — Valider le point de sauvegarde catalogue
+
+- [ ] Lancer le paquet cumulatif `V0.16.20_M0`.
+- [ ] Vérifier l’absence d’erreur de chargement des six modules de mission.
+- [ ] Observer l’exploration, deux collectes de cristaux, deux collectes de
+  fibres et la recherche finale.
+- [ ] Contrôler `BlueFox3D.getMissionState()` dans la console.
+- [ ] Rafraîchir et confirmer la persistance de la progression.
+- [ ] Vérifier que les commandes joueur, la caméra et les menus restent
+  fonctionnels pendant une action de mission.
 
 - [ ] Installer `BlueFox_Correctif_Cumulatif_Portails_Carte_Planete.zip`.
 - [ ] Installer `index.html` et les cinq modules catalogue corrigés.
@@ -40,7 +50,11 @@ Cette page est la **seule TODO active**.
 ## P3 — Gameplay
 
 - [ ] Construction réelle du premier refuge.
-- [ ] Projets prioritaires et besoins associés.
+- [x] Fondation technique des missions hiérarchiques persistantes — M0.
+- [ ] Relier les projets prioritaires aux besoins réels.
+- [ ] Ajouter les missions composées et sous-missions dynamiques.
+- [ ] Ajouter la construction, le transport et la fabrication dans
+  `ActionBridge`.
 - [ ] Alimentation et repos avec effets mesurés.
 - [ ] Recherche et connaissances persistantes.
 - [ ] Créatures et protocole de contact.
