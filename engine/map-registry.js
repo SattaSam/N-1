@@ -224,6 +224,74 @@
     return layouts[BF.clamp(count, 1, 6)] || layouts[1];
   };
 
+  const mapIsDiscovered = (mapId) => {
+    if (!mapId) return false;
+    if (BF.discoveredMaps instanceof Set) return BF.discoveredMaps.has(mapId);
+    try {
+      const saved = JSON.parse(
+        localStorage.getItem("bluefox_discovered_maps_v1") || "[]"
+      );
+      return saved.some((map) => map?.id === mapId);
+    } catch {
+      return mapId === "crystal";
+    }
+  };
+
+  const makePortalLabel = (THREE, direction, exit) => {
+    const directionLabel = ({
+      north: "NORD",
+      south: "SUD",
+      east: "EST",
+      west: "OUEST"
+    })[direction] || direction.toUpperCase();
+    const targetName = mapIsDiscovered(exit.targetMap)
+      ? BF.maps[exit.targetMap]?.name
+      : "";
+    const lines = targetName
+      ? [directionLabel, targetName]
+      : [directionLabel];
+
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    const font = "600 27px Arial";
+    context.font = font;
+    const widestLine = Math.max(
+      ...lines.map((line) => context.measureText(line).width)
+    );
+    canvas.width = Math.ceil(BF.clamp(widestLine + 64, 220, 900));
+    canvas.height = lines.length === 2 ? 116 : 78;
+
+    context.fillStyle = "rgba(2, 12, 28, .86)";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.strokeStyle = "#64e6ff";
+    context.lineWidth = 3;
+    context.strokeRect(3, 3, canvas.width - 6, canvas.height - 6);
+    context.fillStyle = "#eaf8ff";
+    context.font = font;
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    if (lines.length === 1) {
+      context.fillText(lines[0], canvas.width / 2, canvas.height / 2);
+    } else {
+      context.fillText(lines[0], canvas.width / 2, 35);
+      context.fillText(lines[1], canvas.width / 2, 81);
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true,
+      depthTest: false
+    }));
+    const pixelsPerUnit = 68.25;
+    sprite.scale.set(
+      canvas.width / pixelsPerUnit,
+      canvas.height / pixelsPerUnit,
+      1
+    );
+    return sprite;
+  };
+
   BF.buildMap = function buildMap(THREE, definition, assets, renderer) {
     const group = new THREE.Group();
     group.name = `Map:${definition.id}`;
@@ -702,15 +770,7 @@
       ring.position.y = 0.05;
       gate.add(ring);
 
-      const label = BF.makeLabel(
-        THREE,
-        `${({
-          north: "NORD",
-          south: "SUD",
-          east: "EST",
-          west: "OUEST"
-        })[direction] || direction.toUpperCase()} · ${BF.maps[exit.targetMap].name}`
-      );
+      const label = makePortalLabel(THREE, direction, exit);
       label.position.y = 3.2;
       gate.add(label);
       group.add(gate);

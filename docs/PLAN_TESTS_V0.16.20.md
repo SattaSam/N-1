@@ -1,6 +1,6 @@
 # BlueFox Odyssey — Plan de tests V0.16.20
 
-Mise à jour : **28 juillet 2026 — raccordement catalogue**
+Mise à jour : **29 juillet 2026 — catalogue, portails et carte Planète**
 
 ## Préparation
 
@@ -63,12 +63,34 @@ Mise à jour : **28 juillet 2026 — raccordement catalogue**
 ## Portails, transitions et nettoyage
 
 - [ ] Les portails restent près des bords et parallèles au bord concerné.
+- [ ] Nord est sur `minZ`, Sud sur `maxZ`, Est sur `maxX`, Ouest sur `minX`.
+- [ ] Les étiquettes inconnues affichent uniquement la direction.
+- [ ] Les étiquettes explorées affichent direction puis nom de Zone sur deux lignes.
+- [ ] La largeur de l’étiquette s’adapte au nom de la Zone.
 - [ ] Retour vers la Zone précédente possible.
 - [ ] Au moins une continuation inconnue disponible.
 - [ ] Une Zone inconnue charge sans rafraîchissement.
 - [ ] Enchaîner au moins dix transitions.
 - [ ] Aucun objet, collider ou plateau de l’ancienne Map ne subsiste.
 - [ ] Retour à la base actif depuis HUD et Planète.
+
+## Carte Planète
+
+- [ ] La Zone actuelle est correctement repérée.
+- [ ] Une sortie Ouest place la Zone quittée à l’Est de la Zone actuelle.
+- [ ] Une sortie Est place la Zone quittée à l’Ouest.
+- [ ] Une sortie Nord place la Zone quittée au Sud.
+- [ ] Une sortie Sud place la Zone quittée au Nord.
+- [ ] La carte se déplace au pointeur et au toucher sans sélectionner le texte.
+- [ ] Le zoom reste dans ses limites et ne perd pas la carte.
+- [ ] « Centrer sur BlueFox » recentre la Zone actuelle.
+- [ ] Les couleurs correspondent au profil du biome.
+- [ ] La taille des Zones reflète le nombre de plateaux.
+- [ ] Le nom apparaît au survol d’une punaise.
+- [ ] Punaise et vignette de biome ouvrent le même focus.
+- [ ] Le bouton de suggestion est présent pour toute Zone explorée non actuelle.
+- [ ] Une Zone distante est rejointe par une chaîne de portails connus.
+- [ ] Un clic direct dans le monde annule cet itinéraire.
 
 ## Cycle et interface
 

@@ -1,6 +1,6 @@
 # BlueFox Odyssey — Architecture technique
 
-Référence : **V0.16.20 + refonte catalogue du 28 juillet 2026**
+Référence : **V0.16.20 + correctifs cumulatifs du 29 juillet 2026**
 
 ## Démarrage
 
@@ -51,6 +51,21 @@ Les quatre modules du catalogue doivent exister et être chargés avant
 | Reconnaître et associer les fichiers image | `map-assets.js` |
 | Fixer l’ordre de démarrage | `index.html` |
 | Piloter monde, transitions et autonomie | `engine/world-engine.js` |
+| Afficher et manipuler la carte Planète | `engine/ui-enhancements.js` et `engine/ui-enhancements.css` |
+
+## Discipline des hotfixes cumulatifs
+
+Avant tout sprint, constituer une base de travail à partir du dernier livrable
+cumulatif et comparer ses fichiers à GitHub. La version GitHub ne doit pas
+écraser un hotfix local qui n’a pas encore été intégré au dépôt.
+
+Pour chaque fichier modifié :
+
+1. recenser les correctifs antérieurs attendus ;
+2. vérifier leur présence avant la nouvelle modification ;
+3. exécuter les contrôles de non-régression associés ;
+4. livrer un paquet cumulatif lorsqu’un même sous-système a reçu plusieurs
+   hotfixes.
 
 ## Protection de `map-registry.js`
 
@@ -106,6 +121,18 @@ Le moteur 3D est autoritaire pour :
 L’événement `bluefox:map-state` synchronise le HUD et les menus. L’interface
 historique ne doit pas imposer un identifiant divergent.
 
+## Topologie et carte Planète
+
+- `map-registry.js` positionne les portails sur les bords réels : Nord `minZ`,
+  Sud `maxZ`, Est `maxX`, Ouest `minX`.
+- Les portails Nord/Sud suivent l’axe X ; Est/Ouest suivent l’axe Z.
+- `world-engine.js` conserve les sorties réciproques et calcule les itinéraires
+  uniquement entre Zones découvertes.
+- `ui-enhancements.js` projette cette topologie sur la carte Planète.
+- Une suggestion vers une Zone distante emprunte les portails connus ; ce
+  n’est pas une téléportation.
+- Une action directe du joueur annule l’itinéraire suggéré.
+
 ## Déplacement, caméra et panorama
 
 - Pathfinding avec points de passage, lissage et recalcul en cas de blocage.
@@ -128,6 +155,7 @@ Principales clés locales :
 - `bluefox_engine_discovered_maps_v2`
 - `bluefox_discovered_zones_v1`
 - `bluefox_generated_topology_v1`
+- `bluefox_map_names_v1`
 - `bluefox_planet_clock_v1`
 - `bluefox_odyssey_save_v1`
 

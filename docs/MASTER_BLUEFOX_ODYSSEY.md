@@ -1,7 +1,7 @@
 # BlueFox Odyssey — Document maître
 
-Version logicielle de référence : **V0.16.20**  
-Point documentaire : **28 juillet 2026 — refonte du catalogue d’objets**  
+Version logicielle de référence : **V0.16.20 + correctifs cumulatifs**  
+Point documentaire : **29 juillet 2026 — portails et carte Planète**  
 Statut : **candidat à valider dans le jeu avant le prochain point Git**
 
 ## Vision
@@ -42,7 +42,8 @@ Journal ou le menu Planète.
 - **Intention actuelle** : objectif stable ou projet prioritaire.
 - **Bulles de BlueFox** : commentaire immédiat, masquable.
 - **Journal** : date fictive, temps vécu, émotions, synthèses et 50 actions.
-- **Planète** : Zone actuelle et quatre directions voisines.
+- **Planète** : carte 2D déplaçable dans un faux globe, Zones découvertes,
+  connexions topographiques, focus et suggestions de déplacement.
 
 ## Architecture du catalogue d’objets
 
@@ -65,6 +66,8 @@ L’ajout ordinaire d’un objet ne doit pas nécessiter de modification de
 - Ancienne base mobile/APK V16.14 : **obsolète**.
 - Refonte catalogue : dépendances raccordées dans `index.html`, cohérence
   syntaxique vérifiée, **test de lancement réel encore requis**.
+- Correctif cumulatif portails/carte Planète : contrôles statiques réussis,
+  **validation visuelle et fonctionnelle dans le jeu encore requise**.
 - Stabilité du socle 3D estimée avant ce test : **environ 72 %**.
 - Objectif du prochain jalon : **75 %**.
 - Avancement global estimatif : **environ 22 %**.
@@ -82,3 +85,5 @@ Ces pourcentages restent indicatifs jusqu’à validation fonctionnelle.
 - `index.html` est l’autorité sur l’ordre de chargement des scripts.
 - Les fichiers protégés ne sont modifiés qu’avec une justification localisée,
   une vérification des dépendances et un test de non-régression.
+- Un hotfix reprend toujours le dernier état cumulatif. Ne jamais réimporter un
+  fichier GitHub plus ancien au milieu d’une série de correctifs non intégrés.

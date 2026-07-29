@@ -1,10 +1,11 @@
 # BlueFox Odyssey — Roadmap et TODO
 
-Mise à jour : **28 juillet 2026**  
+Mise à jour : **29 juillet 2026**  
 Cette page est la **seule TODO active**.
 
 ## P0 — Valider le point de sauvegarde catalogue
 
+- [ ] Installer `BlueFox_Correctif_Cumulatif_Portails_Carte_Planete.zip`.
 - [ ] Installer `index.html` et les cinq modules catalogue corrigés.
 - [ ] Lancer le jeu avec `LANCER_BLUEFOX.bat`.
 - [ ] Vérifier l’absence d’erreur avant l’affichage de la première Map.
@@ -12,6 +13,11 @@ Cette page est la **seule TODO active**.
 - [ ] Enchaîner au moins dix transitions de Zone.
 - [ ] Tester des Maps de 1, 2, 4 et 6 plateaux.
 - [ ] Vérifier qu’une ancienne Map disparaît totalement.
+- [ ] Vérifier l’emplacement et l’orientation N/S/E/O des quatre portails.
+- [ ] Vérifier la boussole et la correspondance direction prise/carte Planète.
+- [ ] Vérifier déplacement, zoom et « Centrer sur BlueFox ».
+- [ ] Vérifier focus par punaise et par vignette de biome découvert.
+- [ ] Tester « Suggérer à BlueFox de s’y rendre » sur une Zone adjacente puis distante.
 - [ ] Effectuer le point Git seulement après validation.
 
 ## P1 — Atteindre 75 % de stabilité du socle 3D
@@ -45,7 +51,8 @@ Cette page est la **seule TODO active**.
 - [ ] Enrichir les connaissances seulement après découverte.
 - [ ] Produire des synthèses liées aux observations réelles.
 - [ ] Développer émotions, événements et souvenirs.
-- [ ] Finaliser le globe Planète.
+- [x] Implémenter la carte 2D déplaçable dans un faux globe.
+- [ ] Valider et ajuster visuellement la carte Planète en conditions réelles.
 - [ ] Tester polices, panneaux et menus scrollables sur petits écrans.
 - [ ] Ajouter le nom du décor chargé en mode diagnostic.
 

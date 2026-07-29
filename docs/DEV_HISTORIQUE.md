@@ -1,5 +1,36 @@
 # BlueFox Odyssey — Historique de développement
 
+## 29 juillet 2026 — Portails et carte Planète cumulative
+
+### Fonctionnalités
+
+- correction du placement cardinal des vignettes voisines ;
+- correction de la lecture de la boussole ;
+- étiquettes de portails adaptées à l’état exploré ;
+- noms persistants et uniques en cas de graines identiques ;
+- carte 2D déplaçable et zoomable dans un faux globe ;
+- Zones colorées par biome et dimensionnées selon leurs plateaux ;
+- punaises, focus, recentrage sur BlueFox et suggestions de destination ;
+- itinéraires vers les Zones distantes par les portails déjà découverts.
+
+### Incident de cumul
+
+Les hotfixes successifs avaient été répartis entre plusieurs ZIP. Le sprint
+carte Planète contenait un `world-engine.js` cumulatif mais pas le
+`map-registry.js` du hotfix portails. Repartir d’une version GitHub plus ancienne
+ou remplacer un dossier à partir d’un ZIP partiel pouvait donc réintroduire un
+comportement déjà corrigé.
+
+### Correction et règle permanente
+
+Le paquet `BlueFox_Correctif_Cumulatif_Portails_Carte_Planete.zip` rassemble les
+quatre fichiers réellement concernés. Les contrôles de syntaxe, dépendances,
+positions cardinales, rotations des portails et présence des hotfixes antérieurs
+ont réussi. Le test visuel en jeu reste obligatoire.
+
+Désormais, tout sprint part du dernier état cumulatif. GitHub ne redevient la
+base qu’après intégration explicite et point de sauvegarde.
+
 ## 28 juillet 2026 — Consolidation du terrain
 
 ### Analyse

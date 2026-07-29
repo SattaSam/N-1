@@ -71,6 +71,8 @@
       this.measuredFps = 60;
       this.missingImageUrls = new Set();
       this.generatedTopology = [];
+      this.mapNames = new Map();
+      this.navigationRoute = [];
       this.onMissingImage = (event) => {
         const source = String(event.detail?.source || "image inconnue");
         if (this.missingImageUrls.has(source)) return;
@@ -94,6 +96,7 @@
       const { THREE, OrbitControls, GLTFLoader, container } = this;
       global.addEventListener("bluefox:image-missing", this.onMissingImage);
       this.restoreDiscovery();
+      this.restoreMapNames();
       this.restoreGeneratedTopology();
       BF.sceneImages = {
         crystal: this.assets.sceneCrystal,
@@ -227,6 +230,122 @@
         localStorage.removeItem("bluefox_generated_topology_v1");
         this.generatedTopology = [];
       }
+    }
+
+    restoreMapNames() {
+      try {
+        const saved = JSON.parse(
+          localStorage.getItem("bluefox_map_names_v1") || "{}"
+        );
+        if (!saved || typeof saved !== "object" || Array.isArray(saved)) return;
+        Object.entries(saved).forEach(([mapId, name]) => {
+          if (!BF.maps[mapId] || typeof name !== "string" || !name.trim()) return;
+          const resolvedName = name.trim();
+          BF.maps[mapId].name = resolvedName;
+          this.mapNames.set(mapId, resolvedName);
+        });
+      } catch {
+        localStorage.removeItem("bluefox_map_names_v1");
+        this.mapNames.clear();
+      }
+    }
+
+    ensureUniqueMapName(mapId) {
+      const definition = BF.maps[mapId];
+      if (!definition) return "";
+      const savedName = this.mapNames.get(mapId);
+      if (savedName) {
+        definition.name = savedName;
+        return savedName;
+      }
+
+      const normalize = (value) => String(value || "")
+        .toLocaleLowerCase("fr")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim();
+      const discoveredDefinitions = [...this.discoveredMaps]
+        .filter((id) => id !== mapId && BF.maps[id])
+        .map((id) => BF.maps[id]);
+      const duplicateSeed = discoveredDefinitions.some(
+        (map) => Number.isFinite(definition.seed) && map.seed === definition.seed
+      );
+      const duplicateName = discoveredDefinitions.some(
+        (map) => normalize(map.name) === normalize(definition.name)
+      );
+      if (!duplicateSeed && !duplicateName) return definition.name;
+
+      const namesByProfile = {
+        volcanic: [
+          "La Cicatrice d’Aube", "Les Forges Rouges", "Le Seuil de Braise",
+          "La Caldeira Murmurante"
+        ],
+        frozen: [
+          "Le Silence Boréal", "Les Éclats de Givre", "La Veille Blanche",
+          "Le Miroir des Brumes"
+        ],
+        forest: [
+          "La Canopée des Veilleurs", "Le Jardin des Échos", "Les Racines Célestes",
+          "La Clairière Patiente"
+        ],
+        ruins: [
+          "Les Vestiges Endormis", "La Cité des Silences", "Le Passage des Anciens",
+          "Les Arches Oubliées"
+        ],
+        aquatic: [
+          "Le Lagon des Lueurs", "Les Profondeurs Calmes", "La Mer des Murmures",
+          "L’Archipel Opalin"
+        ],
+        desert: [
+          "La Mer de Sable", "Les Dunes du Veilleur", "Le Désert des Deux Lunes",
+          "La Vallée Sèche"
+        ],
+        crystalline: [
+          "Le Champ des Résonances", "Les Flèches d’Azur", "La Plaine Prismatique",
+          "Le Sanctuaire de Verre"
+        ],
+        alien: [
+          "L’Horizon Inconnu", "La Terre des Signes", "Le Domaine des Échos",
+          "La Frontière Silencieuse"
+        ]
+      };
+      const candidates = namesByProfile[definition.profile] || namesByProfile.alien;
+      let hash = 2166136261;
+      for (const character of `${mapId}:${definition.seed}:${definition.name}`) {
+        hash ^= character.charCodeAt(0);
+        hash = Math.imul(hash, 16777619);
+      }
+      const usedNames = new Set(
+        Object.values(BF.maps).map((map) => normalize(map.name))
+      );
+      let chosen = "";
+      for (let offset = 0; offset < candidates.length; offset += 1) {
+        const candidate = candidates[((hash >>> 0) + offset) % candidates.length];
+        if (!usedNames.has(normalize(candidate))) {
+          chosen = candidate;
+          break;
+        }
+      }
+      if (!chosen) {
+        const base = candidates[(hash >>> 0) % candidates.length];
+        let suffix = 2;
+        chosen = `${base} ${suffix}`;
+        while (usedNames.has(normalize(chosen))) {
+          suffix += 1;
+          chosen = `${base} ${suffix}`;
+        }
+      }
+
+      definition.name = chosen;
+      this.mapNames.set(mapId, chosen);
+      localStorage.setItem(
+        "bluefox_map_names_v1",
+        JSON.stringify(Object.fromEntries(this.mapNames))
+      );
+      this.callbacks.onAction(
+        `BlueFox baptise ce nouveau territoire « ${chosen} ».`
+      );
+      return chosen;
     }
 
     applyGeneratedLink(link) {
@@ -1051,6 +1170,7 @@
 
     handlePointer(event) {
       if (this.transitioning) return;
+      this.navigationRoute = [];
       this.showClickMarker(event);
       const rect = this.renderer.domElement.getBoundingClientRect();
       this.pointer.set(
@@ -1152,18 +1272,18 @@
         return;
       }
       if (detail.mapId && detail.mapId !== this.currentMapId) {
-        const gate = this.currentMap.gates.find(
-          (candidate) => candidate.userData.exit.targetMap === detail.mapId
-        );
-        if (gate) {
-          this.pendingGate = gate;
-          this.character.setPlayerSprint(24);
-          this.character.setTarget(gate.position);
-          this.showWorldMarker(gate.position);
+        const route = this.findKnownRoute(this.currentMapId, detail.mapId);
+        if (!route) {
           this.callbacks.onStatus(
-            `BlueFox se dirige vers le passage menant à ${BF.maps[detail.mapId].name}.`
+            "Aucun itinéraire exploré ne relie encore ces deux Zones."
           );
+          return;
         }
+        this.navigationRoute = route.slice(1);
+        this.callbacks.onStatus(
+          `BlueFox prépare un itinéraire vers ${BF.maps[detail.mapId].name}.`
+        );
+        this.navigateNextRouteStep();
         return;
       }
       const centerOffset = this.currentMapId === "jungle" ? 64 : 0;
@@ -1175,6 +1295,53 @@
       this.character.setPlayerSprint(16);
       this.character.setTarget(target);
       this.showWorldMarker(target);
+    }
+
+    findKnownRoute(startMapId, targetMapId) {
+      if (startMapId === targetMapId) return [startMapId];
+      if (!this.discoveredMaps.has(targetMapId)) return null;
+      const queue = [[startMapId]];
+      const visited = new Set([startMapId]);
+      while (queue.length) {
+        const route = queue.shift();
+        const currentId = route[route.length - 1];
+        const exits = Object.values(BF.maps[currentId]?.exits || {});
+        for (const exit of exits) {
+          const nextId = exit.targetMap;
+          if (!nextId || visited.has(nextId) || !this.discoveredMaps.has(nextId)) {
+            continue;
+          }
+          const nextRoute = [...route, nextId];
+          if (nextId === targetMapId) return nextRoute;
+          visited.add(nextId);
+          queue.push(nextRoute);
+        }
+      }
+      return null;
+    }
+
+    navigateNextRouteStep() {
+      const nextMapId = this.navigationRoute[0];
+      if (!nextMapId || nextMapId === this.currentMapId) {
+        if (nextMapId === this.currentMapId) this.navigationRoute.shift();
+        if (!this.navigationRoute.length) return;
+      }
+      const destinationId = this.navigationRoute[0];
+      const gate = this.currentMap.gates.find(
+        (candidate) => candidate.userData.exit.targetMap === destinationId
+      );
+      if (!gate) {
+        this.navigationRoute = [];
+        this.callbacks.onStatus("L’itinéraire mémorisé est devenu impraticable.");
+        return;
+      }
+      this.pendingGate = gate;
+      this.character.setPlayerSprint(24);
+      this.character.setTarget(gate.position);
+      this.showWorldMarker(gate.position);
+      this.callbacks.onStatus(
+        `BlueFox rejoint le passage vers ${BF.maps[destinationId].name}.`
+      );
     }
 
     interactionApproachPoint(object, attempt = 0) {
@@ -1605,6 +1772,7 @@
         await new Promise((resolve) => setTimeout(resolve, 340));
 
         const isNew = !this.discoveredMaps.has(exit.targetMap);
+        if (isNew) this.ensureUniqueMapName(exit.targetMap);
         await this.loadMap(exit.targetMap, null, true);
         const targetMap = BF.maps[exit.targetMap];
         const spawn = this.safeEntryPosition(
@@ -1635,6 +1803,7 @@
       } catch (error) {
         console.error("Échec du passage de map", error);
         this.pendingGate = null;
+        this.navigationRoute = [];
         this.callbacks.onStatus(
           "Le passage n’a pas pu être franchi. BlueFox reprend son exploration dans la zone actuelle."
         );
@@ -1643,6 +1812,12 @@
         this.character.enabled = true;
         this.transitioning = false;
         this.transitionStartedAt = 0;
+        if (this.navigationRoute[0] === this.currentMapId) {
+          this.navigationRoute.shift();
+        }
+        if (this.navigationRoute.length) {
+          window.setTimeout(() => this.navigateNextRouteStep(), 2700);
+        }
       }
     }
 
@@ -2079,7 +2254,7 @@
       this.ensureCompassNeedle();
       if (this.compassNeedle) {
         this.compassNeedle.style.transform =
-          `translate(-50%, -100%) rotate(${this.character.heading + Math.PI}rad)`;
+          `translate(-50%, -100%) rotate(${Math.PI - this.character.heading}rad)`;
       }
       this.updateSpeechBubble();
       if (now - this.lastSavedAt > 3000) {

@@ -1,7 +1,7 @@
 # Documents de référence — BlueFox Odyssey
 
-Référence logicielle : **V0.16.20**  
-Point documentaire : **28 juillet 2026 — refonte du catalogue d’objets**
+Référence logicielle : **V0.16.20 + correctifs cumulatifs**  
+Point documentaire : **29 juillet 2026 — portails et carte Planète**
 
 ## Documents faisant autorité
 
@@ -34,3 +34,10 @@ En cas de contradiction, appliquer cet ordre :
 Une affirmation non vérifiée dans le jeu doit rester marquée **à tester**. Une
 livraison syntaxiquement valide n’est pas considérée comme fonctionnellement
 validée avant un lancement réel et l’exécution du plan de tests.
+
+## Règle de base cumulative
+
+Pendant une chaîne de hotfixes, le fichier source de chaque nouveau sprint est
+le dernier fichier cumulatif validé ou livré, jamais à nouveau la version
+GitHub initiale. GitHub ne redevient la base qu’après intégration et point de
+sauvegarde explicite de l’ensemble des correctifs.
