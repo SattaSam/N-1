@@ -167,14 +167,7 @@
         number: 1,
         scene: "1PlaineCristaux",
         terrainFrames: ["01"],
-        exits: { north: "jungle" }
-      },
-      jungle: {
-        id: "jungle",
-        number: 2,
-        scene: "2RuinesEmeraude",
-        terrainFrames: ["02_1", "02_2"],
-        exits: { south: "crystal" }
+        exits: {}
       }
     }
   };

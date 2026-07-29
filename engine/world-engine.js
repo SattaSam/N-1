@@ -198,7 +198,15 @@
           localStorage.getItem("bluefox_discovered_maps_v1") ||
           "[]"
         );
-        memories.forEach((map) => this.discoveredMaps.add(map.id));
+        const orderedMemories = memories
+          .filter((map) => map?.id && BF.maps[map.id])
+          .sort((left, right) =>
+            (Number(left.order) || Number.MAX_SAFE_INTEGER) -
+            (Number(right.order) || Number.MAX_SAFE_INTEGER)
+          );
+        this.discoveredMaps.clear();
+        if (BF.maps.crystal) this.discoveredMaps.add("crystal");
+        orderedMemories.forEach((map) => this.discoveredMaps.add(map.id));
       } catch {
         localStorage.removeItem("bluefox_discovered_maps_v1");
       }
@@ -218,14 +226,27 @@
       global.BlueFox3D.discoveredZones = this.discoveredZones;
     }
 
+    discoveryNumber(mapId) {
+      const index = [...this.discoveredMaps].indexOf(mapId);
+      if (index >= 0) return index + 1;
+      return BF.maps[mapId] ? this.discoveredMaps.size + 1 : null;
+    }
+
     restoreGeneratedTopology() {
       try {
         const saved = JSON.parse(
           localStorage.getItem("bluefox_generated_topology_v1") || "[]"
         );
         if (!Array.isArray(saved)) return;
-        saved.forEach((link) => this.applyGeneratedLink(link));
-        this.generatedTopology = saved;
+        this.generatedTopology = saved.filter((link) =>
+          this.applyGeneratedLink(link)
+        );
+        if (this.generatedTopology.length !== saved.length) {
+          localStorage.setItem(
+            "bluefox_generated_topology_v1",
+            JSON.stringify(this.generatedTopology)
+          );
+        }
       } catch {
         localStorage.removeItem("bluefox_generated_topology_v1");
         this.generatedTopology = [];
@@ -250,6 +271,31 @@
       }
     }
 
+    sceneIdentity(definition) {
+      if (!definition) return "";
+      const catalogScene =
+        global.BLUEFOX_MAP_ASSETS?.catalog?.maps?.find(
+          (map) => map.id === definition.id || map.number === definition.number
+        )?.scene?.url;
+      const source =
+        definition.sceneUrl ||
+        catalogScene ||
+        this.assets?.[definition.sceneAsset] ||
+        definition.sceneAsset ||
+        "";
+      try {
+        return decodeURIComponent(String(source))
+          .replace(/\\/g, "/")
+          .split(/[?#]/)[0]
+          .toLocaleLowerCase("fr");
+      } catch {
+        return String(source)
+          .replace(/\\/g, "/")
+          .split(/[?#]/)[0]
+          .toLocaleLowerCase("fr");
+      }
+    }
+
     ensureUniqueMapName(mapId) {
       const definition = BF.maps[mapId];
       if (!definition) return "";
@@ -267,13 +313,14 @@
       const discoveredDefinitions = [...this.discoveredMaps]
         .filter((id) => id !== mapId && BF.maps[id])
         .map((id) => BF.maps[id]);
-      const duplicateSeed = discoveredDefinitions.some(
-        (map) => Number.isFinite(definition.seed) && map.seed === definition.seed
+      const sceneKey = this.sceneIdentity(definition);
+      const duplicateScene = Boolean(sceneKey) && discoveredDefinitions.some(
+        (map) => this.sceneIdentity(map) === sceneKey
       );
       const duplicateName = discoveredDefinitions.some(
         (map) => normalize(map.name) === normalize(definition.name)
       );
-      if (!duplicateSeed && !duplicateName) return definition.name;
+      if (!duplicateScene && !duplicateName) return definition.name;
 
       const namesByProfile = {
         volcanic: [
@@ -379,12 +426,14 @@
 
     ensureMapContinuation(mapId) {
       const definition = BF.maps[mapId];
-      if (!definition || Object.keys(definition.exits).length !== 1) return;
+      if (!definition || Object.keys(definition.exits).length > 1) return;
       const opposites = {
         north: "south", south: "north", east: "west", west: "east"
       };
-      const returnDirection = Object.keys(definition.exits)[0];
-      const preferredDirection = opposites[returnDirection];
+      const returnDirection = Object.keys(definition.exits)[0] || null;
+      const preferredDirection = returnDirection
+        ? opposites[returnDirection]
+        : "north";
       const directions = [
         preferredDirection,
         "north", "east", "south", "west"
@@ -432,7 +481,9 @@
       const memories = [...this.discoveredMaps].map((id, index) => ({
         ...(metadata.get(id) || {}),
         id,
-        order: metadata.get(id)?.order || index + 1,
+        name: BF.maps[id]?.name || metadata.get(id)?.name,
+        sceneKey: this.sceneIdentity(BF.maps[id]),
+        order: index + 1,
         discoveredAt: metadata.get(id)?.discoveredAt || Date.now()
       }));
       localStorage.setItem(
@@ -1441,7 +1492,7 @@
       global.dispatchEvent(new CustomEvent("bluefox:map-state", {
         detail: {
           mapId,
-          number: definition.number || 1,
+          number: this.discoveryNumber(mapId),
           name: definition.name,
           sceneUrl:
             global.BLUEFOX_MAP_ASSETS?.catalog?.maps?.find(

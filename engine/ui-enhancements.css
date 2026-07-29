@@ -63,6 +63,15 @@
   min-width: 230px;
 }
 
+/*
+ * Le calque décoratif défini par game.css sur .planet-sphere:after recouvre
+ * toute la carte. Il doit rester visible sans devenir la cible des pointeurs.
+ */
+.planet-panel-enhanced .planet-sphere::before,
+.planet-panel-enhanced .planet-sphere::after {
+  pointer-events: none !important;
+}
+
 .planet-map-viewport {
   position: relative;
   width: 100%;
@@ -82,6 +91,7 @@
   cursor: grab;
   touch-action: none;
   user-select: none;
+  pointer-events: auto;
 }
 
 .planet-map-viewport.dragging {

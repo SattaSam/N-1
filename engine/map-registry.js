@@ -13,27 +13,10 @@
       terrainUrl: "./Images/04_1.png",
       sceneUrl: "./Images/4Savane.png",
       entry: { x: 0, z: 20 },
-      exits: {
-        north: { x: 0, z: -26, targetMap: "jungle", targetEntry: "south" }
-      },
+      exits: {},
       seed: 9173,
       profile: "crystalline",
       palette: { ground: 0x657f98, accent: 0x64e6ff }
-    },
-    jungle: {
-      id: "jungle",
-      number: 2,
-      name: "Ruines d’Émeraude",
-      zones: ["Clairière des stèles", "Ruines noyées"],
-      terrainAsset: "terrainJungle",
-      sceneAsset: "sceneJungle",
-      entry: { x: 0, z: -20 },
-      exits: {
-        south: { x: 0, z: 26, targetMap: "crystal", targetEntry: "north" }
-      },
-      seed: 24023,
-      profile: "ruins",
-      palette: { ground: 0x315f50, accent: 0x63ffc2 }
     }
   };
 

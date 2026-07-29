@@ -14,31 +14,40 @@
       resources: "Cristaux énergétiques, fibres stellaires et composants de l’épave.",
       synthesis: "BlueFox y sécurise son premier refuge et étudie les ressources proches.",
       directions: {
-        north: { mapId: "jungle", x: 0, z: -27, title: "Passage vers les Ruines d’Émeraude" },
+        north: { mapId: null, title: "Territoire non cartographié" },
         west: { mapId: null, title: "Territoire non cartographié" },
         east: { mapId: null, title: "Territoire non cartographié" },
         south: { mapId: null, title: "Territoire non cartographié" }
       }
-    },
-    jungle: {
-      name: "Ruines d’Émeraude",
-      resources: "Fibres bioluminescentes, bassins énergétiques et structures anciennes.",
-      synthesis: "BlueFox compare la flore des clairières et cartographie les ruines noyées.",
-      directions: {
-        north: { mapId: null, title: "Territoire non cartographié" },
-        west: { mapId: null, title: "Territoire non cartographié" },
-        east: { mapId: null, title: "Territoire non cartographié" },
-        south: { mapId: "crystal", x: 64, z: 27, title: "Passage vers la Plaine des Cristaux" }
-      }
     }
   };
+
+  const directionFromExit = (fallbackDirection, exit = {}) => {
+    const x = Number(exit.x);
+    const z = Number(exit.z);
+    if (Number.isFinite(x) && Number.isFinite(z)) {
+      if (Math.abs(x) > Math.abs(z) && Math.abs(x) > 0.01) {
+        return x > 0 ? "east" : "west";
+      }
+      if (Math.abs(z) > 0.01) {
+        return z > 0 ? "south" : "north";
+      }
+    }
+    return fallbackDirection;
+  };
+
+  const exitForDirection = (definition, requestedDirection) =>
+    Object.entries(definition?.exits || {})
+      .find(([storedDirection, exit]) =>
+        directionFromExit(storedDirection, exit) === requestedDirection
+      )?.[1];
 
   const directionsForMap = (mapId) => {
     const definition = global.BlueFox3D?.maps?.[mapId];
     const staticDirections = mapData[mapId]?.directions || {};
     return Object.fromEntries(
       Object.keys(directionNames).map((direction) => {
-        const exit = definition?.exits?.[direction];
+        const exit = exitForDirection(definition, direction);
         if (exit) {
           return [direction, {
             mapId: exit.targetMap,
@@ -47,7 +56,7 @@
             title: `Passage vers ${global.BlueFox3D?.maps?.[exit.targetMap]?.name || "une map connue"}`
           }];
         }
-        return [direction, staticDirections[direction] || {
+        return [direction, (!definition ? staticDirections[direction] : null) || {
           mapId: null,
           title: "Terre inconnue"
         }];
@@ -72,9 +81,7 @@
 
   const currentMapId = (panel) =>
     global.BlueFox3D?.currentEngine?.currentMapId ||
-    (panel.querySelector(".biome-zones article.current .jungle-zone")
-      ? "jungle"
-      : "crystal");
+    "crystal";
 
   const discovered = (panel, mapId) => {
     if (!mapId) return false;
@@ -89,6 +96,148 @@
       return mapId === "crystal";
     }
   };
+
+  const discoveryMemories = () => {
+    for (const key of [
+      "bluefox_engine_discovered_maps_v2",
+      "bluefox_discovered_maps_v1"
+    ]) {
+      try {
+        const memories = JSON.parse(localStorage.getItem(key) || "[]");
+        if (Array.isArray(memories) && memories.some((memory) => memory?.id)) {
+          return memories;
+        }
+      } catch {
+        // Essayer la mémoire de compatibilité suivante.
+      }
+    }
+    return [];
+  };
+
+  const discoveryNumber = (mapId) => {
+    if (!mapId) return null;
+    const memories = discoveryMemories();
+    const chronologicalMemories = memories
+      .filter((item) => item?.id)
+      .map((item, index) => ({ item, index }))
+      .sort((left, right) => {
+        const leftTime = Number(left.item.discoveredAt);
+        const rightTime = Number(right.item.discoveredAt);
+        if (Number.isFinite(leftTime) && Number.isFinite(rightTime) &&
+            leftTime !== rightTime) {
+          return leftTime - rightTime;
+        }
+        const leftOrder = Number(left.item.order);
+        const rightOrder = Number(right.item.order);
+        if (Number.isFinite(leftOrder) && Number.isFinite(rightOrder) &&
+            leftOrder !== rightOrder) {
+          return leftOrder - rightOrder;
+        }
+        return left.index - right.index;
+      });
+    const chronologicalIndex = chronologicalMemories
+      .findIndex(({ item }) => item.id === mapId);
+    if (chronologicalIndex >= 0) return chronologicalIndex + 1;
+    const engineMemory = global.BlueFox3D?.discoveredMaps;
+    if (engineMemory instanceof Set) {
+      const index = [...engineMemory].indexOf(mapId);
+      if (index >= 0) return index + 1;
+    }
+    const engineNumber =
+      global.BlueFox3D?.currentEngine?.discoveryNumber?.(mapId);
+    return Number.isFinite(engineNumber) ? engineNumber : null;
+  };
+
+  const discoveryLabel = (mapId) => {
+    const number = discoveryNumber(mapId);
+    return number
+      ? `ZONE ${String(number).padStart(2, "0")}`
+      : "ZONE INCONNUE";
+  };
+
+  const uniqueNameStorageKey = "bluefox_unique_map_names_v1";
+  const blueFoxPlaceNames = Object.freeze([
+    "Lisière des Murmures",
+    "Veines du Ciel Calme",
+    "Refuge des Éclats Patients",
+    "Jardin des Signaux Doux",
+    "Crête des Curiosités",
+    "Passage des Lumières Timides",
+    "Bassin des Traces Bleues",
+    "Terrasse du Vent Complice",
+    "Clairière des Questions",
+    "Horizon des Pierres Sages",
+    "Détour des Lucioles Astrales",
+    "Vallée du Petit Pas"
+  ]);
+
+  const readUniqueNames = () => {
+    try {
+      const names = JSON.parse(localStorage.getItem(uniqueNameStorageKey) || "{}");
+      return names && typeof names === "object" ? names : {};
+    } catch {
+      return {};
+    }
+  };
+
+  const normalizedSceneIdentity = (mapId) => {
+    const definition = global.BlueFox3D?.maps?.[mapId];
+    return String(
+      sceneImage(mapId) ||
+      definition?.sceneUrl ||
+      definition?.backgroundUrl ||
+      definition?.sceneImage ||
+      ""
+    ).split(/[?#]/)[0].toLocaleLowerCase();
+  };
+
+  function ensureUniqueDiscoveredMapNames(panel) {
+    const ids = discoveredMapIds(panel);
+    if (!ids.length) return;
+    const storedNames = readUniqueNames();
+    const sceneOwners = new Map();
+    const usedNames = new Set();
+    let changed = false;
+
+    ids.forEach((mapId) => {
+      const definition = global.BlueFox3D?.maps?.[mapId];
+      if (!definition) return;
+      const sceneIdentity = normalizedSceneIdentity(mapId);
+      const duplicateScene = Boolean(
+        sceneIdentity && sceneOwners.has(sceneIdentity)
+      );
+      const storedName = storedNames[mapId];
+      let displayName = storedName || definition.name || "Territoire inconnu";
+
+      if (duplicateScene && !storedName) {
+        const order = Math.max(1, discoveryNumber(mapId) || ids.indexOf(mapId) + 1);
+        const start = (order * 5 + mapId.length * 3) % blueFoxPlaceNames.length;
+        for (let offset = 0; offset < blueFoxPlaceNames.length; offset += 1) {
+          const candidate =
+            blueFoxPlaceNames[(start + offset) % blueFoxPlaceNames.length];
+          if (!usedNames.has(candidate)) {
+            displayName = candidate;
+            break;
+          }
+        }
+        storedNames[mapId] = displayName;
+        changed = true;
+      }
+
+      definition.name = displayName;
+      usedNames.add(displayName);
+      if (sceneIdentity && !sceneOwners.has(sceneIdentity)) {
+        sceneOwners.set(sceneIdentity, mapId);
+      }
+    });
+
+    if (changed) {
+      localStorage.setItem(uniqueNameStorageKey, JSON.stringify(storedNames));
+      global.dispatchEvent(new CustomEvent("bluefox:map-names-changed", {
+        detail: { names: storedNames }
+      }));
+    }
+  }
 
   const sceneImage = (mapId) => global.BlueFox3D?.sceneImages?.[mapId] || "";
 
@@ -237,10 +386,15 @@
     }
     const { save, totalMinutes } = readJournalState();
     const emotion = emotionalSummary(save.traits);
-    const signature = `${Math.floor(totalMinutes)}:${emotion}`;
+    const mapName =
+      global.BlueFox3D?.maps?.[mapId]?.name ||
+      mapData[mapId]?.name ||
+      "Zone inconnue";
+    const signature = `${Math.floor(totalMinutes)}:${emotion}:${mapId}:${mapName}`;
     if (meta.dataset.signature === signature) return;
     meta.dataset.signature = signature;
     meta.innerHTML = `
+      <div><span>ZONE ACTUELLE</span><b>${mapName}</b></div>
       <div><span>DATE PLANÉTAIRE</span><b>${fictionalDate(totalMinutes)}</b></div>
       <div><span>DEPUIS L’ARRIVÉE</span><b>${elapsedPlanetTime(totalMinutes)}</b></div>
       <div><span>RESSENTI DE BLUEFOX</span><b>${emotion}</b></div>`;
@@ -266,7 +420,7 @@
         <div class="planet-selection-image unknown"></div>
         <div>
           <span>${directionNames[direction].toUpperCase()} · NON EXPLORÉ</span>
-          <h3>Terre inconnue</h3>
+          <h3>Zone non explorée</h3>
           <p><b>Biome :</b> Données indisponibles.</p>
           <p><b>Ressources :</b> Aucune observation enregistrée.</p>
           <p><b>Point de vue de BlueFox :</b> Je peux partir dans cette direction si tu me le demandes. Le moteur générera alors une nouvelle map sans révéler son biome à l’avance.</p>
@@ -284,8 +438,8 @@
       <div class="planet-selection-image"></div>
       <div>
         <span>${directionNames[direction].toUpperCase()} · ${isKnown ? "DÉJÀ EXPLORÉ" : "NON EXPLORÉ"}</span>
-        <h3>${destination.title}</h3>
-        <p><b>Biome :</b> ${destinationDefinition?.name || destinationMap.name}</p>
+        <h3>${isKnown ? destination.title : "Zone non explorée"}</h3>
+        <p><b>Biome :</b> ${isKnown ? destinationDefinition?.name || destinationMap.name : "Données indisponibles."}</p>
         <p><b>Ressources :</b> ${isKnown ? destinationDefinition?.resourceHints || destinationMap.resources : "Données insuffisantes avant une première exploration active."}</p>
         <p><b>Point de vue de BlueFox :</b> ${isKnown ? destinationDefinition?.synthesis || destinationMap.synthesis : "Je ne connais pas encore ce territoire. Sa première exploration exige ta présence."}</p>
         ${isKnown ? '<button type="button">Suggérer cette direction à BlueFox</button>' : ""}
@@ -305,12 +459,16 @@
     const mapId = currentMapId(panel);
     const definition = mapData[mapId];
     const mapDefinition = global.BlueFox3D?.maps?.[mapId];
-    const zoneName = `Zone ${mapDefinition?.number || 1}`;
+    const zoneName =
+      mapDefinition?.name ||
+      definition?.name ||
+      "Zone inconnue";
     const plateauCount = Math.max(
       1,
       mapDefinition?.plateauCount || mapDefinition?.terrainUrls?.length || 1
     );
-    const cardKey = `${mapId}:${plateauCount}`;
+    const cardKey =
+      `${mapId}:${zoneName}:${plateauCount}:${discoveryNumber(mapId) || "?"}`;
     let card = panel.querySelector(".planet-current-zone");
     if (!card) {
       card = document.createElement("section");
@@ -323,17 +481,20 @@
 
     const text = document.createElement("div");
     const eyebrow = document.createElement("span");
-    eyebrow.textContent = "ZONE ACTUELLE";
+    eyebrow.textContent = `${discoveryLabel(mapId)} · ACTUELLE`;
     const title = document.createElement("h3");
     title.textContent = zoneName;
     const description = document.createElement("p");
     description.textContent =
       mapDefinition?.description ||
-      `${mapDefinition?.name || definition.name} — Zone composée de ${plateauCount} plateau${plateauCount > 1 ? "x" : ""}.`;
+      `${zoneName} — Zone composée de ${plateauCount} plateau${plateauCount > 1 ? "x" : ""}.`;
     const viewpoint = document.createElement("p");
     const strong = document.createElement("b");
     strong.textContent = "Point de vue de BlueFox :";
-    viewpoint.append(strong, ` ${mapDefinition?.synthesis || definition.synthesis}`);
+    viewpoint.append(
+      strong,
+      ` ${mapDefinition?.synthesis || definition?.synthesis || "Je poursuis l’observation de cette Zone."}`
+    );
     text.append(eyebrow, title, description, viewpoint);
 
     const image = document.createElement("div");
@@ -374,7 +535,25 @@
 
   function discoveredMapIds(panel) {
     return Object.keys(global.BlueFox3D?.maps || {})
-      .filter((mapId) => discovered(panel, mapId));
+      .filter((mapId) => discovered(panel, mapId))
+      .sort((left, right) =>
+        (discoveryNumber(left) || Number.MAX_SAFE_INTEGER) -
+        (discoveryNumber(right) || Number.MAX_SAFE_INTEGER)
+      );
+  }
+
+  function planetZoneMetrics(mapId) {
+    const definition = global.BlueFox3D?.maps?.[mapId];
+    const plateauCount = Math.max(
+      1,
+      Math.min(6, definition?.plateauCount || definition?.terrainUrls?.length || 1)
+    );
+    const width = 50 + plateauCount * 12;
+    return {
+      plateauCount,
+      width,
+      height: Math.round(width * 0.78)
+    };
   }
 
   function planetCoordinates(panel) {
@@ -390,22 +569,28 @@
       const mapId = queue.shift();
       const origin = coordinates.get(mapId);
       Object.entries(global.BlueFox3D?.maps?.[mapId]?.exits || {})
-        .forEach(([direction, exit]) => {
+        .forEach(([storedDirection, exit]) => {
+          const direction = directionFromExit(storedDirection, exit);
           const offset = planetDirectionOffset[direction];
           if (!offset || !known.has(exit.targetMap) || coordinates.has(exit.targetMap)) {
             return;
           }
+          const currentSize = planetZoneMetrics(mapId);
+          const targetSize = planetZoneMetrics(exit.targetMap);
+          const distance = offset.x
+            ? (currentSize.width + targetSize.width) / 2 - 3
+            : (currentSize.height + targetSize.height) / 2 - 3;
           coordinates.set(exit.targetMap, {
-            x: origin.x + offset.x,
-            y: origin.y + offset.y
+            x: origin.x + offset.x * distance,
+            y: origin.y + offset.y * distance
           });
           queue.push(exit.targetMap);
         });
     }
     ids.filter((id) => !coordinates.has(id)).forEach((id, index) => {
       coordinates.set(id, {
-        x: (index % 4) - 1.5,
-        y: 2 + Math.floor(index / 4)
+        x: ((index % 4) - 1.5) * 116,
+        y: 220 + Math.floor(index / 4) * 104
       });
     });
     return coordinates;
@@ -424,7 +609,7 @@
     const content = document.createElement("div");
     const state = document.createElement("span");
     state.textContent =
-      `ZONE EXPLORÉE · ${Math.max(1, definition.plateauCount || definition.terrainUrls?.length || catalogMap?.terrains?.length || 1)} PLATEAU${(definition.plateauCount || definition.terrainUrls?.length || catalogMap?.terrains?.length || 1) > 1 ? "X" : ""}`;
+      `${discoveryLabel(mapId)} · EXPLORÉE · ${Math.max(1, definition.plateauCount || definition.terrainUrls?.length || catalogMap?.terrains?.length || 1)} PLATEAU${(definition.plateauCount || definition.terrainUrls?.length || catalogMap?.terrains?.length || 1) > 1 ? "X" : ""}`;
     const title = document.createElement("h3");
     title.textContent = definition.name;
     const paragraph = (label, value) => {
@@ -485,40 +670,107 @@
       centerButton.type = "button";
       centerButton.textContent = "Centrer sur BlueFox";
       controls.appendChild(centerButton);
-      viewport.append(world, glow, controls);
+      viewport.append(world, glow);
       sphere.appendChild(viewport);
+      sphere.insertAdjacentElement("afterend", controls);
 
-      const view = { x: 0, y: 0, zoom: 1, dragging: false, px: 0, py: 0 };
+      const view = {
+        x: 0,
+        y: 0,
+        zoom: 1,
+        dragging: false,
+        dragged: false,
+        px: 0,
+        py: 0,
+        startX: 0,
+        startY: 0,
+        pressedMapId: null
+      };
       viewport._bluefoxView = view;
+      const sphereDepthAt = (clientX) => {
+        const rect = viewport.getBoundingClientRect();
+        if (!rect.width) return 1;
+        const longitude = Math.max(
+          -1,
+          Math.min(1, (clientX - rect.left - rect.width / 2) / (rect.width / 2))
+        );
+        return Math.sqrt(Math.max(0, 1 - longitude * longitude));
+      };
+      const applySphereProjection = () => {
+        const rect = viewport.getBoundingClientRect();
+        if (!rect.width) return;
+        const radius = rect.width / 2;
+        world.querySelectorAll(".planet-map-zone").forEach((zone) => {
+          const mapX = Number.parseFloat(zone.style.left) || 0;
+          const screenX = mapX * view.zoom + view.x;
+          const longitude = Math.max(
+            -1,
+            Math.min(1, (screenX - radius) / radius)
+          );
+          const depth = Math.sqrt(Math.max(0, 1 - longitude * longitude));
+          zone.style.setProperty(
+            "--sphere-scale-x",
+            String(0.3 + depth * 0.7)
+          );
+          zone.style.setProperty(
+            "--sphere-depth",
+            String(0.22 + depth * 0.78)
+          );
+        });
+      };
       const applyTransform = () => {
         world.style.transform =
           `translate(${view.x}px, ${view.y}px) scale(${view.zoom})`;
+        applySphereProjection();
       };
       viewport._bluefoxApplyTransform = applyTransform;
       viewport.addEventListener("pointerdown", (event) => {
-        if (event.target.closest("button")) return;
+        if (event.pointerType === "mouse" && event.button !== 0) return;
         view.dragging = true;
+        view.dragged = false;
         view.px = event.clientX;
         view.py = event.clientY;
+        view.startX = event.clientX;
+        view.startY = event.clientY;
+        view.pressedMapId = event.target instanceof Element
+          ? event.target.closest(".planet-map-zone")?.dataset.mapId || null
+          : null;
         viewport.setPointerCapture?.(event.pointerId);
         viewport.classList.add("dragging");
       });
       viewport.addEventListener("pointermove", (event) => {
         if (!view.dragging) return;
-        view.x += event.clientX - view.px;
-        view.y += event.clientY - view.py;
+        if (Math.hypot(
+          event.clientX - view.startX,
+          event.clientY - view.startY
+        ) > 5) {
+          view.dragged = true;
+        }
+        const resistance = 0.32 + sphereDepthAt(event.clientX) * 0.68;
+        view.x += (event.clientX - view.px) * resistance;
+        view.y += (event.clientY - view.py) * resistance;
         view.px = event.clientX;
         view.py = event.clientY;
         applyTransform();
       });
       const stopDragging = (event) => {
+        const selectedMapId = view.pressedMapId;
+        const wasDragged = view.dragged;
         view.dragging = false;
+        view.pressedMapId = null;
         viewport.releasePointerCapture?.(event.pointerId);
         viewport.classList.remove("dragging");
+        if (!wasDragged && selectedMapId) {
+          setExploredMapDetail(panel, selectedMapId);
+        }
+        global.setTimeout(() => {
+          view.dragged = false;
+        }, 0);
       };
       viewport.addEventListener("pointerup", stopDragging);
       viewport.addEventListener("pointercancel", stopDragging);
       viewport.addEventListener("wheel", (event) => {
+        if (!event.ctrlKey && !event.metaKey) return;
         event.preventDefault();
         view.zoom = Math.max(0.58, Math.min(1.65, view.zoom - event.deltaY * 0.001));
         applyTransform();
@@ -539,7 +791,6 @@
     if (world.dataset.signature !== signature) {
       world.dataset.signature = signature;
       world.replaceChildren();
-      const step = 172;
       const center = 900;
       const renderedLinks = new Set();
       ids.forEach((mapId) => {
@@ -550,10 +801,10 @@
           if (renderedLinks.has(key)) return;
           renderedLinks.add(key);
           const to = coordinates.get(exit.targetMap);
-          const x1 = center + from.x * step;
-          const y1 = center + from.y * step;
-          const x2 = center + to.x * step;
-          const y2 = center + to.y * step;
+          const x1 = center + from.x;
+          const y1 = center + from.y;
+          const x2 = center + to.x;
+          const y2 = center + to.y;
           const length = Math.hypot(x2 - x1, y2 - y1);
           const angle = Math.atan2(y2 - y1, x2 - x1);
           const link = document.createElement("i");
@@ -568,29 +819,29 @@
       ids.forEach((mapId) => {
         const definition = global.BlueFox3D.maps[mapId];
         const point = coordinates.get(mapId);
-        const plateauCount = Math.max(
-          1,
-          Math.min(6, definition.plateauCount || definition.terrainUrls?.length || 1)
-        );
-        const size = 48 + plateauCount * 11;
+        const metrics = planetZoneMetrics(mapId);
         const zone = document.createElement("button");
         zone.type = "button";
         zone.className = "planet-map-zone";
         zone.dataset.mapId = mapId;
-        zone.title = definition.name;
-        zone.style.left = `${center + point.x * step}px`;
-        zone.style.top = `${center + point.y * step}px`;
-        zone.style.width = `${size}px`;
-        zone.style.height = `${Math.round(size * 0.78)}px`;
+        zone.title = `${discoveryLabel(mapId)} · ${definition.name}`;
+        zone.style.left = `${center + point.x}px`;
+        zone.style.top = `${center + point.y}px`;
+        zone.style.width = `${metrics.width}px`;
+        zone.style.height = `${metrics.height}px`;
         zone.style.setProperty("--zone-color", biomeColor(definition));
         zone.style.setProperty("--zone-turn", `${((mapId.length * 17) % 13) - 6}deg`);
         const pin = document.createElement("span");
         pin.className = "planet-map-pin";
         const label = document.createElement("b");
-        label.textContent = definition.name;
+        label.textContent = `${discoveryLabel(mapId)} · ${definition.name}`;
         zone.append(pin, label);
         zone.classList.toggle("current", mapId === currentMapId(panel));
-        zone.addEventListener("click", () => {
+        zone.addEventListener("click", (event) => {
+          if (viewport._bluefoxView?.dragged) {
+            event.preventDefault();
+            return;
+          }
           setExploredMapDetail(panel, mapId);
         });
         world.appendChild(zone);
@@ -699,9 +950,13 @@
     const future = panel.querySelector(".planet-future-space");
     if (!future) return;
     const maps = (global.BLUEFOX_MAP_ASSETS?.catalog?.maps || [])
-      .filter((map) => map.number > 2 && discovered(panel, map.id));
+      .filter((map) => map.number > 1 && discovered(panel, map.id))
+      .sort((left, right) =>
+        (discoveryNumber(left.id) || Number.MAX_SAFE_INTEGER) -
+        (discoveryNumber(right.id) || Number.MAX_SAFE_INTEGER)
+      );
     const signature = maps.map((map) =>
-      `${map.number}:${map.scene.filename}:${map.terrains.length}`
+      `${map.id}:${discoveryNumber(map.id)}:${global.BlueFox3D?.maps?.[map.id]?.name || map.name}:${map.scene.filename}:${map.terrains.length}`
     ).join("|");
     if (future.dataset.catalogSignature === signature) return;
     future.dataset.catalogSignature = signature;
@@ -721,13 +976,16 @@
       const button = document.createElement("button");
       button.type = "button";
       button.className = "planet-catalog-card";
-      button.title = `Consulter ${catalogMap.name}`;
+      const displayedName =
+        global.BlueFox3D?.maps?.[catalogMap.id]?.name ||
+        catalogMap.name;
+      button.title = `Consulter ${displayedName}`;
       const image = document.createElement("i");
       image.style.backgroundImage = `url("${catalogMap.scene.url}")`;
       const label = document.createElement("span");
-      label.textContent = `MAP ${catalogMap.prefix}`;
+      label.textContent = discoveryLabel(catalogMap.id);
       const name = document.createElement("b");
-      name.textContent = catalogMap.name;
+      name.textContent = displayedName;
       const count = document.createElement("small");
       count.textContent = `${catalogMap.terrains.length} plateau${catalogMap.terrains.length > 1 ? "x" : ""}`;
       button.append(image, label, name, count);
@@ -762,7 +1020,7 @@
       .join(",");
     const signature = [
       current,
-      discovered(panel, "jungle") ? "known" : "locked",
+      discoveredMapIds(panel).length,
       mapGrid.querySelectorAll("button").length,
       catalogSignature,
       discoverySignature
@@ -777,7 +1035,10 @@
     panel.dataset.bluefoxPlanetEnhanced = "true";
     panel.dataset.bluefoxPlanetSignature = signature;
     panel.classList.add("planet-panel-enhanced");
+    layout.firstElementChild?.classList.add("planet-map-pane");
     const rightColumn = layout.lastElementChild;
+    rightColumn?.classList.add("planet-info-pane");
+    ensureUniqueDiscoveredMapNames(panel);
     const intro = rightColumn?.querySelector(":scope > p");
     if (intro) {
       intro.classList.add("planet-intro");
@@ -814,9 +1075,7 @@
       }
       content.querySelector("strong").textContent = directionNames[direction];
       content.querySelector("small span").textContent =
-        target
-          ? `MAP ${String(global.BlueFox3D?.maps?.[target]?.number || "?").padStart(2, "0")}`
-          : "MAP INCONNUE";
+        known ? discoveryLabel(target) : "ZONE NON EXPLORÉE";
       content.querySelector("small b").textContent =
         known ? knowledgeForMap(target).name : "Non explorée";
       const directionScene = content.querySelector(".direction-scene");
@@ -847,7 +1106,11 @@
     }
     renderCatalogMaps(panel);
     if (firstEnhancement || !detail.dataset.map) {
-      setPlanetDetail(panel, current === "crystal" ? "north" : "south");
+      const firstDirection =
+        Object.keys(directionNames).find(
+          (direction) => directionsForMap(current)[direction].mapId
+        ) || "north";
+      setPlanetDetail(panel, firstDirection);
     }
   }
 
@@ -857,7 +1120,7 @@
     const location = document.querySelector(".brand-block strong");
     if (location && activeDefinition) {
       const expectedLocation =
-        `${activeDefinition.name} · Zone ${activeDefinition.number || 1}`;
+        `${activeDefinition.name} · ${discoveryLabel(activeMap)}`;
       if (location.textContent !== expectedLocation) {
         location.textContent = expectedLocation;
       }
