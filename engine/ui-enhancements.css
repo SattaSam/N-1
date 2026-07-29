@@ -53,8 +53,10 @@
 }
 
 .planet-panel-enhanced .planet-layout > div:first-child {
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
   min-width: 0;
 }
 
@@ -236,10 +238,17 @@
 }
 
 .planet-map-controls {
-  position: absolute;
+  position: static;
   z-index: 5;
-  right: 10%;
-  bottom: 7%;
+  top: auto;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  width: 100%;
+  min-height: 88px;
+  margin: 10px 0 0;
+  text-align: center;
+  transform: none;
 }
 
 .planet-map-controls button {
@@ -503,6 +512,10 @@
   aspect-ratio: 1 / 1;
   margin-top: 2px;
   flex: none;
+}
+
+.planet-panel-enhanced .planet-map-pane > .planet-sphere {
+  align-self: center;
 }
 
 .planet-panel-enhanced .planet-intro {
@@ -911,6 +924,71 @@
 .action-feed,
 .intent-bar {
   background: rgba(3, 14, 29, .18) !important;
+}
+
+/*
+ * Le globe déborde réellement sous le panneau droit. Le panneau d'information
+ * reste au premier plan et le disque se fond sur 12 à 13 % de ses deux bords.
+ */
+.planet-panel-enhanced .planet-map-pane {
+  z-index: 1;
+  overflow: visible;
+}
+
+.planet-panel-enhanced .planet-map-pane > .planet-sphere {
+  width: min(60.48vh, 39.2vw, 560px);
+  min-width: 246px;
+  transform: translateX(clamp(30px, 3vw, 38px));
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent 0,
+    rgba(0, 0, 0, .3) 4%,
+    rgba(0, 0, 0, .78) 9%,
+    #000 13% 87%,
+    rgba(0, 0, 0, .78) 91%,
+    rgba(0, 0, 0, .3) 96%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent 0,
+    rgba(0, 0, 0, .3) 4%,
+    rgba(0, 0, 0, .78) 9%,
+    #000 13% 87%,
+    rgba(0, 0, 0, .78) 91%,
+    rgba(0, 0, 0, .3) 96%,
+    transparent 100%
+  );
+}
+
+.planet-panel-enhanced .planet-map-pane > .planet-map-controls {
+  transform: translateX(clamp(30px, 3vw, 38px));
+}
+
+.planet-panel-enhanced .planet-layout > .planet-info-pane {
+  position: relative;
+  z-index: 2;
+  border-left: 1px solid rgba(103, 218, 255, .42);
+  box-shadow: -1px 0 rgba(164, 238, 255, .07);
+}
+
+@media (max-width: 900px) {
+  .planet-panel-enhanced .planet-map-pane > .planet-sphere,
+  .planet-panel-enhanced .planet-map-pane > .planet-map-controls {
+    transform: none;
+  }
+
+  .planet-panel-enhanced .planet-map-pane > .planet-sphere {
+    width: min(37vh, 68vw, 370px);
+    min-width: 220px;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .planet-panel-enhanced .planet-layout > .planet-info-pane {
+    border-left: 0;
+    box-shadow: none;
+  }
 }
 
 @media (hover: hover) and (pointer: fine) {

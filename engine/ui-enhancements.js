@@ -1035,8 +1035,21 @@
     panel.dataset.bluefoxPlanetEnhanced = "true";
     panel.dataset.bluefoxPlanetSignature = signature;
     panel.classList.add("planet-panel-enhanced");
-    layout.firstElementChild?.classList.add("planet-map-pane");
-    const rightColumn = layout.lastElementChild;
+    /*
+     * La sphère était auparavant le premier enfant direct de la grille et les
+     * contrôles devenaient un troisième enfant. Un vrai volet gauche garantit
+     * que la grille principale conserve exactement deux colonnes.
+     */
+    let mapPane = layout.querySelector(":scope > .planet-map-pane");
+    const sphere = layout.querySelector(":scope > .planet-sphere");
+    if (!mapPane && sphere) {
+      mapPane = document.createElement("div");
+      mapPane.className = "planet-map-pane";
+      sphere.replaceWith(mapPane);
+      mapPane.appendChild(sphere);
+    }
+    const rightColumn = [...layout.children]
+      .find((element) => element !== mapPane) || layout.lastElementChild;
     rightColumn?.classList.add("planet-info-pane");
     ensureUniqueDiscoveredMapNames(panel);
     const intro = rightColumn?.querySelector(":scope > p");
