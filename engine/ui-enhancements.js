@@ -155,7 +155,7 @@
       : "ZONE INCONNUE";
   };
 
-  const uniqueNameStorageKey = "bluefox_unique_map_names_v1";
+  const uniqueNameStorageKey = "bluefox_map_names_v1";
   const blueFoxPlaceNames = Object.freeze([
     "Lisière des Murmures",
     "Veines du Ciel Calme",

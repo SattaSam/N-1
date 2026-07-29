@@ -611,6 +611,27 @@
   line-height: 1.45;
 }
 
+.planet-return-base {
+  margin-top: 9px;
+  padding: 8px 12px;
+  border: 1px solid rgba(139, 226, 255, .72);
+  border-radius: 9px;
+  color: #fff;
+  background: linear-gradient(180deg, #247fbd, #145486);
+  box-shadow:
+    inset 0 1px rgba(220, 248, 255, .2),
+    0 4px 13px rgba(0, 9, 22, .35);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.planet-return-base:hover,
+.planet-return-base:focus-visible {
+  border-color: #b6efff;
+  background: linear-gradient(180deg, #3194d3, #176397);
+  outline: none;
+}
+
 .planet-current-image {
   width: 126px;
   aspect-ratio: 16 / 9;
