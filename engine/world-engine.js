@@ -187,6 +187,13 @@
       global.dispatchEvent(new CustomEvent("bluefox:scene-images"));
       BF.currentEngine = this;
       BF.getDiagnostics = () => this.getDiagnostics();
+      if (BF.Missions?.MissionManager) {
+        this.missionManager = BF.Missions.MissionManager.create({
+          engine: this,
+          missionId: "shelter"
+        });
+        BF.getMissionState = () => this.missionManager.getState();
+      }
       this.loop();
       return this;
     }
@@ -1747,7 +1754,13 @@
           nearestDistance = distance;
         }
       });
-      if (!force && nearest.index === this.currentZoneIndex) return;
+      const reachedPlannedZone =
+        this.pendingZoneExploration?.index === nearest.index;
+      if (
+        !force &&
+        nearest.index === this.currentZoneIndex &&
+        !reachedPlannedZone
+      ) return;
       this.currentZoneIndex = nearest.index;
       const zoneKey = `${this.currentMapId}:map`;
       if (!this.discoveredZones.has(zoneKey)) {
@@ -1757,12 +1770,25 @@
           `Nouvelle zone explorée : ${this.currentMap.definition.name}.`
         );
       }
-      if (this.pendingZoneExploration?.index === nearest.index) {
+      if (reachedPlannedZone) {
+        const preciseZoneKey = `${this.currentMapId}:${nearest.index}`;
+        if (!this.discoveredZones.has(preciseZoneKey)) {
+          this.discoveredZones.add(preciseZoneKey);
+          this.saveZoneDiscovery();
+        }
         this.callbacks.onStatus(
           `BlueFox commence l’étude du plateau ${nearest.index + 1}.`
         );
         this.pendingZoneExploration = null;
         this.lastAutonomyAt = now - 5000;
+        this.missionManager?.notifyActionCompleted(
+          BF.Missions.ActionType.EXPLORE_ZONE,
+          {
+            mapId: this.currentMapId,
+            zoneIndex: nearest.index,
+            amount: 1
+          }
+        );
       }
       this.callbacks.onZoneChange(
         this.currentMapId,
@@ -1895,6 +1921,7 @@
             this.interactionApproachStartedAt = 0;
             this.interactionApproachAttempts = 0;
             this.character.stop();
+            this.missionManager?.cancelCurrentAction("resource-inaccessible");
           }
         }
         return;
@@ -1932,6 +1959,10 @@
       this.callbacks.onCollect(object.userData.kind);
       this.completedInteractions += 1;
       this.lastCompletedAction = object.userData.kind;
+      this.missionManager?.notifyActionCompleted(
+        BF.Missions.ActionType.COLLECT,
+        { kind: object.userData.kind, amount: 1 }
+      );
       this.pendingInteraction = null;
       this.interactionStartedAt = 0;
       this.interactionApproachStartedAt = 0;
@@ -1950,7 +1981,12 @@
     }
 
     updateAutonomy(now) {
-      if (this.transitioning || this.pendingInteraction || this.currentRoutine) return;
+      if (
+        this.transitioning ||
+        this.pendingInteraction ||
+        this.currentRoutine ||
+        this.missionManager?.currentAction
+      ) return;
       if (now < this.postActionRecoveryUntil) return;
       if (now - this.lastAutonomyAt < 6500) return;
       if (this.character.root.position.distanceTo(this.character.target) > 0.2) return;
@@ -2049,6 +2085,23 @@
       this.currentRoutine = null;
       this.character.cancelInteraction();
       if (finished === "rest") this.callbacks.onRest();
+      const missionActionTypes = {
+        rest: BF.Missions?.ActionType.REST,
+        research: BF.Missions?.ActionType.RESEARCH,
+        food: BF.Missions?.ActionType.EAT
+      };
+      const expectedMissionType = this.missionManager?.currentAction?.type;
+      const completedMissionType =
+        finished === "research" &&
+        expectedMissionType === BF.Missions?.ActionType.OBSERVE
+          ? BF.Missions.ActionType.OBSERVE
+          : missionActionTypes[finished];
+      if (completedMissionType) {
+        this.missionManager?.notifyActionCompleted(
+          completedMissionType,
+          { routine: finished, amount: 1 }
+        );
+      }
       this.lastAutonomyAt = now - 5000;
       this.lastActivityAt = now;
     }
@@ -2254,6 +2307,7 @@
       this.updatePerformanceGovernor(dt);
       this.updateRoutine(now);
       this.updateInteraction(now);
+      this.missionManager?.update(now);
       this.updateAutonomy(now);
       this.ensureActivity(now);
       this.updateInformationLayers(now);
@@ -2341,6 +2395,7 @@
         cameraRecoveries: this.cameraController?.recoveryCount || 0,
         browserResumes: this.resumeCount,
         zonesDiscovered: this.discoveredZones.size,
+        mission: this.missionManager?.getState() || null,
         lastResumeAt: this.lastResumeAt,
         characterActive: Boolean(
           this.character?.speed > 0.08 ||
@@ -2378,6 +2433,7 @@
       this.speechButton?.removeEventListener("click", this.onSpeechToggle);
       this.cameraButton?.remove();
       this.speechButton?.remove();
+      this.missionManager?.dispose();
       document.body.classList.remove("bluefox-speech-hidden");
       this.clickMarker?.remove();
       this.cameraController?.dispose();
@@ -2392,6 +2448,7 @@
       if (BF.currentEngine === this) {
         BF.currentEngine = null;
         BF.getDiagnostics = null;
+        BF.getMissionState = null;
       }
       this.container.replaceChildren();
     }

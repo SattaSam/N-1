@@ -20,6 +20,18 @@ Le raccordement est limité à `index.html` et `engine/world-engine.js`.
 `engine/character-controller.js` et `engine/path-planner.js` sont restés
 strictement inchangés.
 
+La carte de mission est maintenant alimentée par M0 grâce à
+`engine/mission-ui-bridge.js`. Les anciennes définitions refuge, énergie, flore
+et contact ont été converties en arbres M0. Le refuge commence par le camp,
+puis une analyse de Zone composée d’une reconnaissance, de trois relevés
+différents et d’une cartographie des ressources.
+
+L’énergie douce n’est pas lancée automatiquement après le refuge. Elle reste
+une mission disponible pour une activation future.
+
+La tentative d’enregistrement du Service Worker inexistant `/sw.js` a été
+retirée de `game.js`.
+
 Les tests de syntaxe, de progression de l’arbre, de prérequis, de sérialisation
 et de reconstruction du ZIP sont réussis. Le comportement doit maintenant être
 validé dans le navigateur.

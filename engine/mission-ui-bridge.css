@@ -1,0 +1,41 @@
+.mission-card.mission-m0-connected > .eyebrow,
+.mission-card.mission-m0-connected > h2,
+.mission-card.mission-m0-connected > p,
+.mission-card.mission-m0-connected > .mission-step {
+  display: none;
+}
+
+.m0-mission-panel > h2 {
+  margin: 8px 0;
+  font-size: 17px;
+}
+
+.m0-mission-panel > p {
+  margin: 0 0 14px;
+  color: #a9c7d8;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.m0-mission-panel .mission-step.locked {
+  opacity: 0.48;
+}
+
+.m0-mission-panel .mission-step.active {
+  border-color: rgba(100, 230, 255, 0.4);
+}
+
+.m0-mission-panel .mission-step > i.progress {
+  color: #a8dff1;
+  white-space: nowrap;
+}
+
+@media (max-width: 650px) {
+  .m0-mission-panel > h2 {
+    font-size: 13px;
+  }
+
+  .m0-mission-panel > p {
+    display: none;
+  }
+}

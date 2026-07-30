@@ -107,3 +107,11 @@ les modèles de micro-scènes et l’ordre du chargeur ont été vérifiés.
 - Validation sur achèvement réel des collectes, explorations et routines.
 - Conservation intégrale de `character-controller.js` et `path-planner.js`.
 - Exposition de `BlueFox3D.getMissionState()` pour le test et le diagnostic.
+- Raccordement de `.mission-card` à M0 par un pont d’interface indépendant.
+- Conversion des quatre missions historiques en définitions d’arbres M0.
+- Ajout du camp comme prérequis du refuge.
+- Remplacement de l’exploration instantanée par reconnaissance, trois relevés
+  distincts et cartographie des ressources.
+- Suppression de l’enregistrement obsolète de `/sw.js`, responsable du 404.
+- Les missions énergie, flore et contact restent disponibles mais ne sont pas
+  déclenchées automatiquement après le refuge.

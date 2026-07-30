@@ -170,3 +170,12 @@ progression qu’au retour d’un hook d’achèvement réel. La mémoire locale
 historiques du monde.
 
 Référence détaillée : `docs/SPRINT_M0_FONDATION_IA.md`.
+
+La carte `.mission-card` est raccordée sans modifier le rendu React historique :
+`mission-ui-bridge.js` écoute `bluefox:mission-state`, affiche l’arbre M0 et
+réapplique cet état si React reconstruit la carte. Une mission historique n’est
+plus considérée comme source d’autorité visuelle.
+
+Une Zone n’est pas validée à l’arrivée. `EXPLORE_ZONE` représente la
+reconnaissance géographique ; l’objectif parent doit encore réunir trois relevés
+différents et une cartographie avant de devenir `completed`.

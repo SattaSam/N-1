@@ -8,8 +8,9 @@ Cette page est la **seule TODO active**.
 
 - [ ] Lancer le paquet cumulatif `V0.16.20_M0`.
 - [ ] Vérifier l’absence d’erreur de chargement des six modules de mission.
-- [ ] Observer l’exploration, deux collectes de cristaux, deux collectes de
-  fibres et la recherche finale.
+- [ ] Vérifier que la carte « Mission en cours » affiche l’arbre M0.
+- [ ] Observer le camp, la reconnaissance, trois relevés distincts, la
+  cartographie, puis les collectes du refuge.
 - [ ] Contrôler `BlueFox3D.getMissionState()` dans la console.
 - [ ] Rafraîchir et confirmer la persistance de la progression.
 - [ ] Vérifier que les commandes joueur, la caméra et les menus restent
@@ -51,6 +52,11 @@ Cette page est la **seule TODO active**.
 
 - [ ] Construction réelle du premier refuge.
 - [x] Fondation technique des missions hiérarchiques persistantes — M0.
+- [x] Convertir les quatre missions historiques en définitions M0.
+- [x] Raccorder la carte de mission au gestionnaire M0.
+- [x] Définir l’exploration comme reconnaissance + trois relevés +
+  cartographie.
+- [ ] Définir les conditions futures d’activation de la mission énergie douce.
 - [ ] Relier les projets prioritaires aux besoins réels.
 - [ ] Ajouter les missions composées et sous-missions dynamiques.
 - [ ] Ajouter la construction, le transport et la fabrication dans

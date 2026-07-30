@@ -44,12 +44,17 @@ Le moteur dispose désormais d’un premier arbre de mission hiérarchique
 persistant. Une mission peut contenir des sous-objectifs, des prérequis, un
 volume d’actions à accomplir et une progression sauvegardée.
 
-Le premier scénario technique `foundation` demande :
+La première mission active `shelter` demande :
 
-1. d’explorer un plateau ;
-2. de collecter deux cristaux ;
-3. de collecter deux fibres ;
-4. d’effectuer une recherche après les deux collectes.
+1. d’établir le camp près de l’épave ;
+2. de reconnaître le plateau ;
+3. d’identifier trois éléments différents ;
+4. de cartographier les ressources afin de valider l’exploration ;
+5. de réunir ensuite les cristaux et fibres nécessaires au refuge.
+
+Atteindre une Zone ne valide jamais à lui seul son exploration. La mission
+énergie douce existe dans le catalogue M0, mais elle ne doit pas être activée
+automatiquement après le refuge.
 
 Cette couche ne remplace pas l’autonomie existante. Elle propose une action
 uniquement lorsque le moteur est libre et laisse l’autonomie historique
