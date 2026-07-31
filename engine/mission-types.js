@@ -6,6 +6,9 @@
 
   const ActionType = Object.freeze({
     COLLECT: "collect",
+    EXTRACT: "extract",
+    INSPECT: "inspect",
+    ANALYZE: "analyze",
     EXPLORE_ZONE: "explore-zone",
     TRAVEL: "travel",
     REST: "rest",

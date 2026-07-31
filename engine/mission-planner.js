@@ -25,7 +25,7 @@
     score(node, context) {
       let score = 100;
       const type = Missions.normalizeActionType(node.type);
-      if (type === Missions.ActionType.COLLECT) {
+      if ([Missions.ActionType.COLLECT, Missions.ActionType.EXTRACT].includes(type)) {
         const available = context.resources?.[node.params.kind] || 0;
         score += available ? 60 : -100;
       }
@@ -73,7 +73,7 @@
       const node = tree.find(action.nodeId);
       if (!node || node.isComplete) return false;
       if (
-        action.type === Missions.ActionType.COLLECT &&
+        [Missions.ActionType.COLLECT, Missions.ActionType.EXTRACT].includes(action.type) &&
         node.params.kind &&
         detail.kind !== node.params.kind
       ) {

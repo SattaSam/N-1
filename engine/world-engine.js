@@ -1138,7 +1138,20 @@
           event.clientX - this.pointerDown.x,
           event.clientY - this.pointerDown.y
         ) > 8) return;
-        this.handlePointer(event);
+        window.clearTimeout(this.pointerClickTimer);
+        const pointer = {
+          clientX: event.clientX,
+          clientY: event.clientY
+        };
+        this.pointerClickTimer = window.setTimeout(
+          () => this.handlePointer(pointer, "run"),
+          220
+        );
+      };
+      this.onWorldDoubleClick = (event) => {
+        event.preventDefault();
+        window.clearTimeout(this.pointerClickTimer);
+        this.handlePointer(event, "run-fast");
       };
       this.onNavigate = (event) => this.handleNavigationSuggestion(event.detail);
       this.onReturnBase = () => this.returnToBase();
@@ -1183,6 +1196,7 @@
       };
       this.renderer.domElement.addEventListener("pointerdown", this.onPointerDown);
       this.renderer.domElement.addEventListener("pointerup", this.onPointerUp);
+      this.renderer.domElement.addEventListener("dblclick", this.onWorldDoubleClick);
       global.addEventListener("bluefox:navigate", this.onNavigate);
       global.addEventListener("bluefox:return-base", this.onReturnBase);
       global.addEventListener("bluefox:path-planned", this.onPathPlanned);
@@ -1226,7 +1240,7 @@
       }
     }
 
-    handlePointer(event) {
+    handlePointer(event, movementMode = "run") {
       if (this.transitioning) return;
       this.navigationRoute = [];
       this.showClickMarker(event);
@@ -1243,7 +1257,10 @@
       );
       if (hits.length) {
         const object = hits[0].object;
-        if (object.userData.active) this.targetInteraction(object);
+        if (object.userData.active) {
+          object.userData.requestedMovementMode = movementMode;
+          this.targetInteraction(object);
+        }
         return;
       }
 
@@ -1255,7 +1272,7 @@
       this.pendingInteraction = null;
       this.pendingZoneExploration = null;
       this.character.cancelInteraction();
-      this.character.setTarget(point);
+      this.character.setTarget(point, movementMode);
       this.showWorldMarker(point);
       this.callbacks.onStatus("BlueFox suit progressivement la destination suggérée.");
     }
@@ -1309,8 +1326,7 @@
       );
       if (!gate) return;
       this.pendingGate = gate;
-      this.character.setPlayerSprint(24);
-      this.character.setTarget(gate.position);
+      this.character.setTarget(gate.position, "run");
       this.showWorldMarker(gate.position);
       const frenchDirection = {
         north: "le Nord", south: "le Sud", east: "l’Est", west: "l’Ouest"
@@ -1350,8 +1366,7 @@
         0,
         BF.clamp(detail.z || 0, -27, 27)
       );
-      this.character.setPlayerSprint(16);
-      this.character.setTarget(target);
+      this.character.setTarget(target, "run");
       this.showWorldMarker(target);
     }
 
@@ -1394,8 +1409,7 @@
         return;
       }
       this.pendingGate = gate;
-      this.character.setPlayerSprint(24);
-      this.character.setTarget(gate.position);
+      this.character.setTarget(gate.position, "run");
       this.showWorldMarker(gate.position);
       this.callbacks.onStatus(
         `BlueFox rejoint le passage vers ${BF.maps[destinationId].name}.`
@@ -1468,31 +1482,37 @@
       const functional = data.functional || {};
       const interaction = functional.interaction || data.interaction || {};
       const gameplay = functional.gameplay || data.gameplay || {};
-      const kind = String(data.kind || functional.kind || "unknown");
+      const actions = new Set(interaction.actions || []);
+      const kind = String(
+        functional.resource?.inventoryKey ||
+        functional.type ||
+        data.kind ||
+        "unknown"
+      );
       const configuredAction = String(
-        interaction.defaultAction || data.defaultAction || ""
+        interaction.defaultManualAction ||
+        interaction.defaultAction ||
+        data.defaultAction ||
+        ""
       ).toLowerCase();
-      let action = configuredAction;
-      if (!action) {
-        if (gameplay.collectable === true || ["crystal", "fiber"].includes(kind)) {
-          action = "collect";
-        } else if (gameplay.extractable === true || kind === "ore") {
-          action = "extract";
-        } else if (gameplay.analyzable === true || kind === "relic") {
-          action = "analyze";
-        } else if (gameplay.observable === true || kind === "discovery") {
-          action = "observe";
-        } else {
-          action = "inspect";
-        }
-      }
-      const names = {
-        crystal: "le cristal", fiber: "les fibres", ore: "le minerai",
-        structure: "la stèle", discovery: "le bassin", relic: "la relique",
-        plant: "la plante", unknown: "l’objet"
-      };
-      const label = interaction.label || functional.label || data.label || names[kind] || "l’objet";
-      const collectable = gameplay.collectable === true || action === "collect" || action === "extract";
+      const action = actions.has(configuredAction)
+        ? configuredAction
+        : actions.has("extract")
+          ? "extract"
+          : actions.has("collect")
+            ? "collect"
+            : actions.has("analyze")
+              ? "analyze"
+              : actions.has("inspect")
+                ? "inspect"
+                : actions.has("observe")
+                  ? "observe"
+                  : "";
+      const label = interaction.label || functional.label || data.label || "l’objet";
+      const collectable = action === "collect" || action === "extract";
+      const removeFromWorld =
+        interaction.removeFromWorld ??
+        (collectable && gameplay.collectable === true);
       const actionText = {
         collect: `BlueFox collecte ${label}.`,
         extract: `BlueFox extrait une ressource de ${label}.`,
@@ -1514,13 +1534,27 @@
         observe: `J’observe ${label} sans intervenir.`,
         analyze: `J’analyse ${label} et j’enregistre les résultats.`
       }[action] || `J’examine ${label}.`;
-      return { kind, action, label, collectable, actionText, approachText, speechText };
+      return {
+        kind,
+        action,
+        label,
+        collectable,
+        removeFromWorld,
+        respawnMs: Number.isFinite(Number(interaction.respawnSeconds))
+          ? Number(interaction.respawnSeconds) * 1000
+          : null,
+        animationHints: interaction.animation?.[action] || [],
+        actionText,
+        approachText,
+        speechText
+      };
     }
 
     canInteractWith(object, now = performance.now()) {
       if (!object?.userData?.active) return false;
       const last = Number(object.userData.lastInteractionAt || 0);
       const profile = this.interactionProfile(object);
+      if (!profile.action) return false;
       return profile.collectable || now - last > 30000;
     }
 
@@ -1530,8 +1564,8 @@
         collect: types.COLLECT,
         extract: types.EXTRACT || types.COLLECT,
         inspect: types.INSPECT || types.OBSERVE,
-        observe: types.OBSERVE || types.INSPECT,
-        analyze: types.ANALYZE || types.RESEARCH || types.OBSERVE
+        observe: types.OBSERVE,
+        analyze: types.ANALYZE || types.OBSERVE
       }[action];
     }
 
@@ -1547,7 +1581,10 @@
       this.interactionStartedAt = 0;
       this.interactionApproachStartedAt = performance.now();
       if (!retry) this.interactionApproachAttempts = 0;
-      this.character.setTarget(approach.point);
+      this.character.setTarget(
+        approach.point,
+        object.userData.requestedMovementMode || "auto"
+      );
       this.showWorldMarker(approach.point);
       this.callbacks.onStatus(object.userData.interactionProfile.approachText);
     }
@@ -1996,7 +2033,10 @@
       if (!this.interactionStartedAt) {
         this.interactionStartedAt = now;
         this.character.facePoint(anchor.position);
-        const duration = this.character.playInteraction(profile.action || profile.kind);
+        const duration = this.character.playInteraction(
+          profile.action,
+          profile.animationHints
+        );
         this.interactionDuration = Math.max(900, duration * 1000);
         this.callbacks.onAction(profile.actionText);
         if (this.speechVisible && now - this.lastSpeechAt > 3200) {
@@ -2009,9 +2049,11 @@
 
       this.character.cancelInteraction();
       object.userData.lastInteractionAt = now;
-      if (profile.collectable) {
+      if (profile.removeFromWorld) {
         object.userData.active = false;
         anchor.visible = false;
+      }
+      if (profile.collectable) {
         this.callbacks.onCollect(profile.kind);
       }
       this.completedInteractions += 1;
@@ -2034,13 +2076,21 @@
       this.postActionRecoveryUntil = now + 650;
       this.lastActivityAt = now;
       this.lastAutonomyAt = now - 5600;
-      if (profile.collectable) {
+      object.userData.requestedMovementMode = null;
+      if (profile.removeFromWorld) {
+        if (!Number.isFinite(profile.respawnMs) || profile.respawnMs <= 0) {
+          console.error(
+            `[BlueFox3D] Métadonnée CUO interaction.respawnSeconds absente ou invalide pour ${profile.kind}.`
+          );
+          return;
+        }
+        const respawnMs = profile.respawnMs;
         const cooldown = setTimeout(() => {
           if (this.disposed) return;
           anchor.visible = true;
           object.userData.active = true;
           this.resourceCooldowns.delete(object);
-        }, 18000);
+        }, respawnMs);
         this.resourceCooldowns.set(object, cooldown);
       }
     }
@@ -2057,6 +2107,14 @@
       if (this.character.root.position.distanceTo(this.character.target) > 0.2) return;
       this.lastAutonomyAt = now;
 
+      if (Math.random() < 0.08) {
+        const duration = this.character.playAmbientObservation();
+        if (duration > 0) {
+          this.lastActivityAt = now;
+          this.callbacks.onStatus("BlueFox s’immobilise un instant et observe les environs.");
+          return;
+        }
+      }
       const routineRoll = Math.random();
       if (routineRoll < 0.12) {
         this.startRoutine("rest", now, 7200);
@@ -2235,15 +2293,17 @@
         return { key: "food", label: "Alimentation et vérification des réserves.", speech: "Je prends une ration avant de poursuivre." };
       }
       if (this.pendingInteraction) {
-        const kind = this.pendingInteraction.userData.kind;
-        if (kind === "crystal") {
-          return this.interactionStartedAt
-            ? { key: "collect-crystal", label: "Collecte de cristaux énergétiques.", speech: "Je prélève ce cristal, juste la quantité nécessaire." }
-            : { key: "approach-crystal", label: "Déplacement vers un gisement de cristaux.", speech: "Je rejoins le cristal que j’ai repéré." };
-        }
-        return this.interactionStartedAt
-          ? { key: "collect-fiber", label: "Collecte de fibres arrivées à maturité.", speech: "Je récolte uniquement les fibres mûres." }
-          : { key: "approach-fiber", label: "Déplacement vers une plante à fibres.", speech: "Je vais prélever quelques fibres utiles." };
+        const profile =
+          this.pendingInteraction.userData.interactionProfile ||
+          this.interactionProfile(this.pendingInteraction);
+        const phase = this.interactionStartedAt ? "action" : "approach";
+        return {
+          key: `${phase}-${profile.action}-${profile.kind}`,
+          label: this.interactionStartedAt
+            ? profile.actionText
+            : profile.approachText,
+          speech: profile.speechText
+        };
       }
       if (this.transitioning) {
         return { key: "map-transition", label: "Passage vers une nouvelle zone cartographiée.", speech: "Je franchis le passage vers la zone suivante." };
@@ -2481,6 +2541,7 @@
       this.resizeObserver?.disconnect();
       this.renderer.domElement.removeEventListener("pointerdown", this.onPointerDown);
       this.renderer.domElement.removeEventListener("pointerup", this.onPointerUp);
+      this.renderer.domElement.removeEventListener("dblclick", this.onWorldDoubleClick);
       global.removeEventListener("bluefox:navigate", this.onNavigate);
       global.removeEventListener("bluefox:return-base", this.onReturnBase);
       global.removeEventListener("bluefox:path-planned", this.onPathPlanned);
@@ -2489,6 +2550,7 @@
       document.removeEventListener("visibilitychange", this.onVisibilityChange);
       global.removeEventListener("bluefox:camera-mode", this.onCameraMode);
       window.clearTimeout(this.cameraClickTimer);
+      window.clearTimeout(this.pointerClickTimer);
       this.cameraButton?.removeEventListener("click", this.onCameraClick);
       this.cameraButton?.removeEventListener("dblclick", this.onCameraDoubleClick);
       this.speechButton?.removeEventListener("click", this.onSpeechToggle);

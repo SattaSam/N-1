@@ -26,6 +26,8 @@
       this.radius = 0.64;
       this.maxSpeed = 3.55;
       this.playerSprintUntil = 0;
+      this.movementMode = "auto";
+      this.autonomousRunThreshold = 13.5;
       this.acceleration = 5.2;
       this.deceleration = 7.5;
       this.turnSpeed = 9;
@@ -109,13 +111,21 @@
       return this.findClip(fallbackNames);
     }
 
+    findAvailableClip(names) {
+      return names.find((name) => name && this.actions.has(name)) || "";
+    }
+
     setColliders(colliders) {
       this.colliders = colliders;
       if (this.finalTarget) this.rebuildPath();
     }
 
-    setTarget(target) {
+    setTarget(target, movementMode = "auto") {
       if (!target || !Number.isFinite(target.x) || !Number.isFinite(target.z)) return;
+      const directDistance = this.root.position.distanceTo(target);
+      this.movementMode = movementMode === "auto"
+        ? (directDistance > this.autonomousRunThreshold ? "run" : "walk")
+        : movementMode;
       this.finalTarget.copy(target);
       this.finalTarget.y = 0;
       this.failedReplans = 0;
@@ -156,11 +166,13 @@
       this.stuckTime = 0;
       this.failedReplans = 0;
       this.playerSprintUntil = 0;
+      this.movementMode = "auto";
     }
 
     setPlayerSprint(durationSeconds = 18) {
       this.playerSprintUntil =
         performance.now() + Math.max(2, durationSeconds) * 1000;
+      this.movementMode = "run-fast";
     }
 
     cancelInteraction() {
@@ -196,22 +208,37 @@
       this.currentAnimation = name;
     }
 
-    playInteraction(kind) {
-      const names = kind === "crystal"
+    playInteraction(action, animationHints = []) {
+      const normalizedAction = String(action || "observe").toLowerCase();
+      const acquisition = normalizedAction === "collect" ||
+        normalizedAction === "extract";
+      const requestedNames = Array.isArray(animationHints)
+        ? animationHints
+        : [animationHints];
+      const useObservationGesture =
+        normalizedAction !== "observe" || Math.random() < 0.35;
+      const names = acquisition
         ? [
+            ...requestedNames,
             this.clips.find((clip) => /harvest[_\s-]*heavy/i.test(clip.name))?.name,
-            this.clips.find((clip) => /harvest[_\s-]*medium/i.test(clip.name))?.name
+            this.clips.find((clip) => /harvest[_\s-]*medium/i.test(clip.name))?.name,
+            this.clips.find((clip) => /harvers/i.test(clip.name))?.name,
+            this.clips.find((clip) => /harvest[_\s-]*small/i.test(clip.name))?.name
           ]
-        : [
-            this.findClipMatching(
-              [/harvers/i, /harvest[_\s-]*small/i],
-              ["Harvest_Medium", "Idle"]
-            )
-          ];
+        : useObservationGesture ? [
+            ...requestedNames,
+            this.clips.find((clip) => /ear[_\s-]*right/i.test(clip.name))?.name,
+            this.clips.find((clip) => /^ear/i.test(clip.name))?.name
+          ] : [];
+      const idle = this.findAvailableClip(["Idle", "Idle_V2", "Idle_V3", "Idle_V4"]);
       const uniqueNames = names.filter(
-        (name, index) => name && names.indexOf(name) === index
+        (name, index) =>
+          name &&
+          this.actions.has(name) &&
+          names.indexOf(name) === index
       );
-      const speed = kind === "crystal" ? 1.12 : 1.08;
+      if (!uniqueNames.length && idle) uniqueNames.push(idle);
+      const speed = acquisition ? 1.1 : 1;
       const steps = uniqueNames.map((name) => ({
         name,
         duration: Math.max(
@@ -220,7 +247,9 @@
         )
       }));
       if (!steps.length) {
-        steps.push({ name: this.findClip(["Idle", "Idle_V2"]), duration: 1.4 });
+        this.actionLockUntil = 0;
+        this.interactionSequence = null;
+        return 0.9;
       }
       const now = performance.now();
       const duration = steps.reduce((total, step) => total + step.duration, 0);
@@ -234,6 +263,29 @@
       this.actionLockUntil = this.interactionSequence.endsAt;
       this.play(steps[0].name, 0.14, true);
       this.currentAction?.setEffectiveTimeScale(speed);
+      return duration;
+    }
+
+    playAmbientObservation() {
+      const ear = this.findAvailableClip([
+        "Ear_Right",
+        this.clips.find((clip) => /^ear/i.test(clip.name))?.name
+      ]);
+      if (!ear) return 0;
+      const duration = Math.max(
+        0.65,
+        this.actions.get(ear)?.getClip().duration || 1.2
+      );
+      const now = performance.now();
+      this.interactionSequence = {
+        steps: [{ name: ear, duration }],
+        index: 0,
+        speed: 1,
+        stepEndsAt: now + duration * 1000,
+        endsAt: now + duration * 1000
+      };
+      this.actionLockUntil = this.interactionSequence.endsAt;
+      this.play(ear, 0.18, true);
       return duration;
     }
 
@@ -265,6 +317,17 @@
     }
 
     updateLocomotionState() {
+      if (this.movementMode === "walk" && this.speed > 0.08) {
+        this.locomotionState = "walk";
+        return this.locomotionState;
+      }
+      if (
+        (this.movementMode === "run" || this.movementMode === "run-fast") &&
+        this.speed > 1.15
+      ) {
+        this.locomotionState = "run";
+        return this.locomotionState;
+      }
       if (this.locomotionState === "idle") {
         if (this.speed > 0.26) this.locomotionState = "walk";
       } else if (this.locomotionState === "walk") {
@@ -360,9 +423,14 @@
         const arrival = distance < this.arrivalRadius
           ? this.THREE.MathUtils.smoothstep(distance, this.stopRadius, this.arrivalRadius)
           : 1;
-        const playerSprint = performance.now() < this.playerSprintUntil;
+        const playerSprint =
+          this.movementMode === "run-fast" ||
+          performance.now() < this.playerSprintUntil;
+        const movementSpeed = this.movementMode === "walk"
+          ? Math.min(this.maxSpeed, 2.05)
+          : this.maxSpeed;
         const desiredSpeed =
-          this.maxSpeed * (playerSprint ? 1.3 : 1) * arrival;
+          movementSpeed * (playerSprint ? 1.3 : 1) * arrival;
         const lambda = desiredSpeed > this.speed ? this.acceleration : this.deceleration;
         this.speed = BF.damp(this.speed, desiredSpeed, lambda, dt);
         this.velocity.lerp(this.desiredDirection, 1 - Math.exp(-7 * dt)).normalize();
@@ -422,7 +490,9 @@
 
       const actionLocked = performance.now() < this.actionLockUntil;
       const walk = this.findClip(["Walk", "Walk_V1"]);
-      const playerSprint = performance.now() < this.playerSprintUntil;
+      const playerSprint =
+        this.movementMode === "run-fast" ||
+        performance.now() < this.playerSprintUntil;
       const run = playerSprint
         ? this.findClip(["Run_fast", "Run", "Walk", "Walk_V1"])
         : this.findClip(["Run", "Run_fast", "Walk", "Walk_V1"]);

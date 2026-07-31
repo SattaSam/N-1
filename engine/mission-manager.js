@@ -149,7 +149,12 @@
           target: node.target
         })),
         tree: this.tree.toJSON(),
-        inventory: { ...this.memory.state.inventory }
+        inventory: {
+          ...(
+            BF.getProgressionState?.().inventory ||
+            this.memory.state.inventory
+          )
+        }
       };
     }
 

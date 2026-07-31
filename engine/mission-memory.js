@@ -17,7 +17,7 @@
         version: 2,
         activeMissionId: "shelter",
         missions: {},
-        inventory: { crystal: 0, fiber: 0 },
+        inventory: {},
         facts: {},
         history: [],
         updatedAt: Date.now()
@@ -75,7 +75,10 @@
       };
       this.state.history.push(event);
       this.state.history = this.state.history.slice(-150);
-      if (type === Missions.ActionType.COLLECT && detail.kind) {
+      if (
+        [Missions.ActionType.COLLECT, Missions.ActionType.EXTRACT].includes(type) &&
+        detail.kind
+      ) {
         const amount = Math.max(1, Number(detail.amount) || 1);
         this.state.inventory[detail.kind] =
           (Number(this.state.inventory[detail.kind]) || 0) + amount;

@@ -587,7 +587,19 @@
         harvestPriority: 1,
         danger: 0
       }),
-      interaction: { actions: ["inspect", "collect", "analyze"], defaultAction: "collect" },
+      interaction: {
+        actions: ["observe", "inspect", "collect", "analyze"],
+        defaultAction: "collect",
+        acquisitionAction: "collect",
+        removeFromWorld: true,
+        respawnSeconds: 75,
+        animation: {
+          collect: ["Harvest_Heavy", "Harvest_Medium"],
+          observe: ["Ear_Right"],
+          inspect: ["Ear_Right"],
+          analyze: ["Ear_Right"]
+        }
+      },
       knowledge: { family: "mineral", discoverable: true, uniqueByVariant: true },
       observation: { events: ["OBJECT_SEEN", "OBJECT_INSPECTED", "OBJECT_ANALYZED"] },
       resource: { family: "crystal", exploitability: "extractable", inventoryKey: "crystal" },
@@ -623,7 +635,19 @@
         harvestPriority: 0.8,
         danger: 0
       }),
-      interaction: { actions: ["inspect", "collect", "analyze"], defaultAction: "collect" },
+      interaction: {
+        actions: ["observe", "inspect", "collect", "analyze"],
+        defaultAction: "collect",
+        acquisitionAction: "collect",
+        removeFromWorld: true,
+        respawnSeconds: 45,
+        animation: {
+          collect: ["Harvers_Samall", "Harvest_Medium"],
+          observe: ["Ear_Right"],
+          inspect: ["Ear_Right"],
+          analyze: ["Ear_Right"]
+        }
+      },
       knowledge: { family: "flora", discoverable: true, uniqueByVariant: true },
       observation: { events: ["OBJECT_SEEN", "OBJECT_INSPECTED", "OBJECT_ANALYZED"] },
       resource: { family: "fiber", exploitability: "harvestable", inventoryKey: "fiber" },
@@ -640,7 +664,14 @@
       placement: Object.freeze({ edgeWeight: 0.4, centerWeight: 0.6, minSlope: 0, maxSlope: 42 }),
       gameplay: Object.freeze({ interactive: true, collectable: true, inspectable: true, destructible: false, obstacle: true }),
       ai: Object.freeze({ curiosity: 0.9, harvestPriority: 0.88, danger: 0.05 }),
-      interaction: { actions: ["inspect", "collect", "analyze"], defaultAction: "collect" },
+      interaction: {
+        actions: ["observe", "inspect", "extract", "analyze"],
+        defaultAction: "extract",
+        acquisitionAction: "extract",
+        removeFromWorld: true,
+        respawnSeconds: 75,
+        animation: { extract: ["Harvest_Heavy", "Harvest_Medium"] }
+      },
       knowledge: { family: "mineral", discoverable: true, uniqueByVariant: true },
       observation: { events: ["OBJECT_SEEN", "OBJECT_INSPECTED", "OBJECT_ANALYZED"] },
       resource: { family: "ore", exploitability: "extractable", inventoryKey: "magnetic_ore" },
@@ -662,7 +693,15 @@
         defaultAction: "inspect",
         defaultManualAction: "inspect",
         requiresInspectionBeforeCollect: true,
-        afterInspectionAction: "collect"
+        afterInspectionAction: "collect",
+        acquisitionAction: "collect",
+        removeFromWorld: true,
+        respawnSeconds: 45,
+        animation: {
+          collect: ["Harvers_Samall", "Harvest_Medium"],
+          inspect: ["Ear_Right"],
+          analyze: ["Ear_Right"]
+        }
       },
       knowledge: { family: "flora", discoverable: true, uniqueByVariant: true },
       observation: { events: ["OBJECT_SEEN", "OBJECT_INSPECTED", "OBJECT_ANALYZED"] },
@@ -681,7 +720,16 @@
       placement: Object.freeze({ edgeWeight: 0.2, centerWeight: 0.8, minSlope: 0, maxSlope: 18 }),
       gameplay: Object.freeze({ interactive: true, collectable: false, inspectable: true, destructible: false, obstacle: true, discoverable: true }),
       ai: Object.freeze({ curiosity: 1, harvestPriority: 0, danger: 0.12 }),
-      interaction: { actions: ["inspect", "analyze"], defaultAction: "inspect" },
+      interaction: {
+        actions: ["observe", "inspect", "analyze"],
+        defaultAction: "inspect",
+        removeFromWorld: false,
+        animation: {
+          observe: ["Ear_Right"],
+          inspect: ["Ear_Right"],
+          analyze: ["Ear_Right"]
+        }
+      },
       knowledge: { family: "technology", discoverable: true, uniqueByInstance: true },
       observation: { events: ["OBJECT_SEEN", "OBJECT_INSPECTED", "OBJECT_ANALYZED"] },
       research: { domains: ["engineering", "ancient-technology", "energy"] },
@@ -710,7 +758,7 @@
       gameplay: Object.freeze({
         interactive: true,
         collectable: false,
-        inspectable: true,
+        inspectable: false,
         destructible: false,
         obstacle: true
       }),
@@ -719,6 +767,15 @@
         harvestPriority: 0,
         danger: 0
       }),
+      interaction: {
+        actions: ["observe"],
+        defaultAction: "observe",
+        removeFromWorld: false,
+        animation: { observe: ["Ear_Right"] }
+      },
+      knowledge: { family: "geology", discoverable: true, uniqueByVariant: true },
+      observation: { events: ["OBJECT_SEEN", "PHENOMENON_OBSERVED"] },
+      progression: { mapExpertise: 1, discovery: 1 },
       build: alienRock
     }),
 
@@ -741,7 +798,7 @@
       gameplay: Object.freeze({
         interactive: true,
         collectable: false,
-        inspectable: true,
+        inspectable: false,
         destructible: false,
         obstacle: true,
         discoverable: true
@@ -751,6 +808,16 @@
         harvestPriority: 0,
         danger: 0
       }),
+      interaction: {
+        actions: ["observe"],
+        defaultAction: "observe",
+        removeFromWorld: false,
+        animation: { observe: ["Ear_Right"] }
+      },
+      knowledge: { family: "flora", discoverable: true, uniqueByVariant: true },
+      observation: { events: ["OBJECT_SEEN", "PHENOMENON_OBSERVED"] },
+      situation: { tags: ["plant", "landmark"] },
+      progression: { mapExpertise: 1, discovery: 1 },
       build: alienTree
     }),
 
@@ -782,7 +849,17 @@
         harvestPriority: 0,
         danger: 0
       }),
-      interaction: { actions: ["inspect", "analyze"], defaultAction: "inspect", defaultManualAction: "inspect" },
+      interaction: {
+        actions: ["observe", "inspect", "analyze"],
+        defaultAction: "inspect",
+        defaultManualAction: "inspect",
+        removeFromWorld: false,
+        animation: {
+          observe: ["Ear_Right"],
+          inspect: ["Ear_Right"],
+          analyze: ["Ear_Right"]
+        }
+      },
       knowledge: { family: "ancient-ruin", discoverable: true, uniqueByInstance: true },
       observation: { events: ["OBJECT_SEEN", "OBJECT_INSPECTED", "OBJECT_ANALYZED"] },
       research: { domains: ["archaeology", "xenolinguistics", "ancient-technology"] },
@@ -842,7 +919,7 @@
       gameplay: Object.freeze({
         interactive: true,
         collectable: false,
-        inspectable: true,
+        inspectable: false,
         destructible: false,
         obstacle: false,
         discoverable: true
@@ -852,9 +929,15 @@
         harvestPriority: 0,
         danger: 0.1
       }),
-      interaction: { actions: ["inspect", "analyze"], defaultAction: "inspect", defaultManualAction: "inspect" },
+      interaction: {
+        actions: ["observe"],
+        defaultAction: "observe",
+        defaultManualAction: "observe",
+        removeFromWorld: false,
+        animation: { observe: ["Ear_Right"] }
+      },
       knowledge: { family: "phenomenon", discoverable: true, uniqueByInstance: true },
-      observation: { events: ["OBJECT_SEEN", "PHENOMENON_OBSERVED", "OBJECT_ANALYZED"] },
+      observation: { events: ["OBJECT_SEEN", "PHENOMENON_OBSERVED"] },
       research: { domains: ["biology", "chemistry", "energy"] },
       situation: { tags: ["liquid", "bioluminescent", "environmental-phenomenon"] },
       progression: { mapExpertise: 2, discovery: 1, journal: true },
@@ -1008,58 +1091,6 @@
   // changerait les espacements, les collisions et la disposition des maps.
   const MAP_PLACEMENT = Object.freeze({
 
-    magnetic_ore: Object.freeze({
-      id: "RES-MAGN-M-001", type: "magnetic_ore", label: "Minerai magnétique",
-      category: "resources", subtype: "magnetic_ore_cluster", size: "M", rarity: "uncommon",
-      status: "active", biomes: ["mountain", "cave", "desert", "ruins"],
-      placement: Object.freeze({ edgeWeight: 0.4, centerWeight: 0.6, minSlope: 0, maxSlope: 42 }),
-      gameplay: Object.freeze({ interactive: true, collectable: true, inspectable: true, destructible: false, obstacle: true }),
-      ai: Object.freeze({ curiosity: 0.9, harvestPriority: 0.88, danger: 0.05 }),
-      interaction: { actions: ["inspect", "collect", "analyze"], defaultAction: "collect" },
-      knowledge: { family: "mineral", discoverable: true, uniqueByVariant: true },
-      observation: { events: ["OBJECT_SEEN", "OBJECT_INSPECTED", "OBJECT_ANALYZED"] },
-      resource: { family: "ore", exploitability: "extractable", inventoryKey: "magnetic_ore" },
-      research: { domains: ["geology", "magnetism", "materials"] },
-      situation: { tags: ["mineral", "magnetic", "conductive"] },
-      progression: { mapExpertise: 2, discovery: 1 },
-      build: magneticOre
-    }),
-
-    adaptive_plant: Object.freeze({
-      id: "BIO-ADAP-S-001", type: "adaptive_plant", label: "Plante adaptative",
-      category: "resources", subtype: "adaptive_bioluminescent_plant", size: "S", rarity: "uncommon",
-      status: "active", biomes: ["forest", "jungle", "swamp", "tundra", "coast"],
-      placement: Object.freeze({ edgeWeight: 0.48, centerWeight: 0.52, minSlope: 0, maxSlope: 30 }),
-      gameplay: Object.freeze({ interactive: true, collectable: true, inspectable: true, destructible: true, obstacle: false }),
-      ai: Object.freeze({ curiosity: 0.92, harvestPriority: 0.66, danger: 0 }),
-      interaction: { actions: ["inspect", "collect", "analyze"], defaultAction: "inspect" },
-      knowledge: { family: "flora", discoverable: true, uniqueByVariant: true },
-      observation: { events: ["OBJECT_SEEN", "OBJECT_INSPECTED", "OBJECT_ANALYZED"] },
-      resource: { family: "biomass", exploitability: "harvestable", inventoryKey: "adaptive_biomass" },
-      research: { domains: ["botany", "adaptation", "bioluminescence"] },
-      situation: { tags: ["plant", "adaptive", "bioluminescent"] },
-      decision: { sustainableHarvestRecommended: true },
-      progression: { mapExpertise: 2, discovery: 1, journal: true },
-      build: adaptivePlant
-    }),
-
-    tech_relic: Object.freeze({
-      id: "TEC-RELI-M-001", type: "tech_relic", label: "Vestige technologique",
-      category: "technology", subtype: "ancient_technology_relic", size: "M", rarity: "rare",
-      status: "active", biomes: ["ruins", "desert", "mountain", "cave"],
-      placement: Object.freeze({ edgeWeight: 0.2, centerWeight: 0.8, minSlope: 0, maxSlope: 18 }),
-      gameplay: Object.freeze({ interactive: true, collectable: false, inspectable: true, destructible: false, obstacle: true, discoverable: true }),
-      ai: Object.freeze({ curiosity: 1, harvestPriority: 0, danger: 0.12 }),
-      interaction: { actions: ["inspect", "analyze"], defaultAction: "inspect" },
-      knowledge: { family: "technology", discoverable: true, uniqueByInstance: true },
-      observation: { events: ["OBJECT_SEEN", "OBJECT_INSPECTED", "OBJECT_ANALYZED"] },
-      research: { domains: ["engineering", "ancient-technology", "energy"] },
-      situation: { tags: ["technology", "ruin", "component", "landmark"] },
-      decision: { mayTriggerProject: true, extractionForbiddenUntilAnalyzed: true },
-      progression: { mapExpertise: 4, discovery: 1, journal: true },
-      build: technologicalRelic
-    }),
-
     magnetic_ore: Object.freeze({ radius: 1.1, volume: "medium" }),
     adaptive_plant: Object.freeze({ radius: 0.8, volume: "small" }),
     tech_relic: Object.freeze({ radius: 1.15, volume: "medium" }),
@@ -1094,7 +1125,10 @@
       harvestTime: overrides.harvestTime ?? null,
       lootTable: overrides.lootTable ?? null
     });
-    const functional = normalizeFunctional(definition);
+    const interaction = definition.interaction
+      ? { ...definition.interaction }
+      : null;
+    const functional = normalizeFunctional({ ...definition, interaction });
     return Object.freeze({
       ...definition,
       placement: Object.freeze({ ...definition.placement }),
@@ -1163,6 +1197,15 @@
       Object.values(OBJECT_LIBRARY).forEach((definition) => {
         if (!definition.id || !definition.type || typeof definition.build !== "function") errors.push(`Définition invalide : ${definition.type || "inconnue"}`);
         if (ids.has(definition.id)) errors.push(`Identifiant dupliqué : ${definition.id}`);
+        if (
+          definition.gameplay.collectable === true &&
+          (!Number.isFinite(definition.interaction?.respawnSeconds) ||
+            definition.interaction.respawnSeconds < 30)
+        ) {
+          errors.push(
+            `Délai CUO interaction.respawnSeconds invalide : ${definition.type}`
+          );
+        }
         ids.add(definition.id);
       });
       return Object.freeze({ valid: errors.length === 0, errors: Object.freeze(errors) });
@@ -1173,6 +1216,21 @@
       if (!definition) throw new Error(`Type d'objet 3D inconnu : ${type}`);
 
       const instance = definition.build(THREE, palette, variant);
+      if (
+        definition.gameplay.interactive === true &&
+        !instance.hitbox &&
+        instance.root
+      ) {
+        const radius = Math.max(0.35, (SIZE_RADIUS[definition.size] || SIZE_RADIUS.M) * 0.8);
+        const height = Math.max(0.7, (SIZE_RADIUS[definition.size] || SIZE_RADIUS.M) * 1.8);
+        instance.hitbox = makeHitbox(
+          THREE,
+          instance.root,
+          radius,
+          height,
+          definition.type
+        );
+      }
       instance.catalogId = definition.id;
       instance.definition = definition;
 

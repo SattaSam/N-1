@@ -14,7 +14,12 @@
       const resources = {};
       (engine.currentMap?.interactables || []).forEach((object) => {
         if (!object.userData.active) return;
-        const kind = object.userData.kind;
+        const definition = object.userData.functional ||
+          BF.ObjectLibrary?.get?.(object.userData.libraryType) ||
+          BF.ObjectLibrary?.get?.(object.userData.kind);
+        const kind = definition?.resource?.inventoryKey ||
+          definition?.type ||
+          object.userData.kind;
         resources[kind] = (resources[kind] || 0) + 1;
       });
       const unexploredZones = (engine.currentMap?.zoneRegions || []).filter(
@@ -50,17 +55,29 @@
       if (!action || this.isEngineBusy()) return false;
       const engine = this.engine;
       switch (action.type) {
-        case Missions.ActionType.COLLECT: {
+        case Missions.ActionType.COLLECT:
+        case Missions.ActionType.EXTRACT:
+        case Missions.ActionType.INSPECT:
+        case Missions.ActionType.ANALYZE:
+        case Missions.ActionType.OBSERVE: {
           const candidates = engine.currentMap.interactables
             .filter((object) =>
               object.userData.active &&
-              (!action.params.kind || object.userData.kind === action.params.kind)
+              (
+                !action.params.kind ||
+                object.userData.kind === action.params.kind ||
+                object.userData.functional?.type === action.params.kind ||
+                object.userData.functional?.resource?.inventoryKey === action.params.kind
+              )
             )
             .sort((left, right) =>
               engine.character.root.position.distanceTo(left.position) -
               engine.character.root.position.distanceTo(right.position)
             );
           if (!candidates.length) return false;
+          candidates[0].userData.requestedInteraction = action.type;
+          candidates[0].userData.requestedInteractionSource = "mission";
+          candidates[0].userData.missionSubject = action.params?.subject || null;
           engine.targetInteraction(candidates[0]);
           return true;
         }
@@ -87,13 +104,6 @@
             "research",
             now,
             Math.max(1500, Number(action.params.duration) || 6500)
-          );
-          return true;
-        case Missions.ActionType.OBSERVE:
-          engine.startRoutine(
-            "research",
-            now,
-            Math.max(1500, Number(action.params.duration) || 5200)
           );
           return true;
         case Missions.ActionType.REST:

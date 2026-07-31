@@ -196,7 +196,10 @@
       const quantity = Math.max(0, Number(event.quantity) || 0);
       this.incrementScopes(event, quantity || 1);
 
-      if (event.type === BF.ObjectEvents?.types.RESOURCE_COLLECTED) {
+      if ([
+        BF.ObjectEvents?.types.RESOURCE_COLLECTED,
+        BF.ObjectEvents?.types.RESOURCE_EXTRACTED
+      ].includes(event.type)) {
         this.addInventory(event.inventoryKey || event.detail?.inventoryKey || event.detail?.kind || event.family, quantity || 1);
       }
 

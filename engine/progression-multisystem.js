@@ -65,6 +65,7 @@
   const createMapIndicators = () => ({
     expertise: 0,
     collections: 0,
+    extractions: 0,
     inspections: 0,
     analyses: 0,
     observations: 0,
@@ -175,6 +176,7 @@
       const tags = new Set(event.tags || []);
 
       if (event.type === types.RESOURCE_COLLECTED) bucket.collections += quantity;
+      if (event.type === types.RESOURCE_EXTRACTED) bucket.extractions += quantity;
       if (event.type === types.OBJECT_INSPECTED) bucket.inspections += quantity;
       if (event.type === types.OBJECT_ANALYZED) bucket.analyses += quantity;
       if (event.type === types.PHENOMENON_OBSERVED) bucket.observations += quantity;
@@ -188,7 +190,7 @@
 
       rememberUnique(bucket.uniqueObjects, event.objectId, { family: event.family || null });
       rememberUnique(bucket.uniqueInstances, event.instanceId, { objectId: event.objectId || null });
-      if (event.type === types.RESOURCE_COLLECTED) {
+      if ([types.RESOURCE_COLLECTED, types.RESOURCE_EXTRACTED].includes(event.type)) {
         rememberUnique(bucket.uniqueResources, event.inventoryKey || event.family, {
           objectId: event.objectId || null
         });
@@ -211,6 +213,7 @@
       const label = event.detail?.label || event.detail?.name || event.objectId || event.family || "objet inconnu";
       const verbs = {
         RESOURCE_COLLECTED: "Ressource collectée",
+        RESOURCE_EXTRACTED: "Ressource extraite",
         OBJECT_SEEN: "Objet repéré",
         OBJECT_INSPECTED: "Objet inspecté",
         OBJECT_ANALYZED: "Objet analysé",
