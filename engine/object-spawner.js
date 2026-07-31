@@ -31,6 +31,7 @@
       this.palette = options.palette || { accent: 0x65d9ff, ground: 0x52606c };
       this.random = options.random || Math.random;
       this.instances = [];
+      this.instanceSequence = 0;
       if (!this.THREE) throw new Error("ObjectSpawner nécessite THREE.");
       if (!BF.ObjectLibrary) throw new Error("ObjectSpawner nécessite ObjectLibrary.");
     }
@@ -56,7 +57,19 @@
         root.userData.spawnSource = options.source || "object-spawner";
         (options.scene || this.scene)?.add(root);
       }
-      const record = { type, definition, instance, root, position: { x: position.x || 0, y: position.y || 0, z: position.z || 0 } };
+      const instanceId = options.instanceId || `${definition.id}:${Date.now().toString(36)}:${(++this.instanceSequence).toString(36)}`;
+      if (root) {
+        root.userData.instanceId = instanceId;
+        root.userData.variant = options.variant || 0;
+      }
+      if (instance.hitbox) {
+        instance.hitbox.userData.instanceId = instanceId;
+        instance.hitbox.userData.catalogId = definition.id;
+        instance.hitbox.userData.libraryType = type;
+        instance.hitbox.userData.variant = options.variant || 0;
+        instance.hitbox.userData.functional = definition;
+      }
+      const record = { type, definition, instance, instanceId, root, position: { x: position.x || 0, y: position.y || 0, z: position.z || 0 } };
       this.instances.push(record);
       return record;
     }
@@ -288,9 +301,17 @@
       );
       let placedResources = 0;
       let resourceGuard = 0;
+      const pickResourceKind = () => {
+        const entries = (population.resourceWeights || []).map((entry) => ({
+          definition: { type: entry.family },
+          weight: entry.weight
+        }));
+        return weightedPick(entries, next)?.definition?.type ||
+          population.resourcePattern[placedResources % population.resourcePattern.length];
+      };
       while (placedResources < resourceCount && resourceGuard < resourceCount * 6) {
         resourceGuard += 1;
-        const kind = population.resourcePattern[placedResources % population.resourcePattern.length];
+        const kind = pickResourceKind();
         const center = randomPosition(3.5, 24, placement(kind).radius, kind);
         if (!center) continue;
         const remaining = resourceCount - placedResources;
@@ -302,7 +323,7 @@
         );
         const rotation = next() * Math.PI * 2;
         for (let member = 0; member < clusterSize; member += 1) {
-          const memberKind = population.resourcePattern[(placedResources + member) % population.resourcePattern.length];
+          const memberKind = member === 0 ? kind : pickResourceKind();
           const isAnchor = member === 0;
           const distance = isAnchor ? 0 : resourceCluster.minRadius + next() * resourceCluster.radiusRange;
           const angle = rotation + next() * Math.PI * 2;
@@ -374,7 +395,7 @@
       landmarks.forEach(([type, x, z, variant, rotation]) => {
         placeObject(type, x, z, variant, rotation);
       });
-      return { occupied, obstacleBudget, resourceCount };
+      return { occupied, obstacleBudget, resourceCount, resourceFamilies: population.resourceFamilies, richness: population.richness };
     }
 
     clear(dispose = false) {

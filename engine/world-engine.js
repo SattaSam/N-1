@@ -1462,6 +1462,79 @@
       };
     }
 
+
+    interactionProfile(object) {
+      const data = object?.userData || {};
+      const functional = data.functional || {};
+      const interaction = functional.interaction || data.interaction || {};
+      const gameplay = functional.gameplay || data.gameplay || {};
+      const kind = String(data.kind || functional.kind || "unknown");
+      const configuredAction = String(
+        interaction.defaultAction || data.defaultAction || ""
+      ).toLowerCase();
+      let action = configuredAction;
+      if (!action) {
+        if (gameplay.collectable === true || ["crystal", "fiber"].includes(kind)) {
+          action = "collect";
+        } else if (gameplay.extractable === true || kind === "ore") {
+          action = "extract";
+        } else if (gameplay.analyzable === true || kind === "relic") {
+          action = "analyze";
+        } else if (gameplay.observable === true || kind === "discovery") {
+          action = "observe";
+        } else {
+          action = "inspect";
+        }
+      }
+      const names = {
+        crystal: "le cristal", fiber: "les fibres", ore: "le minerai",
+        structure: "la stèle", discovery: "le bassin", relic: "la relique",
+        plant: "la plante", unknown: "l’objet"
+      };
+      const label = interaction.label || functional.label || data.label || names[kind] || "l’objet";
+      const collectable = gameplay.collectable === true || action === "collect" || action === "extract";
+      const actionText = {
+        collect: `BlueFox collecte ${label}.`,
+        extract: `BlueFox extrait une ressource de ${label}.`,
+        inspect: `BlueFox inspecte attentivement ${label}.`,
+        observe: `BlueFox observe ${label} sans le perturber.`,
+        analyze: `BlueFox analyse méthodiquement ${label}.`
+      }[action] || `BlueFox interagit avec ${label}.`;
+      const approachText = {
+        collect: `BlueFox approche ${label} avant la collecte.`,
+        extract: `BlueFox approche ${label} avant l’extraction.`,
+        inspect: `BlueFox approche ${label} pour l’inspecter.`,
+        observe: `BlueFox se place près de ${label} pour l’observer.`,
+        analyze: `BlueFox approche ${label} pour l’analyser.`
+      }[action] || `BlueFox approche ${label}.`;
+      const speechText = {
+        collect: `Je collecte ${label} avec précaution.`,
+        extract: `J’extrais seulement ce qui est utile de ${label}.`,
+        inspect: `J’inspecte ${label} avant de tirer des conclusions.`,
+        observe: `J’observe ${label} sans intervenir.`,
+        analyze: `J’analyse ${label} et j’enregistre les résultats.`
+      }[action] || `J’examine ${label}.`;
+      return { kind, action, label, collectable, actionText, approachText, speechText };
+    }
+
+    canInteractWith(object, now = performance.now()) {
+      if (!object?.userData?.active) return false;
+      const last = Number(object.userData.lastInteractionAt || 0);
+      const profile = this.interactionProfile(object);
+      return profile.collectable || now - last > 30000;
+    }
+
+    missionActionForInteraction(action) {
+      const types = BF.Missions?.ActionType || {};
+      return {
+        collect: types.COLLECT,
+        extract: types.EXTRACT || types.COLLECT,
+        inspect: types.INSPECT || types.OBSERVE,
+        observe: types.OBSERVE || types.INSPECT,
+        analyze: types.ANALYZE || types.RESEARCH || types.OBSERVE
+      }[action];
+    }
+
     targetInteraction(object, retry = false) {
       this.pendingZoneExploration = null;
       const approach = this.interactionApproachPoint(
@@ -1470,16 +1543,13 @@
       );
       this.pendingInteraction = object;
       object.userData.approachDistance = approach.approachDistance;
+      object.userData.interactionProfile = this.interactionProfile(object);
       this.interactionStartedAt = 0;
       this.interactionApproachStartedAt = performance.now();
       if (!retry) this.interactionApproachAttempts = 0;
       this.character.setTarget(approach.point);
       this.showWorldMarker(approach.point);
-      this.callbacks.onStatus(
-        object.userData.kind === "crystal"
-          ? "BlueFox approche le cristal avant de le récolter."
-          : "BlueFox approche les fibres avant de les prélever."
-      );
+      this.callbacks.onStatus(object.userData.interactionProfile.approachText);
     }
 
     async loadMap(mapId, entry, announce = true) {
@@ -1898,30 +1968,26 @@
       }
     }
 
+
     updateInteraction(now) {
       if (!this.pendingInteraction || !this.pendingInteraction.userData.active) return;
-      const distance = this.character.root.position.distanceTo(
-        (this.pendingInteraction.userData.worldAnchor || this.pendingInteraction).position
-      );
-      const interactionDistance =
-        (this.pendingInteraction.userData.approachDistance || 1.36) + 0.18;
+      const object = this.pendingInteraction;
+      const profile = object.userData.interactionProfile || this.interactionProfile(object);
+      const anchor = object.userData.worldAnchor || object;
+      const distance = this.character.root.position.distanceTo(anchor.position);
+      const interactionDistance = (object.userData.approachDistance || 1.36) + 0.18;
       if (distance > interactionDistance) {
-        if (
-          !this.interactionStartedAt &&
-          now - this.interactionApproachStartedAt > 6500
-        ) {
+        if (!this.interactionStartedAt && now - this.interactionApproachStartedAt > 6500) {
           this.interactionApproachAttempts += 1;
           if (this.interactionApproachAttempts <= 3) {
-            this.targetInteraction(this.pendingInteraction, true);
+            this.targetInteraction(object, true);
           } else {
-            this.callbacks.onStatus(
-              "BlueFox renonce temporairement à cette ressource inaccessible."
-            );
+            this.callbacks.onStatus(`BlueFox renonce temporairement : ${profile.label} est inaccessible.`);
             this.pendingInteraction = null;
             this.interactionApproachStartedAt = 0;
             this.interactionApproachAttempts = 0;
             this.character.stop();
-            this.missionManager?.cancelCurrentAction("resource-inaccessible");
+            this.missionManager?.cancelCurrentAction("interaction-inaccessible");
           }
         }
         return;
@@ -1929,40 +1995,37 @@
       this.character.stop();
       if (!this.interactionStartedAt) {
         this.interactionStartedAt = now;
-        this.character.facePoint(
-          (this.pendingInteraction.userData.worldAnchor || this.pendingInteraction).position
-        );
-        const duration = this.character.playInteraction(this.pendingInteraction.userData.kind);
-        this.interactionDuration = duration * 1000;
-        this.callbacks.onAction(
-          this.pendingInteraction.userData.kind === "crystal"
-            ? "BlueFox récolte méthodiquement un cristal."
-            : "BlueFox prélève uniquement les fibres arrivées à maturité."
-        );
+        this.character.facePoint(anchor.position);
+        const duration = this.character.playInteraction(profile.action || profile.kind);
+        this.interactionDuration = Math.max(900, duration * 1000);
+        this.callbacks.onAction(profile.actionText);
         if (this.speechVisible && now - this.lastSpeechAt > 3200) {
-          this.callbacks.onSpeak(
-            this.pendingInteraction.userData.kind === "crystal"
-              ? "Je prélève ce cristal pour l’étape en cours."
-              : "Je récolte uniquement les fibres arrivées à maturité."
-          );
+          this.callbacks.onSpeak(profile.speechText);
           this.lastSpeechAt = now;
         }
         return;
       }
       if (now - this.interactionStartedAt < this.interactionDuration) return;
 
-      const object = this.pendingInteraction;
-      const anchor = object.userData.worldAnchor || object;
       this.character.cancelInteraction();
-      object.userData.active = false;
-      anchor.visible = false;
-      this.callbacks.onCollect(object.userData.kind);
+      object.userData.lastInteractionAt = now;
+      if (profile.collectable) {
+        object.userData.active = false;
+        anchor.visible = false;
+        this.callbacks.onCollect(profile.kind);
+      }
       this.completedInteractions += 1;
-      this.lastCompletedAction = object.userData.kind;
-      this.missionManager?.notifyActionCompleted(
-        BF.Missions.ActionType.COLLECT,
-        { kind: object.userData.kind, amount: 1 }
-      );
+      this.lastCompletedAction = profile.action;
+      const missionAction = this.missionActionForInteraction(profile.action);
+      if (missionAction) {
+        this.missionManager?.notifyActionCompleted(missionAction, {
+          kind: profile.kind,
+          action: profile.action,
+          amount: 1,
+          mapId: this.currentMapId,
+          zoneIndex: this.currentZoneIndex
+        });
+      }
       this.pendingInteraction = null;
       this.interactionStartedAt = 0;
       this.interactionApproachStartedAt = 0;
@@ -1971,13 +2034,15 @@
       this.postActionRecoveryUntil = now + 650;
       this.lastActivityAt = now;
       this.lastAutonomyAt = now - 5600;
-      const cooldown = setTimeout(() => {
-        if (this.disposed) return;
-        anchor.visible = true;
-        object.userData.active = true;
-        this.resourceCooldowns.delete(object);
-      }, 18000);
-      this.resourceCooldowns.set(object, cooldown);
+      if (profile.collectable) {
+        const cooldown = setTimeout(() => {
+          if (this.disposed) return;
+          anchor.visible = true;
+          object.userData.active = true;
+          this.resourceCooldowns.delete(object);
+        }, 18000);
+        this.resourceCooldowns.set(object, cooldown);
+      }
     }
 
     updateAutonomy(now) {
@@ -2036,9 +2101,7 @@
         return;
       }
 
-      const resources = this.currentMap.interactables.filter(
-        (object) => object.userData.active
-      );
+      const resources = this.currentMap.interactables.filter((object) => this.canInteractWith(object, now));
       if (resources.length) {
         const object = resources[Math.floor(Math.random() * resources.length)];
         this.targetInteraction(object);
@@ -2120,9 +2183,7 @@
 
       this.pendingInteraction = null;
       this.character.cancelInteraction();
-      const resources = this.currentMap.interactables.filter(
-        (object) => object.userData.active
-      );
+      const resources = this.currentMap.interactables.filter((object) => this.canInteractWith(object, now));
       if (resources.length) {
         const object = resources[Math.floor(Math.random() * resources.length)];
         this.targetInteraction(object);

@@ -220,8 +220,10 @@
       rune.rotation.z = index % 2 ? 0.55 : -0.2;
       root.add(rune);
     }
+    const hitbox = makeHitbox(THREE, root, 0.82, 2.5, "structure");
     return {
       root: setShadows(root),
+      hitbox,
       colliders: [{ offset: new THREE.Vector3(), radius: 0.66 }],
       kind: "structure"
     };
@@ -289,8 +291,10 @@
     water.rotation.x = -Math.PI / 2;
     water.position.y = 0.045;
     root.add(water);
+    const hitbox = makeHitbox(THREE, root, 1.45, 0.32, "discovery");
     return {
       root: setShadows(root),
+      hitbox,
       colliders: [],
       kind: "discovery"
     };
@@ -437,6 +441,124 @@
     };
   };
 
+
+  const magneticOre = (THREE, palette, variant = 0) => {
+    const root = new THREE.Group();
+    root.name = "MagneticOre";
+    const ore = material(THREE, {
+      color: variant % 2 ? 0x596d7a : 0x394b5a,
+      emissive: palette.accent,
+      emissiveIntensity: 0.28,
+      roughness: 0.52,
+      metalness: 0.62
+    });
+    for (let index = 0; index < 5; index += 1) {
+      const shard = new THREE.Mesh(
+        new THREE.OctahedronGeometry(0.28 + (index % 2) * 0.08, 0), ore
+      );
+      const angle = index * Math.PI * 0.4;
+      shard.position.set(Math.cos(angle) * 0.34, 0.3 + (index % 3) * 0.18, Math.sin(angle) * 0.34);
+      shard.rotation.set(index * 0.17, angle, index * 0.11);
+      root.add(shard);
+    }
+    const hitbox = makeHitbox(THREE, root, 0.75, 1.35, "magnetic_ore");
+    return { root: setShadows(root), hitbox, colliders: [{ offset: new THREE.Vector3(), radius: 0.55 }], kind: "magnetic_ore" };
+  };
+
+  const adaptivePlant = (THREE, palette, variant = 0) => {
+    const root = new THREE.Group();
+    root.name = "AdaptivePlant";
+    const stemMaterial = material(THREE, { color: 0x3f8f72, roughness: 0.72 });
+    const leafMaterial = material(THREE, {
+      color: variant % 2 ? 0xc06adf : 0x70d9b2,
+      emissive: variant % 2 ? 0x4b1f61 : 0x1d624d,
+      emissiveIntensity: 0.5,
+      roughness: 0.56,
+      side: THREE.DoubleSide
+    });
+    for (let index = 0; index < 6; index += 1) {
+      const angle = index * Math.PI / 3;
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.055, 0.72, 6), stemMaterial);
+      stem.position.set(Math.cos(angle) * 0.18, 0.36, Math.sin(angle) * 0.18);
+      stem.rotation.z = Math.cos(angle) * 0.25;
+      stem.rotation.x = Math.sin(angle) * 0.25;
+      root.add(stem);
+      const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 7), leafMaterial);
+      leaf.scale.set(1.5, 0.38, 0.75);
+      leaf.position.set(Math.cos(angle) * 0.34, 0.68 + (index % 2) * 0.12, Math.sin(angle) * 0.34);
+      leaf.rotation.y = -angle;
+      root.add(leaf);
+    }
+    const hitbox = makeHitbox(THREE, root, 0.68, 1.25, "adaptive_plant");
+    return { root: setShadows(root), hitbox, colliders: [], kind: "adaptive_plant" };
+  };
+
+  const technologicalRelic = (THREE, palette, variant = 0) => {
+    const root = new THREE.Group();
+    root.name = "TechnologicalRelic";
+    const shell = material(THREE, { color: 0x4d5d6c, roughness: 0.42, metalness: 0.75 });
+    const core = material(THREE, {
+      color: palette.accent,
+      emissive: palette.accent,
+      emissiveIntensity: 1.35,
+      roughness: 0.18,
+      metalness: 0.35
+    });
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.64, 1.3, 8), shell);
+    body.position.y = 0.65;
+    body.rotation.y = variant * 0.28;
+    root.add(body);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.48, 0.08, 8, 24), core);
+    ring.position.y = 0.82;
+    ring.rotation.x = Math.PI / 2;
+    root.add(ring);
+    const beacon = new THREE.PointLight(palette.accent, 3.2, 5.5);
+    beacon.position.y = 1.05;
+    root.add(beacon);
+    const hitbox = makeHitbox(THREE, root, 0.78, 1.6, "tech_relic");
+    return { root: setShadows(root), hitbox, colliders: [{ offset: new THREE.Vector3(), radius: 0.58 }], kind: "tech_relic" };
+  };
+
+
+  const FUNCTIONAL_FIELDS = Object.freeze([
+    "interaction",
+    "knowledge",
+    "observation",
+    "resource",
+    "research",
+    "situation",
+    "decision",
+    "progression"
+  ]);
+
+  const DEFAULT_FUNCTIONAL = Object.freeze({
+    interaction: null,
+    knowledge: null,
+    observation: null,
+    resource: null,
+    research: null,
+    situation: null,
+    decision: null,
+    progression: null
+  });
+
+  const freezeFunctionalValue = (value) => {
+    if (Array.isArray(value)) return Object.freeze(value.map(freezeFunctionalValue));
+    if (value && typeof value === "object") {
+      return Object.freeze(Object.fromEntries(
+        Object.entries(value).map(([key, nested]) => [key, freezeFunctionalValue(nested)])
+      ));
+    }
+    return value ?? null;
+  };
+
+  const normalizeFunctional = (definition) => Object.freeze(
+    Object.fromEntries(FUNCTIONAL_FIELDS.map((field) => [
+      field,
+      freezeFunctionalValue(definition[field] ?? DEFAULT_FUNCTIONAL[field])
+    ]))
+  );
+
   const RAW_OBJECT_LIBRARY = {
     crystal: Object.freeze({
       id: "RES-CRYS-M-001",
@@ -465,6 +587,12 @@
         harvestPriority: 1,
         danger: 0
       }),
+      interaction: { actions: ["inspect", "collect", "analyze"], defaultAction: "collect" },
+      knowledge: { family: "mineral", discoverable: true, uniqueByVariant: true },
+      observation: { events: ["OBJECT_SEEN", "OBJECT_INSPECTED", "OBJECT_ANALYZED"] },
+      resource: { family: "crystal", exploitability: "extractable", inventoryKey: "crystal" },
+      research: { domains: ["energy", "geology", "magnetism"] },
+      progression: { mapExpertise: 1, discovery: 1 },
       build: crystalCluster
     }),
 
@@ -495,7 +623,72 @@
         harvestPriority: 0.8,
         danger: 0
       }),
+      interaction: { actions: ["inspect", "collect", "analyze"], defaultAction: "collect" },
+      knowledge: { family: "flora", discoverable: true, uniqueByVariant: true },
+      observation: { events: ["OBJECT_SEEN", "OBJECT_INSPECTED", "OBJECT_ANALYZED"] },
+      resource: { family: "fiber", exploitability: "harvestable", inventoryKey: "fiber" },
+      research: { domains: ["botany", "materials", "adaptation"] },
+      progression: { mapExpertise: 1, discovery: 1 },
       build: fiberPlant
+    }),
+
+
+    magnetic_ore: Object.freeze({
+      id: "RES-MAGN-M-001", type: "magnetic_ore", label: "Minerai magnétique",
+      category: "resources", subtype: "magnetic_ore_cluster", size: "M", rarity: "uncommon",
+      status: "active", biomes: ["mountain", "cave", "desert", "ruins"],
+      placement: Object.freeze({ edgeWeight: 0.4, centerWeight: 0.6, minSlope: 0, maxSlope: 42 }),
+      gameplay: Object.freeze({ interactive: true, collectable: true, inspectable: true, destructible: false, obstacle: true }),
+      ai: Object.freeze({ curiosity: 0.9, harvestPriority: 0.88, danger: 0.05 }),
+      interaction: { actions: ["inspect", "collect", "analyze"], defaultAction: "collect" },
+      knowledge: { family: "mineral", discoverable: true, uniqueByVariant: true },
+      observation: { events: ["OBJECT_SEEN", "OBJECT_INSPECTED", "OBJECT_ANALYZED"] },
+      resource: { family: "ore", exploitability: "extractable", inventoryKey: "magnetic_ore" },
+      research: { domains: ["geology", "magnetism", "materials"] },
+      situation: { tags: ["mineral", "magnetic", "conductive"] },
+      progression: { mapExpertise: 2, discovery: 1 },
+      build: magneticOre
+    }),
+
+    adaptive_plant: Object.freeze({
+      id: "BIO-ADAP-S-001", type: "adaptive_plant", label: "Plante adaptative",
+      category: "resources", subtype: "adaptive_bioluminescent_plant", size: "S", rarity: "uncommon",
+      status: "active", biomes: ["forest", "jungle", "swamp", "tundra", "coast"],
+      placement: Object.freeze({ edgeWeight: 0.48, centerWeight: 0.52, minSlope: 0, maxSlope: 30 }),
+      gameplay: Object.freeze({ interactive: true, collectable: true, inspectable: true, destructible: true, obstacle: false }),
+      ai: Object.freeze({ curiosity: 0.92, harvestPriority: 0.66, danger: 0 }),
+      interaction: {
+        actions: ["inspect", "collect", "analyze"],
+        defaultAction: "inspect",
+        defaultManualAction: "inspect",
+        requiresInspectionBeforeCollect: true,
+        afterInspectionAction: "collect"
+      },
+      knowledge: { family: "flora", discoverable: true, uniqueByVariant: true },
+      observation: { events: ["OBJECT_SEEN", "OBJECT_INSPECTED", "OBJECT_ANALYZED"] },
+      resource: { family: "biomass", exploitability: "harvestable", inventoryKey: "adaptive_biomass" },
+      research: { domains: ["botany", "adaptation", "bioluminescence"] },
+      situation: { tags: ["plant", "adaptive", "bioluminescent"] },
+      decision: { sustainableHarvestRecommended: true },
+      progression: { mapExpertise: 2, discovery: 1, journal: true },
+      build: adaptivePlant
+    }),
+
+    tech_relic: Object.freeze({
+      id: "TEC-RELI-M-001", type: "tech_relic", label: "Vestige technologique",
+      category: "technology", subtype: "ancient_technology_relic", size: "M", rarity: "rare",
+      status: "active", biomes: ["ruins", "desert", "mountain", "cave"],
+      placement: Object.freeze({ edgeWeight: 0.2, centerWeight: 0.8, minSlope: 0, maxSlope: 18 }),
+      gameplay: Object.freeze({ interactive: true, collectable: false, inspectable: true, destructible: false, obstacle: true, discoverable: true }),
+      ai: Object.freeze({ curiosity: 1, harvestPriority: 0, danger: 0.12 }),
+      interaction: { actions: ["inspect", "analyze"], defaultAction: "inspect" },
+      knowledge: { family: "technology", discoverable: true, uniqueByInstance: true },
+      observation: { events: ["OBJECT_SEEN", "OBJECT_INSPECTED", "OBJECT_ANALYZED"] },
+      research: { domains: ["engineering", "ancient-technology", "energy"] },
+      situation: { tags: ["technology", "ruin", "component", "landmark"] },
+      decision: { mayTriggerProject: true, extractionForbiddenUntilAnalyzed: true },
+      progression: { mapExpertise: 4, discovery: 1, journal: true },
+      build: technologicalRelic
     }),
 
     rock: Object.freeze({
@@ -515,8 +708,9 @@
         maxSlope: 50
       }),
       gameplay: Object.freeze({
-        interactive: false,
+        interactive: true,
         collectable: false,
+        inspectable: true,
         destructible: false,
         obstacle: true
       }),
@@ -545,10 +739,12 @@
         maxSlope: 28
       }),
       gameplay: Object.freeze({
-        interactive: false,
+        interactive: true,
         collectable: false,
+        inspectable: true,
         destructible: false,
-        obstacle: true
+        obstacle: true,
+        discoverable: true
       }),
       ai: Object.freeze({
         curiosity: 0.1,
@@ -575,8 +771,9 @@
         maxSlope: 20
       }),
       gameplay: Object.freeze({
-        interactive: false,
+        interactive: true,
         collectable: false,
+        inspectable: true,
         destructible: false,
         obstacle: true
       }),
@@ -585,6 +782,13 @@
         harvestPriority: 0,
         danger: 0
       }),
+      interaction: { actions: ["inspect", "analyze"], defaultAction: "inspect", defaultManualAction: "inspect" },
+      knowledge: { family: "ancient-ruin", discoverable: true, uniqueByInstance: true },
+      observation: { events: ["OBJECT_SEEN", "OBJECT_INSPECTED", "OBJECT_ANALYZED"] },
+      research: { domains: ["archaeology", "xenolinguistics", "ancient-technology"] },
+      situation: { tags: ["ruin", "landmark", "evidence"] },
+      decision: { mayTriggerProject: true },
+      progression: { mapExpertise: 3, discovery: 1, journal: true },
       build: ancientStele
     }),
 
@@ -636,8 +840,9 @@
         maxSlope: 6
       }),
       gameplay: Object.freeze({
-        interactive: false,
+        interactive: true,
         collectable: false,
+        inspectable: true,
         destructible: false,
         obstacle: false,
         discoverable: true
@@ -647,6 +852,12 @@
         harvestPriority: 0,
         danger: 0.1
       }),
+      interaction: { actions: ["inspect", "analyze"], defaultAction: "inspect", defaultManualAction: "inspect" },
+      knowledge: { family: "phenomenon", discoverable: true, uniqueByInstance: true },
+      observation: { events: ["OBJECT_SEEN", "PHENOMENON_OBSERVED", "OBJECT_ANALYZED"] },
+      research: { domains: ["biology", "chemistry", "energy"] },
+      situation: { tags: ["liquid", "bioluminescent", "environmental-phenomenon"] },
+      progression: { mapExpertise: 2, discovery: 1, journal: true },
       build: luminousPool
     }),
 
@@ -776,6 +987,9 @@
   const RARITY_WEIGHT = Object.freeze({ common: 1, uncommon: 0.55, rare: 0.22, epic: 0.08, legendary: 0.02 });
 
   const SPAWN_OVERRIDES = Object.freeze({
+    magnetic_ore: { spawnCost: 4, maxPerZone: 4, minDistance: 2.5, tags: ["resource", "mineral", "magnetic", "technology"], lootTable: "magnetic_ore_basic", harvestTime: 5 },
+    adaptive_plant: { spawnCost: 3, maxPerZone: 5, minDistance: 1.8, tags: ["resource", "plant", "adaptive", "bioluminescent"], lootTable: "adaptive_biomass", harvestTime: 3.8 },
+    tech_relic: { spawnCost: 10, maxPerZone: 1, minDistance: 8, tags: ["technology", "ruin", "component", "landmark", "discovery"], discoverable: true },
     crystal: { spawnCost: 3, maxPerZone: 5, minDistance: 2.2, tags: ["resource", "mineral", "glowing"], lootTable: "crystal_basic", harvestTime: 4.5 },
     fiber: { spawnCost: 2, maxPerZone: 7, minDistance: 1.4, tags: ["resource", "plant", "fiber"], lootTable: "fiber_basic", harvestTime: 3 },
     rock: { spawnCost: 2, maxPerZone: 12, minDistance: 1.3, tags: ["decor", "mineral", "obstacle"] },
@@ -793,6 +1007,62 @@
   // Elles restent distinctes des profils de spawn génériques : les modifier
   // changerait les espacements, les collisions et la disposition des maps.
   const MAP_PLACEMENT = Object.freeze({
+
+    magnetic_ore: Object.freeze({
+      id: "RES-MAGN-M-001", type: "magnetic_ore", label: "Minerai magnétique",
+      category: "resources", subtype: "magnetic_ore_cluster", size: "M", rarity: "uncommon",
+      status: "active", biomes: ["mountain", "cave", "desert", "ruins"],
+      placement: Object.freeze({ edgeWeight: 0.4, centerWeight: 0.6, minSlope: 0, maxSlope: 42 }),
+      gameplay: Object.freeze({ interactive: true, collectable: true, inspectable: true, destructible: false, obstacle: true }),
+      ai: Object.freeze({ curiosity: 0.9, harvestPriority: 0.88, danger: 0.05 }),
+      interaction: { actions: ["inspect", "collect", "analyze"], defaultAction: "collect" },
+      knowledge: { family: "mineral", discoverable: true, uniqueByVariant: true },
+      observation: { events: ["OBJECT_SEEN", "OBJECT_INSPECTED", "OBJECT_ANALYZED"] },
+      resource: { family: "ore", exploitability: "extractable", inventoryKey: "magnetic_ore" },
+      research: { domains: ["geology", "magnetism", "materials"] },
+      situation: { tags: ["mineral", "magnetic", "conductive"] },
+      progression: { mapExpertise: 2, discovery: 1 },
+      build: magneticOre
+    }),
+
+    adaptive_plant: Object.freeze({
+      id: "BIO-ADAP-S-001", type: "adaptive_plant", label: "Plante adaptative",
+      category: "resources", subtype: "adaptive_bioluminescent_plant", size: "S", rarity: "uncommon",
+      status: "active", biomes: ["forest", "jungle", "swamp", "tundra", "coast"],
+      placement: Object.freeze({ edgeWeight: 0.48, centerWeight: 0.52, minSlope: 0, maxSlope: 30 }),
+      gameplay: Object.freeze({ interactive: true, collectable: true, inspectable: true, destructible: true, obstacle: false }),
+      ai: Object.freeze({ curiosity: 0.92, harvestPriority: 0.66, danger: 0 }),
+      interaction: { actions: ["inspect", "collect", "analyze"], defaultAction: "inspect" },
+      knowledge: { family: "flora", discoverable: true, uniqueByVariant: true },
+      observation: { events: ["OBJECT_SEEN", "OBJECT_INSPECTED", "OBJECT_ANALYZED"] },
+      resource: { family: "biomass", exploitability: "harvestable", inventoryKey: "adaptive_biomass" },
+      research: { domains: ["botany", "adaptation", "bioluminescence"] },
+      situation: { tags: ["plant", "adaptive", "bioluminescent"] },
+      decision: { sustainableHarvestRecommended: true },
+      progression: { mapExpertise: 2, discovery: 1, journal: true },
+      build: adaptivePlant
+    }),
+
+    tech_relic: Object.freeze({
+      id: "TEC-RELI-M-001", type: "tech_relic", label: "Vestige technologique",
+      category: "technology", subtype: "ancient_technology_relic", size: "M", rarity: "rare",
+      status: "active", biomes: ["ruins", "desert", "mountain", "cave"],
+      placement: Object.freeze({ edgeWeight: 0.2, centerWeight: 0.8, minSlope: 0, maxSlope: 18 }),
+      gameplay: Object.freeze({ interactive: true, collectable: false, inspectable: true, destructible: false, obstacle: true, discoverable: true }),
+      ai: Object.freeze({ curiosity: 1, harvestPriority: 0, danger: 0.12 }),
+      interaction: { actions: ["inspect", "analyze"], defaultAction: "inspect" },
+      knowledge: { family: "technology", discoverable: true, uniqueByInstance: true },
+      observation: { events: ["OBJECT_SEEN", "OBJECT_INSPECTED", "OBJECT_ANALYZED"] },
+      research: { domains: ["engineering", "ancient-technology", "energy"] },
+      situation: { tags: ["technology", "ruin", "component", "landmark"] },
+      decision: { mayTriggerProject: true, extractionForbiddenUntilAnalyzed: true },
+      progression: { mapExpertise: 4, discovery: 1, journal: true },
+      build: technologicalRelic
+    }),
+
+    magnetic_ore: Object.freeze({ radius: 1.1, volume: "medium" }),
+    adaptive_plant: Object.freeze({ radius: 0.8, volume: "small" }),
+    tech_relic: Object.freeze({ radius: 1.15, volume: "medium" }),
     rock: Object.freeze({ radius: 1.15, volume: "medium" }),
     crystal: Object.freeze({ radius: 1.05, volume: "medium" }),
     fiber: Object.freeze({ radius: 0.82, volume: "small" }),
@@ -824,7 +1094,15 @@
       harvestTime: overrides.harvestTime ?? null,
       lootTable: overrides.lootTable ?? null
     });
-    return Object.freeze({ ...definition, placement: Object.freeze({ ...definition.placement }), gameplay, ai: Object.freeze({ ...definition.ai }), spawn });
+    const functional = normalizeFunctional(definition);
+    return Object.freeze({
+      ...definition,
+      placement: Object.freeze({ ...definition.placement }),
+      gameplay,
+      ai: Object.freeze({ ...definition.ai }),
+      spawn,
+      ...functional
+    });
   };
 
   const OBJECT_LIBRARY = Object.freeze(
@@ -839,7 +1117,8 @@
   );
 
   BF.ObjectLibrary = Object.freeze({
-    schemaVersion: 2,
+    schemaVersion: 3,
+    functionalFields: FUNCTIONAL_FIELDS,
     data: OBJECT_LIBRARY,
 
     get(type) {
@@ -904,6 +1183,15 @@
         instance.root.userData.subtype = definition.subtype;
         instance.root.userData.size = definition.size;
         instance.root.userData.rarity = definition.rarity;
+        instance.root.userData.functional = definition;
+        instance.root.userData.interaction = definition.interaction;
+        instance.root.userData.knowledge = definition.knowledge;
+        instance.root.userData.observation = definition.observation;
+        instance.root.userData.resource = definition.resource;
+        instance.root.userData.research = definition.research;
+        instance.root.userData.situation = definition.situation;
+        instance.root.userData.decision = definition.decision;
+        instance.root.userData.progression = definition.progression;
       }
 
       return instance;
