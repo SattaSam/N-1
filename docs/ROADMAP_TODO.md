@@ -1,10 +1,19 @@
 # BlueFox Odyssey — Roadmap et TODO
 
-Mise à jour : **30 juillet 2026**
+Mise à jour : **1er août 2026**
 
 Cette page est la **seule TODO active**.
 
 ## P0 — Valider le point de sauvegarde catalogue
+
+- [ ] Installer les ZIP des Sprints 1, 2, 3 et 4 dans l’ordre.
+- [ ] Vérifier l’absence d’erreur JavaScript au chargement.
+- [ ] Confirmer que le camp précède toujours le refuge, puis la base, sur chaque Map.
+- [ ] Ouvrir Missions et contrôler les quatre statuts et les notes de BlueFox.
+- [ ] Vérifier qu’Ingénierie I apparaît au cinquième type de roche/cristal.
+- [ ] Tester pause, reprise et suggestion de priorité.
+- [ ] Tester sac, stockage partagé, glisser-déposer et dépôt automatique à la base.
+- [ ] Recharger la page et vérifier toutes les persistances.
 
 - [ ] Lancer le paquet cumulatif `V0.16.20_M0`.
 - [ ] Vérifier l’absence d’erreur de chargement des six modules de mission.
@@ -54,6 +63,12 @@ Cette page est la **seule TODO active**.
 - [x] Fondation technique des missions hiérarchiques persistantes — M0.
 - [x] Convertir les quatre missions historiques en définitions M0.
 - [x] Raccorder la carte de mission au gestionnaire M0.
+- [x] Réactiver plusieurs missions simultanées avec un pilote unique.
+- [x] Ajouter le cycle de vie, la priorité et la reprise persistante.
+- [x] Raccorder le catalogue de missions au registre central.
+- [x] Imposer la chaîne locale `camp → refuge → base` sur chaque Map.
+- [x] Ajouter le menu Missions et les introductions de BlueFox.
+- [x] Séparer sac personnel et stockage partagé des camps.
 - [x] Définir l’exploration comme reconnaissance + trois relevés +
   cartographie.
 - [ ] Définir les conditions futures d’activation de la mission énergie douce.
@@ -86,4 +101,4 @@ Cette page est la **seule TODO active**.
 
 - Socle 3D avant validation du raccordement : **environ 72 %**.
 - Prochain jalon : **75 %**.
-- Jeu complet envisagé : **environ 22 %**.
+- Jeu complet envisagé : **environ 28 %** avant validation en jeu.

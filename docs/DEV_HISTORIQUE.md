@@ -26,3 +26,17 @@ diagnostic, audit du fichier, audit des dépendances, reproduction, tests, corre
 ### Clôture
 Aucun correctif `world-engine.js` n’est validé pendant cette session.
 Les documents de référence sont mis à jour pour refléter cet état.
+# Session du 1er août 2026 — Sprints Missions 1 à 4
+
+- Réactivation du moteur multi-missions avec mission principale unique.
+- Progression passive des missions secondaires et suppression du clignotement UI.
+- Cycle de vie persistant : disponible, active, pause, terminée et échouée.
+- Priorisation automatique expliquée et changement différé après l’action en cours.
+- Catalogue déclaratif raccordé au registre central, recalcul historique idempotent.
+- Chaîne locale obligatoire et instanciée par Map : `camp → refuge → base`.
+- Ingénierie I déverrouillée après cinq roches ou cristaux distincts.
+- Menu Missions complet avec notes personnelles de BlueFox.
+- Inventaire séparé entre sac et stockage partagé des camps.
+- Glisser-déposer manuel et dépôt automatique au camp de base principal.
+- `map-registry.js`, `CharacterController` et `PathPlanner` inchangés.
+- Tests syntaxiques et logiques réussis ; validation navigateur encore requise.

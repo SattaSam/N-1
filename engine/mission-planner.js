@@ -10,7 +10,8 @@
     }
 
     createTree(missionId) {
-      const definition = Missions.definitions[missionId];
+      const definition = Missions.getDefinition?.(missionId) ||
+        Missions.definitions[missionId];
       if (!definition) throw new Error(`Mission inconnue : ${missionId}`);
       return new Missions.MissionTree(Missions.cloneDefinition(definition));
     }

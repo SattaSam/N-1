@@ -1,8 +1,8 @@
 # BlueFox Odyssey — Document maître
 
-Version logicielle de référence : **V0.16.20 + Sprint M0 Fondation IA**
+Version logicielle de référence : **V0.16.20 + Sprints Missions 1 à 4**
 
-Point documentaire : **30 juillet 2026 — fondation du système de missions**
+Point documentaire : **1er août 2026 — moteur multi-missions et interfaces**
 
 Statut : **candidat à valider dans le jeu avant le prochain point Git**
 
@@ -38,19 +38,29 @@ Journal ou le menu Planète.
 6. La découverte enrichit Planète, le Journal et les connaissances.
 7. BlueFox revient au refuge sur demande ou selon ses besoins.
 
-## Fondation IA de missions — M0
+## Moteur de missions — M0 à Sprint 4
 
 Le moteur dispose désormais d’un premier arbre de mission hiérarchique
 persistant. Une mission peut contenir des sous-objectifs, des prérequis, un
 volume d’actions à accomplir et une progression sauvegardée.
 
-La première mission active `shelter` demande :
+Sur chaque Map, la progression d’installation respecte obligatoirement :
 
-1. d’établir le camp près de l’épave ;
-2. de reconnaître le plateau ;
-3. d’identifier trois éléments différents ;
-4. de cartographier les ressources afin de valider l’exploration ;
-5. de réunir ensuite les cristaux et fibres nécessaires au refuge.
+1. `camp` — repos, sécurité et alimentation ;
+2. `shelter` — refuge durable ;
+3. `base` — installation évoluée déverrouillant de nouveaux projets.
+
+La première mission active `camp@Map` précède donc toujours le refuge, y
+compris hors Map de départ. Le moteur prend en charge plusieurs missions
+actives, mais une seule mission principale pilote BlueFox. Les missions
+secondaires progressent passivement depuis le registre central.
+
+L’analyse initiale d’une zone demande ensuite :
+
+1. de reconnaître la zone ;
+2. d’identifier trois éléments différents ;
+3. de cartographier les ressources ;
+4. de réunir les ressources nécessaires au refuge.
 
 Atteindre une Zone ne valide jamais à lui seul son exploration. La mission
 énergie douce existe dans le catalogue M0, mais elle ne doit pas être activée
@@ -59,6 +69,12 @@ automatiquement après le refuge.
 Cette couche ne remplace pas l’autonomie existante. Elle propose une action
 uniquement lorsque le moteur est libre et laisse l’autonomie historique
 reprendre si aucune action de mission n’est réalisable.
+
+Le menu Missions affiche les états, la progression, les prérequis et une note
+de journal dans laquelle BlueFox explique l’origine et l’ambition du projet.
+Le menu Inventaire sépare le sac personnel du stockage partagé entre tous les
+camps. Les transferts sont disponibles uniquement dans une Map avec camp ; le
+sac peut être vidé automatiquement au camp de base principal.
 
 ## Informations affichées
 
@@ -87,7 +103,7 @@ L’ajout ordinaire d’un objet ne doit pas nécessiter de modification de
 ## État connu
 
 - Base PC : **V0.16.20**.
-- Fondation IA M0 intégrée : **contrôles statiques et cycle logique réussis,
+- Moteur de missions Sprints 1 à 4 intégré : **contrôles statiques et cycles logiques réussis,
   validation en jeu requise**.
 - `CharacterController` et `PathPlanner` sont inchangés par M0.
 - Ancienne base mobile/APK V16.14 : **obsolète**.
@@ -97,7 +113,7 @@ L’ajout ordinaire d’un objet ne doit pas nécessiter de modification de
   **validation visuelle et fonctionnelle dans le jeu encore requise**.
 - Stabilité du socle 3D estimée avant ce test : **environ 72 %**.
 - Objectif du prochain jalon : **75 %**.
-- Avancement global estimatif : **environ 22 %**.
+- Avancement global estimatif : **environ 28 %**.
 
 Ces pourcentages restent indicatifs jusqu’à validation fonctionnelle.
 

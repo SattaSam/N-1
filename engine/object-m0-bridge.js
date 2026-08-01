@@ -137,6 +137,7 @@
   };
 
   const eventMatchesNode = (event, node) => {
+    if (node.params?.catalogManaged) return false;
     const type = Missions.normalizeActionType(node.type);
     const detail = event.detail || {};
     const tags = new Set([...(event.tags || []), ...(detail.tags || [])]);
@@ -169,13 +170,29 @@
   const fanOut = (manager, event, excludedNodeId = null) => {
     if (!manager?.tree) return 0;
     let changed = 0;
-    manager.tree.availableLeaves().forEach((node) => {
-      if (node.id === excludedNodeId || node.isComplete || !eventMatchesNode(event, node)) return;
-      if (node.increment(Math.max(1, Number(event.quantity) || 1))) changed += 1;
+    const trees = manager.trees || new Map([[manager.tree.id, manager.tree]]);
+    trees.forEach((tree, missionId) => {
+      if (
+        manager.ensureLifecycle &&
+        manager.ensureLifecycle(missionId).status !== "active"
+      ) return;
+      let treeChanged = false;
+      tree.availableLeaves().forEach((node) => {
+        if (tree === manager.tree && node.id === excludedNodeId) return;
+        if (node.isComplete || !eventMatchesNode(event, node)) return;
+        if (node.increment(Math.max(1, Number(event.quantity) || 1))) {
+          changed += 1;
+          treeChanged = true;
+        }
+      });
+      if (treeChanged) {
+        tree.refresh();
+        manager.memory.saveTree(tree);
+      }
     });
     if (changed) {
-      manager.tree.refresh();
-      manager.memory.saveTree(manager.tree);
+      manager.syncLifecycleFromTrees?.();
+      manager.reevaluatePendingActivations?.();
       manager.publish();
     }
     return changed;
@@ -213,7 +230,9 @@
       ) {
         const node = this.tree.find(current.nodeId);
         if (node && eventMatchesNode(event, node)) {
-          currentConsumed = this.notifyActionCompleted(current.type, detail);
+          currentConsumed = this.notifyActionCompleted(current.type, detail, {
+            passive: false
+          });
         }
       }
       const changed = fanOut(this, event, currentConsumed ? current?.nodeId : null);

@@ -1,8 +1,8 @@
 # Documents de référence — BlueFox Odyssey
 
-Référence logicielle : **V0.16.20 + Sprint M0 Fondation IA**
+Référence logicielle : **V0.16.20 + Sprints Missions 1 à 4**
 
-Point documentaire : **30 juillet 2026 — fondation du système de missions**
+Point documentaire : **1er août 2026 — moteur multi-missions et interfaces**
 
 ## Documents faisant autorité
 

@@ -190,9 +190,32 @@
       if (BF.Missions?.MissionManager) {
         this.missionManager = BF.Missions.MissionManager.create({
           engine: this,
-          missionId: "shelter"
+          missionId: `camp@${this.currentMapId}`
         });
         BF.getMissionState = () => this.missionManager.getState();
+        BF.startMission = (missionId, options) =>
+          this.missionManager.startMission(missionId, options);
+        BF.setPrimaryMission = (missionId) =>
+          this.missionManager.setPrimaryMission(missionId);
+        BF.suggestMissionPriority = (missionId) =>
+          this.missionManager.suggestPrimaryMission(missionId);
+        BF.pauseMission = (missionId, reason) =>
+          this.missionManager.pauseMission(missionId, reason);
+        BF.resumeMission = (missionId, options) =>
+          this.missionManager.resumeMission(missionId, options);
+        BF.failMission = (missionId, reason) =>
+          this.missionManager.failMission(missionId, reason);
+        BF.triggerMission = (missionId, options = {}) =>
+          this.missionManager.notifyMissionEvent(options.type || "event", {
+            ...options,
+            missionId
+          });
+        BF.setSiteStage = (mapId, stage, detail) =>
+          this.missionManager.catalogController?.registerSiteStage(
+            mapId,
+            stage,
+            detail
+          ) || false;
       }
       this.loop();
       return this;
@@ -1984,6 +2007,14 @@
         await new Promise((resolve) => setTimeout(resolve, 220));
         this.cameraController.resetBehindCharacter(true);
         this.completedTransitions += 1;
+        global.dispatchEvent(new CustomEvent("bluefox:map-transition-completed", {
+          detail: {
+            fromMapId: previousMapId,
+            mapId: this.currentMapId,
+            isNew,
+            count: this.completedTransitions
+          }
+        }));
       } catch (error) {
         console.error("Échec du passage de map", error);
         this.pendingGate = null;
@@ -2066,7 +2097,7 @@
           amount: 1,
           mapId: this.currentMapId,
           zoneIndex: this.currentZoneIndex
-        });
+        }, { passive: false });
       }
       this.pendingInteraction = null;
       this.interactionStartedAt = 0;
@@ -2572,6 +2603,14 @@
         BF.currentEngine = null;
         BF.getDiagnostics = null;
         BF.getMissionState = null;
+        BF.startMission = null;
+        BF.setPrimaryMission = null;
+        BF.suggestMissionPriority = null;
+        BF.pauseMission = null;
+        BF.resumeMission = null;
+        BF.failMission = null;
+        BF.triggerMission = null;
+        BF.setSiteStage = null;
       }
       this.container.replaceChildren();
     }

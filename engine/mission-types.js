@@ -36,6 +36,27 @@
   });
 
   const definitions = Object.freeze({
+    camp: {
+      id: "camp",
+      title: "Établir un camp",
+      description:
+        "Créer un point de repos, de sécurité et d’alimentation avant tout refuge durable.",
+      priority: 120,
+      instanceScope: "map",
+      journalIntro: "Cette zone est encore nouvelle pour moi. Je veux d’abord y établir un camp simple : un endroit où reprendre des forces et observer les environs avant d’envisager une installation durable.",
+      root: {
+        id: "camp-root",
+        title: "Établir un camp",
+        type: "objective",
+        children: [{
+          id: "camp-establish",
+          title: "Sécuriser un camp provisoire",
+          type: ActionType.OBSERVE,
+          target: 1,
+          params: { subject: "camp", duration: 4200 }
+        }]
+      }
+    },
     foundation: {
       id: "foundation",
       title: "Sécuriser le refuge",
@@ -81,27 +102,21 @@
     },
     shelter: {
       id: "shelter",
-      title: "Établir un premier refuge",
+      title: "Transformer le camp en refuge",
       description:
-        "Rassembler ce qui protège l’épave sans épuiser les ressources du site.",
-      priority: 100,
+        "Renforcer un camp déjà établi pour créer un refuge durable sur cette map.",
+      priority: 110,
+      instanceScope: "map",
+      journalIntro: "Le camp tient bon. Je pense pouvoir le renforcer en refuge durable sans épuiser les ressources de cette zone. Mon ambition est d’y disposer d’un véritable point d’appui sûr.",
       root: {
         id: "shelter-root",
         title: "Établir un premier refuge",
         type: "objective",
         children: [
           {
-            id: "shelter-camp",
-            title: "Établir le camp près de l’épave",
-            type: ActionType.OBSERVE,
-            target: 1,
-            params: { subject: "camp", duration: 4200 }
-          },
-          {
             id: "shelter-zone-analysis",
             title: "Analyser la zone du camp",
             type: "objective",
-            requires: ["shelter-camp"],
             children: [
               {
                 id: "shelter-zone-reach",
@@ -165,6 +180,27 @@
             params: { kind: "fiber" }
           }
         ]
+      }
+    },
+    base: {
+      id: "base",
+      title: "Faire évoluer le refuge en base",
+      description:
+        "Développer un refuge existant en base locale capable de débloquer de nouveaux projets.",
+      priority: 105,
+      instanceScope: "map",
+      journalIntro: "Ce refuge est désormais fiable. Je veux le faire évoluer en base locale afin qu’il soutienne des projets plus complexes et déverrouille de nouvelles possibilités de recherche.",
+      root: {
+        id: "base-root",
+        title: "Établir une base locale",
+        type: "objective",
+        children: [{
+          id: "base-upgrade",
+          title: "Renforcer les installations du refuge",
+          type: ActionType.BUILD,
+          target: 1,
+          params: { subject: "base" }
+        }]
       }
     },
     energy: {
@@ -289,10 +325,40 @@
     return JSON.parse(JSON.stringify(definition));
   }
 
+  function getDefinition(missionId) {
+    if (definitions[missionId]) return definitions[missionId];
+    const separator = String(missionId || "").indexOf("@");
+    if (separator < 1) return null;
+    const baseId = missionId.slice(0, separator);
+    const scopeId = missionId.slice(separator + 1);
+    const base = definitions[baseId];
+    if (!base || base.instanceScope !== "map" || !scopeId) return null;
+    const instance = cloneDefinition(base);
+    const idMap = new Map();
+    const collectIds = (node) => {
+      idMap.set(node.id, `${node.id}@${scopeId}`);
+      (node.children || []).forEach(collectIds);
+    };
+    const applyScope = (node) => {
+      node.id = idMap.get(node.id);
+      node.requires = (node.requires || []).map((id) => idMap.get(id) || id);
+      node.params = { ...(node.params || {}), mapId: scopeId };
+      (node.children || []).forEach(applyScope);
+    };
+    collectIds(instance.root);
+    applyScope(instance.root);
+    instance.id = missionId;
+    instance.baseMissionId = baseId;
+    instance.scopeId = scopeId;
+    instance.title = `${instance.title} — ${scopeId}`;
+    return instance;
+  }
+
   Missions.ActionType = ActionType;
   Missions.MissionStatus = MissionStatus;
   Missions.NeedType = NeedType;
   Missions.definitions = definitions;
   Missions.normalizeActionType = normalizeActionType;
   Missions.cloneDefinition = cloneDefinition;
+  Missions.getDefinition = getDefinition;
 })(window);

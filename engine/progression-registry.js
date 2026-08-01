@@ -25,6 +25,7 @@
       missions: {}
     },
     inventory: {},
+    campStorage: {},
     deposited: {},
     consumed: {},
     discoveries: {
@@ -59,6 +60,7 @@
         ...(saved.counters || {})
       },
       inventory: { ...(saved.inventory || {}) },
+      campStorage: { ...(saved.campStorage || {}) },
       deposited: { ...(saved.deposited || {}) },
       consumed: { ...(saved.consumed || {}) },
       discoveries: {
@@ -251,11 +253,35 @@
       const available = Number(this.state.inventory[safeKey]) || 0;
       const moved = Math.min(available, requested);
       this.state.inventory[safeKey] = available - moved;
+      this.increment(this.state.campStorage, safeKey, moved);
       this.increment(this.state.deposited, safeKey, moved);
       this.save();
       this.publishChange("inventory-deposited", {
         inventoryKey: safeKey,
         quantity: moved
+      });
+      return moved;
+    }
+
+    withdrawInventory(key, amount = 1) {
+      const safeKey = cleanKey(key);
+      const requested = Math.max(0, Number(amount) || 0);
+      const stored = Number(this.state.campStorage[safeKey]) || 0;
+      const moved = Math.min(stored, requested);
+      this.state.campStorage[safeKey] = stored - moved;
+      this.increment(this.state.inventory, safeKey, moved);
+      this.save();
+      this.publishChange("inventory-withdrawn", {
+        inventoryKey: safeKey,
+        quantity: moved
+      });
+      return moved;
+    }
+
+    depositAllInventory() {
+      let moved = 0;
+      Object.entries({ ...this.state.inventory }).forEach(([key, amount]) => {
+        moved += this.depositInventory(key, Number(amount) || 0);
       });
       return moved;
     }
@@ -357,6 +383,8 @@
   BF.getProgressionState = () => registry.snapshot();
   BF.consumeInventory = (key, amount) => registry.consumeInventory(key, amount);
   BF.depositInventory = (key, amount) => registry.depositInventory(key, amount);
+  BF.withdrawInventory = (key, amount) => registry.withdrawInventory(key, amount);
+  BF.depositAllInventory = () => registry.depositAllInventory();
   BF.completeLegacyInventoryReconciliation = () =>
     registry.completeLegacyOfflineReconciliation();
   BF.reachProgressionMilestone = (id, detail) => registry.reachMilestone(id, detail);

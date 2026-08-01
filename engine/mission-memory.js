@@ -15,7 +15,13 @@
     defaultState() {
       return {
         version: 2,
-        activeMissionId: "shelter",
+        activeMissionId: "camp",
+        primaryMissionId: "camp",
+        activeMissionIds: [],
+        missionLifecycle: {},
+        pendingActivations: {},
+        rewardedMissions: {},
+        siteProgression: {},
         missions: {},
         facts: {},
         history: [],
@@ -33,8 +39,24 @@
           ...savedWithoutInventory,
           facts: { ...(saved.facts || {}) },
           missions: { ...(saved.missions || {}) },
+          missionLifecycle: { ...(saved.missionLifecycle || {}) },
+          pendingActivations: { ...(saved.pendingActivations || {}) },
+          rewardedMissions: { ...(saved.rewardedMissions || {}) },
+          siteProgression: { ...(saved.siteProgression || {}) },
           history: Array.isArray(saved.history) ? saved.history.slice(-150) : []
         };
+        const legacyPrimary = saved.primaryMissionId ||
+          saved.activeMissionId || "camp";
+        const activeIds = Array.isArray(saved.activeMissionIds)
+          ? saved.activeMissionIds
+          : [legacyPrimary];
+        this.state.primaryMissionId = legacyPrimary;
+        this.state.activeMissionId = legacyPrimary;
+        this.state.activeMissionIds = [...new Set(
+          [legacyPrimary, ...activeIds].filter((id) =>
+            Missions.getDefinition?.(id) || Missions.definitions?.[id]
+          )
+        )];
       } catch (error) {
         console.warn("Mémoire de mission illisible, réinitialisation M0.", error);
       }
