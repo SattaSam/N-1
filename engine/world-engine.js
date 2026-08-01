@@ -35,6 +35,7 @@
       this.cameraButton = null;
       this.clickMarker = null;
       this.lastCycleUpdate = 0;
+      this.lastWeatherSignature = "";
       this.gateCooldownUntil = 0;
       this.lastActivityAt = performance.now();
       this.lastIntentUpdate = 0;
@@ -1105,6 +1106,50 @@
         ? 0
         : Math.sin(((minuteOfDay - 2 * 60) / (15 * 60)) * Math.PI);
 
+      const weatherProfiles = {
+        frozen: { night: -14, amplitude: 12 },
+        aquatic: { night: 4, amplitude: 6 },
+        volcanic: { night: 34, amplitude: 10 },
+        desert: { night: 20, amplitude: 18 },
+        forest: { night: 9, amplitude: 9 },
+        ruins: { night: 10, amplitude: 8 },
+        crystalline: { night: 8, amplitude: 10 },
+        alien: { night: 7, amplitude: 11 }
+      };
+      const biomeProfile = this.currentMap?.definition?.profile || "alien";
+      const weatherProfile = weatherProfiles[biomeProfile] || weatherProfiles.alien;
+      const temperature = Math.round(
+        weatherProfile.night + daylight * weatherProfile.amplitude
+      );
+      const thermalStress = BF.clamp(
+        temperature < 8 ? (8 - temperature) / 22 :
+          temperature > 26 ? (temperature - 26) / 20 : 0,
+        0,
+        1
+      );
+      const condition = temperature < 8
+        ? "Froid"
+        : temperature > 26
+          ? "Chaud"
+          : "Tempéré";
+      const weatherState = {
+        mapId: this.currentMapId,
+        biomeProfile,
+        temperature,
+        condition,
+        thermalStress,
+        isNight
+      };
+      BF.currentWeatherState = weatherState;
+      BF.getWeatherState = () => ({ ...BF.currentWeatherState });
+      const weatherSignature = `${this.currentMapId}:${temperature}:${condition}:${isNight}`;
+      if (weatherSignature !== this.lastWeatherSignature) {
+        this.lastWeatherSignature = weatherSignature;
+        global.dispatchEvent(new CustomEvent("bluefox:weather-changed", {
+          detail: { ...weatherState }
+        }));
+      }
+
       const block = document.querySelector(".day-block");
       if (block) {
         const dayElement = block.querySelector("span");
@@ -1116,9 +1161,8 @@
             `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
         }
         if (detailElement) {
-          const temperature = Math.round(11 + daylight * 8);
           detailElement.textContent =
-            `${isNight ? "NUIT" : "JOUR"} · Cycle calme · ${temperature} °C`;
+            `${isNight ? "NUIT" : "JOUR"} · ${condition} · ${temperature} °C`;
         }
         block.classList.toggle("night", isNight);
       }
@@ -1671,6 +1715,7 @@
         this.character.pathPlanner.bounds = nextMap.bounds || 27;
       }
       this.character?.setColliders(nextMap.colliders);
+      this.character?.setWalkableRegions(nextMap.walkableRegions);
       await this.setPanorama(
         definition.sceneUrl || this.assets[definition.sceneAsset],
         definition

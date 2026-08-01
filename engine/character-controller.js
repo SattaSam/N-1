@@ -34,6 +34,7 @@
       this.arrivalRadius = 1.6;
       this.stopRadius = 0.1;
       this.colliders = [];
+      this.walkableRegions = [];
       this.enabled = true;
       this.lastSafePosition = root.position.clone();
       this.stuckTime = 0;
@@ -120,13 +121,52 @@
       if (this.finalTarget) this.rebuildPath();
     }
 
+    setWalkableRegions(regions = []) {
+      this.walkableRegions = regions.map((region) => ({
+        minX: Number(region.minX), maxX: Number(region.maxX),
+        minZ: Number(region.minZ), maxZ: Number(region.maxZ)
+      })).filter((region) => Object.values(region).every(Number.isFinite));
+      if (!this.walkableRegions.length) return;
+      this.constrainToWalkable(this.root.position);
+      this.lastSafePosition.copy(this.root.position);
+    }
+
+    constrainToWalkable(position) {
+      if (!this.walkableRegions.length || !position) return position;
+      const margin = this.radius + 0.08;
+      const contains = this.walkableRegions.some((region) =>
+        position.x >= region.minX + margin && position.x <= region.maxX - margin &&
+        position.z >= region.minZ + margin && position.z <= region.maxZ - margin
+      );
+      if (contains) return position;
+      let nearest = null;
+      let nearestDistance = Infinity;
+      this.walkableRegions.forEach((region) => {
+        const x = BF.clamp(position.x, region.minX + margin, region.maxX - margin);
+        const z = BF.clamp(position.z, region.minZ + margin, region.maxZ - margin);
+        const distance = (position.x - x) ** 2 + (position.z - z) ** 2;
+        if (distance >= nearestDistance) return;
+        nearestDistance = distance;
+        nearest = { x, z };
+      });
+      if (nearest) {
+        position.x = nearest.x;
+        position.z = nearest.z;
+      }
+      return position;
+    }
+
     setTarget(target, movementMode = "auto") {
       if (!target || !Number.isFinite(target.x) || !Number.isFinite(target.z)) return;
-      const directDistance = this.root.position.distanceTo(target);
+      const safeTarget = target.clone
+        ? target.clone()
+        : new this.THREE.Vector3(target.x, 0, target.z);
+      this.constrainToWalkable(safeTarget);
+      const directDistance = this.root.position.distanceTo(safeTarget);
       this.movementMode = movementMode === "auto"
         ? (directDistance > this.autonomousRunThreshold ? "run" : "walk")
         : movementMode;
-      this.finalTarget.copy(target);
+      this.finalTarget.copy(safeTarget);
       this.finalTarget.y = 0;
       this.failedReplans = 0;
       this.rebuildPath();
@@ -439,6 +479,7 @@
           Math.min(distance, this.speed * dt, this.maxFrameTravel)
         );
         this.resolveCollisions(proposed, previous);
+        this.constrainToWalkable(proposed);
         const actualTravel = proposed.distanceTo(previous);
         if (actualTravel > this.maxFrameTravel * 1.05) {
           proposed.copy(previous).lerp(

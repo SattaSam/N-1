@@ -612,7 +612,8 @@
           index,
           name: `Plateau ${index + 1}`,
           center: new THREE.Vector3(x, 0, z),
-          radius: zoneSize * 0.62
+          radius: zoneSize * 0.62,
+          halfSize: zoneSize * 0.5
         });
       });
     }
@@ -708,6 +709,12 @@
       definition,
       group,
       zoneRegions,
+      walkableRegions: zoneRegions.map((zone) => ({
+        minX: zone.center.x - zone.halfSize,
+        maxX: zone.center.x + zone.halfSize,
+        minZ: zone.center.z - zone.halfSize,
+        maxZ: zone.center.z + zone.halfSize
+      })),
       bounds: { minX, maxX, minZ, maxZ },
       resolvedExits,
       internalZonePaths,
@@ -777,6 +784,12 @@
       interactables,
       gates,
       zoneRegions,
+      walkableRegions: zoneRegions.map((zone) => ({
+        minX: zone.center.x - zone.halfSize,
+        maxX: zone.center.x + zone.halfSize,
+        minZ: zone.center.z - zone.halfSize,
+        maxZ: zone.center.z + zone.halfSize
+      })),
       internalZonePaths,
       bounds: Math.max(
         Math.abs(minX), Math.abs(maxX), Math.abs(minZ), Math.abs(maxZ)

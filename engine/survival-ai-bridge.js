@@ -4,6 +4,7 @@
   const BF = global.BlueFox3D = global.BlueFox3D || {};
   const STORAGE_KEY = "bluefox_survival_v1";
   const clamp = (value) => Math.max(0, Math.min(100, Number(value) || 0));
+  const clamp01 = (value) => Math.max(0, Math.min(1, Number(value) || 0));
   const clone = (value) => JSON.parse(JSON.stringify(value));
 
   const legacyEnergy = () => {
@@ -71,6 +72,12 @@
     observe: 0.8
   });
 
+  const weather = () => BF.getWeatherState?.() || BF.currentWeatherState || {
+    temperature: 17,
+    condition: "Tempéré",
+    thermalStress: 0
+  };
+
   const recordAction = (action, source = "autonomy") => {
     const baseCost = interactionCost[action] || 1;
     const now = Date.now();
@@ -85,7 +92,8 @@
     const manualMultiplier = source === "manual"
       ? 1.35 + state.manualPressure * 0.12
       : 1;
-    const cost = baseCost * manualMultiplier;
+    const thermalMultiplier = 1 + clamp01(weather().thermalStress) * 0.55;
+    const cost = baseCost * manualMultiplier * thermalMultiplier;
     state.rest = clamp(state.rest - cost);
     state.food = clamp(state.food - cost * 0.42);
     publish(`action:${action}:${source}`);
@@ -118,11 +126,26 @@
 
   const snapshot = () => ({
     ...clone(state),
+    weather: { ...weather() },
     needs: {
       rest: state.rest < 35 || state.energy < 30,
       food: state.food < 35 || state.energy < 25
     }
   });
+
+  let lastExposureAt = Date.now();
+  const applyEnvironmentalExposure = () => {
+    const now = Date.now();
+    if (now - lastExposureAt < 30000) return false;
+    lastExposureAt = now;
+    const currentWeather = weather();
+    const stress = clamp01(currentWeather.thermalStress);
+    if (stress <= 0) return false;
+    state.rest = clamp(state.rest - stress * 0.9);
+    state.food = clamp(state.food - stress * 0.25);
+    publish(`weather:${currentWeather.condition}:${currentWeather.temperature}`);
+    return true;
+  };
 
   const renderEnergy = () => {
     const meter = document.querySelector(".survival-energy-meter");
@@ -144,7 +167,7 @@
       if (fill.style.width !== width) fill.style.width = width;
       if (fill.className !== className) fill.className = className;
     }
-    const title = `Repos ${Math.round(current.rest)} % · Alimentation ${Math.round(current.food)} % · Sécurité ${Math.round(current.safety)} %`;
+    const title = `Repos ${Math.round(current.rest)} % · Alimentation ${Math.round(current.food)} % · Sécurité ${Math.round(current.safety)} % · ${current.weather.condition} ${Math.round(current.weather.temperature)} °C`;
     if (meter.title !== title) meter.title = title;
     return true;
   };
@@ -155,6 +178,7 @@
     recordAction,
     completeRoutine,
     updateSafety,
+    applyEnvironmentalExposure,
     save: () => publish("manual-save")
   });
   BF.getSurvivalState = snapshot;
@@ -166,10 +190,12 @@
   });
   global.addEventListener("bluefox:survival-changed", renderEnergy);
   global.addEventListener("bluefox:mission-state", renderEnergy);
+  global.addEventListener("bluefox:weather-changed", renderEnergy);
   const observer = new MutationObserver(renderEnergy);
   observer.observe(document.documentElement, { childList: true, subtree: true });
   global.setInterval(() => {
     updateSafety();
+    applyEnvironmentalExposure();
     renderEnergy();
   }, 2000);
   global.setTimeout(() => {
