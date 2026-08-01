@@ -19,28 +19,50 @@
   }
 
   function renderTrackedMissionMeters(state) {
-    const meters = document.querySelectorAll(".meters label");
+    const container = document.querySelector(".meters");
+    if (!container) return;
+    let energyMeter = container.querySelector(".survival-energy-meter");
+    if (!energyMeter) {
+      energyMeter = [...container.querySelectorAll("label")].find((meter) =>
+        meter.querySelector("span")?.textContent?.trim().toUpperCase() === "ÉNERGIE"
+      ) || container.querySelector("label");
+      energyMeter?.classList.add("survival-energy-meter");
+    }
+    let missionMeters = [...container.querySelectorAll("label:not(.survival-energy-meter)")];
+    while (missionMeters.length < 2 && missionMeters[0]) {
+      const clone = missionMeters[0].cloneNode(true);
+      clone.classList.add("tracked-mission-meter");
+      container.appendChild(clone);
+      missionMeters.push(clone);
+    }
+    const meters = missionMeters.slice(0, 2);
     if (!meters.length) return;
     const tracked = [...(state.missions || [])]
       .filter((mission) => mission.lifecycleStatus === "active")
       .sort((left, right) => Number(right.isPrimary) - Number(left.isPrimary))
       .slice(0, 2);
     meters.forEach((meter, index) => {
+      meter.classList.add("tracked-mission-meter");
       const mission = tracked[index];
       const label = meter.querySelector("span");
       const value = meter.querySelector("b");
       const fill = meter.querySelector("em");
       if (!mission) {
-        if (label) label.textContent = "MISSION À SUIVRE";
-        if (value) value.textContent = "—";
-        if (fill) fill.style.width = "0%";
+        if (label && label.textContent !== "MISSION À SUIVRE") {
+          label.textContent = "MISSION À SUIVRE";
+        }
+        if (value && value.textContent !== "—") value.textContent = "—";
+        if (fill && fill.style.width !== "0%") fill.style.width = "0%";
         return;
       }
       const percent = Math.round((mission.progress || 0) * 100);
-      if (label) label.textContent = mission.title;
-      if (value) value.textContent = `${percent}%`;
-      if (fill) fill.style.width = `${percent}%`;
-      meter.title = mission.isPrimary ? "Mission prioritaire" : "Deuxième mission suivie";
+      const valueText = `${percent}%`;
+      const width = `${percent}%`;
+      const title = mission.isPrimary ? "Mission prioritaire" : "Deuxième mission suivie";
+      if (label && label.textContent !== mission.title) label.textContent = mission.title;
+      if (value && value.textContent !== valueText) value.textContent = valueText;
+      if (fill && fill.style.width !== width) fill.style.width = width;
+      if (meter.title !== title) meter.title = title;
     });
   }
 
@@ -111,8 +133,10 @@
     card.classList.add("mission-m0-connected");
     renderTrackedMissionMeters(state);
     const intention = document.querySelector(".intent-bar strong");
-    if (intention) intention.textContent = state.description || state.title;
-
+    const intentionText = state.description || state.title || "";
+    if (intention && intention.textContent !== intentionText) {
+      intention.textContent = intentionText;
+    }
     const signature = JSON.stringify({
       missionId: state.missionId,
       status: state.status,
@@ -236,8 +260,9 @@
         status: mission.lifecycleStatus || mission.status
       });
     });
+    const publicStatuses = new Set(["available", "active", "paused", "completed"]);
     return [...merged.values()].filter((mission) =>
-      mission.missionId !== "foundation"
+      mission.missionId !== "foundation" && publicStatuses.has(mission.status)
     );
   }
 
@@ -343,15 +368,24 @@
 
   function ensureMissionTool() {
     const rail = document.querySelector(".tool-rail");
-    if (!rail || rail.querySelector(".mission-tool-button")) return;
+    if (!rail) return;
+    const planetButton = [...rail.querySelectorAll("button")].find((candidate) =>
+      candidate.getAttribute("aria-label") === "Planète"
+    );
+    const planetIcon = planetButton?.querySelector("span");
+    if (planetIcon && !planetIcon.classList.contains("planet-sphere-icon")) {
+      planetIcon.className = "planet-sphere-icon";
+      planetIcon.textContent = "●";
+    }
+    if (rail.querySelector(".mission-tool-button")) return;
     const button = document.createElement("button");
     button.type = "button";
     button.className = "mission-tool-button";
     button.setAttribute("aria-label", "Missions");
-    button.append(
-      createTextElement("span", "", "◎"),
-      createTextElement("small", "", "Missions")
-    );
+    const icon = createTextElement("span", "mission-page-icon", "");
+    icon.setAttribute("aria-hidden", "true");
+    icon.append(document.createElement("i"), document.createElement("i"), document.createElement("i"));
+    button.append(icon, createTextElement("small", "", "Missions"));
     button.addEventListener("click", () => {
       document.querySelector(".mission-browser")?.remove();
       const browser = document.createElement("section");

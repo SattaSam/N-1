@@ -5,6 +5,7 @@
   const Missions = BF.Missions = BF.Missions || {};
   const A = Missions.ActionType;
   const SECONDARY_CAMP_BAG_THRESHOLD = 10;
+  const DEFAULT_SITE_INTERACTION_RADIUS = 12;
 
   const leaf = (id, title, type, target, metric) => ({
     id,
@@ -140,7 +141,8 @@
       this.manager = manager;
       this.scheduled = false;
       const facts = this.manager.memory.state.facts;
-      facts.primaryBaseMapId = facts.primaryBaseMapId || "crystal";
+      facts.primaryBaseMapId = facts.primaryBaseMapId ||
+        this.manager.engine?.currentMapId || "crystal";
       this.events = [
         "bluefox:progression-changed",
         "bluefox:multi-progression",
@@ -159,6 +161,8 @@
       };
       this.events.forEach((type) => global.addEventListener(type, this.onChange));
       global.addEventListener("bluefox:map-transition-completed", this.onTransition);
+      BF.registerSiteAnchor = (mapId, anchor, interactionRadius) =>
+        this.registerSiteAnchor(mapId, anchor, interactionRadius);
       this.evaluate();
     }
 
@@ -328,16 +332,31 @@
     }
 
     unlockCatalogMission(definition) {
+      const lifecycle = this.manager.memory.state.missionLifecycle?.[definition.id];
       if (
         definition.unlockMetric &&
         this.metric(definition.unlockMetric) < Number(definition.unlockTarget || 1)
-      ) return false;
+      ) {
+        if (lifecycle?.status === "available" && lifecycle.source === "system") {
+          lifecycle.status = "hidden";
+          lifecycle.updatedAt = Date.now();
+          return true;
+        }
+        return false;
+      }
       const probe = new Missions.MissionTree(Missions.cloneDefinition(definition));
       this.updateTree(probe);
       const hasProgress = definition.unlockMetric || this.manager.treeProgress(probe) > 0;
-      if (!hasProgress) return false;
-      const status = this.manager.ensureLifecycle(definition.id).status;
-      if (status === "available") {
+      if (!hasProgress) {
+        if (lifecycle?.status === "available" && lifecycle.source === "system") {
+          lifecycle.status = "hidden";
+          lifecycle.updatedAt = Date.now();
+          return true;
+        }
+        return false;
+      }
+      const status = lifecycle?.status;
+      if (!status || status === "hidden" || status === "available") {
         this.manager.startMission(definition.id, {
           primary: false,
           autoPrimaryEligible: false,
@@ -368,7 +387,10 @@
       });
       this.manager.syncLifecycleFromTrees();
       Object.values(catalog).forEach((definition) => {
-        const lifecycle = this.manager.ensureLifecycle(definition.id);
+        const lifecycle = this.manager.memory.state.missionLifecycle?.[
+          definition.id
+        ];
+        if (!lifecycle) return;
         if (lifecycle.status !== "completed") return;
         const rewards = this.manager.memory.state.rewardedMissions;
         if (rewards[definition.id]) return;
@@ -385,6 +407,27 @@
       return changed;
     }
 
+    registerSiteAnchor(mapId, anchor, interactionRadius) {
+      const site = this.manager.memory.state.siteProgression?.[mapId];
+      if (
+        !site ||
+        Number(site.stage) < 1 ||
+        !Number.isFinite(Number(anchor?.x)) ||
+        !Number.isFinite(Number(anchor?.z))
+      ) return false;
+      site.anchor = { x: Number(anchor.x), z: Number(anchor.z) };
+      site.interactionRadius = Math.max(
+        4,
+        Number(interactionRadius) ||
+          Number(site.interactionRadius) ||
+          DEFAULT_SITE_INTERACTION_RADIUS
+      );
+      site.updatedAt = Date.now();
+      this.manager.memory.save();
+      this.manager.publish();
+      return true;
+    }
+
     registerSiteStage(mapId, stage, detail = {}) {
       if (!mapId) return false;
       const sites = this.manager.memory.state.siteProgression;
@@ -395,6 +438,21 @@
       if (nextStage === site.stage) return false;
       site.stage = nextStage;
       site.updatedAt = Date.now();
+      if (nextStage >= 1 && !site.anchor) {
+        const requestedAnchor = detail.anchor || detail.position;
+        const characterPosition = this.manager.engine?.character?.root?.position;
+        const anchor = requestedAnchor || characterPosition || { x: 0, z: 8 };
+        site.anchor = {
+          x: Number.isFinite(Number(anchor.x)) ? Number(anchor.x) : 0,
+          z: Number.isFinite(Number(anchor.z)) ? Number(anchor.z) : 8
+        };
+      }
+      site.interactionRadius = Math.max(
+        4,
+        Number(detail.interactionRadius) ||
+          Number(site.interactionRadius) ||
+          DEFAULT_SITE_INTERACTION_RADIUS
+      );
       const primaryMapId = this.primaryBaseMapId();
       site.isPrimary = mapId === primaryMapId;
       const completedId = [null, `camp@${mapId}`, `shelter@${mapId}`, `base@${mapId}`][nextStage];

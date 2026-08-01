@@ -42,14 +42,24 @@
   const updateTraitBalance = (row) => {
     const input = row.querySelector('input[type="range"]');
     const output = row.querySelector("b");
-    const names = splitTrait(row.querySelector("span")?.textContent);
+    const label = row.querySelector("span");
+    const names = row.dataset.traitLeft && row.dataset.traitRight
+      ? [row.dataset.traitLeft, row.dataset.traitRight]
+      : splitTrait(label?.textContent);
     if (!input || !output || names.length !== 2) return false;
+    row.dataset.traitLeft = names[0];
+    row.dataset.traitRight = names[1];
     const left = Math.max(0, Math.min(100, Number(input.value) || 0));
     const right = 100 - left;
+    row.classList.add("trait-bipolar-row");
+    label.classList.add("trait-pole", "trait-pole-left");
     output.classList.add("trait-balance-value");
-    const text = `${names[0]} ${left} % / ${names[1]} ${right} %`;
+    output.classList.add("trait-pole", "trait-pole-right");
+    const leftText = `${names[0]} ${left} %`;
+    const rightText = `${names[1]} ${right} %`;
     const ariaText = `${names[0]} ${left} %, ${names[1]} ${right} %`;
-    if (output.textContent !== text) output.textContent = text;
+    if (label.textContent !== leftText) label.textContent = leftText;
+    if (output.textContent !== rightText) output.textContent = rightText;
     if (input.getAttribute("aria-valuetext") !== ariaText) {
       input.setAttribute("aria-valuetext", ariaText);
     }

@@ -164,7 +164,7 @@
         ? options.prerequisites.filter(Boolean)
         : [];
       const missing = prerequisites.filter((id) =>
-        this.ensureLifecycle(id).status !== "completed"
+        this.memory.state.missionLifecycle?.[id]?.status !== "completed"
       );
       if (missing.length) {
         this.memory.state.pendingActivations = this.memory.state.pendingActivations || {};
@@ -174,8 +174,8 @@
           options: { ...options, prerequisites: undefined },
           requestedAt: Date.now()
         };
-        const lifecycle = this.ensureLifecycle(missionId, "available");
-        lifecycle.status = "available";
+        const lifecycle = this.ensureLifecycle(missionId, "hidden");
+        lifecycle.status = "hidden";
         lifecycle.waitingFor = missing;
         this.memory.save();
         this.publish();
@@ -596,6 +596,9 @@
           .filter((id) => Object.prototype.hasOwnProperty.call(
             this.memory.state.missionLifecycle || {},
             id
+          ))
+          .filter((id) => ["available", "active", "paused", "completed"].includes(
+            this.memory.state.missionLifecycle[id]?.status
           ))
           .map((id) => ({
             missionId: id,

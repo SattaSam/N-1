@@ -387,6 +387,7 @@
         amount: 1,
         quantity: 1,
         interactionMode: mode,
+        interactionSource: object.userData.requestedInteractionSource || "autonomy",
         interactionState: { ...state }
       };
 

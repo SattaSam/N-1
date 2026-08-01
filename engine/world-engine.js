@@ -221,6 +221,10 @@
     }
 
     restoreDiscovery() {
+      const requestedStartMap = localStorage.getItem("bluefox_new_game_start_v1");
+      const startMapId = requestedStartMap && BF.maps[requestedStartMap]
+        ? requestedStartMap
+        : "crystal";
       try {
         const memories = JSON.parse(
           localStorage.getItem("bluefox_engine_discovered_maps_v2") ||
@@ -234,7 +238,7 @@
             (Number(right.order) || Number.MAX_SAFE_INTEGER)
           );
         this.discoveredMaps.clear();
-        if (BF.maps.crystal) this.discoveredMaps.add("crystal");
+        if (BF.maps[startMapId]) this.discoveredMaps.add(startMapId);
         orderedMemories.forEach((map) => this.discoveredMaps.add(map.id));
       } catch {
         localStorage.removeItem("bluefox_discovered_maps_v1");
@@ -557,6 +561,16 @@
         }
       } catch {
         localStorage.removeItem("bluefox_world_position_v2");
+      }
+      const requestedStartMap = localStorage.getItem("bluefox_new_game_start_v1");
+      if (requestedStartMap && BF.maps[requestedStartMap]) {
+        localStorage.removeItem("bluefox_new_game_start_v1");
+        const entry = BF.maps[requestedStartMap].entry || { x: 0, z: 5 };
+        return {
+          map: requestedStartMap,
+          x: BF.clamp(Number(entry.x) || 0, -27, 27),
+          z: BF.clamp(Number(entry.z) || 5, -27, 27)
+        };
       }
       return { map: "crystal", x: 0, z: 5 };
     }
@@ -2125,6 +2139,44 @@
       }
     }
 
+    personalityTraits() {
+      try {
+        return JSON.parse(
+          localStorage.getItem("bluefox_odyssey_save_v1") || "null"
+        )?.traits || {};
+      } catch {
+        return {};
+      }
+    }
+
+    autonomousResourceTarget(resources) {
+      if (!resources.length) return null;
+      const characterPosition = this.character.root.position;
+      const respect = BF.clamp(
+        Number(this.personalityTraits()["Respectueux — Destructeur"] ?? 50) / 100,
+        0,
+        1
+      );
+      const candidates = resources.map((object) => {
+        const definition = object.userData.functional || {};
+        const anchor = object.userData.worldAnchor || object.userData.worldRoot || object;
+        const distance = characterPosition.distanceTo(anchor.position);
+        const maturity = BF.clamp(
+          Number(object.userData.maturity ?? definition.state?.maturity ?? 1),
+          0,
+          1
+        );
+        const ecologicalPenalty =
+          (1 - maturity) * 18 * respect +
+          (definition.gameplay?.destructible === true ? 2.5 * respect : 0);
+        const harvestBenefit = Math.max(0, Number(definition.ai?.harvestPriority) || 0) * 2;
+        return { object, distance, score: distance + ecologicalPenalty - harvestBenefit };
+      });
+      const immediate = candidates.filter((candidate) => candidate.distance <= 4);
+      return (immediate.length ? immediate : candidates)
+        .sort((left, right) => left.score - right.score)[0]?.object || null;
+    }
+
     updateAutonomy(now) {
       if (
         this.transitioning ||
@@ -2136,6 +2188,16 @@
       if (now - this.lastAutonomyAt < 5000) return;
       if (this.character.root.position.distanceTo(this.character.target) > 0.2) return;
       this.lastAutonomyAt = now;
+
+      const survival = BF.getSurvivalState?.();
+      if (survival?.needs?.food && Math.random() < 0.82) {
+        this.startRoutine("food", now, 5200);
+        return;
+      }
+      if (survival?.needs?.rest && Math.random() < 0.82) {
+        this.startRoutine("rest", now, 7200);
+        return;
+      }
 
       if (Math.random() < 0.08) {
         const duration = this.character.playAmbientObservation();
@@ -2191,7 +2253,8 @@
 
       const resources = this.currentMap.interactables.filter((object) => this.canInteractWith(object, now));
       if (resources.length) {
-        const object = resources[Math.floor(Math.random() * resources.length)];
+        const object = this.autonomousResourceTarget(resources);
+        object.userData.requestedInteractionSource = "autonomy";
         this.targetInteraction(object);
         return;
       }
@@ -2236,6 +2299,7 @@
       this.currentRoutine = null;
       this.character.cancelInteraction();
       if (finished === "rest") this.callbacks.onRest();
+      BF.survival?.completeRoutine?.(finished);
       const missionActionTypes = {
         rest: BF.Missions?.ActionType.REST,
         research: BF.Missions?.ActionType.RESEARCH,
@@ -2273,7 +2337,8 @@
       this.character.cancelInteraction();
       const resources = this.currentMap.interactables.filter((object) => this.canInteractWith(object, now));
       if (resources.length) {
-        const object = resources[Math.floor(Math.random() * resources.length)];
+        const object = this.autonomousResourceTarget(resources);
+        object.userData.requestedInteractionSource = "autonomy";
         this.targetInteraction(object);
         this.callbacks.onAction(
           "BlueFox reprend spontanément son activité après avoir évalué les priorités locales."
@@ -2295,7 +2360,9 @@
     }
 
     activityPurpose() {
-      const mission = document.querySelector(".mission-card h2")?.textContent || "";
+      const missionState = BF.getMissionState?.() || BF.missionState;
+      const mission = missionState?.title ||
+        document.querySelector(".mission-card h2")?.textContent || "";
       const lower = mission.toLowerCase();
       if (lower.includes("refuge")) {
         return "sécuriser le refuge et rendre le camp durable";
@@ -2381,16 +2448,6 @@
       const activity = this.currentActivity();
       const activityElement = document.querySelector(".action-feed p");
       if (activityElement) activityElement.textContent = activity.label;
-
-      const mission = document.querySelector(".mission-card h2")?.textContent || "";
-      const intentElement = document.querySelector(".intent-bar strong");
-      if (mission !== this.intentMissionKey || !this.stableIntentText) {
-        this.intentMissionKey = mission;
-        this.stableIntentText = this.buildGlobalIntention(mission);
-      }
-      if (intentElement && intentElement.textContent !== this.stableIntentText) {
-        intentElement.textContent = this.stableIntentText;
-      }
 
       const stateChanged = activity.key !== this.currentActivityKey;
       if (

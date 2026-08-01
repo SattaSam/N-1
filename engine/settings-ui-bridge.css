@@ -1,5 +1,22 @@
 .settings-content .trait-row {
-  grid-template-columns: minmax(150px, 1fr) minmax(110px, 1.4fr) minmax(145px, auto);
+  grid-template-columns: minmax(105px, auto) minmax(150px, 1fr) minmax(105px, auto);
+  align-items: center;
+}
+
+.settings-content .trait-bipolar-row input[type="range"] {
+  direction: rtl;
+  width: 100%;
+}
+
+.settings-content .trait-pole {
+  color: #cdeeff;
+  font-size: 10px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.settings-content .trait-pole-left {
+  text-align: right;
 }
 
 .settings-content .trait-balance-value {
@@ -8,7 +25,7 @@
   font-weight: 600;
   line-height: 1.35;
   text-align: right;
-  white-space: normal;
+  white-space: nowrap;
 }
 
 @media (max-width: 650px) {

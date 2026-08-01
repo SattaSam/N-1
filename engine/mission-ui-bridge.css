@@ -1,3 +1,31 @@
+.tool-rail .planet-sphere-icon {
+  color: #d9f7ff;
+  font-size: 25px;
+  line-height: 1;
+  text-shadow: 0 0 12px rgba(103, 225, 255, .48);
+}
+
+.tool-rail .mission-page-icon {
+  width: 25px;
+  height: 17px;
+  border: 2px solid currentColor;
+  border-radius: 2px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 0 4px;
+  box-sizing: border-box;
+}
+
+.tool-rail .mission-page-icon i {
+  display: block;
+  width: 100%;
+  height: 1px;
+  background: currentColor;
+  opacity: .9;
+}
+
 .mission-card.mission-m0-connected > .eyebrow,
 .mission-card.mission-m0-connected > h2,
 .mission-card.mission-m0-connected > p,
@@ -278,4 +306,19 @@
   .m0-mission-panel > p {
     display: none;
   }
+}
+.meters .survival-energy-meter {
+  order: -1;
+}
+
+.meters .survival-energy-meter em.energy-healthy {
+  background: linear-gradient(90deg, #78d66b, #34b96f);
+}
+
+.meters .survival-energy-meter em.energy-low {
+  background: linear-gradient(90deg, #f3a43b, #e8772e);
+}
+
+.meters .survival-energy-meter em.energy-critical {
+  background: linear-gradient(90deg, #ef7b35, #d74335);
 }

@@ -28,6 +28,7 @@
         )
       ).length;
       let energy = null;
+      const survival = BF.getSurvivalState?.();
       try {
         const legacy = JSON.parse(
           global.localStorage.getItem("bluefox_odyssey_save_v1") || "null"
@@ -36,14 +37,17 @@
       } catch {
         energy = null;
       }
+      if (Number.isFinite(Number(survival?.energy))) {
+        energy = Number(survival.energy);
+      }
       return {
         mapId: engine.currentMapId,
         resources,
         unexploredZones,
         canRoutine: !engine.currentRoutine,
         needs: {
-          rest: energy != null && energy < 35,
-          food: false
+          rest: survival?.needs?.rest === true || (energy != null && energy < 35),
+          food: survival?.needs?.food === true
         },
         energy
       };
