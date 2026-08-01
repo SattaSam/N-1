@@ -150,10 +150,7 @@
         })),
         tree: this.tree.toJSON(),
         inventory: {
-          ...(
-            BF.getProgressionState?.().inventory ||
-            this.memory.state.inventory
-          )
+          ...(BF.getProgressionState?.().inventory || {})
         }
       };
     }

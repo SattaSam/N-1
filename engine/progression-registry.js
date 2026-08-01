@@ -3,6 +3,7 @@
 
   const BF = global.BlueFox3D = global.BlueFox3D || {};
   const STORAGE_KEY = "bluefox_progression_registry_v1";
+  const LEGACY_STORAGE_KEY = "bluefox_odyssey_save_v1";
   const VERSION = 1;
   const MAX_HISTORY = 500;
 
@@ -40,6 +41,10 @@
       global: 0
     },
     milestones: {},
+    migrations: {
+      legacyInventoryImported: false,
+      legacyOfflineReconciled: false
+    },
     history: []
   });
 
@@ -65,6 +70,10 @@
         ...(saved.expertise || {})
       },
       milestones: { ...(saved.milestones || {}) },
+      migrations: {
+        ...base.migrations,
+        ...(saved.migrations || {})
+      },
       history: Array.isArray(saved.history) ? saved.history.slice(-MAX_HISTORY) : []
     };
   };
@@ -84,18 +93,87 @@
         console.warn("Registre central de progression illisible, réinitialisation.", error);
         this.state = defaultState();
       }
+      this.importLegacyInventoryOnce();
       return this.state;
+    }
+
+    importLegacyInventoryOnce() {
+      if (this.state.migrations.legacyInventoryImported) return false;
+      this.state.migrations.legacyInventoryImported = true;
+
+      if (Object.keys(this.state.inventory).length) {
+        this.save();
+        return false;
+      }
+
+      try {
+        const legacy = JSON.parse(
+          this.storage.getItem("bluefox_odyssey_save_v1") || "null"
+        );
+        const resources = legacy?.resources;
+        if (resources && typeof resources === "object" && !Array.isArray(resources)) {
+          Object.entries(resources).forEach(([key, amount]) => {
+            const quantity = Math.max(0, Number(amount) || 0);
+            if (quantity > 0) this.state.inventory[cleanKey(key)] = quantity;
+          });
+        }
+      } catch (error) {
+        console.warn("Migration de l’ancien inventaire indisponible.", error);
+      }
+      this.save();
+      return true;
     }
 
     save() {
       this.state.updatedAt = Date.now();
       try {
         this.storage.setItem(STORAGE_KEY, JSON.stringify(this.state));
+        if (this.state.migrations.legacyOfflineReconciled) {
+          this.syncLegacyInventory();
+        }
         return true;
       } catch (error) {
         console.warn("Sauvegarde du registre central indisponible.", error);
         return false;
       }
+    }
+
+    syncLegacyInventory() {
+      try {
+        const legacy = JSON.parse(
+          this.storage.getItem(LEGACY_STORAGE_KEY) || "null"
+        );
+        if (!legacy || typeof legacy !== "object" || Array.isArray(legacy)) {
+          return false;
+        }
+        this.storage.setItem(LEGACY_STORAGE_KEY, JSON.stringify({
+          ...legacy,
+          resources: { ...this.state.inventory },
+          inventorySource: "progression-registry-v1"
+        }));
+        return true;
+      } catch (error) {
+        console.warn("Synchronisation de l’inventaire historique indisponible.", error);
+        return false;
+      }
+    }
+
+    completeLegacyOfflineReconciliation() {
+      if (this.state.migrations.legacyOfflineReconciled) return false;
+      this.state.migrations.legacyOfflineReconciled = true;
+      this.save();
+      this.publishChange("legacy-offline-reconciled");
+      return true;
+    }
+
+    publishChange(reason, event = null) {
+      global.dispatchEvent(new CustomEvent("bluefox:progression-changed", {
+        detail: {
+          reason,
+          event: clone(event),
+          snapshot: this.snapshot()
+        }
+      }));
     }
 
     increment(bucket, key, amount = 1) {
@@ -160,6 +238,10 @@
       this.state.inventory[safeKey] = available - removed;
       this.increment(this.state.consumed, safeKey, removed);
       this.save();
+      this.publishChange("inventory-consumed", {
+        inventoryKey: safeKey,
+        quantity: removed
+      });
       return removed;
     }
 
@@ -171,6 +253,10 @@
       this.state.inventory[safeKey] = available - moved;
       this.increment(this.state.deposited, safeKey, moved);
       this.save();
+      this.publishChange("inventory-deposited", {
+        inventoryKey: safeKey,
+        quantity: moved
+      });
       return moved;
     }
 
@@ -236,9 +322,7 @@
       this.state.history.push(clone(event));
       this.state.history = this.state.history.slice(-MAX_HISTORY);
       this.save();
-      global.dispatchEvent(new CustomEvent("bluefox:progression-changed", {
-        detail: { event: clone(event), snapshot: this.snapshot() }
-      }));
+      this.publishChange("event-consumed", event);
       return true;
     }
 
@@ -259,7 +343,10 @@
 
     reset() {
       this.state = defaultState();
+      this.state.migrations.legacyInventoryImported = true;
+      this.state.migrations.legacyOfflineReconciled = true;
       this.save();
+      this.publishChange("inventory-reset");
       return this.snapshot();
     }
   }
@@ -270,6 +357,8 @@
   BF.getProgressionState = () => registry.snapshot();
   BF.consumeInventory = (key, amount) => registry.consumeInventory(key, amount);
   BF.depositInventory = (key, amount) => registry.depositInventory(key, amount);
+  BF.completeLegacyInventoryReconciliation = () =>
+    registry.completeLegacyOfflineReconciliation();
   BF.reachProgressionMilestone = (id, detail) => registry.reachMilestone(id, detail);
   registry.connect();
 })(window);

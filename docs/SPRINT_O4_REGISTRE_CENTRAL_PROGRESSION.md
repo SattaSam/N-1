@@ -29,6 +29,8 @@ Les portées absentes dans un événement ne sont simplement pas alimentées.
 
 - `engine/object-event-registry.js` : événements enrichis avec inventaire, progression, recherche et portées.
 - `engine/progression-registry.js` : stockage central et API publique.
+- `engine/inventory-ui-bridge.js` : projection du registre central dans l'interface historique.
+- `engine/mission-memory.js` : mémoire des missions sans copie locale de l'inventaire.
 
 ## Ordre de chargement
 
@@ -67,4 +69,10 @@ Un même palier ne peut être validé qu'une seule fois.
 
 ## Compatibilité
 
-La mémoire M0 existante n'est pas supprimée. Le registre central fonctionne en parallèle afin de permettre une migration progressive du moteur de mission.
+Le registre central est désormais l'unique source de vérité de l'inventaire.
+
+- L'ancien champ `resources` de `bluefox_odyssey_save_v1` est importé une seule fois.
+- Les gains hors ligne encore produits par l'interface historique sont convertis une seule fois en événements de collecte standardisés.
+- Après cette réconciliation, `resources` devient une projection compatible du registre central et ne peut plus l'écraser.
+- `MissionMemory` conserve l'arbre, les faits et l'historique des missions, mais plus aucun inventaire parallèle.
+- Collecte, extraction, consommation et dépôt déclenchent tous une mise à jour de l'interface.

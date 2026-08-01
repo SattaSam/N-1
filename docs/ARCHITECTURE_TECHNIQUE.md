@@ -158,6 +158,15 @@ Principales clés locales :
 - `bluefox_map_names_v1`
 - `bluefox_planet_clock_v1`
 - `bluefox_odyssey_save_v1`
+- `bluefox_progression_registry_v1`
+- `bluefox_mission_memory_m0_v1`
+
+`bluefox_progression_registry_v1` est l'unique source de vérité des quantités
+transportées, déposées et consommées. Le champ `resources` de
+`bluefox_odyssey_save_v1` est conservé uniquement comme projection de
+compatibilité pour l'interface compilée ; après sa réconciliation initiale, il
+ne peut plus réécrire l'inventaire central. La mémoire M0 ne possède plus de
+copie d'inventaire.
 
 Les Maps procédurales sont régénérées à partir de leurs définitions et graines.
 # Extension M0 — Fondation IA

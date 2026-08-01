@@ -17,7 +17,6 @@
         version: 2,
         activeMissionId: "shelter",
         missions: {},
-        inventory: {},
         facts: {},
         history: [],
         updatedAt: Date.now()
@@ -28,13 +27,10 @@
       try {
         const saved = JSON.parse(this.storage.getItem(STORAGE_KEY) || "null");
         if (!saved || saved.version !== 2) return this.state;
+        const { inventory: _obsoleteInventory, ...savedWithoutInventory } = saved;
         this.state = {
           ...this.defaultState(),
-          ...saved,
-          inventory: {
-            ...this.defaultState().inventory,
-            ...(saved.inventory || {})
-          },
+          ...savedWithoutInventory,
           facts: { ...(saved.facts || {}) },
           missions: { ...(saved.missions || {}) },
           history: Array.isArray(saved.history) ? saved.history.slice(-150) : []
@@ -75,14 +71,6 @@
       };
       this.state.history.push(event);
       this.state.history = this.state.history.slice(-150);
-      if (
-        [Missions.ActionType.COLLECT, Missions.ActionType.EXTRACT].includes(type) &&
-        detail.kind
-      ) {
-        const amount = Math.max(1, Number(detail.amount) || 1);
-        this.state.inventory[detail.kind] =
-          (Number(this.state.inventory[detail.kind]) || 0) + amount;
-      }
       this.save();
       return event;
     }

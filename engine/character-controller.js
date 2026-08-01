@@ -215,8 +215,7 @@
       const requestedNames = Array.isArray(animationHints)
         ? animationHints
         : [animationHints];
-      const useObservationGesture =
-        normalizedAction !== "observe" || Math.random() < 0.35;
+      const useObservationGesture = Math.random() < 0.28;
       const names = acquisition
         ? [
             ...requestedNames,
