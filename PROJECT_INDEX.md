@@ -1,26 +1,27 @@
-# Index du projet — 00 EXECUTABLE_BFO V2
+# Index du projet — V3_EXECUTABL_fondation IA
 
-_Généré automatiquement le 28/07/2026 à 23:56:53._
+_Généré automatiquement le 01/08/2026 à 10:28:12._
 
 ## Résumé
 
-- Fichiers : **157**
-- Taille totale : **347.34 Mo**
-- Lignes de texte/code : **13174**
+- Fichiers : **186**
+- Taille totale : **356.88 Mo**
+- Lignes de texte/code : **22942**
 
 ### Répartition par catégorie
 
 | Catégorie | Nombre |
 |---|---:|
-| Asset | 112 |
-| Autre | 3 |
+| Asset | 113 |
+| Autre | 6 |
 | Sans extension | 1 |
-| Texte / Code | 41 |
+| Texte / Code | 66 |
 
 ## Arborescence
 
 ```text
-00 EXECUTABLE_BFO V2
+V3_EXECUTABL_fondation IA
+├── .project_index_cache.json
 ├── Cahier_des_Charges_BlueFox_Odyssey.docx
 ├── game.css
 ├── game.js
@@ -42,6 +43,10 @@ _Généré automatiquement le 28/07/2026 à 23:56:53._
 │   └── config.json
 ├── docs
 │   ├── ARCHITECTURE_TECHNIQUE.md
+│   ├── BlueFox_CUO_Audit_Consolidation.xlsx
+│   ├── BlueFox_Decisions_2026-07-31.docx
+│   ├── BlueFox_Game.glb
+│   ├── BlueFox_Reference_Methodologie.docx
 │   ├── CONVENTIONS_MAPS_IMAGES.md
 │   ├── DEV_HISTORIQUE.md
 │   ├── ETAT_REPRISE.md
@@ -51,18 +56,42 @@ _Généré automatiquement le 28/07/2026 à 23:56:53._
 │   ├── PLAN_TESTS_V0.16.20.md
 │   ├── README.md
 │   ├── ROADMAP_TODO.md
+│   ├── SPRINT_M0_FONDATION_IA.md
+│   ├── SPRINT_O1_3_O2_1.md
+│   ├── SPRINT_O2_2_O2_3.md
+│   ├── SPRINT_O3_PROFILS_RESSOURCES_PONDERES.md
+│   ├── SPRINT_O4_REGISTRE_CENTRAL_PROGRESSION.md
+│   ├── SPRINT_O5_1_ROUTEUR_INTERACTIONS_MANUELLES.md
+│   ├── SPRINT_O5_PROGRESSION_MULTI_SYSTEMES.md
+│   ├── SPRINT_O6_EXPLORATION_EXPERTISE_MAP.md
 │   └── TODO.md
 ├── engine
+│   ├── action-bridge.js
 │   ├── biome-rules.js
 │   ├── bluefox3d-core.js
 │   ├── camera-controller.js
 │   ├── character-controller.js
 │   ├── exploration-hud.css
+│   ├── inventory-ui-bridge.css
+│   ├── inventory-ui-bridge.js
+│   ├── map-exploration-tracker.js
 │   ├── map-registry.js
 │   ├── micro-scenes.js
+│   ├── mission-catalog.js
+│   ├── mission-manager.js
+│   ├── mission-memory.js
+│   ├── mission-planner.js
+│   ├── mission-tree.js
+│   ├── mission-types.js
+│   ├── mission-ui-bridge.css
+│   ├── mission-ui-bridge.js
+│   ├── object-event-registry.js
 │   ├── object-library.js
+│   ├── object-m0-bridge.js
 │   ├── object-spawner.js
 │   ├── path-planner.js
+│   ├── progression-multisystem.js
+│   ├── progression-registry.js
 │   ├── ui-enhancements.css
 │   ├── ui-enhancements.js
 │   └── world-engine.js
@@ -192,35 +221,64 @@ _Généré automatiquement le 28/07/2026 à 23:56:53._
 
 | Chemin | Catégorie | Taille | Lignes |
 |---|---|---:|---:|
+| `.project_index_cache.json` | Texte / Code | 86.15 Ko | 2951 |
 | `assets/Capsule.png` | Asset | 4.04 Mo |  |
 | `assets/maps/CONVENTION_IMAGES.txt` | Texte / Code | 1.43 Ko | 36 |
 | `Cahier_des_Charges_BlueFox_Odyssey.docx` | Autre | 39.34 Ko |  |
 | `css/style.css` | Texte / Code | 1.74 Ko | 23 |
 | `data/config.json` | Texte / Code | 238 o | 16 |
-| `docs/ARCHITECTURE_TECHNIQUE.md` | Texte / Code | 4.38 Ko | 134 |
+| `docs/ARCHITECTURE_TECHNIQUE.md` | Texte / Code | 7.13 Ko | 190 |
+| `docs/BlueFox_CUO_Audit_Consolidation.xlsx` | Autre | 38.09 Ko |  |
+| `docs/BlueFox_Decisions_2026-07-31.docx` | Autre | 37.20 Ko |  |
+| `docs/BlueFox_Game.glb` | Asset | 9.10 Mo |  |
+| `docs/BlueFox_Reference_Methodologie.docx` | Autre | 36.09 Ko |  |
 | `docs/CONVENTIONS_MAPS_IMAGES.md` | Texte / Code | 2.83 Ko | 84 |
-| `docs/DEV_HISTORIQUE.md` | Texte / Code | 2.31 Ko | 70 |
-| `docs/ETAT_REPRISE.md` | Texte / Code | 1.31 Ko | 37 |
+| `docs/DEV_HISTORIQUE.md` | Texte / Code | 2.21 Ko | 42 |
+| `docs/ETAT_REPRISE.md` | Texte / Code | 1.33 Ko | 34 |
 | `docs/GENERER_CATALOGUE_IMAGES.bat` | Texte / Code | 348 o | 14 |
-| `docs/MASTER.md` | Texte / Code | 501 o | 12 |
-| `docs/MASTER_BLUEFOX_ODYSSEY.md` | Texte / Code | 3.84 Ko | 84 |
-| `docs/PLAN_TESTS_V0.16.20.md` | Texte / Code | 3.43 Ko | 87 |
-| `docs/README.md` | Texte / Code | 1.53 Ko | 36 |
-| `docs/ROADMAP_TODO.md` | Texte / Code | 2.45 Ko | 62 |
-| `docs/TODO.md` | Texte / Code | 447 o | 12 |
-| `engine/biome-rules.js` | Texte / Code | 7.58 Ko | 129 |
+| `docs/MASTER.md` | Texte / Code | 3.93 Ko | 83 |
+| `docs/MASTER_BLUEFOX_ODYSSEY.md` | Texte / Code | 6.20 Ko | 132 |
+| `docs/PLAN_TESTS_V0.16.20.md` | Texte / Code | 4.66 Ko | 109 |
+| `docs/README.md` | Texte / Code | 2.00 Ko | 45 |
+| `docs/ROADMAP_TODO.md` | Texte / Code | 5.08 Ko | 104 |
+| `docs/SPRINT_M0_FONDATION_IA.md` | Texte / Code | 4.69 Ko | 130 |
+| `docs/SPRINT_O1_3_O2_1.md` | Texte / Code | 2.09 Ko | 47 |
+| `docs/SPRINT_O2_2_O2_3.md` | Texte / Code | 1.38 Ko | 24 |
+| `docs/SPRINT_O3_PROFILS_RESSOURCES_PONDERES.md` | Texte / Code | 1.40 Ko | 46 |
+| `docs/SPRINT_O4_REGISTRE_CENTRAL_PROGRESSION.md` | Texte / Code | 2.59 Ko | 78 |
+| `docs/SPRINT_O5_1_ROUTEUR_INTERACTIONS_MANUELLES.md` | Texte / Code | 1.24 Ko | 39 |
+| `docs/SPRINT_O5_PROGRESSION_MULTI_SYSTEMES.md` | Texte / Code | 1.92 Ko | 71 |
+| `docs/SPRINT_O6_EXPLORATION_EXPERTISE_MAP.md` | Texte / Code | 2.00 Ko | 60 |
+| `docs/TODO.md` | Texte / Code | 1.81 Ko | 35 |
+| `engine/action-bridge.js` | Texte / Code | 4.19 Ko | 122 |
+| `engine/biome-rules.js` | Texte / Code | 11.50 Ko | 193 |
 | `engine/bluefox3d-core.js` | Texte / Code | 1.77 Ko | 54 |
 | `engine/camera-controller.js` | Texte / Code | 12.56 Ko | 359 |
-| `engine/character-controller.js` | Texte / Code | 16.55 Ko | 455 |
+| `engine/character-controller.js` | Texte / Code | 19.08 Ko | 524 |
 | `engine/exploration-hud.css` | Texte / Code | 4.00 Ko | 204 |
-| `engine/map-registry.js` | Texte / Code | 26.92 Ko | 780 |
+| `engine/inventory-ui-bridge.css` | Texte / Code | 1007 o | 58 |
+| `engine/inventory-ui-bridge.js` | Texte / Code | 10.10 Ko | 273 |
+| `engine/map-exploration-tracker.js` | Texte / Code | 8.92 Ko | 255 |
+| `engine/map-registry.js` | Texte / Code | 28.29 Ko | 823 |
 | `engine/micro-scenes.js` | Texte / Code | 5.02 Ko | 87 |
-| `engine/object-library.js` | Texte / Code | 26.54 Ko | 912 |
-| `engine/object-spawner.js` | Texte / Code | 18.24 Ko | 390 |
+| `engine/mission-catalog.js` | Texte / Code | 15.76 Ko | 363 |
+| `engine/mission-manager.js` | Texte / Code | 22.31 Ko | 613 |
+| `engine/mission-memory.js` | Texte / Code | 3.48 Ko | 118 |
+| `engine/mission-planner.js` | Texte / Code | 2.85 Ko | 90 |
+| `engine/mission-tree.js` | Texte / Code | 5.62 Ko | 191 |
+| `engine/mission-types.js` | Texte / Code | 11.24 Ko | 364 |
+| `engine/mission-ui-bridge.css` | Texte / Code | 3.28 Ko | 185 |
+| `engine/mission-ui-bridge.js` | Texte / Code | 11.17 Ko | 307 |
+| `engine/object-event-registry.js` | Texte / Code | 2.92 Ko | 69 |
+| `engine/object-library.js` | Texte / Code | 41.34 Ko | 1258 |
+| `engine/object-m0-bridge.js` | Texte / Code | 21.66 Ko | 516 |
+| `engine/object-spawner.js` | Texte / Code | 19.19 Ko | 411 |
 | `engine/path-planner.js` | Texte / Code | 6.67 Ko | 200 |
-| `engine/ui-enhancements.css` | Texte / Code | 13.44 Ko | 680 |
-| `engine/ui-enhancements.js` | Texte / Code | 24.07 Ko | 626 |
-| `engine/world-engine.js` | Texte / Code | 82.92 Ko | 2178 |
+| `engine/progression-multisystem.js` | Texte / Code | 10.04 Ko | 295 |
+| `engine/progression-registry.js` | Texte / Code | 12.63 Ko | 392 |
+| `engine/ui-enhancements.css` | Texte / Code | 21.34 Ko | 1012 |
+| `engine/ui-enhancements.js` | Texte / Code | 44.06 Ko | 1179 |
+| `engine/world-engine.js` | Texte / Code | 98.63 Ko | 2623 |
 | `game.css` | Texte / Code | 10.65 Mo | 1 |
 | `game.js` | Texte / Code | 27.60 Mo | 3905 |
 | `generate_project_index.py` | Texte / Code | 11.13 Ko | 285 |
@@ -339,10 +397,10 @@ _Généré automatiquement le 28/07/2026 à 23:56:53._
 | `Images/images-catalog.js` | Texte / Code | 6.97 Ko | 1 |
 | `Images/images.txt` | Texte / Code | 184 o | 5 |
 | `Images/LISEZ_MOI.txt` | Texte / Code | 744 o | 19 |
-| `index.html` | Texte / Code | 2.93 Ko | 69 |
+| `index.html` | Texte / Code | 4.06 Ko | 74 |
 | `journal.css` | Texte / Code | 3.10 Ko | 189 |
 | `LANCER_BLUEFOX.bat` | Texte / Code | 346 o | 14 |
-| `map-assets.js` | Texte / Code | 5.25 Ko | 182 |
+| `map-assets.js` | Texte / Code | 5.06 Ko | 175 |
 | `README_LANCEMENT.txt` | Texte / Code | 31.08 Ko | 566 |
 | `Savegarde BFO` | Sans extension | 31 o |  |
 | `tools/bluefox-local-server.ps1` | Texte / Code | 4.01 Ko | 124 |
