@@ -103,7 +103,12 @@
   };
 
   const startMapCandidates = () => Object.keys(BF.maps || {}).filter((mapId) =>
-    BF.maps[mapId]?.terrainUrl || BF.maps[mapId]?.terrainUrls?.length
+    (BF.maps[mapId]?.terrainUrl || BF.maps[mapId]?.terrainUrls?.length) &&
+    Math.max(
+      1,
+      Number(BF.maps[mapId]?.plateauCount) ||
+        Number(BF.maps[mapId]?.terrainUrls?.length) || 1
+    ) === 1
   );
 
   const selectNewStartMap = () => {
@@ -125,6 +130,17 @@
   const startNewGame = () => {
     const startMap = selectNewStartMap();
     clearActiveGameState({ preservePreferences: true });
+    global.localStorage.setItem("bluefox_odyssey_save_v1", JSON.stringify({
+      resources: { crystal: 0, fiber: 0, parts: 0 },
+      energy: 82,
+      actions: [{ text: "Début d’une nouvelle exploration.", at: "JOUR 01" }],
+      knowledge: 0,
+      relations: 0,
+      saveVersion: 3,
+      newGame: true,
+      startedAt: Date.now()
+    }));
+    global.localStorage.setItem("bluefox_last_seen", String(Date.now()));
     global.localStorage.setItem("bluefox_new_game_start_v1", startMap);
     global.localStorage.setItem("bluefox_last_start_map_v1", startMap);
     global.dispatchEvent(new CustomEvent("bluefox:new-game", { detail: { startMap } }));
@@ -155,8 +171,10 @@
         const button = createButton(formatSlot(slot, `Sauvegarde ${slot}`));
         button.addEventListener("click", () => {
           const snapshot = writeSnapshot(slot);
-          status.textContent = `Partie enregistrée dans la sauvegarde ${slot}.`;
-          popover.remove();
+          status.textContent = snapshot
+            ? `Partie enregistrée dans la sauvegarde ${slot}.`
+            : "Échec de la sauvegarde : espace local insuffisant ou indisponible.";
+          if (snapshot) popover.remove();
           return snapshot;
         });
         popover.appendChild(button);
@@ -224,7 +242,8 @@
     }
   };
   global.addEventListener("pagehide", () => writeSnapshot("auto", { flush: false }));
-  global.setInterval(scheduleAutoSave, 60000);
+  global.setTimeout(scheduleAutoSave, 5000);
+  global.setInterval(scheduleAutoSave, 30000);
 
   BF.saveGame = (slot = 1) => Boolean(writeSnapshot(slot));
   BF.createManualSave = (slot = 1) => Boolean(writeSnapshot(slot));

@@ -143,6 +143,7 @@
       const facts = this.manager.memory.state.facts;
       facts.primaryBaseMapId = facts.primaryBaseMapId ||
         this.manager.engine?.currentMapId || "crystal";
+      this.retireInvalidSiteUpgrades();
       this.events = [
         "bluefox:progression-changed",
         "bluefox:multi-progression",
@@ -166,6 +167,33 @@
       this.evaluate();
     }
 
+    retireInvalidSiteUpgrades() {
+      const primaryMapId = this.primaryBaseMapId();
+      const lifecycle = this.manager.memory.state.missionLifecycle || {};
+      const invalidIds = Object.keys(lifecycle).filter((id) => {
+        const match = /^(shelter|base)@(.+)$/.exec(id);
+        return match && match[2] !== primaryMapId;
+      });
+      if (!invalidIds.length) return false;
+      const invalid = new Set(invalidIds);
+      invalidIds.forEach((id) => {
+        lifecycle[id].status = "hidden";
+        lifecycle[id].updatedAt = Date.now();
+        lifecycle[id].discoveryReason = "Chaîne Refuge/Base réservée à la zone de départ.";
+      });
+      this.manager.activeMissionIds = (this.manager.activeMissionIds || []).filter(
+        (id) => !invalid.has(id)
+      );
+      this.manager.memory.state.activeMissionIds = [
+        ...this.manager.activeMissionIds
+      ];
+      if (invalid.has(this.manager.primaryMissionId)) {
+        this.manager.selectBestPrimary?.(performance.now(), true);
+      }
+      this.manager.memory.save();
+      return true;
+    }
+
     primaryBaseMapId() {
       return this.manager.memory.state.facts.primaryBaseMapId || "crystal";
     }
@@ -176,6 +204,8 @@
     }
 
     currentEnergy() {
+      const survivalEnergy = Number(BF.getSurvivalState?.().energy);
+      if (Number.isFinite(survivalEnergy)) return survivalEnergy;
       try {
         const save = JSON.parse(
           global.localStorage.getItem("bluefox_odyssey_save_v1") || "null"
@@ -190,10 +220,16 @@
       const mapId = detail.mapId || this.manager.engine?.currentMapId;
       const primaryMapId = this.primaryBaseMapId();
       if (!mapId || mapId === primaryMapId) return false;
+      const primarySite = this.manager.memory.state.siteProgression?.[primaryMapId];
+      if (Number(primarySite?.stage) < 3) return false;
+      const exploredMapCount = this.manager.engine?.discoveredMaps?.size || 0;
+      if (exploredMapCount < 3) return false;
       const site = this.manager.memory.state.siteProgression?.[mapId];
       if (Number(site?.stage) >= 1) return false;
       const missionId = `camp@${mapId}`;
-      if (this.manager.ensureLifecycle(missionId).status === "active") return false;
+      if (this.manager.memory.state.missionLifecycle?.[missionId]?.status === "active") {
+        return false;
+      }
 
       const energy = this.currentEnergy();
       const inventoryLoad = this.inventoryLoad();
@@ -202,16 +238,31 @@
       const lowEnergy = energy != null && energy < 35;
       const remote = hopsFromBase >= 2;
       const loadedBag = inventoryLoad >= SECONDARY_CAMP_BAG_THRESHOLD;
-      if (!lowEnergy && !remote && !loadedBag) return false;
+      const returnEnergyCost = 8 + hopsFromBase * 12;
+      const campEnergyCost = 20;
+      const returnMoreTiring = returnEnergyCost > campEnergyCost;
+      const activeMissionNeedsCamp = (this.manager.activeMissionIds || []).some((id) => {
+        const definition = this.manager.definition(id);
+        return definition?.requiresLocalCamp === true ||
+          definition?.requirements?.includes?.("local-camp");
+      });
+      const relevanceScore =
+        (remote ? 2 : 0) +
+        (loadedBag ? 1 : 0) +
+        (lowEnergy && returnMoreTiring ? 2 : 0) +
+        (activeMissionNeedsCamp ? 2 : 0);
+      if (relevanceScore < 3) return false;
 
       const reasons = [];
       if (lowEnergy) reasons.push(`énergie basse (${Math.round(energy)} %)`);
       if (remote) reasons.push(`éloignement de ${hopsFromBase} Maps`);
       if (loadedBag) reasons.push(`sac chargé (${inventoryLoad} objets)`);
+      if (returnMoreTiring) reasons.push("retour à la base plus fatigant qu’un camp local");
+      if (activeMissionNeedsCamp) reasons.push("mission locale nécessitant un point de repos");
       return this.manager.startMission(missionId, {
         primary: false,
-        urgency: lowEnergy ? 30 : 10,
-        narrativePriority: lowEnergy ? 20 : 8,
+        urgency: lowEnergy && returnMoreTiring ? 22 : 6,
+        narrativePriority: activeMissionNeedsCamp ? 16 : 4,
         source: "autonomie locale",
         reason: `BlueFox envisage un camp local : ${reasons.join(", ")}.`
       });
@@ -456,7 +507,7 @@
       const primaryMapId = this.primaryBaseMapId();
       site.isPrimary = mapId === primaryMapId;
       const completedId = [null, `camp@${mapId}`, `shelter@${mapId}`, `base@${mapId}`][nextStage];
-      const nextId = nextStage === 1
+      const nextId = nextStage === 1 && site.isPrimary
         ? `shelter@${mapId}`
         : nextStage === 2 && site.isPrimary
           ? `base@${mapId}`

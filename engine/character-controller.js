@@ -216,29 +216,28 @@
         ? animationHints
         : [animationHints];
       const useObservationGesture = Math.random() < 0.28;
+      const harvestClip = (requestedName) => {
+        const token = String(requestedName || "").toLowerCase();
+        const pattern = /heavy/.test(token)
+          ? /harvest[_\s-]*heavy/i
+          : /medium|medieum|médium/.test(token)
+            ? /harvest[_\s-]*medium/i
+            : /harvest[_\s-]*(light|small)|harvers[_\s-]*samall/i;
+        return this.clips.find((clip) => pattern.test(clip.name))?.name;
+      };
       const names = acquisition
-        ? [
-            ...requestedNames,
-            this.clips.find((clip) => /harvest[_\s-]*heavy/i.test(clip.name))?.name,
-            this.clips.find((clip) => /harvest[_\s-]*medium/i.test(clip.name))?.name,
-            this.clips.find((clip) => /harvers/i.test(clip.name))?.name,
-            this.clips.find((clip) => /harvest[_\s-]*small/i.test(clip.name))?.name
-          ]
+        ? requestedNames.map(harvestClip)
         : useObservationGesture ? [
             ...requestedNames,
             this.clips.find((clip) => /ear[_\s-]*right/i.test(clip.name))?.name,
             this.clips.find((clip) => /^ear/i.test(clip.name))?.name
           ] : [];
       const idle = this.findAvailableClip(["Idle", "Idle_V2", "Idle_V3", "Idle_V4"]);
-      const uniqueNames = names.filter(
-        (name, index) =>
-          name &&
-          this.actions.has(name) &&
-          names.indexOf(name) === index
-      );
-      if (!uniqueNames.length && idle) uniqueNames.push(idle);
+      // Les répétitions sont intentionnelles (ex. heavy / medium / heavy).
+      const sequenceNames = names.filter((name) => name && this.actions.has(name));
+      if (!sequenceNames.length && idle) sequenceNames.push(idle);
       const speed = acquisition ? 1.1 : 1;
-      const steps = uniqueNames.map((name) => ({
+      const steps = sequenceNames.map((name) => ({
         name,
         duration: Math.max(
           0.65,

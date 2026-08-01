@@ -2,25 +2,16 @@ $ErrorActionPreference = "Stop"
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $listener = $null
-$port = 0
-
-foreach ($attempt in 1..32) {
-    $candidate = Get-Random -Minimum 49152 -Maximum 60000
-    try {
-        $listener = [System.Net.Sockets.TcpListener]::new(
-            [System.Net.IPAddress]::Loopback,
-            $candidate
-        )
-        $listener.Start()
-        $port = $candidate
-        break
-    } catch {
-        $listener = $null
-    }
-}
-
-if ($null -eq $listener) {
-    throw "Aucun port local temporaire n'a pu etre ouvert."
+$preferredPort = 8765
+$port = $preferredPort
+try {
+    $listener = [System.Net.Sockets.TcpListener]::new(
+        [System.Net.IPAddress]::Loopback,
+        $preferredPort
+    )
+    $listener.Start()
+} catch {
+    throw "Le port stable $preferredPort est deja occupe. Fermez l'autre serveur BlueFox (ou sa fenetre PowerShell), puis relancez. Aucun port aleatoire n'est utilise afin de proteger les sauvegardes."
 }
 
 $mimeTypes = @{

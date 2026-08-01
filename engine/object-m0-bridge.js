@@ -251,15 +251,25 @@
     return true;
   };
 
-  const selectObservable = (engine, action) => (engine.currentMap?.interactables || [])
+  const selectObservable = (engine, action) => {
+    const now = performance.now();
+    return (engine.currentMap?.interactables || [])
     .filter((object) => {
       if (!object.userData.active) return false;
+      const lastInteractionAt = Number(object.userData.lastInteractionAt || 0);
+      if (lastInteractionAt && now - lastInteractionAt < 90000) return false;
       const caps = capabilities(resolveObject(object).definition);
       if (action.type === Missions.ActionType.ANALYZE) return caps.analyzable;
       if (action.type === Missions.ActionType.INSPECT) return caps.inspectable;
       return caps.observable || caps.inspectable || caps.analyzable;
     })
-    .sort((left, right) => engine.character.root.position.distanceTo(left.position) - engine.character.root.position.distanceTo(right.position))[0] || null;
+    .sort((left, right) => {
+      const distance = (object) => engine.character.root.position.distanceTo(
+        object.userData.worldAnchor?.position || object.position
+      );
+      return distance(left) - distance(right);
+    })[0] || null;
+  };
 
   const installActionBridge = () => {
     if (installed.action || !Missions.ActionBridge) return false;
@@ -361,7 +371,18 @@
       if (!this.interactionStartedAt) {
         this.interactionStartedAt = now;
         this.character.facePoint(anchor.position);
-        const animationHints = definition.interaction?.animation?.[mode] || [];
+        const acquisition = mode === "collect" || mode === "extract";
+        const size = String(definition.size || "S").toUpperCase();
+        const isPlant = definition.knowledge?.family === "flora" ||
+          definition.resource?.family === "fiber" ||
+          /plant|flora|fiber|biomass/i.test(`${definition.type} ${definition.subtype}`);
+        const animationHints = acquisition
+          ? size === "L" || size === "XL" || definition.knowledge?.family === "mineral"
+            ? ["Harvest_Heavy", "Harvest_Medium", "Harvest_Heavy"]
+            : size === "M" || isPlant
+              ? ["Harvest_Light", "Harvest_Medium", "Harvest_Light"]
+              : ["Harvest_Light"]
+          : definition.interaction?.animation?.[mode] || [];
         const duration = this.character.playInteraction(mode, animationHints);
         this.interactionDuration = Math.max(2200, duration * 1000);
         const label = definition.label?.toLowerCase() || "l’objet";
@@ -390,6 +411,7 @@
         interactionSource: object.userData.requestedInteractionSource || "autonomy",
         interactionState: { ...state }
       };
+      const autonomousInteraction = detail.interactionSource === "autonomy";
 
       const acquisition = mode === "collect" || mode === "extract";
       if (acquisition) {
@@ -462,6 +484,12 @@
       }
 
       this.character.cancelInteraction();
+      object.userData.lastInteractionAt = now;
+      if (autonomousInteraction) {
+        object.userData.lastAutonomousInteractionAt = now;
+        object.userData.autonomousInteractionCount =
+          (Number(object.userData.autonomousInteractionCount) || 0) + 1;
+      }
       this.completedInteractions += 1;
       this.lastCompletedAction = `${mode}:${definition.type}`;
       this.pendingInteraction = null;

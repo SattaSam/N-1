@@ -36,6 +36,17 @@
   font-size: 11px;
 }
 
+.inventory-bag-controls {
+  margin: -2px 12px 10px;
+  padding: 3px 0;
+  border: 0;
+  background: transparent;
+}
+
+.inventory-bag-controls input {
+  margin: 0;
+}
+
 .inventory-camp-locked {
   padding: 16px;
   border: 1px solid rgba(255, 190, 100, .25);

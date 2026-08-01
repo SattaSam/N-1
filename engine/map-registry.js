@@ -141,11 +141,14 @@
         existingMap.name = catalogMap.name || existingMap.name;
         existingMap.sceneUrl = catalogMap.scene.url;
         existingMap.sceneVariants = catalogMap.sceneVariants;
-        existingMap.terrainUrls = terrainUrls;
+        const registeredTerrains = existingMap.id === "crystal"
+          ? [terrainUrls[0] || existingMap.terrainUrl].filter(Boolean)
+          : terrainUrls;
+        existingMap.terrainUrls = registeredTerrains;
         existingMap.terrainUrl =
-          terrainUrls[0] || catalogMap.scene.url;
+          registeredTerrains[0] || catalogMap.scene.url;
         existingMap.zones = [`Zone ${catalogMap.number}`];
-        existingMap.plateauCount = Math.max(1, terrainUrls.length);
+        existingMap.plateauCount = Math.max(1, registeredTerrains.length);
         existingMap.profile = profile;
         existingMap.traits = traits;
         existingMap.description = description;

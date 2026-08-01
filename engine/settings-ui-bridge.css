@@ -6,6 +6,27 @@
 .settings-content .trait-bipolar-row input[type="range"] {
   direction: rtl;
   width: 100%;
+  height: 5px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #7458e8 0%, #8067df 45%, #2b9ee8 100%);
+  accent-color: #5f71e8;
+  appearance: none;
+}
+
+.settings-content .trait-bipolar-row input[type="range"]::-webkit-slider-thumb {
+  width: 15px;
+  height: 15px;
+  border: 2px solid #dff8ff;
+  border-radius: 50%;
+  background: #6774e9;
+  box-shadow: 0 0 8px rgba(92, 130, 235, .55);
+  appearance: none;
+}
+
+.settings-content .trait-bipolar-row input[type="range"]::-moz-range-track {
+  height: 5px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #7458e8 0%, #8067df 45%, #2b9ee8 100%);
 }
 
 .settings-content .trait-pole {

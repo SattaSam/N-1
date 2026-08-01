@@ -1241,39 +1241,34 @@
     }
 
     async returnToBase() {
-      if (this.transitioning) return;
-      if (this.currentMapId === "crystal") {
-        const camp = new this.THREE.Vector3(0, 0, 8);
+      if (this.transitioning || this.pendingGate) return;
+      const missionMemory = this.missionManager?.memory?.state;
+      const primaryMapId = missionMemory?.facts?.primaryBaseMapId || "crystal";
+      const primarySite = missionMemory?.siteProgression?.[primaryMapId];
+      const anchor = primarySite?.anchor || { x: 0, z: 8 };
+      if (this.currentMapId === primaryMapId) {
+        const camp = new this.THREE.Vector3(
+          Number.isFinite(Number(anchor.x)) ? Number(anchor.x) : 0,
+          0,
+          Number.isFinite(Number(anchor.z)) ? Number(anchor.z) : 8
+        );
         this.pendingInteraction = null;
         this.pendingGate = null;
-        this.character.setTarget(camp);
+        this.navigationRoute = [];
+        this.character.setTarget(camp, "walk");
         this.showWorldMarker(camp);
-        this.callbacks.onStatus("BlueFox revient vers le refuge.");
+        this.callbacks.onStatus("BlueFox prend en compte la suggestion et revient à pied vers la base.");
         return;
       }
-      this.transitioning = true;
-      this.character.enabled = false;
-      this.character.stop();
-      this.transitionElement.classList.add("active");
-      this.callbacks.onStatus("BlueFox utilise les passages mémorisés pour revenir à la base.");
-      try {
-        await new Promise((resolve) => setTimeout(resolve, 340));
-        await this.loadMap("crystal", null, true);
-        const camp = new this.THREE.Vector3(0, 0, 8);
-        this.character.root.position.copy(camp);
-        this.character.setTarget(camp);
-        this.character.lastSafePosition.copy(camp);
-        this.savePosition();
-        await new Promise((resolve) => setTimeout(resolve, 220));
-        this.cameraController.resetBehindCharacter(true);
-      } catch (error) {
-        console.error("Échec du retour à la base", error);
-        this.callbacks.onStatus("Le retour a échoué. BlueFox reste dans la zone actuelle.");
-      } finally {
-        this.transitionElement.classList.remove("active");
-        this.character.enabled = true;
-        this.transitioning = false;
+      const route = this.findKnownRoute(this.currentMapId, primaryMapId);
+      if (!route?.length) {
+        this.callbacks.onStatus("Aucun itinéraire mémorisé ne permet encore de rejoindre la base.");
+        return;
       }
+      this.pendingInteraction = null;
+      this.navigationRoute = route.slice(1);
+      this.callbacks.onStatus("BlueFox accepte la suggestion et rejoint les passages menant à la base.");
+      this.navigateNextRouteStep();
     }
 
     handlePointer(event, movementMode = "run") {
@@ -1570,6 +1565,16 @@
         observe: `J’observe ${label} sans intervenir.`,
         analyze: `J’analyse ${label} et j’enregistre les résultats.`
       }[action] || `J’examine ${label}.`;
+      const size = String(functional.size || "S").toUpperCase();
+      const isPlant = functional.knowledge?.family === "flora" ||
+        functional.resource?.family === "fiber" ||
+        /plant|flora|fiber|biomass/i.test(`${functional.type} ${functional.subtype}`);
+      const harvestSequence = size === "L" || size === "XL" ||
+        functional.knowledge?.family === "mineral"
+        ? ["Harvest_Heavy", "Harvest_Medium", "Harvest_Heavy"]
+        : size === "M" || isPlant
+          ? ["Harvest_Light", "Harvest_Medium", "Harvest_Light"]
+          : ["Harvest_Light"];
       return {
         kind,
         action,
@@ -1579,7 +1584,7 @@
         respawnMs: Number.isFinite(Number(interaction.respawnSeconds))
           ? Number(interaction.respawnSeconds) * 1000
           : null,
-        animationHints: interaction.animation?.[action] || [],
+        animationHints: collectable ? harvestSequence : interaction.animation?.[action] || [],
         actionText,
         approachText,
         speechText
@@ -1628,6 +1633,16 @@
     async loadMap(mapId, entry, announce = true) {
       const definition = BF.maps[mapId];
       if (!definition) throw new Error(`Map inconnue: ${mapId}`);
+      // Les actions en cours appartiennent au plateau qui va être détruit.
+      // Une référence résiduelle rendrait l'autonomie définitivement occupée.
+      this.pendingInteraction = null;
+      this.interactionStartedAt = 0;
+      this.interactionApproachStartedAt = 0;
+      this.interactionApproachAttempts = 0;
+      this.pendingZoneExploration = null;
+      this.currentRoutine = null;
+      this.postActionRecoveryUntil = 0;
+      this.character?.cancelInteraction?.();
       this.ensureMapContinuation(mapId);
       const previousMap = this.currentMap;
       const nextMap = BF.buildMap(
@@ -1673,6 +1688,9 @@
         this.callbacks.onAction(`Map chargée : ${definition.name}.`);
       }
       this.updateCurrentZone(performance.now(), true);
+      const autonomyResumeAt = performance.now();
+      this.lastActivityAt = autonomyResumeAt;
+      this.lastAutonomyAt = autonomyResumeAt - 5000;
       return entry;
     }
 
@@ -2102,6 +2120,11 @@
       }
       this.completedInteractions += 1;
       this.lastCompletedAction = profile.action;
+      if (object.userData.requestedInteractionSource === "autonomy") {
+        object.userData.lastAutonomousInteractionAt = now;
+        object.userData.autonomousInteractionCount =
+          (Number(object.userData.autonomousInteractionCount) || 0) + 1;
+      }
       const missionAction = this.missionActionForInteraction(profile.action);
       if (missionAction) {
         this.missionManager?.notifyActionCompleted(missionAction, {
@@ -2152,6 +2175,7 @@
     autonomousResourceTarget(resources) {
       if (!resources.length) return null;
       const characterPosition = this.character.root.position;
+      const now = performance.now();
       const respect = BF.clamp(
         Number(this.personalityTraits()["Respectueux — Destructeur"] ?? 50) / 100,
         0,
@@ -2161,17 +2185,32 @@
         const definition = object.userData.functional || {};
         const anchor = object.userData.worldAnchor || object.userData.worldRoot || object;
         const distance = characterPosition.distanceTo(anchor.position);
+        const explicitMaturity = object.userData.maturity ?? definition.state?.maturity;
         const maturity = BF.clamp(
-          Number(object.userData.maturity ?? definition.state?.maturity ?? 1),
+          Number(explicitMaturity ?? 1),
           0,
           1
         );
+        const lastAutonomousAt = Number(object.userData.lastAutonomousInteractionAt || 0);
+        const noveltyAge = lastAutonomousAt ? now - lastAutonomousAt : Infinity;
+        const noveltyDelay = (55 + respect * 75) * 1000;
+        const matureEnough = explicitMaturity == null ||
+          maturity >= 0.42 + respect * 0.43;
+        const eligible = noveltyAge >= noveltyDelay && matureEnough;
+        const repetition = Math.max(0, Number(object.userData.autonomousInteractionCount) || 0);
         const ecologicalPenalty =
           (1 - maturity) * 18 * respect +
           (definition.gameplay?.destructible === true ? 2.5 * respect : 0);
+        const repetitionPenalty = Math.min(24, repetition * (1.5 + respect));
         const harvestBenefit = Math.max(0, Number(definition.ai?.harvestPriority) || 0) * 2;
-        return { object, distance, score: distance + ecologicalPenalty - harvestBenefit };
-      });
+        return {
+          object,
+          distance,
+          eligible,
+          score: distance + ecologicalPenalty + repetitionPenalty - harvestBenefit
+        };
+      }).filter((candidate) => candidate.eligible);
+      if (!candidates.length) return null;
       const immediate = candidates.filter((candidate) => candidate.distance <= 4);
       return (immediate.length ? immediate : candidates)
         .sort((left, right) => left.score - right.score)[0]?.object || null;
@@ -2254,9 +2293,11 @@
       const resources = this.currentMap.interactables.filter((object) => this.canInteractWith(object, now));
       if (resources.length) {
         const object = this.autonomousResourceTarget(resources);
-        object.userData.requestedInteractionSource = "autonomy";
-        this.targetInteraction(object);
-        return;
+        if (object) {
+          object.userData.requestedInteractionSource = "autonomy";
+          this.targetInteraction(object);
+          return;
+        }
       }
 
       const angle = Math.random() * Math.PI * 2;
@@ -2338,12 +2379,18 @@
       const resources = this.currentMap.interactables.filter((object) => this.canInteractWith(object, now));
       if (resources.length) {
         const object = this.autonomousResourceTarget(resources);
-        object.userData.requestedInteractionSource = "autonomy";
-        this.targetInteraction(object);
-        this.callbacks.onAction(
-          "BlueFox reprend spontanément son activité après avoir évalué les priorités locales."
-        );
-      } else {
+        if (object) {
+          object.userData.requestedInteractionSource = "autonomy";
+          this.targetInteraction(object);
+          this.callbacks.onAction(
+            "BlueFox reprend spontanément son activité après avoir évalué les priorités locales."
+          );
+          this.lastActivityAt = now;
+          this.lastAutonomyAt = now;
+          return;
+        }
+      }
+      {
         const angle = Math.random() * Math.PI * 2;
         const distance = 7 + Math.random() * 13;
         const target = new this.THREE.Vector3(

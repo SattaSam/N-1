@@ -387,6 +387,7 @@
     icon.append(document.createElement("i"), document.createElement("i"), document.createElement("i"));
     button.append(icon, createTextElement("small", "", "Missions"));
     button.addEventListener("click", () => {
+      document.querySelector(".drawer .drawer-close, .full-screen-panel:not(.mission-browser) .drawer-close")?.click();
       document.querySelector(".mission-browser")?.remove();
       const browser = document.createElement("section");
       browser.className = "full-screen-panel mission-browser";
@@ -397,6 +398,12 @@
     });
     rail.appendChild(button);
   }
+
+  document.addEventListener("click", (event) => {
+    const toolButton = event.target.closest?.(".tool-rail button");
+    if (!toolButton || toolButton.classList.contains("mission-tool-button")) return;
+    document.querySelector(".mission-browser")?.remove();
+  }, true);
 
   global.addEventListener("bluefox:mission-state", (event) => {
     latestState = event.detail;
@@ -412,6 +419,21 @@
     if (!panel?.isConnected) lastSignature = "";
     render(current);
   };
+
+  const enforceStableIntention = () => {
+    const intention = document.querySelector(".intent-bar strong");
+    const text = latestState?.description || latestState?.title || "";
+    if (!intention || !text || intention.textContent === text) return false;
+    intention.textContent = text;
+    return true;
+  };
+
+  const intentionObserver = new MutationObserver(enforceStableIntention);
+  intentionObserver.observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+    characterData: true
+  });
 
   global.setInterval(refresh, 500);
   global.setTimeout(refresh, 0);

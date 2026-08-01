@@ -4,6 +4,7 @@
   const BF = global.BlueFox3D = global.BlueFox3D || {};
   const LEGACY_STORAGE_KEY = "bluefox_odyssey_save_v1";
   const BASE_KEYS = ["crystal", "fiber", "parts"];
+  const DEFAULT_SITE_INTERACTION_RADIUS = 12;
   const FALLBACKS = Object.freeze({
     crystal: { label: "Cristaux", icon: "◆" },
     fiber: { label: "Fibres", icon: "❧" },
@@ -28,13 +29,24 @@
     };
   };
 
+  const inventoryKeys = () => {
+    const keys = new Set(BASE_KEYS);
+    BF.ObjectLibrary?.list?.({ status: "active" }).forEach((definition) => {
+      const key = definition.gameplay?.collectable === true
+        ? definition.resource?.inventoryKey
+        : null;
+      if (key) keys.add(key);
+    });
+    const state = BF.getProgressionState?.() || {};
+    [state.inventory, state.campStorage].forEach((bucket) => {
+      Object.keys(bucket || {}).forEach((key) => keys.add(key));
+    });
+    return [...keys];
+  };
+
   const inventoryEntries = (bucketName = "inventory") => {
     const inventory = BF.getProgressionState?.()[bucketName] || {};
-    const keys = new Set(BASE_KEYS);
-    Object.entries(inventory).forEach(([key, amount]) => {
-      if ((Number(amount) || 0) > 0) keys.add(key);
-    });
-    return [...keys].map((key) => ({
+    return inventoryKeys().map((key) => ({
       ...catalogEntry(key),
       amount: Math.max(0, Number(inventory[key]) || 0)
     }));
@@ -47,7 +59,28 @@
       ? BF.currentEngine?.missionManager?.memory?.state?.siteProgression?.[mapId]
       : null;
   };
-  const canAccessCampInventory = () => Number(currentSite()?.stage) >= 1;
+  const siteAnchor = (site = currentSite()) => {
+    if (!site || Number(site.stage) < 1) return null;
+    const anchor = site.anchor || site.position;
+    if (Number.isFinite(Number(anchor?.x)) && Number.isFinite(Number(anchor?.z))) {
+      return { x: Number(anchor.x), z: Number(anchor.z) };
+    }
+    return { x: 0, z: 8 };
+  };
+  const distanceToCurrentSite = () => {
+    const anchor = siteAnchor();
+    const position = BF.currentEngine?.character?.root?.position;
+    if (!anchor || !position) return Infinity;
+    return Math.hypot(Number(position.x) - anchor.x, Number(position.z) - anchor.z);
+  };
+  const canAccessCampInventory = () => {
+    const site = currentSite();
+    const radius = Math.max(
+      4,
+      Number(site?.interactionRadius) || DEFAULT_SITE_INTERACTION_RADIUS
+    );
+    return Number(site?.stage) >= 1 && distanceToCurrentSite() <= radius;
+  };
 
   const transfer = (key, direction, amount = 1) => {
     if (!canAccessCampInventory()) return 0;
@@ -90,8 +123,7 @@
     if (
       autoDepositRunning ||
       !canAccessCampInventory() ||
-      currentSite()?.isPrimary !== true ||
-      global.localStorage.getItem("bluefox_auto_deposit_v1") === "false"
+      global.localStorage.getItem("bluefox_auto_deposit_v1") !== "true"
     ) return false;
     const total = Object.values(BF.getProgressionState?.().inventory || {})
       .reduce((sum, amount) => sum + Math.max(0, Number(amount) || 0), 0);
@@ -133,14 +165,18 @@
   const reconcileLegacyOfflineInventory = () => {
     if (BF.progression?.state?.migrations?.legacyOfflineReconciled) return false;
     let resources = {};
+    let legacySave = null;
     try {
-      resources = JSON.parse(
-        global.localStorage.getItem(LEGACY_STORAGE_KEY) || "null"
-      )?.resources || {};
+      legacySave = JSON.parse(global.localStorage.getItem(LEGACY_STORAGE_KEY) || "null");
+      resources = legacySave?.resources || {};
     } catch {
       resources = {};
     }
 
+    if (legacySave?.newGame === true) {
+      BF.completeLegacyInventoryReconciliation?.();
+      return true;
+    }
     const inventory = BF.getProgressionState?.().inventory || {};
     Object.entries(resources).forEach(([inventoryKey, legacyAmount]) => {
       const quantity = Math.max(
@@ -176,7 +212,10 @@
   };
 
   const render = () => {
-    const grid = document.querySelector(".inventory-grid");
+    const grid = document.querySelector(
+      ".drawer > .inventory-grid:not(.inventory-transfer-grid), " +
+      ".drawer .inventory-grid:not(.inventory-transfer-grid)"
+    );
     if (!grid) return false;
     const drawer = grid.closest(".drawer");
     const campAccessible = canAccessCampInventory();
@@ -184,6 +223,9 @@
     const personal = inventoryEntries("inventory");
     const stored = inventoryEntries("campStorage");
     const signature = JSON.stringify({
+      campAccessible,
+      campEstablished: Number(currentSite()?.stage) >= 1,
+      autoDeposit: global.localStorage.getItem("bluefox_auto_deposit_v1") === "true",
       personal: personal.map(({ key, amount }) => [key, amount]),
       stored: stored.map(({ key, amount }) => [key, amount])
     });
@@ -213,9 +255,23 @@
     if (!campAccessible) {
       personalSection.querySelectorAll("article").forEach((article) => {
         article.draggable = false;
-        article.title = "Le sac reste consultable ; établissez un camp pour déposer son contenu.";
+        article.title = Number(currentSite()?.stage) >= 1
+          ? "Le sac reste consultable ; rapprochez-vous du site pour déposer son contenu."
+          : "Le sac reste consultable ; établissez un camp pour déposer son contenu.";
       });
     }
+    const automation = document.createElement("label");
+    automation.className = "inventory-auto-deposit inventory-bag-controls";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = global.localStorage.getItem("bluefox_auto_deposit_v1") === "true";
+    checkbox.addEventListener("change", () => {
+      global.localStorage.setItem("bluefox_auto_deposit_v1", String(checkbox.checked));
+      if (checkbox.checked) autoDeposit();
+      scheduleRender();
+    });
+    automation.append(checkbox, " Vider automatiquement le sac à proximité d’un camp");
+    personalSection.appendChild(automation);
     sections.appendChild(personalSection);
     if (campAccessible) {
       sections.appendChild(
@@ -224,20 +280,11 @@
     } else {
       const locked = document.createElement("p");
       locked.className = "inventory-camp-locked";
-      locked.textContent = "Le stockage Camp/Base sera disponible dès qu’un camp aura été établi dans cette zone. Le sac personnel reste consultable.";
+      locked.textContent = Number(currentSite()?.stage) >= 1
+        ? "Le stockage partagé est hors de portée. Rapprochez BlueFox du camp, du refuge ou de la base."
+        : "Le stockage Camp/Base sera disponible dès qu’un camp aura été établi dans cette zone. Le sac personnel reste consultable.";
       sections.appendChild(locked);
     }
-    const automation = document.createElement("label");
-    automation.className = "inventory-auto-deposit";
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.checked = global.localStorage.getItem("bluefox_auto_deposit_v1") !== "false";
-    checkbox.addEventListener("change", () => {
-      global.localStorage.setItem("bluefox_auto_deposit_v1", String(checkbox.checked));
-      if (checkbox.checked) autoDeposit();
-    });
-    automation.append(checkbox, " Vider automatiquement le sac à l’arrivée au camp de base");
-    if (campAccessible) sections.appendChild(automation);
     sections.dataset.signature = signature;
     return true;
   };
@@ -268,6 +315,7 @@
   global.addEventListener("bluefox:mission-state", scheduleRender);
   global.addEventListener("bluefox:map-state", scheduleRender);
   global.addEventListener("DOMContentLoaded", scheduleRender, { once: true });
+  global.setInterval(scheduleRender, 750);
   const observer = new MutationObserver(scheduleRender);
   observer.observe(document.documentElement, { childList: true, subtree: true });
 
@@ -276,4 +324,6 @@
 
   BF.refreshInventoryUI = render;
   BF.reconcileLegacyOfflineInventory = reconcileLegacyOfflineInventory;
+  BF.canAccessCampInventory = canAccessCampInventory;
+  BF.distanceToCurrentSite = distanceToCurrentSite;
 })(window);

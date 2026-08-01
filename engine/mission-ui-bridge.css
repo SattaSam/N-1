@@ -1,13 +1,13 @@
 .tool-rail .planet-sphere-icon {
   color: #d9f7ff;
-  font-size: 25px;
+  font-size: 29px;
   line-height: 1;
   text-shadow: 0 0 12px rgba(103, 225, 255, .48);
 }
 
 .tool-rail .mission-page-icon {
-  width: 25px;
-  height: 17px;
+  width: 28px;
+  height: 18px;
   border: 2px solid currentColor;
   border-radius: 2px;
   display: flex;
@@ -16,6 +16,9 @@
   gap: 2px;
   padding: 0 4px;
   box-sizing: border-box;
+  margin: 0 auto;
+  align-self: center;
+  flex: 0 0 auto;
 }
 
 .tool-rail .mission-page-icon i {
