@@ -11,6 +11,14 @@
     for (const entry of entries) { cursor -= Math.max(0, entry.weight); if (cursor <= 0) return entry; }
     return entries[entries.length - 1] || null;
   };
+  const MAP_OBJECT_BUDGETS = Object.freeze({
+    1: Object.freeze({ min: 60, max: 75, resourcesMin: 14, resourcesMax: 20, landmarksMin: 1, landmarksMax: 1 }),
+    2: Object.freeze({ min: 75, max: 92, resourcesMin: 22, resourcesMax: 30, landmarksMin: 1, landmarksMax: 1 }),
+    3: Object.freeze({ min: 88, max: 108, resourcesMin: 30, resourcesMax: 39, landmarksMin: 1, landmarksMax: 2 }),
+    4: Object.freeze({ min: 102, max: 124, resourcesMin: 38, resourcesMax: 48, landmarksMin: 1, landmarksMax: 2 }),
+    5: Object.freeze({ min: 116, max: 138, resourcesMin: 44, resourcesMax: 56, landmarksMin: 1, landmarksMax: 2 }),
+    6: Object.freeze({ min: 132, max: 150, resourcesMin: 50, resourcesMax: 62, landmarksMin: 1, landmarksMax: 3 })
+  });
   const segmentDistanceSquared = (start, end, x, z) => {
     const dx = end.x - start.x;
     const dz = end.z - start.z;
@@ -252,10 +260,34 @@
       const rockCluster = BF.MicroScenes.getMapCluster("rock");
       const resourceCluster = BF.MicroScenes.getMapCluster("resource");
       const ambientCluster = BF.MicroScenes.getMapCluster("ambient");
-      const plateauObstacleBoost = Math.max(0, zoneRegions.length - 1) * 2;
+      const plateauCount = BF.clamp(zoneRegions.length || 1, 1, 6);
+      const mapBudget = MAP_OBJECT_BUDGETS[plateauCount];
+      const targetObjectBudget = Math.round(
+        mapBudget.min + next() * (mapBudget.max - mapBudget.min)
+      );
+      const resourceCount = Math.round(
+        mapBudget.resourcesMin +
+        next() * (mapBudget.resourcesMax - mapBudget.resourcesMin)
+      );
+      const landmarkCount = mapBudget.landmarksMin + Math.floor(
+        next() * (mapBudget.landmarksMax - mapBudget.landmarksMin + 1)
+      );
+      const landmarkTemplate = BF.MicroScenes.getMapLandmark(population.profileId);
+      const landmarkObjectBudget = landmarks.length
+        ? landmarks.length
+        : landmarkCount * landmarkTemplate.length;
+      const remainingAfterResources = Math.max(
+        0,
+        targetObjectBudget - resourceCount - landmarkObjectBudget
+      );
+      const mineralDensity = BF.clamp(population.rockCount / 18, 0.35, 1);
       const obstacleBudget = Math.max(
-        population.rockCount + plateauObstacleBoost,
-        Math.round(population.rockCount * (1.9 + next() * 0.45)) + plateauObstacleBoost
+        plateauCount * 2,
+        Math.round(remainingAfterResources * (0.27 + mineralDensity * 0.12))
+      );
+      const decorationBudget = Math.max(
+        0,
+        targetObjectBudget - resourceCount - obstacleBudget - landmarkObjectBudget
       );
       let placedRocks = 0;
       let clusterGuard = 0;
@@ -293,12 +325,6 @@
         }
       }
 
-      const legacyResourceCount = Math.min(12, 8 + zoneRegions.length);
-      const resourceMultiplier = 1.5 + next();
-      const resourceCount = Math.min(
-        Math.floor(legacyResourceCount * 2.5),
-        Math.max(Math.ceil(legacyResourceCount * 1.5), Math.round(legacyResourceCount * resourceMultiplier))
-      );
       let placedResources = 0;
       let resourceGuard = 0;
       const pickResourceKind = () => {
@@ -340,9 +366,19 @@
         }
       }
 
+      const decorationWeightTotal = population.decorations.reduce(
+        (sum, [, weight]) => sum + Math.max(0, Number(weight) || 0),
+        0
+      );
+      let allocatedDecorations = 0;
       population.decorations.forEach(([type, count], familyIndex) => {
-        const densityMultiplier = 1.5 + next() * 0.5;
-        const denseCount = Math.round(count * densityMultiplier);
+        const isLastFamily = familyIndex === population.decorations.length - 1;
+        const denseCount = isLastFamily
+          ? Math.max(0, decorationBudget - allocatedDecorations)
+          : Math.max(0, Math.floor(
+            decorationBudget * (Math.max(0, Number(count) || 0) / Math.max(1, decorationWeightTotal))
+          ));
+        allocatedDecorations += denseCount;
         let placed = 0;
         let guard = 0;
         while (placed < denseCount && guard < denseCount * 5) {
@@ -376,8 +412,6 @@
       });
 
       if (!landmarks.length) {
-        const landmarkTemplate = BF.MicroScenes.getMapLandmark(population.profileId);
-        const landmarkCount = Math.min(2, Math.max(1, Math.ceil(zoneRegions.length / 3)));
         for (let landmarkIndex = 0; landmarkIndex < landmarkCount; landmarkIndex += 1) {
           const center = randomPosition(9, 25, 4.2, "stele");
           if (!center) continue;
@@ -395,7 +429,17 @@
       landmarks.forEach(([type, x, z, variant, rotation]) => {
         placeObject(type, x, z, variant, rotation);
       });
-      return { occupied, obstacleBudget, resourceCount, resourceFamilies: population.resourceFamilies, richness: population.richness };
+      return {
+        occupied,
+        plateauCount,
+        targetObjectBudget,
+        obstacleBudget,
+        resourceCount,
+        decorationBudget,
+        landmarkCount: landmarks.length ? 1 : landmarkCount,
+        resourceFamilies: population.resourceFamilies,
+        richness: population.richness
+      };
     }
 
     clear(dispose = false) {
@@ -407,5 +451,6 @@
     }
   }
 
+  ObjectSpawner.mapObjectBudgets = MAP_OBJECT_BUDGETS;
   BF.ObjectSpawner = ObjectSpawner;
 })(window);

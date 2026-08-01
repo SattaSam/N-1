@@ -35,7 +35,6 @@
       this.cameraButton = null;
       this.clickMarker = null;
       this.lastCycleUpdate = 0;
-      this.lastWeatherSignature = "";
       this.gateCooldownUntil = 0;
       this.lastActivityAt = performance.now();
       this.lastIntentUpdate = 0;
@@ -96,6 +95,7 @@
     async initialize() {
       const { THREE, OrbitControls, GLTFLoader, container } = this;
       global.addEventListener("bluefox:image-missing", this.onMissingImage);
+      BF.MapGenerator?.restore?.();
       this.restoreDiscovery();
       this.restoreMapNames();
       this.restoreGeneratedTopology();
@@ -222,10 +222,6 @@
     }
 
     restoreDiscovery() {
-      const requestedStartMap = localStorage.getItem("bluefox_new_game_start_v1");
-      const startMapId = requestedStartMap && BF.maps[requestedStartMap]
-        ? requestedStartMap
-        : "crystal";
       try {
         const memories = JSON.parse(
           localStorage.getItem("bluefox_engine_discovered_maps_v2") ||
@@ -239,7 +235,7 @@
             (Number(right.order) || Number.MAX_SAFE_INTEGER)
           );
         this.discoveredMaps.clear();
-        if (BF.maps[startMapId]) this.discoveredMaps.add(startMapId);
+        if (BF.maps.crystal) this.discoveredMaps.add("crystal");
         orderedMemories.forEach((map) => this.discoveredMaps.add(map.id));
       } catch {
         localStorage.removeItem("bluefox_discovered_maps_v1");
@@ -460,43 +456,10 @@
 
     ensureMapContinuation(mapId) {
       const definition = BF.maps[mapId];
-      if (!definition || Object.keys(definition.exits).length > 1) return;
-      const opposites = {
-        north: "south", south: "north", east: "west", west: "east"
-      };
-      const returnDirection = Object.keys(definition.exits)[0] || null;
-      const preferredDirection = returnDirection
-        ? opposites[returnDirection]
-        : "north";
-      const directions = [
-        preferredDirection,
-        "north", "east", "south", "west"
-      ].filter((value, index, list) =>
-        value && list.indexOf(value) === index && !definition.exits[value]
-      );
-      const usedTargets = new Set(
-        this.generatedTopology.flatMap((link) => [link.from, link.to])
-      );
-      for (const direction of directions) {
-        const opposite = opposites[direction];
-        const destination = Object.values(BF.maps)
-          .filter((map) =>
-            map.id !== mapId &&
-            !this.discoveredMaps.has(map.id) &&
-            !usedTargets.has(map.id) &&
-            !map.exits[opposite]
-          )
-          .sort((left, right) => left.number - right.number)[0];
-        if (!destination) continue;
-        const link = { from: mapId, direction, to: destination.id };
-        if (!this.applyGeneratedLink(link)) continue;
-        this.generatedTopology.push(link);
-        localStorage.setItem(
-          "bluefox_generated_topology_v1",
-          JSON.stringify(this.generatedTopology)
-        );
-        break;
-      }
+      if (!definition) return;
+      // Les anciennes liaisons sont restaurées par restoreGeneratedTopology().
+      // Une nouvelle destination n'est créée que sur ordre d'exploration du
+      // joueur, dans generateUnknownPassage().
     }
 
     saveDiscovery() {
@@ -520,9 +483,16 @@
         order: index + 1,
         discoveredAt: metadata.get(id)?.discoveredAt || Date.now()
       }));
+      // game.js conserve un ancien catalogue React limité à crystal/jungle et
+      // déréférence directement ses entrées au rechargement. Sa vue V1 reste
+      // donc volontairement limitée aux IDs qu'il sait lire ; le moteur V2
+      // demeure la source complète pour les cartes procédurales.
+      const legacyMemories = memories.filter((map) =>
+        map.id === "crystal" || map.id === "jungle"
+      );
       localStorage.setItem(
         "bluefox_discovered_maps_v1",
-        JSON.stringify(memories)
+        JSON.stringify(legacyMemories)
       );
       localStorage.setItem(
         "bluefox_engine_discovered_maps_v2",
@@ -562,16 +532,6 @@
         }
       } catch {
         localStorage.removeItem("bluefox_world_position_v2");
-      }
-      const requestedStartMap = localStorage.getItem("bluefox_new_game_start_v1");
-      if (requestedStartMap && BF.maps[requestedStartMap]) {
-        localStorage.removeItem("bluefox_new_game_start_v1");
-        const entry = BF.maps[requestedStartMap].entry || { x: 0, z: 5 };
-        return {
-          map: requestedStartMap,
-          x: BF.clamp(Number(entry.x) || 0, -27, 27),
-          z: BF.clamp(Number(entry.z) || 5, -27, 27)
-        };
       }
       return { map: "crystal", x: 0, z: 5 };
     }
@@ -1106,50 +1066,6 @@
         ? 0
         : Math.sin(((minuteOfDay - 2 * 60) / (15 * 60)) * Math.PI);
 
-      const weatherProfiles = {
-        frozen: { night: -14, amplitude: 12 },
-        aquatic: { night: 4, amplitude: 6 },
-        volcanic: { night: 34, amplitude: 10 },
-        desert: { night: 20, amplitude: 18 },
-        forest: { night: 9, amplitude: 9 },
-        ruins: { night: 10, amplitude: 8 },
-        crystalline: { night: 8, amplitude: 10 },
-        alien: { night: 7, amplitude: 11 }
-      };
-      const biomeProfile = this.currentMap?.definition?.profile || "alien";
-      const weatherProfile = weatherProfiles[biomeProfile] || weatherProfiles.alien;
-      const temperature = Math.round(
-        weatherProfile.night + daylight * weatherProfile.amplitude
-      );
-      const thermalStress = BF.clamp(
-        temperature < 8 ? (8 - temperature) / 22 :
-          temperature > 26 ? (temperature - 26) / 20 : 0,
-        0,
-        1
-      );
-      const condition = temperature < 8
-        ? "Froid"
-        : temperature > 26
-          ? "Chaud"
-          : "Tempéré";
-      const weatherState = {
-        mapId: this.currentMapId,
-        biomeProfile,
-        temperature,
-        condition,
-        thermalStress,
-        isNight
-      };
-      BF.currentWeatherState = weatherState;
-      BF.getWeatherState = () => ({ ...BF.currentWeatherState });
-      const weatherSignature = `${this.currentMapId}:${temperature}:${condition}:${isNight}`;
-      if (weatherSignature !== this.lastWeatherSignature) {
-        this.lastWeatherSignature = weatherSignature;
-        global.dispatchEvent(new CustomEvent("bluefox:weather-changed", {
-          detail: { ...weatherState }
-        }));
-      }
-
       const block = document.querySelector(".day-block");
       if (block) {
         const dayElement = block.querySelector("span");
@@ -1161,8 +1077,9 @@
             `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
         }
         if (detailElement) {
+          const temperature = Math.round(11 + daylight * 8);
           detailElement.textContent =
-            `${isNight ? "NUIT" : "JOUR"} · ${condition} · ${temperature} °C`;
+            `${isNight ? "NUIT" : "JOUR"} · Cycle calme · ${temperature} °C`;
         }
         block.classList.toggle("night", isNight);
       }
@@ -1285,34 +1202,39 @@
     }
 
     async returnToBase() {
-      if (this.transitioning || this.pendingGate) return;
-      const missionMemory = this.missionManager?.memory?.state;
-      const primaryMapId = missionMemory?.facts?.primaryBaseMapId || "crystal";
-      const primarySite = missionMemory?.siteProgression?.[primaryMapId];
-      const anchor = primarySite?.anchor || { x: 0, z: 8 };
-      if (this.currentMapId === primaryMapId) {
-        const camp = new this.THREE.Vector3(
-          Number.isFinite(Number(anchor.x)) ? Number(anchor.x) : 0,
-          0,
-          Number.isFinite(Number(anchor.z)) ? Number(anchor.z) : 8
-        );
+      if (this.transitioning) return;
+      if (this.currentMapId === "crystal") {
+        const camp = new this.THREE.Vector3(0, 0, 8);
         this.pendingInteraction = null;
         this.pendingGate = null;
-        this.navigationRoute = [];
-        this.character.setTarget(camp, "walk");
+        this.character.setTarget(camp);
         this.showWorldMarker(camp);
-        this.callbacks.onStatus("BlueFox prend en compte la suggestion et revient à pied vers la base.");
+        this.callbacks.onStatus("BlueFox revient vers le refuge.");
         return;
       }
-      const route = this.findKnownRoute(this.currentMapId, primaryMapId);
-      if (!route?.length) {
-        this.callbacks.onStatus("Aucun itinéraire mémorisé ne permet encore de rejoindre la base.");
-        return;
+      this.transitioning = true;
+      this.character.enabled = false;
+      this.character.stop();
+      this.transitionElement.classList.add("active");
+      this.callbacks.onStatus("BlueFox utilise les passages mémorisés pour revenir à la base.");
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 340));
+        await this.loadMap("crystal", null, true);
+        const camp = new this.THREE.Vector3(0, 0, 8);
+        this.character.root.position.copy(camp);
+        this.character.setTarget(camp);
+        this.character.lastSafePosition.copy(camp);
+        this.savePosition();
+        await new Promise((resolve) => setTimeout(resolve, 220));
+        this.cameraController.resetBehindCharacter(true);
+      } catch (error) {
+        console.error("Échec du retour à la base", error);
+        this.callbacks.onStatus("Le retour a échoué. BlueFox reste dans la zone actuelle.");
+      } finally {
+        this.transitionElement.classList.remove("active");
+        this.character.enabled = true;
+        this.transitioning = false;
       }
-      this.pendingInteraction = null;
-      this.navigationRoute = route.slice(1);
-      this.callbacks.onStatus("BlueFox accepte la suggestion et rejoint les passages menant à la base.");
-      this.navigateNextRouteStep();
     }
 
     handlePointer(event, movementMode = "run") {
@@ -1364,26 +1286,27 @@
         this.handleNavigationSuggestion({ mapId: existing.targetMap });
         return;
       }
-      const candidates = Object.values(BF.maps)
-        .filter((map) =>
-          map.id !== this.currentMapId &&
-          !this.discoveredMaps.has(map.id) &&
-          !map.exits[opposite]
-        )
-        .sort((left, right) => left.number - right.number);
-      if (!candidates.length) {
+      if (!BF.MapGenerator) {
+        this.callbacks.onStatus(
+          "Le générateur de territoires n’est pas disponible."
+        );
+        return;
+      }
+      let destination;
+      try {
+        destination = BF.MapGenerator.generate({
+          fromMapId: this.currentMapId,
+          direction,
+          discoveryIndex: this.discoveredMaps.size,
+          ordinal: BF.MapGenerator.listSaved().length + 1
+        });
+      } catch (error) {
+        console.error("Échec de génération de map", error);
         this.callbacks.onStatus(
           "Aucun territoire compatible ne peut être généré dans cette direction."
         );
         return;
       }
-      const key = `${this.currentMapId}:${direction}`;
-      let hash = 2166136261;
-      for (const character of key) {
-        hash ^= character.charCodeAt(0);
-        hash = Math.imul(hash, 16777619);
-      }
-      const destination = candidates[(hash >>> 0) % candidates.length];
       const link = { from: this.currentMapId, direction, to: destination.id };
       if (!this.applyGeneratedLink(link)) return;
       this.generatedTopology.push(link);
@@ -1609,16 +1532,6 @@
         observe: `J’observe ${label} sans intervenir.`,
         analyze: `J’analyse ${label} et j’enregistre les résultats.`
       }[action] || `J’examine ${label}.`;
-      const size = String(functional.size || "S").toUpperCase();
-      const isPlant = functional.knowledge?.family === "flora" ||
-        functional.resource?.family === "fiber" ||
-        /plant|flora|fiber|biomass/i.test(`${functional.type} ${functional.subtype}`);
-      const harvestSequence = size === "L" || size === "XL" ||
-        functional.knowledge?.family === "mineral"
-        ? ["Harvest_Heavy", "Harvest_Medium", "Harvest_Heavy"]
-        : size === "M" || isPlant
-          ? ["Harvest_Light", "Harvest_Medium", "Harvest_Light"]
-          : ["Harvest_Light"];
       return {
         kind,
         action,
@@ -1628,7 +1541,7 @@
         respawnMs: Number.isFinite(Number(interaction.respawnSeconds))
           ? Number(interaction.respawnSeconds) * 1000
           : null,
-        animationHints: collectable ? harvestSequence : interaction.animation?.[action] || [],
+        animationHints: interaction.animation?.[action] || [],
         actionText,
         approachText,
         speechText
@@ -1677,16 +1590,6 @@
     async loadMap(mapId, entry, announce = true) {
       const definition = BF.maps[mapId];
       if (!definition) throw new Error(`Map inconnue: ${mapId}`);
-      // Les actions en cours appartiennent au plateau qui va être détruit.
-      // Une référence résiduelle rendrait l'autonomie définitivement occupée.
-      this.pendingInteraction = null;
-      this.interactionStartedAt = 0;
-      this.interactionApproachStartedAt = 0;
-      this.interactionApproachAttempts = 0;
-      this.pendingZoneExploration = null;
-      this.currentRoutine = null;
-      this.postActionRecoveryUntil = 0;
-      this.character?.cancelInteraction?.();
       this.ensureMapContinuation(mapId);
       const previousMap = this.currentMap;
       const nextMap = BF.buildMap(
@@ -1715,7 +1618,6 @@
         this.character.pathPlanner.bounds = nextMap.bounds || 27;
       }
       this.character?.setColliders(nextMap.colliders);
-      this.character?.setWalkableRegions(nextMap.walkableRegions);
       await this.setPanorama(
         definition.sceneUrl || this.assets[definition.sceneAsset],
         definition
@@ -1733,9 +1635,6 @@
         this.callbacks.onAction(`Map chargée : ${definition.name}.`);
       }
       this.updateCurrentZone(performance.now(), true);
-      const autonomyResumeAt = performance.now();
-      this.lastActivityAt = autonomyResumeAt;
-      this.lastAutonomyAt = autonomyResumeAt - 5000;
       return entry;
     }
 
@@ -1972,8 +1871,11 @@
       if (!this.discoveredZones.has(zoneKey)) {
         this.discoveredZones.add(zoneKey);
         this.saveZoneDiscovery();
-        this.callbacks.onAction(
-          `Nouvelle zone explorée : ${this.currentMap.definition.name}.`
+        const mapIsKnown = this.discoveredMaps.has(this.currentMapId) ||
+          this.currentMapId === "crystal";
+        this.callbacks.onAction(mapIsKnown
+          ? `Nouvelle zone explorée : ${this.currentMap.definition.name}.`
+          : "BlueFox prend pied sur une terre inconnue."
         );
       }
       if (reachedPlannedZone) {
@@ -2055,8 +1957,7 @@
         await new Promise((resolve) => setTimeout(resolve, 340));
 
         const isNew = !this.discoveredMaps.has(exit.targetMap);
-        if (isNew) this.ensureUniqueMapName(exit.targetMap);
-        await this.loadMap(exit.targetMap, null, true);
+        await this.loadMap(exit.targetMap, null, !isNew);
         const targetMap = BF.maps[exit.targetMap];
         const spawn = this.safeEntryPosition(
           targetMap,
@@ -2069,7 +1970,11 @@
         this.character.facePoint(new this.THREE.Vector3(0, 0, 0));
         if (isNew) {
           this.discoveredMaps.add(exit.targetMap);
+          this.ensureUniqueMapName(exit.targetMap);
           this.saveDiscovery();
+          this.callbacks.onAction(
+            `Nouvelle terre découverte : ${BF.maps[exit.targetMap].name}.`
+          );
           if (exit.targetMap === "crystal" || exit.targetMap === "jungle") {
             this.callbacks.onMapDiscovered(exit.targetMap);
           }
@@ -2165,11 +2070,6 @@
       }
       this.completedInteractions += 1;
       this.lastCompletedAction = profile.action;
-      if (object.userData.requestedInteractionSource === "autonomy") {
-        object.userData.lastAutonomousInteractionAt = now;
-        object.userData.autonomousInteractionCount =
-          (Number(object.userData.autonomousInteractionCount) || 0) + 1;
-      }
       const missionAction = this.missionActionForInteraction(profile.action);
       if (missionAction) {
         this.missionManager?.notifyActionCompleted(missionAction, {
@@ -2207,64 +2107,12 @@
       }
     }
 
-    personalityTraits() {
-      try {
-        return JSON.parse(
-          localStorage.getItem("bluefox_odyssey_save_v1") || "null"
-        )?.traits || {};
-      } catch {
-        return {};
-      }
-    }
-
-    autonomousResourceTarget(resources) {
-      if (!resources.length) return null;
-      const characterPosition = this.character.root.position;
-      const now = performance.now();
-      const respect = BF.clamp(
-        Number(this.personalityTraits()["Respectueux — Destructeur"] ?? 50) / 100,
-        0,
-        1
-      );
-      const candidates = resources.map((object) => {
-        const definition = object.userData.functional || {};
-        const anchor = object.userData.worldAnchor || object.userData.worldRoot || object;
-        const distance = characterPosition.distanceTo(anchor.position);
-        const explicitMaturity = object.userData.maturity ?? definition.state?.maturity;
-        const maturity = BF.clamp(
-          Number(explicitMaturity ?? 1),
-          0,
-          1
-        );
-        const lastAutonomousAt = Number(object.userData.lastAutonomousInteractionAt || 0);
-        const noveltyAge = lastAutonomousAt ? now - lastAutonomousAt : Infinity;
-        const noveltyDelay = (55 + respect * 75) * 1000;
-        const matureEnough = explicitMaturity == null ||
-          maturity >= 0.42 + respect * 0.43;
-        const eligible = noveltyAge >= noveltyDelay && matureEnough;
-        const repetition = Math.max(0, Number(object.userData.autonomousInteractionCount) || 0);
-        const ecologicalPenalty =
-          (1 - maturity) * 18 * respect +
-          (definition.gameplay?.destructible === true ? 2.5 * respect : 0);
-        const repetitionPenalty = Math.min(24, repetition * (1.5 + respect));
-        const harvestBenefit = Math.max(0, Number(definition.ai?.harvestPriority) || 0) * 2;
-        return {
-          object,
-          distance,
-          eligible,
-          score: distance + ecologicalPenalty + repetitionPenalty - harvestBenefit
-        };
-      }).filter((candidate) => candidate.eligible);
-      if (!candidates.length) return null;
-      const immediate = candidates.filter((candidate) => candidate.distance <= 4);
-      return (immediate.length ? immediate : candidates)
-        .sort((left, right) => left.score - right.score)[0]?.object || null;
-    }
-
     updateAutonomy(now) {
       if (
         this.transitioning ||
         this.pendingInteraction ||
+        this.pendingGate ||
+        this.pendingZoneExploration ||
         this.currentRoutine ||
         this.missionManager?.currentAction
       ) return;
@@ -2272,16 +2120,6 @@
       if (now - this.lastAutonomyAt < 5000) return;
       if (this.character.root.position.distanceTo(this.character.target) > 0.2) return;
       this.lastAutonomyAt = now;
-
-      const survival = BF.getSurvivalState?.();
-      if (survival?.needs?.food && Math.random() < 0.82) {
-        this.startRoutine("food", now, 5200);
-        return;
-      }
-      if (survival?.needs?.rest && Math.random() < 0.82) {
-        this.startRoutine("rest", now, 7200);
-        return;
-      }
 
       if (Math.random() < 0.08) {
         const duration = this.character.playAmbientObservation();
@@ -2305,24 +2143,6 @@
         return;
       }
 
-      const unexploredZones = this.currentMap.zoneRegions.filter(
-        (zone) => !this.discoveredZones.has(`${this.currentMapId}:${zone.index}`)
-      );
-      if (unexploredZones.length && Math.random() < 0.58) {
-        unexploredZones.sort((left, right) =>
-          this.character.root.position.distanceTo(left.center) -
-          this.character.root.position.distanceTo(right.center)
-        );
-        const zone = unexploredZones[0];
-        this.pendingZoneExploration = zone;
-        this.character.setTarget(zone.center);
-        this.showWorldMarker(zone.center);
-        this.callbacks.onStatus(
-          `BlueFox choisit d’explorer ${zone.name} avant de poursuivre les collectes.`
-        );
-        return;
-      }
-
       const knownGate = this.currentMap.gates.find(
         (gate) => this.discoveredMaps.has(gate.userData.exit.targetMap)
       );
@@ -2337,12 +2157,9 @@
 
       const resources = this.currentMap.interactables.filter((object) => this.canInteractWith(object, now));
       if (resources.length) {
-        const object = this.autonomousResourceTarget(resources);
-        if (object) {
-          object.userData.requestedInteractionSource = "autonomy";
-          this.targetInteraction(object);
-          return;
-        }
+        const object = resources[Math.floor(Math.random() * resources.length)];
+        this.targetInteraction(object);
+        return;
       }
 
       const angle = Math.random() * Math.PI * 2;
@@ -2385,7 +2202,6 @@
       this.currentRoutine = null;
       this.character.cancelInteraction();
       if (finished === "rest") this.callbacks.onRest();
-      BF.survival?.completeRoutine?.(finished);
       const missionActionTypes = {
         rest: BF.Missions?.ActionType.REST,
         research: BF.Missions?.ActionType.RESEARCH,
@@ -2408,6 +2224,23 @@
     }
 
     ensureActivity(now) {
+      if (this.pendingGate) {
+        if (this.character.speed > 0.08) {
+          this.lastActivityAt = now;
+          return;
+        }
+        if (now - this.lastActivityAt >= 6000) {
+          this.character.setTarget(this.pendingGate.position, "run");
+          this.showWorldMarker(this.pendingGate.position);
+          this.callbacks.onStatus(
+            this.discoveredMaps.has(this.pendingGate.userData.exit.targetMap)
+              ? "BlueFox reprend le trajet mémorisé sans se laisser détourner."
+              : "BlueFox reprend sa route vers la terre inconnue sans interrompre l’exploration."
+          );
+          this.lastActivityAt = now;
+        }
+        return;
+      }
       const activeMotion = this.character.speed > 0.08 ||
         Boolean(this.interactionStartedAt) ||
         Boolean(this.pendingZoneExploration) ||
@@ -2423,19 +2256,12 @@
       this.character.cancelInteraction();
       const resources = this.currentMap.interactables.filter((object) => this.canInteractWith(object, now));
       if (resources.length) {
-        const object = this.autonomousResourceTarget(resources);
-        if (object) {
-          object.userData.requestedInteractionSource = "autonomy";
-          this.targetInteraction(object);
-          this.callbacks.onAction(
-            "BlueFox reprend spontanément son activité après avoir évalué les priorités locales."
-          );
-          this.lastActivityAt = now;
-          this.lastAutonomyAt = now;
-          return;
-        }
-      }
-      {
+        const object = resources[Math.floor(Math.random() * resources.length)];
+        this.targetInteraction(object);
+        this.callbacks.onAction(
+          "BlueFox reprend spontanément son activité après avoir évalué les priorités locales."
+        );
+      } else {
         const angle = Math.random() * Math.PI * 2;
         const distance = 7 + Math.random() * 13;
         const target = new this.THREE.Vector3(
@@ -2452,9 +2278,7 @@
     }
 
     activityPurpose() {
-      const missionState = BF.getMissionState?.() || BF.missionState;
-      const mission = missionState?.title ||
-        document.querySelector(".mission-card h2")?.textContent || "";
+      const mission = document.querySelector(".mission-card h2")?.textContent || "";
       const lower = mission.toLowerCase();
       if (lower.includes("refuge")) {
         return "sécuriser le refuge et rendre le camp durable";
@@ -2498,8 +2322,18 @@
         return { key: "map-transition", label: "Passage vers une nouvelle zone cartographiée.", speech: "Je franchis le passage vers la zone suivante." };
       }
       if (this.pendingGate) {
-        const destination = BF.maps[this.pendingGate.userData.exit.targetMap]?.name;
-        return { key: `gate-${destination}`, label: `Déplacement vers le passage menant à ${destination}.`, speech: `Je me dirige vers ${destination}.` };
+        const targetMapId = this.pendingGate.userData.exit.targetMap;
+        const isKnown = this.discoveredMaps.has(targetMapId);
+        const destination = isKnown ? BF.maps[targetMapId]?.name : "une terre inconnue";
+        return {
+          key: `gate-${isKnown ? targetMapId : "unknown"}`,
+          label: isKnown
+            ? `Déplacement vers le passage menant à ${destination}.`
+            : "Déplacement vers un passage encore inconnu.",
+          speech: isKnown
+            ? `Je me dirige vers ${destination}.`
+            : "Je me dirige vers une terre inconnue."
+        };
       }
       if (this.pendingZoneExploration) {
         return {
@@ -2540,6 +2374,16 @@
       const activity = this.currentActivity();
       const activityElement = document.querySelector(".action-feed p");
       if (activityElement) activityElement.textContent = activity.label;
+
+      const mission = document.querySelector(".mission-card h2")?.textContent || "";
+      const intentElement = document.querySelector(".intent-bar strong");
+      if (mission !== this.intentMissionKey || !this.stableIntentText) {
+        this.intentMissionKey = mission;
+        this.stableIntentText = this.buildGlobalIntention(mission);
+      }
+      if (intentElement && intentElement.textContent !== this.stableIntentText) {
+        intentElement.textContent = this.stableIntentText;
+      }
 
       const stateChanged = activity.key !== this.currentActivityKey;
       if (
