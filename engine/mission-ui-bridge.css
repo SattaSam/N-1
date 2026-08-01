@@ -10,6 +10,14 @@
   font-size: 17px;
 }
 
+.m0-mission-panel {
+  max-height: calc(100vh - 235px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+  scrollbar-width: thin;
+}
+
 .m0-mission-panel > p {
   margin: 0 0 14px;
   color: #a9c7d8;
@@ -36,6 +44,94 @@
   color: #7fdfff;
   font-size: 9px;
   line-height: 1.4;
+}
+
+.m0-mission-panel .m2-pending-priority {
+  display: block;
+  margin: 0 0 9px;
+  color: #ffd9a4;
+  font-size: 9px;
+}
+
+.mission-card-entry {
+  margin: 7px 0;
+  border: 1px solid rgba(107, 214, 255, .16);
+  border-radius: 9px;
+  background: rgba(4, 17, 34, .34);
+}
+
+.mission-card-entry.primary {
+  border-color: rgba(100, 230, 255, .45);
+}
+
+.mission-card-entry > summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.mission-card-entry > summary small {
+  color: #7fdfff;
+  font-size: 8px;
+}
+
+.mission-card-entry-body {
+  padding: 0 8px 8px;
+}
+
+.mission-card-entry-body > p {
+  margin: 0 2px 8px;
+  color: #a9c7d8;
+  font-size: 9px;
+}
+
+.mission-priority-button {
+  width: 100%;
+  margin-top: 7px;
+  padding: 7px;
+  border: 1px solid rgba(100, 220, 255, .3);
+  border-radius: 7px;
+  color: #dff8ff;
+  background: rgba(14, 55, 84, .75);
+  cursor: pointer;
+}
+
+.mission-card-overflow {
+  display: block;
+  margin-top: 8px;
+  color: #95b7ca;
+  font-size: 9px;
+}
+
+.mission-card.collapsed .m0-mission-panel > .m2-priority-reason,
+.mission-card.collapsed .m0-mission-panel > .m2-pending-priority,
+.mission-card.collapsed .m0-mission-panel > .m3-catalog-summary,
+.mission-card.collapsed .m0-mission-panel > .mission-card-overflow,
+.mission-card.collapsed .mission-card-entry:not(.primary),
+.mission-card.collapsed .mission-card-entry.primary .mission-card-entry-body {
+  display: none !important;
+}
+
+.mission-card.collapsed .m0-mission-panel {
+  max-height: none;
+  overflow: hidden;
+}
+
+.mission-card.collapsed .mission-card-entry.primary {
+  margin: 0;
+  border: 0;
+  background: transparent;
+}
+
+.mission-card.collapsed .mission-card-entry.primary > summary {
+  padding: 5px 0 0;
+  list-style: none;
+}
+
+.mission-card.collapsed .mission-card-entry.primary > summary small {
+  display: none;
 }
 
 .m0-mission-panel .m1-secondary-summary {

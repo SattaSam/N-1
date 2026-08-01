@@ -1,0 +1,23 @@
+.settings-content .trait-row {
+  grid-template-columns: minmax(150px, 1fr) minmax(110px, 1.4fr) minmax(145px, auto);
+}
+
+.settings-content .trait-balance-value {
+  color: #cdeeff;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: right;
+  white-space: normal;
+}
+
+@media (max-width: 650px) {
+  .settings-content .trait-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .settings-content .trait-balance-value {
+    text-align: left;
+  }
+}

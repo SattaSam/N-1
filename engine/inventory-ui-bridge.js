@@ -179,20 +179,8 @@
     const grid = document.querySelector(".inventory-grid");
     if (!grid) return false;
     const drawer = grid.closest(".drawer");
-    if (!canAccessCampInventory()) {
-      drawer?.querySelector(".inventory-sections")?.remove();
-      grid.hidden = true;
-      let locked = drawer?.querySelector(".inventory-camp-locked");
-      if (!locked && drawer) {
-        locked = document.createElement("p");
-        locked.className = "inventory-camp-locked";
-        locked.textContent = "Le menu Inventaire est accessible uniquement dans une zone où BlueFox a établi un camp.";
-        drawer.appendChild(locked);
-      }
-      return true;
-    }
-    drawer?.querySelector(".inventory-camp-locked")?.remove();
-    autoDeposit();
+    const campAccessible = canAccessCampInventory();
+    if (campAccessible) autoDeposit();
     const personal = inventoryEntries("inventory");
     const stored = inventoryEntries("campStorage");
     const signature = JSON.stringify({
@@ -216,10 +204,29 @@
       details.append(summary, createInventoryGrid(entries, bucket, target));
       return details;
     };
-    sections.append(
-      createSection("Sac personnel de BlueFox", personal, "inventory", "camp"),
-      createSection("Stockage partagé des camps", stored, "deposited", "bag")
+    const personalSection = createSection(
+      "Sac personnel de BlueFox",
+      personal,
+      "inventory",
+      campAccessible ? "camp" : ""
     );
+    if (!campAccessible) {
+      personalSection.querySelectorAll("article").forEach((article) => {
+        article.draggable = false;
+        article.title = "Le sac reste consultable ; établissez un camp pour déposer son contenu.";
+      });
+    }
+    sections.appendChild(personalSection);
+    if (campAccessible) {
+      sections.appendChild(
+        createSection("Stockage partagé des camps", stored, "deposited", "bag")
+      );
+    } else {
+      const locked = document.createElement("p");
+      locked.className = "inventory-camp-locked";
+      locked.textContent = "Le stockage Camp/Base sera disponible dès qu’un camp aura été établi dans cette zone. Le sac personnel reste consultable.";
+      sections.appendChild(locked);
+    }
     const automation = document.createElement("label");
     automation.className = "inventory-auto-deposit";
     const checkbox = document.createElement("input");
@@ -230,7 +237,7 @@
       if (checkbox.checked) autoDeposit();
     });
     automation.append(checkbox, " Vider automatiquement le sac à l’arrivée au camp de base");
-    sections.appendChild(automation);
+    if (campAccessible) sections.appendChild(automation);
     sections.dataset.signature = signature;
     return true;
   };
@@ -239,11 +246,10 @@
     document.querySelectorAll(".tool-rail button").forEach((button) => {
       const label = button.querySelector("small")?.textContent?.trim().toLowerCase();
       if (label !== "inventaire") return;
-      const enabled = canAccessCampInventory();
-      button.disabled = !enabled;
-      button.title = enabled
+      button.disabled = false;
+      button.title = canAccessCampInventory()
         ? "Ouvrir le sac et le stockage partagé des camps"
-        : "Établir un camp dans cette zone pour accéder à l’inventaire";
+        : "Ouvrir le sac personnel (stockage Camp/Base encore verrouillé)";
     });
   };
 

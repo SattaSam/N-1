@@ -27,15 +27,25 @@
           `${engine.currentMapId}:${zone.index}`
         )
       ).length;
+      let energy = null;
+      try {
+        const legacy = JSON.parse(
+          global.localStorage.getItem("bluefox_odyssey_save_v1") || "null"
+        );
+        if (Number.isFinite(Number(legacy?.energy))) energy = Number(legacy.energy);
+      } catch {
+        energy = null;
+      }
       return {
         mapId: engine.currentMapId,
         resources,
         unexploredZones,
         canRoutine: !engine.currentRoutine,
         needs: {
-          rest: false,
+          rest: energy != null && energy < 35,
           food: false
-        }
+        },
+        energy
       };
     }
 

@@ -20,7 +20,12 @@
       this.activeMissionIds = [...new Set(
         [this.primaryMissionId, ...rememberedIds]
           .filter((id) => this.definition(id))
+          .filter((id) => !this.isLegacyUnscopedSiteMission(id))
       )];
+      Object.keys(this.memory.state.missionLifecycle || {}).forEach((id) => {
+        if (!this.isLegacyUnscopedSiteMission(id)) return;
+        this.memory.state.missionLifecycle[id].status = "available";
+      });
       this.trees = new Map(this.activeMissionIds.map((id) => [
         id,
         this.planner.restoreOrCreate(id)
@@ -63,6 +68,11 @@
       return Missions.getDefinition?.(missionId) || Missions.definitions[missionId];
     }
 
+    isLegacyUnscopedSiteMission(missionId) {
+      return !String(missionId || "").includes("@") &&
+        this.definition(missionId)?.instanceScope === "map";
+    }
+
     ensureLifecycle(missionId, status = "available") {
       const collection = this.memory.state.missionLifecycle =
         this.memory.state.missionLifecycle || {};
@@ -97,12 +107,8 @@
       ).length
         ? this.memory.state.activeMissionId
         : "";
-      const candidates = [
-        rememberedMissionId,
-        legacyMissionId,
-        fallback,
-        "camp"
-      ];
+      const candidates = [rememberedMissionId, legacyMissionId, fallback, "camp"]
+        .filter((id) => !this.isLegacyUnscopedSiteMission(id));
       const selected = candidates.find((id) =>
         this.definition(id) && id !== "foundation"
       );
@@ -247,7 +253,11 @@
       lifecycle.autoPrimaryEligible = true;
       lifecycle.discoveryReason = lifecycle.discoveryReason ||
         "Le joueur m’a suggéré d’en faire une priorité.";
-      const changed = this.selectBestPrimary(performance.now());
+      const changed = this.setPrimaryMission(
+        missionId,
+        false,
+        "Priorité suggérée par le joueur."
+      );
       this.memory.save();
       this.publish();
       return changed || true;
@@ -541,6 +551,9 @@
         activeMissionIds: [...this.activeMissionIds],
         selectionReason: this.selectionReason,
         pendingPrimaryMissionId: this.pendingPrimaryMissionId,
+        pendingPrimaryMissionTitle: this.pendingPrimaryMissionId
+          ? this.trees.get(this.pendingPrimaryMissionId)?.title || ""
+          : "",
         missionId: this.tree.id,
         title: this.tree.title,
         description: this.tree.description,
@@ -556,10 +569,12 @@
           target: node.target
         })),
         tree: this.tree.toJSON(),
-        missions: [...new Set([
-          this.primaryMissionId,
-          ...this.activeMissionIds
-        ])].map((id) => {
+        missions: [...this.trees.keys()]
+          .sort((left, right) =>
+            Number(right === this.primaryMissionId) -
+            Number(left === this.primaryMissionId)
+          )
+          .map((id) => {
           const tree = this.trees.get(id);
           return {
             missionId: id,
@@ -574,13 +589,18 @@
             isPrimary: id === this.primaryMissionId,
             tree: tree.toJSON()
           };
-        }),
+          }),
         catalog: Object.keys(Missions.definitions)
           .filter((id) => id !== "foundation")
+          .filter((id) => Missions.definitions[id].instanceScope !== "map")
+          .filter((id) => Object.prototype.hasOwnProperty.call(
+            this.memory.state.missionLifecycle || {},
+            id
+          ))
           .map((id) => ({
             missionId: id,
             title: Missions.definitions[id].title,
-            status: this.ensureLifecycle(id).status,
+            status: this.memory.state.missionLifecycle[id].status,
             scope: Missions.definitions[id].scope ||
               Missions.definitions[id].instanceScope || "global",
             progress: this.trees.has(id)
@@ -588,8 +608,8 @@
               : 0,
             journalIntro: Missions.definitions[id].journalIntro ||
               `Cette mission est apparue lorsque ma progression a atteint un nouveau seuil. Je veux maintenant vérifier méthodiquement ce que ces découvertes rendent possible.`,
-            discoveryReason: this.ensureLifecycle(id).discoveryReason,
-            waitingFor: [...(this.ensureLifecycle(id).waitingFor || [])]
+            discoveryReason: this.memory.state.missionLifecycle[id].discoveryReason,
+            waitingFor: [...(this.memory.state.missionLifecycle[id].waitingFor || [])]
           })),
         inventory: {
           ...(BF.getProgressionState?.().inventory || {})

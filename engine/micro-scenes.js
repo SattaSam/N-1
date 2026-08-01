@@ -49,9 +49,9 @@
     volcanic: Object.freeze([["rock", -1.25, 0.25, 2], ["rock", 1.1, 0.5, 1], ["needle", 0, -0.45, 2], ["debris", 0.2, 1.25, 0]].map(Object.freeze)),
     frozen: Object.freeze([["needle", 0, 0, 2], ["needle", -1.15, 0.8, 1], ["needle", 1.2, 0.65, 0], ["rock", 0.15, 1.55, 1]].map(Object.freeze)),
     forest: Object.freeze([["tree", 0, 0, 1], ["spore", -1.45, 0.85, 2], ["spore", 1.35, 0.9, 1], ["frond", 0.25, -1.45, 2]].map(Object.freeze)),
-    ruins: Object.freeze([["stele", 0, 0, 1], ["debris", -1.25, 0.8, 2], ["debris", 1.3, 0.65, 1], ["debris", 0.2, -1.25, 0]].map(Object.freeze)),
+    ruins: Object.freeze([["tech_relic", 0, 0, 1], ["stele", -1.35, 0.75, 1], ["debris", 1.3, 0.65, 1], ["debris", 0.2, -1.25, 0]].map(Object.freeze)),
     aquatic: Object.freeze([["pool", 0, 0, 1], ["spore", -1.8, 0.9, 2], ["spore", 1.75, 0.8, 1], ["frond", 0.15, -1.9, 2]].map(Object.freeze)),
-    desert: Object.freeze([["stele", 0, 0, 0], ["rock", -1.45, 0.85, 2], ["rock", 1.5, 0.7, 1], ["debris", 0.35, -1.35, 2]].map(Object.freeze)),
+    desert: Object.freeze([["tech_relic", 0, 0, 0], ["stele", -1.45, 0.85, 2], ["rock", 1.5, 0.7, 1], ["debris", 0.35, -1.35, 2]].map(Object.freeze)),
     crystalline: Object.freeze([["needle", 0, 0, 2], ["needle", -1.35, 0.75, 1], ["needle", 1.4, 0.7, 0], ["stele", 0.15, 1.65, 1]].map(Object.freeze)),
     alien: Object.freeze([["stele", 0, 0, 1], ["pool", 0, 1.8, 0], ["spore", -1.7, -0.7, 2], ["needle", 1.65, -0.65, 1]].map(Object.freeze))
   });

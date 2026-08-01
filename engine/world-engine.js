@@ -183,7 +183,6 @@
       this.resizeObserver.observe(container);
 
       this.callbacks.onStatus("Nouveau moteur 3D initialisé sur une base stable.");
-      this.callbacks.onAction("Le sous-système 3D modulaire prend le contrôle de BlueFox.");
       global.dispatchEvent(new CustomEvent("bluefox:scene-images"));
       BF.currentEngine = this;
       BF.getDiagnostics = () => this.getDiagnostics();
@@ -2134,7 +2133,7 @@
         this.missionManager?.currentAction
       ) return;
       if (now < this.postActionRecoveryUntil) return;
-      if (now - this.lastAutonomyAt < 6500) return;
+      if (now - this.lastAutonomyAt < 5000) return;
       if (this.character.root.position.distanceTo(this.character.target) > 0.2) return;
       this.lastAutonomyAt = now;
 
@@ -2268,7 +2267,7 @@
         this.lastActivityAt = now;
         return;
       }
-      if (now - this.lastActivityAt < 26000) return;
+      if (now - this.lastActivityAt < 12000) return;
 
       this.pendingInteraction = null;
       this.character.cancelInteraction();

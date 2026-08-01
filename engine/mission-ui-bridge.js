@@ -5,6 +5,44 @@
   let latestState = null;
   let lastSignature = "";
   let browserStatus = "active";
+  const hudExpandedMissions = new Set();
+  const browserExpandedMissions = new Set();
+  let hudInitialized = false;
+
+  function rememberExpanded(container, selector, target) {
+    container?.querySelectorAll(selector).forEach((details) => {
+      const id = details.dataset.missionId;
+      if (!id) return;
+      if (details.open) target.add(id);
+      else target.delete(id);
+    });
+  }
+
+  function renderTrackedMissionMeters(state) {
+    const meters = document.querySelectorAll(".meters label");
+    if (!meters.length) return;
+    const tracked = [...(state.missions || [])]
+      .filter((mission) => mission.lifecycleStatus === "active")
+      .sort((left, right) => Number(right.isPrimary) - Number(left.isPrimary))
+      .slice(0, 2);
+    meters.forEach((meter, index) => {
+      const mission = tracked[index];
+      const label = meter.querySelector("span");
+      const value = meter.querySelector("b");
+      const fill = meter.querySelector("em");
+      if (!mission) {
+        if (label) label.textContent = "MISSION À SUIVRE";
+        if (value) value.textContent = "—";
+        if (fill) fill.style.width = "0%";
+        return;
+      }
+      const percent = Math.round((mission.progress || 0) * 100);
+      if (label) label.textContent = mission.title;
+      if (value) value.textContent = `${percent}%`;
+      if (fill) fill.style.width = `${percent}%`;
+      meter.title = mission.isPrimary ? "Mission prioritaire" : "Deuxième mission suivie";
+    });
+  }
 
   function createTextElement(tag, className, text) {
     const element = document.createElement(tag);
@@ -71,6 +109,9 @@
       card.insertBefore(panel, card.querySelector(".action-feed"));
     }
     card.classList.add("mission-m0-connected");
+    renderTrackedMissionMeters(state);
+    const intention = document.querySelector(".intent-bar strong");
+    if (intention) intention.textContent = state.description || state.title;
 
     const signature = JSON.stringify({
       missionId: state.missionId,
@@ -98,12 +139,11 @@
       ])
     });
     if (signature === lastSignature && panel.childElementCount) return;
+    rememberExpanded(panel, ".mission-card-entry", hudExpandedMissions);
     lastSignature = signature;
 
     panel.replaceChildren();
-    panel.appendChild(createTextElement("div", "eyebrow", "MISSION EN COURS"));
-    panel.appendChild(createTextElement("h2", "", state.title));
-    panel.appendChild(createTextElement("p", "", state.description || ""));
+    panel.appendChild(createTextElement("div", "eyebrow", "MISSIONS EN COURS"));
     if (state.selectionReason) {
       panel.appendChild(createTextElement(
         "small",
@@ -111,26 +151,64 @@
         state.selectionReason
       ));
     }
-    state.tree.root.children.forEach((node, index) => {
-      panel.appendChild(renderStep(node, index, state.currentAction));
-    });
-    const secondary = (state.missions || []).filter((mission) => !mission.isPrimary);
-    if (secondary.length) {
-      const summary = document.createElement("div");
-      summary.className = "m1-secondary-summary";
-      summary.appendChild(createTextElement(
+    if (state.pendingPrimaryMissionId) {
+      panel.appendChild(createTextElement(
         "small",
-        "",
-        `${secondary.length} mission${secondary.length > 1 ? "s" : ""} secondaire${secondary.length > 1 ? "s" : ""}`
+        "m2-pending-priority",
+        `Prochaine priorité après l’action en cours : ${state.pendingPrimaryMissionTitle || state.pendingPrimaryMissionId}`
       ));
-      secondary.forEach((mission) => {
-        summary.appendChild(createTextElement(
-          "span",
-          "",
-          `${mission.title} · ${mission.lifecycleStatus || mission.status} · ${Math.round((mission.progress || 0) * 100)} %`
-        ));
+    }
+    const visibleMissions = [...(state.missions || [])]
+      .filter((mission) => mission.lifecycleStatus === "active")
+      .sort((left, right) => Number(right.isPrimary) - Number(left.isPrimary))
+      .slice(0, 5);
+    visibleMissions.forEach((mission) => {
+      const details = document.createElement("details");
+      details.className = `mission-card-entry${mission.isPrimary ? " primary" : ""}`;
+      details.dataset.missionId = mission.missionId;
+      details.open = hudInitialized
+        ? hudExpandedMissions.has(mission.missionId)
+        : mission.isPrimary;
+      details.addEventListener("toggle", () => {
+        if (details.open) hudExpandedMissions.add(mission.missionId);
+        else hudExpandedMissions.delete(mission.missionId);
       });
-      panel.appendChild(summary);
+      const summary = document.createElement("summary");
+      const percent = Math.round((mission.progress || 0) * 100);
+      summary.append(
+        createTextElement("b", "", mission.title),
+        createTextElement(
+          "small",
+          "",
+          `${mission.isPrimary ? "PRIORITAIRE · " : ""}${percent} %`
+        )
+      );
+      details.appendChild(summary);
+      const body = document.createElement("div");
+      body.className = "mission-card-entry-body";
+      if (mission.description) body.appendChild(createTextElement("p", "", mission.description));
+      (mission.tree?.root?.children || []).forEach((node, index) => {
+        body.appendChild(renderStep(node, index, state.currentAction));
+      });
+      if (!mission.isPrimary && mission.lifecycleStatus === "active") {
+        const prioritize = createTextElement("button", "mission-priority-button", "Définir comme priorité");
+        prioritize.type = "button";
+        prioritize.addEventListener("click", () => BF.suggestMissionPriority?.(mission.missionId));
+        body.appendChild(prioritize);
+      }
+      details.appendChild(body);
+      panel.appendChild(details);
+    });
+    hudInitialized = true;
+    const activeMissionCount = (state.missions || []).filter(
+      (mission) => mission.lifecycleStatus === "active"
+    ).length;
+    if (activeMissionCount > visibleMissions.length) {
+      panel.appendChild(createTextElement(
+        "small",
+        "mission-card-overflow",
+        `+ ${activeMissionCount - visibleMissions.length} mission(s) dans le menu Missions`
+      ));
     }
     const catalog = state.catalog || [];
     if (catalog.length) {
@@ -144,12 +222,6 @@
       ));
     }
 
-    const intention = document.querySelector(".intent-bar strong");
-    if (intention) {
-      intention.textContent = state.currentAction
-        ? `En ce moment : ${state.currentAction.title}.`
-        : state.description || state.title;
-    }
   }
 
   function missionList(state) {
@@ -172,6 +244,7 @@
   function renderMissionBrowser(state) {
     const browser = document.querySelector(".mission-browser");
     if (!browser || !state) return;
+    rememberExpanded(browser, ".mission-browser-card", browserExpandedMissions);
     const list = missionList(state);
     const statuses = [
       ["available", "Disponibles"],
@@ -208,6 +281,12 @@
       .forEach((mission) => {
         const details = document.createElement("details");
         details.className = "mission-browser-card";
+        details.dataset.missionId = mission.missionId;
+        details.open = browserExpandedMissions.has(mission.missionId);
+        details.addEventListener("toggle", () => {
+          if (details.open) browserExpandedMissions.add(mission.missionId);
+          else browserExpandedMissions.delete(mission.missionId);
+        });
         const summary = document.createElement("summary");
         const percent = Math.round((mission.progress || 0) * 100);
         summary.append(
@@ -239,7 +318,7 @@
         const actions = document.createElement("div");
         actions.className = "mission-browser-actions";
         if (mission.status === "active" && !mission.isPrimary) {
-          const suggest = createTextElement("button", "", "Suggérer comme priorité");
+          const suggest = createTextElement("button", "", "Définir comme priorité");
           suggest.addEventListener("click", () => BF.suggestMissionPriority?.(mission.missionId));
           actions.appendChild(suggest);
         }

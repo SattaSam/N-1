@@ -4,6 +4,7 @@
   const BF = global.BlueFox3D = global.BlueFox3D || {};
   const Missions = BF.Missions = BF.Missions || {};
   const A = Missions.ActionType;
+  const SECONDARY_CAMP_BAG_THRESHOLD = 10;
 
   const leaf = (id, title, type, target, metric) => ({
     id,
@@ -138,6 +139,8 @@
     constructor(manager) {
       this.manager = manager;
       this.scheduled = false;
+      const facts = this.manager.memory.state.facts;
+      facts.primaryBaseMapId = facts.primaryBaseMapId || "crystal";
       this.events = [
         "bluefox:progression-changed",
         "bluefox:multi-progression",
@@ -147,15 +150,67 @@
         "bluefox:site-progression"
       ];
       this.onChange = () => this.schedule();
-      this.onTransition = () => {
+      this.onTransition = (event) => {
         const facts = this.manager.memory.state.facts;
         facts.mapTransitions = (Number(facts.mapTransitions) || 0) + 1;
         this.manager.memory.save();
+        this.considerSecondaryCamp(event.detail || {});
         this.schedule();
       };
       this.events.forEach((type) => global.addEventListener(type, this.onChange));
       global.addEventListener("bluefox:map-transition-completed", this.onTransition);
       this.evaluate();
+    }
+
+    primaryBaseMapId() {
+      return this.manager.memory.state.facts.primaryBaseMapId || "crystal";
+    }
+
+    inventoryLoad() {
+      return Object.values(BF.getProgressionState?.().inventory || {})
+        .reduce((sum, amount) => sum + Math.max(0, Number(amount) || 0), 0);
+    }
+
+    currentEnergy() {
+      try {
+        const save = JSON.parse(
+          global.localStorage.getItem("bluefox_odyssey_save_v1") || "null"
+        );
+        return Number.isFinite(Number(save?.energy)) ? Number(save.energy) : null;
+      } catch {
+        return null;
+      }
+    }
+
+    considerSecondaryCamp(detail = {}) {
+      const mapId = detail.mapId || this.manager.engine?.currentMapId;
+      const primaryMapId = this.primaryBaseMapId();
+      if (!mapId || mapId === primaryMapId) return false;
+      const site = this.manager.memory.state.siteProgression?.[mapId];
+      if (Number(site?.stage) >= 1) return false;
+      const missionId = `camp@${mapId}`;
+      if (this.manager.ensureLifecycle(missionId).status === "active") return false;
+
+      const energy = this.currentEnergy();
+      const inventoryLoad = this.inventoryLoad();
+      const route = this.manager.engine?.findKnownRoute?.(primaryMapId, mapId);
+      const hopsFromBase = Array.isArray(route) ? Math.max(0, route.length - 1) : 0;
+      const lowEnergy = energy != null && energy < 35;
+      const remote = hopsFromBase >= 2;
+      const loadedBag = inventoryLoad >= SECONDARY_CAMP_BAG_THRESHOLD;
+      if (!lowEnergy && !remote && !loadedBag) return false;
+
+      const reasons = [];
+      if (lowEnergy) reasons.push(`énergie basse (${Math.round(energy)} %)`);
+      if (remote) reasons.push(`éloignement de ${hopsFromBase} Maps`);
+      if (loadedBag) reasons.push(`sac chargé (${inventoryLoad} objets)`);
+      return this.manager.startMission(missionId, {
+        primary: false,
+        urgency: lowEnergy ? 30 : 10,
+        narrativePriority: lowEnergy ? 20 : 8,
+        source: "autonomie locale",
+        reason: `BlueFox envisage un camp local : ${reasons.join(", ")}.`
+      });
     }
 
     schedule() {
@@ -195,6 +250,18 @@
       return maps;
     }
 
+    analyzedByCategory(category) {
+      return this.eventHistory().reduce((sum, event) => {
+        if (event.type !== "OBJECT_ANALYZED") return sum;
+        const tags = new Set(event.tags || []);
+        const descriptor = `${event.family || ""} ${event.inventoryKey || ""}`.toLowerCase();
+        const matches = category === "minerals"
+          ? tags.has("mineral") || /mineral|crystal|ore|cristal|minerai|rock|roche/.test(descriptor)
+          : tags.has("component") || tags.has("technology") || /component|technology|technologie/.test(descriptor);
+        return sum + (matches ? Math.max(1, Number(event.quantity) || 1) : 0);
+      }, 0);
+    }
+
     metric(name) {
       const exploration = BF.getExplorationSummary?.() || { maps: {} };
       const maps = Object.values(exploration.maps || {});
@@ -219,17 +286,18 @@
         "total-acquisitions": this.countEvents(["RESOURCE_COLLECTED", "RESOURCE_EXTRACTED"]),
         analyses: this.countEvents(["OBJECT_ANALYZED"]),
         inspections: this.countEvents(["OBJECT_INSPECTED"]),
-        minerals: categorized.reduce((sum, map) => sum + map.minerals, 0),
-        components: this.eventHistory().reduce((sum, event) =>
-          sum + (/component|debris|technology/.test(`${event.family || ""} ${(event.tags || []).join(" ")}`)
-            ? Math.max(1, Number(event.quantity) || 1) : 0), 0),
+        minerals: this.analyzedByCategory("minerals"),
+        components: this.analyzedByCategory("components"),
         "distinct-rock-types": new Set(this.eventHistory()
           .filter((event) => {
             const tags = new Set(event.tags || []);
             const family = `${event.family || ""} ${event.inventoryKey || ""}`.toLowerCase();
             return tags.has("mineral") || /mineral|crystal|ore|cristal|minerai|rock|roche/.test(family);
           })
-          .map((event) => event.objectId || event.inventoryKey || event.family)
+          .map((event) => {
+            const identity = event.objectId || event.inventoryKey || event.family;
+            return identity == null ? null : `${identity}:${event.variant ?? 0}`;
+          })
           .filter(Boolean)).size,
         contacts: Number(facts.contacts) || 0,
         transitions: Number(facts.mapTransitions) || 0,
@@ -327,13 +395,14 @@
       if (nextStage === site.stage) return false;
       site.stage = nextStage;
       site.updatedAt = Date.now();
-      const hasPrimarySite = Object.values(sites).some((candidate) =>
-        candidate !== site && candidate.isPrimary === true
-      );
-      site.isPrimary = detail.isPrimary === true || site.isPrimary === true ||
-        !hasPrimarySite;
+      const primaryMapId = this.primaryBaseMapId();
+      site.isPrimary = mapId === primaryMapId;
       const completedId = [null, `camp@${mapId}`, `shelter@${mapId}`, `base@${mapId}`][nextStage];
-      const nextId = [null, `shelter@${mapId}`, `base@${mapId}`, null][nextStage];
+      const nextId = nextStage === 1
+        ? `shelter@${mapId}`
+        : nextStage === 2 && site.isPrimary
+          ? `base@${mapId}`
+          : null;
       if (completedId) {
         const tree = this.manager.trees.get(completedId);
         tree?.root.walk((node) => { if (node.isLeaf) node.progress = node.target; });
