@@ -31,3 +31,9 @@ Les entrées uniquement documentaires du tableur CUO ne peuvent pas être matér
 Le bouton **Sauvegarder la micro-scène** enregistre tous les objets du plateau test sous un code `MSC-CUSTOM-NOM-DE-LA-SCENE`.
 
 Le serveur met à jour `data/custom-micro-scenes.json` et `data/custom-micro-scenes.js`. Le moteur charge ce registre au démarrage et `BlueFox3D.MicroScenes.plan(code, origine, rotation)` peut ensuite reproduire la scène, y compris les rotations X, Y et Z de chaque objet.
+
+Chaque sauvegarde est conservée comme une nouvelle entrée. Si un nom déjà
+utilisé est saisi, le serveur attribue un suffixe unique (`-002`, `-003`, etc.)
+au lieu d’écraser la scène précédente. Le fichier JSON est la sauvegarde
+éditable ; le fichier JavaScript est son miroir directement chargé par le jeu
+et par le générateur de maps.

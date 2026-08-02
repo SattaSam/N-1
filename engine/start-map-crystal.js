@@ -62,8 +62,11 @@
     profile: "crystalline",
     constructionExclusionZones,
     crashSite: Object.freeze({
+      capsuleAsset: "./assets/models/BlueFox_Capsule_Depart.glb",
       capsuleAnchor: Object.freeze({ x: 0.8, y: 0, z: -0.9 }),
       capsuleRotation: 0,
+      capsuleScale: 1,
+      capsuleGroundOffset: 0.16,
       stages: Object.freeze(["crash", "refuge", "base"]),
       exclusionZoneIds: Object.freeze(
         constructionExclusionZones.map((zone) => zone.id)
@@ -190,7 +193,10 @@
 
   BF.getCrashSiteLayout = () => ({
     mapId: "crystal",
+    capsuleAsset: BF.maps.crystal.crashSite.capsuleAsset,
     capsuleAnchor: { ...BF.maps.crystal.crashSite.capsuleAnchor },
+    capsuleRotation: BF.maps.crystal.crashSite.capsuleRotation,
+    capsuleScale: BF.maps.crystal.crashSite.capsuleScale,
     zones: BF.maps.crystal.constructionExclusionZones.map((zone) => ({
       ...zone,
       center: zone.center ? { ...zone.center } : undefined,

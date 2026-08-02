@@ -1587,6 +1587,69 @@
       this.callbacks.onStatus(object.userData.interactionProfile.approachText);
     }
 
+    async addCrashCapsule(map, definition) {
+      const crashSite = definition?.crashSite;
+      if (!map?.group || !crashSite?.capsuleAsset || !this.GLTFLoader) return false;
+
+      try {
+        const gltf = await new Promise((resolve, reject) => {
+          new this.GLTFLoader().load(
+            crashSite.capsuleAsset,
+            resolve,
+            undefined,
+            reject
+          );
+        });
+        const capsule = gltf.scene;
+        const anchor = crashSite.capsuleAnchor || { x: 0, y: 0, z: 0 };
+        const scale = Math.max(0.01, Number(crashSite.capsuleScale) || 1);
+        capsule.name = "BlueFoxStartCapsule";
+        capsule.position.set(
+          Number(anchor.x) || 0,
+          (Number(anchor.y) || 0) +
+            Math.max(0, Number(crashSite.capsuleGroundOffset) || 0),
+          Number(anchor.z) || 0
+        );
+        capsule.rotation.y = Number(crashSite.capsuleRotation) || 0;
+        capsule.scale.setScalar(scale);
+        capsule.userData.landmark = "crash-capsule";
+        capsule.userData.mapId = definition.id;
+        capsule.traverse((child) => {
+          if (!child.isMesh) return;
+          child.castShadow = true;
+          child.receiveShadow = true;
+          child.frustumCulled = false;
+        });
+        map.group.add(capsule);
+        map.crashCapsule = capsule;
+
+        const colliderOffsets = [-2.35, 0, 2.35];
+        colliderOffsets.forEach((offsetX) => {
+          const offset = new this.THREE.Vector3(offsetX * scale, 0, 0)
+            .applyAxisAngle(
+              new this.THREE.Vector3(0, 1, 0),
+              capsule.rotation.y
+            );
+          map.colliders.push({
+            position: new this.THREE.Vector3(
+              capsule.position.x + offset.x,
+              0,
+              capsule.position.z + offset.z
+            ),
+            radius: 1.85 * scale,
+            owner: capsule
+          });
+        });
+        return true;
+      } catch (error) {
+        console.error("Chargement de la capsule de départ impossible.", error);
+        this.callbacks.onStatus(
+          "La capsule 3D de la map de départ n’a pas pu être chargée."
+        );
+        return false;
+      }
+    }
+
     async loadMap(mapId, entry, announce = true) {
       const definition = BF.maps[mapId];
       if (!definition) throw new Error(`Map inconnue: ${mapId}`);
@@ -1598,6 +1661,7 @@
         this.assets,
         this.renderer
       );
+      await this.addCrashCapsule(nextMap, definition);
       this.scene.add(nextMap.group);
       this.currentMap = nextMap;
       this.currentMapId = mapId;

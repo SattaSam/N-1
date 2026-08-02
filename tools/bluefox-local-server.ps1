@@ -9,6 +9,30 @@ $projectRoot = Split-Path -Parent $PSScriptRoot
 $listener = $null
 $port = 0
 
+function Get-CustomMicroSceneTemplates {
+    param([object]$Node)
+
+    if ($null -eq $Node) { return }
+    $idProperty = $Node.PSObject.Properties["id"]
+    $objectsProperty = $Node.PSObject.Properties["objects"]
+    if ($null -ne $idProperty -and $null -ne $objectsProperty) {
+        if ([string]$Node.id -match '^MSC-CUSTOM-[A-Z0-9-]+$') {
+            Write-Output $Node
+        }
+        return
+    }
+    if ($Node -is [System.Collections.IEnumerable] -and $Node -isnot [string]) {
+        foreach ($item in $Node) {
+            Get-CustomMicroSceneTemplates -Node $item
+        }
+        return
+    }
+    $valueProperty = $Node.PSObject.Properties["value"]
+    if ($null -ne $valueProperty) {
+        Get-CustomMicroSceneTemplates -Node $Node.value
+    }
+}
+
 foreach ($attempt in 1..32) {
     $candidate = Get-Random -Minimum 49152 -Maximum 60000
     try {
@@ -233,11 +257,29 @@ try {
                     if (Test-Path -LiteralPath $customJsonPath -PathType Leaf) {
                         $existingText = [System.IO.File]::ReadAllText($customJsonPath)
                         if (-not [string]::IsNullOrWhiteSpace($existingText)) {
-                            $templates = @($existingText | ConvertFrom-Json)
+                            $existingRegistry = $existingText | ConvertFrom-Json
+                            $templates = @(Get-CustomMicroSceneTemplates -Node $existingRegistry)
                         }
                     }
-                    $templates = @($templates | Where-Object { $_.id -ne $template.id }) + @($template)
-                    $json = ConvertTo-Json -InputObject @($templates) -Depth 12
+                    $requestedId = [string]$template.id
+                    $uniqueId = $requestedId
+                    $suffix = 2
+                    $knownIds = @{}
+                    foreach ($existingTemplate in $templates) {
+                        $knownIds[[string]$existingTemplate.id] = $true
+                    }
+                    while ($knownIds.ContainsKey($uniqueId)) {
+                        $uniqueId = "$requestedId-$($suffix.ToString('000'))"
+                        $suffix += 1
+                    }
+                    $template.id = $uniqueId
+                    $updatedTemplates = New-Object System.Collections.Generic.List[object]
+                    foreach ($existingTemplate in $templates) {
+                        [void]$updatedTemplates.Add($existingTemplate)
+                    }
+                    [void]$updatedTemplates.Add($template)
+                    $templates = [object[]]$updatedTemplates.ToArray()
+                    $json = ConvertTo-Json -InputObject $templates -Depth 12
                     $utf8 = [System.Text.UTF8Encoding]::new($false)
                     [System.IO.File]::WriteAllText($customJsonPath, $json, $utf8)
                     [System.IO.File]::WriteAllText(
@@ -245,7 +287,7 @@ try {
                         "window.BlueFoxCustomMicroScenes = $json;`n",
                         $utf8
                     )
-                    $response = ConvertTo-Json @{ status = "saved"; id = $template.id; count = $templateObjects.Count }
+                    $response = ConvertTo-Json @{ status = "saved"; id = $uniqueId; count = $templateObjects.Count; total = $templates.Count }
                     $body = [System.Text.Encoding]::UTF8.GetBytes($response)
                 } catch {
                     $status = "400 Bad Request"
