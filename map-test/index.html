@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BlueFox · Laboratoire de maps</title>
+    <link rel="stylesheet" href="./map-test.css">
+    <script type="importmap">
+      {"imports":{"three":"../cuo-lab/vendor/three.module.min.js"}}
+    </script>
+  </head>
+  <body>
+    <main>
+      <canvas id="viewport"></canvas>
+      <aside class="builder-panel">
+        <header><span>BLUEFOX ODYSSEY</span><h1>Laboratoire de maps</h1><small>Environnement mono-map · moteur CUO réel</small></header>
+        <section>
+          <label>Nombre de plateaux
+            <select id="plateau-count"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option selected>6</option></select>
+          </label>
+          <label>Profil de biome
+            <select id="biome-profile"></select>
+          </label>
+          <button id="new-map" class="primary">Générer une nouvelle map</button>
+        </section>
+        <section>
+          <h2>Micro-scènes à intégrer</h2>
+          <div class="scene-adder"><select id="micro-scene-catalog"></select><button id="add-scene">Ajouter</button></div>
+          <ol id="scene-queue"></ol>
+          <button id="validate-map" class="primary">Valider et générer la map</button>
+        </section>
+        <section class="edit-tools">
+          <h2>Placement</h2>
+          <button id="move-mode" aria-pressed="false">Déplacer les micro-scènes</button>
+          <p id="selection-name">Aucune micro-scène sélectionnée</p>
+          <div class="axis" data-axis="x"><b>X</b><button data-step="-15">−15°</button><output>0°</output><button data-step="15">+15°</button></div>
+          <div class="axis" data-axis="y"><b>Y</b><button data-step="-15">−15°</button><output>0°</output><button data-step="15">+15°</button></div>
+          <div class="axis" data-axis="z"><b>Z</b><button data-step="-15">−15°</button><output>0°</output><button data-step="15">+15°</button></div>
+          <div class="axis height"><b>H</b><button data-height="-0.25">−0,25</button><output>0.00</output><button data-height="0.25">+0,25</button></div>
+          <button id="reset-scene">Réinitialiser la transformation</button>
+        </section>
+        <section>
+          <h2>Sauvegarde moteur</h2>
+          <label>Nom de la map<input id="map-name" maxlength="64" placeholder="ex. Vallée des spores"></label>
+          <p>Index proposé : <code id="map-index">calcul en cours…</code></p>
+          <button id="save-map" class="save">Sauvegarder dans le moteur</button>
+        </section>
+      </aside>
+      <section class="runtime-hud">
+        <strong id="fox-state">BlueFox attend la génération.</strong>
+        <span id="inventory">Inventaire : vide</span>
+        <button id="toggle-autonomy" aria-pressed="true">Autonomie active</button>
+        <button id="focus-fox">Centrer BlueFox</button>
+      </section>
+      <div id="toast" role="status"></div>
+      <div class="help">Clic gauche : déplacement/interaction · clic droit : caméra · molette : zoom · mode placement : glisser une micro-scène</div>
+    </main>
+    <script src="../map-assets.js"></script>
+    <script src="../Images/images-catalog.js"></script>
+    <script src="../engine/bluefox3d-core.js"></script>
+    <script src="../engine/object-library.js"></script>
+    <script src="../engine/biome-rules.js"></script>
+    <script src="../data/custom-micro-scenes.js"></script>
+    <script src="../engine/micro-scenes.js"></script>
+    <script src="../engine/object-spawner.js"></script>
+    <script src="../engine/map-generation-rules.js"></script>
+    <script type="module" src="./map-test.js"></script>
+  </body>
+</html>

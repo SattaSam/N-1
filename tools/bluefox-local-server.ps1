@@ -117,7 +117,94 @@ try {
             $status = "200 OK"
             $body = $null
             $contentType = "application/octet-stream"
-            if ($method -eq "POST" -and $decodedPath -eq "/api/custom-micro-scenes") {
+            if ($method -eq "GET" -and $decodedPath -eq "/api/custom-maps/next-index") {
+                $contentType = "application/json; charset=utf-8"
+                try {
+                    $customMapsPath = Join-Path $projectRoot "data\custom-maps.json"
+                    $customMaps = @()
+                    if (Test-Path -LiteralPath $customMapsPath -PathType Leaf) {
+                        $customMapsText = [System.IO.File]::ReadAllText($customMapsPath)
+                        if (-not [string]::IsNullOrWhiteSpace($customMapsText)) {
+                            $customMaps = @($customMapsText | ConvertFrom-Json)
+                        }
+                    }
+                    $knownNumbers = @($customMaps | ForEach-Object { [int]$_.number })
+                    Get-ChildItem -LiteralPath (Join-Path $projectRoot "Images") -File | ForEach-Object {
+                        if ($_.BaseName -match '^(\d+)[^\d_]') { $knownNumbers += [int]$matches[1] }
+                    }
+                    $nextNumber = if ($knownNumbers.Count) { ($knownNumbers | Measure-Object -Maximum).Maximum + 1 } else { 1 }
+                    $response = ConvertTo-Json @{ number = $nextNumber }
+                    $body = [System.Text.Encoding]::UTF8.GetBytes($response)
+                } catch {
+                    $status = "500 Internal Server Error"
+                    $response = ConvertTo-Json @{ error = $_.Exception.Message }
+                    $body = [System.Text.Encoding]::UTF8.GetBytes($response)
+                }
+            } elseif ($method -eq "POST" -and $decodedPath -eq "/api/custom-maps") {
+                $contentType = "application/json; charset=utf-8"
+                try {
+                    $draft = $requestBody | ConvertFrom-Json
+                    if ($null -eq $draft -or [string]::IsNullOrWhiteSpace([string]$draft.name)) {
+                        throw "Nom de map manquant."
+                    }
+                    if ([string]$draft.slug -notmatch '^[a-z0-9-]{1,42}$') {
+                        throw "Nom technique de map invalide."
+                    }
+                    $plateauCount = [int]$draft.plateauCount
+                    if ($plateauCount -lt 1 -or $plateauCount -gt 6) {
+                        throw "Le nombre de plateaux doit etre compris entre 1 et 6."
+                    }
+                    if (@($draft.terrainUrls).Count -lt $plateauCount) {
+                        throw "Une texture de terrain est requise pour chaque plateau."
+                    }
+                    $microScenes = @($draft.microScenes)
+                    if ($microScenes.Count -gt 200) { throw "Trop de micro-scenes pour une map." }
+                    foreach ($placement in $microScenes) {
+                        if ([string]$placement.id -notmatch '^MSC-[A-Z0-9-]+$') { throw "Code de micro-scene invalide." }
+                        if (@($placement.position).Count -ne 3 -or @($placement.rotation).Count -ne 3) { throw "Transformation de micro-scene incomplete." }
+                    }
+                    $customJsonPath = Join-Path $projectRoot "data\custom-maps.json"
+                    $customJsPath = Join-Path $projectRoot "data\custom-maps.js"
+                    $maps = @()
+                    if (Test-Path -LiteralPath $customJsonPath -PathType Leaf) {
+                        $existingText = [System.IO.File]::ReadAllText($customJsonPath)
+                        if (-not [string]::IsNullOrWhiteSpace($existingText)) { $maps = @($existingText | ConvertFrom-Json) }
+                    }
+                    $knownNumbers = @($maps | ForEach-Object { [int]$_.number })
+                    Get-ChildItem -LiteralPath (Join-Path $projectRoot "Images") -File | ForEach-Object {
+                        if ($_.BaseName -match '^(\d+)[^\d_]') { $knownNumbers += [int]$matches[1] }
+                    }
+                    $number = if ($knownNumbers.Count) { ($knownNumbers | Measure-Object -Maximum).Maximum + 1 } else { 1 }
+                    $padded = $number.ToString("00")
+                    $index = "$padded-$($draft.slug)"
+                    $map = [ordered]@{
+                        id = "custom-map-$index"
+                        number = $number
+                        index = $index
+                        name = [string]$draft.name
+                        plateauCount = $plateauCount
+                        profile = [string]$draft.profile
+                        terrainUrls = @($draft.terrainUrls)
+                        terrainUrl = @($draft.terrainUrls)[0]
+                        sceneUrl = $draft.sceneUrl
+                        seed = [int64]$draft.seed
+                        palette = $draft.palette
+                        customMicroScenes = $microScenes
+                        createdAt = [DateTime]::UtcNow.ToString("o")
+                    }
+                    $maps += [pscustomobject]$map
+                    $json = ConvertTo-Json -InputObject @($maps) -Depth 14
+                    $utf8 = [System.Text.UTF8Encoding]::new($false)
+                    [System.IO.File]::WriteAllText($customJsonPath, $json, $utf8)
+                    [System.IO.File]::WriteAllText($customJsPath, "window.BlueFoxCustomMaps = $json;`n", $utf8)
+                    $response = ConvertTo-Json @{ status = "saved"; id = $map["id"]; index = $index; number = $number }
+                    $body = [System.Text.Encoding]::UTF8.GetBytes($response)
+                } catch {
+                    $status = "400 Bad Request"
+                    $response = ConvertTo-Json @{ error = $_.Exception.Message }
+                    $body = [System.Text.Encoding]::UTF8.GetBytes($response)
+                }
+            } elseif ($method -eq "POST" -and $decodedPath -eq "/api/custom-micro-scenes") {
                 $contentType = "application/json; charset=utf-8"
                 try {
                     $template = $requestBody | ConvertFrom-Json
