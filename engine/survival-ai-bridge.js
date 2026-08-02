@@ -115,6 +115,18 @@
     return state.energy;
   };
 
+  const applyHazard = (hazard, pressure = {}) => {
+    const restCost = Math.max(0, Number(pressure.rest) || 0);
+    const foodCost = Math.max(0, Number(pressure.food) || 0);
+    const safetyCost = Math.max(0, Number(pressure.safety) || 0);
+    if (!restCost && !foodCost && !safetyCost) return state.energy;
+    state.rest = clamp(state.rest - restCost);
+    state.food = clamp(state.food - foodCost);
+    state.safety = clamp(state.safety - safetyCost);
+    publish(`hazard:${String(hazard || "environment")}`);
+    return state.energy;
+  };
+
   const updateSafety = () => {
     const target = BF.canAccessCampInventory?.() ? 100 : 62;
     const next = state.safety + (target - state.safety) * 0.08;
@@ -177,6 +189,7 @@
     snapshot,
     recordAction,
     completeRoutine,
+    applyHazard,
     updateSafety,
     applyEnvironmentalExposure,
     save: () => publish("manual-save")

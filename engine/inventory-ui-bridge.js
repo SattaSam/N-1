@@ -222,12 +222,14 @@
     if (campAccessible) autoDeposit();
     const personal = inventoryEntries("inventory");
     const stored = inventoryEntries("campStorage");
+    const droneState = BF.SpecialObjectRuntime?.snapshot?.() || { drones: {}, recipes: {} };
     const signature = JSON.stringify({
       campAccessible,
       campEstablished: Number(currentSite()?.stage) >= 1,
       autoDeposit: global.localStorage.getItem("bluefox_auto_deposit_v1") === "true",
       personal: personal.map(({ key, amount }) => [key, amount]),
-      stored: stored.map(({ key, amount }) => [key, amount])
+      stored: stored.map(({ key, amount }) => [key, amount]),
+      drones: droneState.drones
     });
     let sections = drawer?.querySelector(".inventory-sections");
     if (sections?.dataset.signature === signature) return true;
@@ -284,6 +286,34 @@
         ? "Le stockage partagé est hors de portée. Rapprochez BlueFox du camp, du refuge ou de la base."
         : "Le stockage Camp/Base sera disponible dès qu’un camp aura été établi dans cette zone. Le sac personnel reste consultable.";
       sections.appendChild(locked);
+    }
+    if (Number(currentSite()?.stage) >= 3) {
+      const workshop = document.createElement("details");
+      workshop.open = true;
+      const summary = document.createElement("summary");
+      summary.textContent = "Atelier de drones";
+      workshop.appendChild(summary);
+      Object.entries(droneState.recipes || {}).forEach(([type, recipe]) => {
+        const row = document.createElement("p");
+        row.className = "inventory-bag-controls";
+        const button = document.createElement("button");
+        const label = type === "scout_drone" ? "Drone éclaireur" : "Drone récolteur";
+        const crafted = Boolean(droneState.drones?.[type]?.crafted);
+        button.type = "button";
+        button.textContent = crafted ? `${label} assemblé` : `Assembler : ${label}`;
+        button.disabled = crafted || !BF.SpecialObjectRuntime?.canCraft?.(type);
+        button.addEventListener("click", () => {
+          BF.SpecialObjectRuntime?.craftDrone?.(type);
+          scheduleRender();
+        });
+        const cost = document.createElement("small");
+        cost.textContent = Object.entries(recipe)
+          .map(([key, amount]) => `${amount} ${catalogEntry(key).label.toLocaleLowerCase("fr")}`)
+          .join(" · ");
+        row.append(button, cost);
+        workshop.appendChild(row);
+      });
+      sections.appendChild(workshop);
     }
     sections.dataset.signature = signature;
     return true;

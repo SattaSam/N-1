@@ -882,6 +882,285 @@
         root.add(plank);
       }
       hitbox = makeHitbox(THREE, root, 1.15, 0.85, type);
+    } else if (type === "npc_translucent") {
+      const shell = new THREE.MeshPhysicalMaterial({ color: 0xaeefff, emissive: 0x267da8, emissiveIntensity: 0.42, transparent: true, opacity: 0.52, transmission: 0.28, roughness: 0.34, metalness: 0.02, side: THREE.DoubleSide, depthWrite: false });
+      const edge = material(THREE, { color: 0x75dcff, emissive: 0x208dbd, emissiveIntensity: 1.05, roughness: 0.46 });
+      const eyeMaterial = material(THREE, { color: 0x143856, emissive: 0x4fdcff, emissiveIntensity: 1.25, roughness: 0.18 });
+      const bodyProfile = [
+        [0.13, 0], [0.27, 0.16], [0.32, 0.48], [0.23, 0.74], [0.31, 1.02],
+        [0.52, 1.28], [0.58, 1.5], [0.42, 1.72], [0.25, 1.88], [0.14, 2.05]
+      ].map(([x, y]) => new THREE.Vector2(x, y));
+      const torso = new THREE.Mesh(new THREE.LatheGeometry(bodyProfile, 18), shell);
+      torso.name = "TranslucentTorso"; torso.position.y = 1.05; torso.scale.z = 0.72; root.add(torso);
+      const pelvis = new THREE.Mesh(new THREE.IcosahedronGeometry(0.43, 2), shell);
+      pelvis.scale.set(0.86, 0.58, 0.64); pelvis.position.y = 1.15; root.add(pelvis);
+      const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.19, 0.5, 10), shell);
+      neck.position.y = 3.18; root.add(neck);
+      const head = new THREE.Mesh(new THREE.IcosahedronGeometry(0.48, 3), shell);
+      head.name = "TranslucentHead"; head.scale.set(0.7, 1.12, 0.72); head.position.set(0.05, 3.72, 0); root.add(head);
+      [-1, 1].forEach((side) => {
+        const eye = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 8), eyeMaterial);
+        eye.position.set(0.3, 3.78, side * 0.2); eye.scale.set(0.72, 1.18, 0.6); root.add(eye);
+        const shoulder = new THREE.Mesh(new THREE.IcosahedronGeometry(0.23, 2), shell);
+        shoulder.scale.set(1.35, 0.62, 0.7); shoulder.position.set(0, 2.74, side * 0.55); root.add(shoulder);
+        const upperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.145, 0.8, 9), shell);
+        upperArm.position.set(0, 2.28, side * 0.68); upperArm.rotation.x = side * 0.11; root.add(upperArm);
+        const elbow = new THREE.Mesh(new THREE.IcosahedronGeometry(0.13, 1), edge);
+        elbow.position.set(0.04, 1.87, side * 0.75); root.add(elbow);
+        const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.11, 0.92, 9), shell);
+        forearm.position.set(0.08, 1.4, side * 0.79); forearm.rotation.x = side * 0.07; root.add(forearm);
+        const palm = new THREE.Mesh(new THREE.IcosahedronGeometry(0.12, 1), shell);
+        palm.scale.set(0.65, 1.45, 0.75); palm.position.set(0.12, 0.88, side * 0.82); root.add(palm);
+        for (let finger = -1; finger <= 1; finger += 1) {
+          const digit = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.027, 0.3 + Math.abs(finger) * 0.04, 6), edge);
+          digit.position.set(0.16 + finger * 0.035, 0.65, side * (0.82 + finger * 0.045)); digit.rotation.z = finger * 0.08; root.add(digit);
+        }
+        const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.2, 0.82, 10), shell);
+        thigh.position.set(0, 0.73, side * 0.25); root.add(thigh);
+        const knee = new THREE.Mesh(new THREE.IcosahedronGeometry(0.14, 1), edge);
+        knee.scale.set(0.85, 1.15, 0.75); knee.position.set(0.08, 0.3, side * 0.25); root.add(knee);
+        const shin = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.12, 0.78, 9), shell);
+        shin.position.set(0.08, -0.15, side * 0.25); root.add(shin);
+        const foot = new THREE.Mesh(new THREE.IcosahedronGeometry(0.18, 1), shell);
+        foot.scale.set(1.6, 0.42, 0.72); foot.position.set(0.23, -0.58, side * 0.25); root.add(foot);
+        const membraneGeometry = new THREE.BufferGeometry();
+        membraneGeometry.setAttribute("position", new THREE.Float32BufferAttribute([0,2.8,side*0.48, -0.2,2.2,side*0.62, 0.02,1.55,side*0.68, 0,2.8,side*0.48, 0.02,1.55,side*0.68, 0.22,2.35,side*0.56], 3));
+        membraneGeometry.computeVertexNormals(); root.add(new THREE.Mesh(membraneGeometry, shell));
+      });
+      const core = new THREE.Mesh(new THREE.OctahedronGeometry(0.19, 2), edge);
+      core.name = "NpcCore"; core.position.set(0.18, 2.35, 0); root.add(core);
+      for (let index = 0; index < 7; index += 1) { const filament = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.02, 0.5 + index * 0.08, 5), edge); filament.position.set(0.24, 1.55 + index * 0.2, Math.sin(index * 1.7) * 0.18); filament.rotation.z = 0.3 + index * 0.04; root.add(filament); }
+      root.scale.setScalar(0.72);
+      hitbox = makeHitbox(THREE, root, 0.67, 4.1, type);
+      colliders = [{ offset: new THREE.Vector3(), radius: 0.38 }];
+    } else if (type === "npc_rocky") {
+      const stoneSkin = material(THREE, { color: variant % 2 ? 0x786a58 : 0x5f5a52, roughness: 1, metalness: 0.01 });
+      const seams = material(THREE, { color: 0x292b2c, roughness: 0.84 });
+      const amber = material(THREE, { color: 0xffb34f, emissive: 0xa84d12, emissiveIntensity: 1.35, roughness: 0.28 });
+      const torso = new THREE.Mesh(new THREE.DodecahedronGeometry(0.78, 1), seams); torso.scale.set(0.92, 1.28, 0.7); torso.position.y = 2.05; root.add(torso);
+      [[0,2.7,0,0.55],[-0.15,2.25,0.45,0.46],[0.18,1.9,-0.42,0.43],[0,1.55,0.18,0.48]].forEach(([x,y,z,s],i)=>{ const plate=new THREE.Mesh(new THREE.DodecahedronGeometry(s,0),stoneSkin); plate.position.set(x,y,z); plate.scale.set(1.25,0.58+i*0.04,0.55); plate.rotation.set(i*0.11,i*0.47,i*0.07); root.add(plate); });
+      const head = new THREE.Mesh(new THREE.DodecahedronGeometry(0.48, 1), stoneSkin); head.scale.set(0.78,1.05,0.74); head.position.y=3.28; root.add(head);
+      [-1,1].forEach(side=>{ const eye=new THREE.Mesh(new THREE.SphereGeometry(0.07,9,6),amber); eye.position.set(0.36,3.34,side*0.19); root.add(eye); const limb=new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.18,1.15,7),seams); limb.position.set(0,1.95,side*0.72); root.add(limb); const leg=new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.22,1.35,7),seams); leg.position.set(0,0.65,side*0.3); root.add(leg); [0.45,1.15,1.75,2.35].forEach((y,i)=>{ const plate=new THREE.Mesh(new THREE.DodecahedronGeometry(0.24+i*0.025,0),stoneSkin); plate.position.set((i%2)*0.08,y,side*(0.31+i*0.12)); plate.rotation.set(i*0.17,i*0.31,side*i*0.08); root.add(plate); }); });
+      root.scale.setScalar(0.75);
+      hitbox = makeHitbox(THREE, root, 0.82, 4.07, type);
+      colliders = [{ offset: new THREE.Vector3(), radius: 0.5 }];
+    } else if (type === "energy_crystal") {
+      const base = new THREE.Mesh(new THREE.DodecahedronGeometry(0.82, 0), darkMetal);
+      base.name = "EnergyCrystalBase";
+      base.scale.set(1.35, 0.42, 1.15);
+      base.position.y = 0.22;
+      root.add(base);
+      const blueCrystal = material(THREE, { color: 0x62ddff, emissive: 0x087ad8, emissiveIntensity: 2.2, roughness: 0.2, metalness: 0.12, transparent: true, opacity: 0.92 });
+      for (let index = 0; index < 7; index += 1) {
+        const height = 1.25 + (index % 3) * 0.48;
+        const shard = new THREE.Mesh(new THREE.ConeGeometry(0.32 + (index % 2) * 0.09, height, 6), blueCrystal.clone());
+        const angle = index * 2.399 + variant * 0.27;
+        shard.name = "EnergyShard";
+        shard.position.set(Math.cos(angle) * (0.18 + index * 0.075), height * 0.5 + 0.28, Math.sin(angle) * (0.18 + index * 0.075));
+        shard.rotation.z = Math.cos(angle) * 0.13;
+        shard.rotation.x = Math.sin(angle) * 0.13;
+        shard.userData.baseY = shard.position.y;
+        root.add(shard);
+      }
+      const glow = new THREE.PointLight(0x49cfff, 3.4, 6.5);
+      glow.name = "EnergyGlow";
+      glow.position.y = 1.2;
+      root.add(glow);
+      hitbox = makeHitbox(THREE, root, 0.95, 2.45, type);
+      colliders = [{ offset: new THREE.Vector3(), radius: 0.75 }];
+    } else if (type === "abandoned_drone") {
+      const hull = new THREE.Mesh(new THREE.OctahedronGeometry(0.82, 0), darkMetal);
+      hull.name = "DroneHull";
+      hull.scale.set(1.45, 0.55, 1);
+      hull.position.set(0, 0.72, 0);
+      hull.rotation.set(0.18, variant * 0.18, -0.12);
+      root.add(hull);
+      [-1, 1].forEach((side, index) => {
+        const arm = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.12, 0.16), metal);
+        arm.position.set(side * 1.02, 0.72, 0);
+        arm.rotation.z = side * (0.08 + index * 0.09);
+        root.add(arm);
+        const rotor = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.07, 7, 18), darkMetal);
+        rotor.name = "BrokenRotor";
+        rotor.position.set(side * 1.58, 0.68 + index * 0.18, index ? -0.18 : 0.22);
+        rotor.rotation.x = Math.PI / 2 + side * 0.22;
+        root.add(rotor);
+      });
+      const optic = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 7), violet);
+      optic.name = "ResidualOptic";
+      optic.position.set(0.86, 0.78, 0);
+      root.add(optic);
+      hitbox = makeHitbox(THREE, root, 1.85, 1.55, type);
+      colliders = [{ offset: new THREE.Vector3(), radius: 1.35 }];
+    } else if (type === "nocturnal_animal") {
+      const skin = material(THREE, { color: 0x253653, roughness: 0.68 });
+      const glowSkin = material(THREE, { color: 0x79e8ff, emissive: 0x126eac, emissiveIntensity: 1.35, roughness: 0.42 });
+      const body = new THREE.Mesh(new THREE.SphereGeometry(0.72, 14, 9), skin);
+      body.name = "NocturnalBody";
+      body.scale.set(1.45, 0.72, 0.82);
+      body.position.y = 0.78;
+      root.add(body);
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.42, 12, 8), skin);
+      head.position.set(0.82, 0.98, 0);
+      root.add(head);
+      [-1, 1].forEach((side) => {
+        const ear = new THREE.Mesh(new THREE.ConeGeometry(0.25, 0.82, 5), skin);
+        ear.name = "SensorEar";
+        ear.position.set(0.68, 1.62, side * 0.3);
+        ear.rotation.z = -0.18;
+        root.add(ear);
+        const eye = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), glowSkin);
+        eye.name = "NightGlow";
+        eye.position.set(1.16, 1.08, side * 0.19);
+        root.add(eye);
+      });
+      for (let index = 0; index < 5; index += 1) {
+        const spot = new THREE.Mesh(new THREE.SphereGeometry(0.055, 7, 5), glowSkin);
+        spot.name = "NightGlow";
+        spot.position.set(0.42 - index * 0.3, 1.2 - (index % 2) * 0.16, index % 2 ? 0.5 : -0.5);
+        root.add(spot);
+      }
+      [-0.48, 0.45].forEach((x) => [-1, 1].forEach((side) => {
+        const leg = new THREE.Mesh(new THREE.CapsuleGeometry(0.07, 0.55, 4, 6), skin);
+        leg.position.set(x, 0.32, side * 0.46);
+        root.add(leg);
+      }));
+      hitbox = makeHitbox(THREE, root, 1.15, 2.1, type);
+    } else if (type === "electrostatic_storm") {
+      const cloudMaterial = new THREE.MeshBasicMaterial({ color: 0x284d9a, transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide });
+      const coreMaterial = new THREE.MeshBasicMaterial({ color: 0x63dfff, transparent: true, opacity: 0.32, depthWrite: false, blending: THREE.AdditiveBlending });
+      for (let level = 0; level < 9; level += 1) {
+        const radius = 2.9 - level * 0.23 + (level % 2) * 0.34;
+        const cloud = new THREE.Mesh(new THREE.TorusGeometry(Math.max(0.55, radius), 0.42 + (level % 3) * 0.12, 8, 28), cloudMaterial.clone());
+        cloud.name = "StormCloud";
+        cloud.position.y = 0.8 + level * 0.58;
+        cloud.rotation.x = Math.PI / 2 + (level % 2 ? 0.08 : -0.06);
+        cloud.rotation.z = level * 0.38;
+        cloud.userData.spinDirection = level % 2 ? -1 : 1;
+        root.add(cloud);
+      }
+      const core = new THREE.Mesh(new THREE.ConeGeometry(1.5, 5.8, 18, 1, true), coreMaterial);
+      core.name = "StormCore";
+      core.position.y = 2.9;
+      root.add(core);
+      const lightningColors = [0xffffff, 0xffcf68, 0xff8a3d];
+      for (let boltIndex = 0; boltIndex < 5; boltIndex += 1) {
+        const points = [];
+        for (let step = 0; step < 7; step += 1) {
+          const y = 5.4 - step * 0.78;
+          const angle = boltIndex * 1.31 + step * 0.52;
+          const radius = 1.25 + (step % 2) * 0.65;
+          points.push(new THREE.Vector3(Math.cos(angle) * radius, y, Math.sin(angle) * radius));
+        }
+        const bolt = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), new THREE.LineBasicMaterial({ color: lightningColors[boltIndex % lightningColors.length], transparent: true, opacity: 0.92 }));
+        bolt.name = "StormLightning";
+        bolt.userData.boltIndex = boltIndex;
+        root.add(bolt);
+      }
+      const stormLight = new THREE.PointLight(0x4ecfff, 5.5, 12);
+      stormLight.name = "StormLight";
+      stormLight.position.y = 3;
+      root.add(stormLight);
+      hitbox = makeHitbox(THREE, root, 3.25, 6.3, type);
+    } else if (type === "mobile_islet") {
+      const islandRoot = new THREE.Group();
+      islandRoot.name = "FloatingMass";
+      islandRoot.position.y = 2.8;
+      root.add(islandRoot);
+      const top = new THREE.Mesh(new THREE.CylinderGeometry(3.1, 2.65, 0.62, 9), green);
+      top.position.y = 0.25;
+      islandRoot.add(top);
+      for (let index = 0; index < 9; index += 1) {
+        const angle = index * 2.399;
+        const rock = new THREE.Mesh(new THREE.ConeGeometry(0.72 + (index % 3) * 0.22, 2.4 + (index % 4) * 0.55, 6), stone);
+        rock.position.set(Math.cos(angle) * (0.5 + index * 0.19), -1.05 - (index % 3) * 0.28, Math.sin(angle) * (0.5 + index * 0.19));
+        rock.rotation.z = Math.cos(angle) * 0.18;
+        islandRoot.add(rock);
+      }
+      for (let index = 0; index < 6; index += 1) {
+        const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.24 + (index % 2) * 0.08, 0), violet);
+        crystal.name = "LiftCrystal";
+        const angle = index * Math.PI / 3;
+        crystal.position.set(Math.cos(angle) * 2.1, -0.38, Math.sin(angle) * 2.1);
+        islandRoot.add(crystal);
+      }
+      hitbox = makeHitbox(THREE, root, 3.25, 6.1, type);
+    } else if (type === "carnivorous_plant") {
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.42, 2.2, 9), green);
+      stem.position.y = 1.1;
+      root.add(stem);
+      const jawPivot = new THREE.Group();
+      jawPivot.name = "CarnivorousJaw";
+      jawPivot.position.y = 2.15;
+      root.add(jawPivot);
+      [-1, 1].forEach((side) => {
+        const jaw = new THREE.Mesh(new THREE.SphereGeometry(0.9, 14, 8, 0, Math.PI, 0, Math.PI), side > 0 ? luminousGreen : violet);
+        jaw.scale.set(1.2, 0.55, 0.9);
+        jaw.position.z = side * 0.28;
+        jaw.rotation.x = side * 0.78;
+        jawPivot.add(jaw);
+        for (let tooth = 0; tooth < 7; tooth += 1) {
+          const fang = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.32, 5), material(THREE, { color: 0xe9f5d0, roughness: 0.7 }));
+          fang.position.set((tooth - 3) * 0.22, -0.08, side * 0.48);
+          fang.rotation.x = side > 0 ? Math.PI / 2 : -Math.PI / 2;
+          jawPivot.add(fang);
+        }
+      });
+      for (let index = 0; index < 7; index += 1) {
+        const angle = index * 2.399;
+        const tendril = new THREE.Mesh(new THREE.CapsuleGeometry(0.04, 1.2 + (index % 3) * 0.35, 4, 6), green);
+        tendril.name = "PlantTendril";
+        tendril.position.set(Math.cos(angle) * 0.68, 0.5, Math.sin(angle) * 0.68);
+        tendril.rotation.z = Math.cos(angle) * 0.72;
+        tendril.rotation.x = Math.sin(angle) * 0.72;
+        root.add(tendril);
+      }
+      hitbox = makeHitbox(THREE, root, 1.35, 3.25, type);
+      colliders = [{ offset: new THREE.Vector3(), radius: 0.72 }];
+    } else if (type === "scout_drone" || type === "harvest_drone") {
+      const isScout = type === "scout_drone";
+      const droneRoot = new THREE.Group();
+      droneRoot.name = "FunctionalDrone";
+      droneRoot.position.y = 1.45;
+      root.add(droneRoot);
+      const hull = new THREE.Mesh(isScout ? new THREE.OctahedronGeometry(0.68, 1) : new THREE.BoxGeometry(1.2, 0.55, 0.9), darkMetal);
+      hull.scale.set(1.25, 0.65, 1);
+      droneRoot.add(hull);
+      const accent = material(THREE, { color: isScout ? 0x6de9ff : 0xffb45e, emissive: isScout ? 0x0879ad : 0xb04f12, emissiveIntensity: 1.5, roughness: 0.3 });
+      [-1, 1].forEach((side) => {
+        const arm = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.09, 0.12), metal);
+        arm.position.x = side * 0.92;
+        droneRoot.add(arm);
+        const rotor = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.055, 7, 20), accent);
+        rotor.name = "DroneRotor";
+        rotor.position.x = side * 1.46;
+        rotor.rotation.x = Math.PI / 2;
+        droneRoot.add(rotor);
+      });
+      if (isScout) {
+        const lens = new THREE.Mesh(new THREE.SphereGeometry(0.19, 12, 8), accent);
+        lens.name = "DroneSensor";
+        lens.position.set(0.72, -0.02, 0);
+        droneRoot.add(lens);
+        const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.04, 0.72, 6), metal);
+        antenna.position.y = 0.62;
+        droneRoot.add(antenna);
+      } else {
+        [-1, 1].forEach((side) => {
+          const claw = new THREE.Mesh(new THREE.CapsuleGeometry(0.045, 0.72, 4, 6), metal);
+          claw.name = "HarvestArm";
+          claw.position.set(0.18, -0.65, side * 0.32);
+          claw.rotation.x = side * 0.18;
+          droneRoot.add(claw);
+        });
+        const basket = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.38, 0.62), accent);
+        basket.position.set(-0.48, -0.48, 0);
+        droneRoot.add(basket);
+      }
+      const droneLight = new THREE.PointLight(isScout ? 0x65e5ff : 0xffa346, 2, 4.5);
+      droneLight.name = "DroneLight";
+      droneRoot.add(droneLight);
+      hitbox = makeHitbox(THREE, root, 1.7, 2.5, type);
     }
 
     root.rotation.y = variant * 0.31;
@@ -892,6 +1171,8 @@
     productionObject(THREE, palette, variant, type);
 
   const PRODUCTION_SPECS = Object.freeze([
+    { id: "DOC-NPC-TRAN-S-001", type: "npc_translucent", label: "Humanoïde translucide", category: "npc", subtype: "translucent_alien_humanoid", size: "S", rarity: "rare", biomes: ["crystalline", "aquatic", "alien"], scenes: ["Rencontre translucide", "Observatoire opalescent"], states: ["calme", "curieux", "en dialogue", "en déplacement"], actions: ["observe", "inspect", "contact", "talk"], defaultAction: "contact", inspectable: true, obstacle: true, family: "sentient", research: ["xenology", "language", "culture", "energy"], tags: ["npc", "humanoid", "sentient", "translucent", "peaceful", "detailed"], spawnCost: 18, maxPerZone: 2, minDistance: 8, maxSlope: 24, radius: 0.48, volume: "medium", curiosity: 0.9, danger: 0, missions: ["premier contact", "échanges prudents", "ambassadeur"], events: ["NPC_SEEN", "NPC_CONTACTED", "NPC_DIALOGUE"], note: "Silhouette organique détaillée, échelle réduite de 28 %.", decision: "validated" },
+    { id: "DOC-NPC-ROCK-S-001", type: "npc_rocky", label: "Humanoïde rocheux", category: "npc", subtype: "rock_plated_alien_humanoid", size: "S", rarity: "rare", biomes: ["mountain", "desert", "ruins", "alien"], scenes: ["Rencontre rocheuse", "Conseil minéral"], states: ["calme", "curieux", "en dialogue", "en déplacement"], actions: ["observe", "inspect", "contact", "talk"], defaultAction: "contact", inspectable: true, obstacle: true, family: "sentient", research: ["xenology", "language", "culture", "geology"], tags: ["npc", "humanoid", "sentient", "mineral", "peaceful", "rough"], spawnCost: 20, maxPerZone: 2, minDistance: 8, maxSlope: 34, radius: 0.61, volume: "medium", curiosity: 0.75, danger: 0, missions: ["premier contact", "échanges prudents", "ambassadeur"], events: ["NPC_SEEN", "NPC_CONTACTED", "NPC_DIALOGUE"], note: "Plaques minérales irrégulières, échelle réduite de 25 %.", decision: "validated" },
     { id: "NAT-ROCK-M-002", type: "strong_rock", label: "Roche solide", category: "natural_decor", subtype: "solid_rock", size: "M", rarity: "common", biomes: ["all"], scenes: ["Éboulis", "Balisage naturel", "Abri minéral"], states: ["présente", "repérée", "observée", "cartographiée"], actions: ["observe", "inspect"], inspectable: true, obstacle: true, family: "geology", tags: ["decor", "mineral", "obstacle", "border-separator"], spawnCost: 2, maxPerZone: 12, minDistance: 1.3, maxSlope: 50, radius: 1.15, volume: "medium", note: "Formes saillantes et découpées, sans arrondis.", decision: "validated" },
     { id: "NAT-ROCK-XL-001", type: "large_rock", label: "Roche obstacle", category: "natural_decor", subtype: "alien_large_rock", size: "XL", rarity: "common", biomes: ["all"], scenes: ["Éboulis", "Séparateur de bordure"], states: ["présente", "repérée", "observée", "cartographiée"], actions: ["observe", "inspect"], inspectable: true, obstacle: true, family: "geology", tags: ["decor", "mineral", "obstacle", "border-separator"], spawnCost: 2, maxPerZone: 18, minDistance: 10, maxSlope: 12, radius: 2.2, volume: "large", note: "Grand séparateur rocheux anguleux.", decision: "validated" },
     { id: "DOC-NAT-TREE-L-002", type: "crystalline_tree", label: "Arbre cristallin", category: "natural_decor", subtype: "crystalline_alien_tree", size: "L", rarity: "rare", biomes: ["forest", "crystalline", "alien"], scenes: ["Forêt cristalline", "Bosquet résonant"], states: ["présent", "lumineux", "résonant", "inspecté", "analysé"], actions: ["observe", "inspect", "analyze"], defaultAction: "inspect", inspectable: true, obstacle: true, discoverable: true, family: "flora", research: ["botany", "crystallography", "energy"], tags: ["plant", "crystal", "glowing", "landmark"], spawnCost: 7, maxPerZone: 3, minDistance: 5, maxSlope: 24, radius: 1.5, volume: "large", curiosity: 0.9, danger: 0.05, decision: "validated" },
@@ -918,7 +1199,15 @@
     { id: "CUO_FAUNA_GRAZER", type: "brouteur", label: "Brouteur paisible", category: "fauna", subtype: "peaceful_grazer", size: "M", rarity: "common", biomes: ["forest", "jungle", "desert", "plain", "alien"], scenes: ["Troupeau de plaine", "Point de pâture"], states: ["normal", "effrayé"], actions: ["observe", "inspect", "track"], defaultAction: "observe", inspectable: true, traversable: true, family: "fauna", research: ["zoology", "ecology", "behavior"], tags: ["fauna", "living", "mobile", "peaceful", "grazer"], spawnCost: 12, maxPerZone: 4, minDistance: 4, maxSlope: 30, radius: 1.05, volume: "medium", curiosity: 0.6, danger: 0, missions: ["exploration", "inventaire biologique"], events: ["OBJECT_SEEN", "OBJECT_INSPECTED", "SPECIES_DISCOVERED"], decision: "validated" },
     { id: "CUO_FAUNA_HOPPER", type: "sauteur", label: "Sauteur placide", category: "fauna", subtype: "placid_hopper", size: "M", rarity: "common", biomes: ["forest", "jungle", "desert", "plain", "alien"], scenes: ["Couple de sauteurs", "Terrain ouvert"], states: ["normal", "effrayé"], actions: ["observe", "inspect", "track"], defaultAction: "observe", inspectable: true, traversable: true, family: "fauna", research: ["zoology", "ecology", "behavior"], tags: ["fauna", "living", "mobile", "peaceful", "hopper"], spawnCost: 12, maxPerZone: 4, minDistance: 4, maxSlope: 30, radius: 1.05, volume: "medium", curiosity: 0.6, danger: 0, missions: ["exploration", "inventaire biologique"], events: ["OBJECT_SEEN", "OBJECT_INSPECTED", "SPECIES_DISCOVERED"], decision: "validated" },
     { id: "DOC-FAU-PERC-M-001", type: "patte_creature", label: "Créature perchée", category: "fauna", subtype: "medium_alien_creature", size: "M", rarity: "common", biomes: ["forest", "jungle", "coast", "island", "alien"], scenes: ["Amas végétal habité", "Perchoir rocheux"], states: ["curieuse", "effrayée", "apaisée"], actions: ["observe", "inspect", "track", "contact"], defaultAction: "observe", inspectable: true, traversable: true, family: "fauna", research: ["zoology", "behavior", "adaptation"], tags: ["fauna", "living", "mobile", "peaceful", "near-plants", "long-legged"], spawnCost: 10, maxPerZone: 8, minDistance: 3, maxSlope: 35, radius: 1.05, volume: "medium", curiosity: 0.4, danger: 0, missions: ["exploration", "inventaire biologique", "contact local"], events: ["OBJECT_SEEN", "OBJECT_INSPECTED", "SPECIES_DISCOVERED"], decision: "validated" },
-    { id: "MAT-WOOD-M-001", type: "wood_plane", label: "Planche de bois", category: "constructions", subtype: "wood_plank", size: "M", rarity: "common", biomes: ["all"], scenes: ["Stock de matériaux", "Chantier de refuge", "Atelier de base"], states: ["brute", "taillée", "assemblée", "posée", "endommagée"], actions: ["inspect", "carry", "build", "repair", "dismantle"], defaultAction: "inspect", collectable: false, inspectable: true, destructible: true, traversable: true, family: "materials", research: ["construction", "engineering", "materials"], tags: ["material", "wood", "plank", "construction"], spawnCost: 2, maxPerZone: 20, minDistance: 0.4, maxSlope: 35, radius: 0.65, volume: "small", curiosity: 0.25, missions: ["fabriquer un refuge", "construire une base", "réparer une structure"], events: ["OBJECT_CRAFTED", "OBJECT_INSPECTED", "OBJECT_USED", "OBJECT_BUILT"], note: "Une planche posée dans une construction ne peut pas être collectée ni retirée par BlueFox.", decision: "validated" }
+    { id: "MAT-WOOD-M-001", type: "wood_plane", label: "Planche de bois", category: "constructions", subtype: "wood_plank", size: "M", rarity: "common", biomes: ["all"], scenes: ["Stock de matériaux", "Chantier de refuge", "Atelier de base"], states: ["brute", "taillée", "assemblée", "posée", "endommagée"], actions: ["inspect", "carry", "build", "repair", "dismantle"], defaultAction: "inspect", collectable: false, inspectable: true, destructible: true, traversable: true, family: "materials", research: ["construction", "engineering", "materials"], tags: ["material", "wood", "plank", "construction"], spawnCost: 2, maxPerZone: 20, minDistance: 0.4, maxSlope: 35, radius: 0.65, volume: "small", curiosity: 0.25, missions: ["fabriquer un refuge", "construire une base", "réparer une structure"], events: ["OBJECT_CRAFTED", "OBJECT_INSPECTED", "OBJECT_USED", "OBJECT_BUILT"], note: "Une planche posée dans une construction ne peut pas être collectée ni retirée par BlueFox.", decision: "validated" },
+    { id: "RES-ENER-M-001", type: "energy_crystal", label: "Cristal d’énergie bleu", category: "resources", subtype: "blue_energy_crystal", size: "M", rarity: "rare", biomes: ["desert", "crystalline", "magnetic", "electrical", "alien"], scenes: ["Affleurement énergétique", "Cercle de résonance"], states: ["dormant", "rayonnant", "inspecté", "analysé", "extrait", "régénération"], actions: ["observe", "inspect", "analyze", "extract"], defaultAction: "inspect", acquisitionAction: "extract", requiresInspectionBeforeCollect: true, afterInspectionAction: "extract", collectable: true, inspectable: true, obstacle: true, respawn: 900, inventoryKey: "energy_crystal", exploitability: "extractable", family: "mineral", resourceFamily: "energy_crystal", research: ["energy", "crystallography", "physics"], tags: ["resource", "mineral", "energy", "crystal", "glowing", "rare"], spawnCost: 7, maxPerZone: 2, minDistance: 8, maxSlope: 28, radius: 0.95, volume: "medium", curiosity: 1, harvest: 0.82, danger: 0.12, missions: ["énergie douce", "recherche énergétique"], decision: "validated" },
+    { id: "TEC-DRON-L-001", type: "abandoned_drone", label: "Drone abandonné", category: "technology", subtype: "abandoned_exploration_drone", size: "L", rarity: "rare", biomes: ["ruins", "desert", "city", "magnetic", "electrical", "alien"], scenes: ["Épave technologique", "Relais oublié"], states: ["échoué", "inactif", "signal résiduel", "inspecté", "analysé", "récupéré"], actions: ["observe", "inspect", "analyze", "collect"], defaultAction: "inspect", acquisitionAction: "collect", requiresInspectionBeforeCollect: true, afterInspectionAction: "collect", collectable: true, inspectable: true, obstacle: true, respawn: 43200, inventoryKey: "drone_components", exploitability: "salvageable", family: "technology", resourceFamily: "technology", research: ["robotics", "engineering", "ancient-technology"], tags: ["technology", "drone", "wreck", "component", "landmark", "rare"], spawnCost: 9, maxPerZone: 1, minDistance: 12, maxSlope: 18, radius: 1.85, volume: "large", curiosity: 1, harvest: 0.72, danger: 0.08, missions: ["technologie perdue", "robotique"], decision: "validated" },
+    { id: "FAU-NOCT-M-001", type: "nocturnal_animal", label: "Animal nocturne", category: "fauna", subtype: "bioluminescent_nocturnal_animal", size: "M", rarity: "uncommon", biomes: ["forest", "jungle", "swamp", "desert", "alien"], scenes: ["Clairière nocturne", "Terrier luminescent"], states: ["caché", "en éveil", "curieux", "effrayé", "observé", "analysé"], actions: ["observe", "inspect", "track", "contact"], defaultAction: "observe", inspectable: true, traversable: true, discoverable: true, family: "fauna", research: ["zoology", "behavior", "bioluminescence"], tags: ["fauna", "living", "mobile", "nocturnal", "bioluminescent"], spawnCost: 8, maxPerZone: 3, minDistance: 5, maxSlope: 28, radius: 1.15, volume: "medium", curiosity: 0.78, danger: 0.06, missions: ["inventaire nocturne", "étude comportementale"], decision: "validated" },
+    { id: "PHE-STOR-XL-001", type: "electrostatic_storm", label: "Tempête électrostatique", category: "phenomena", subtype: "blue_electrostatic_cyclone", size: "XL", rarity: "rare", biomes: ["magnetic", "electrical", "crystalline", "alien"], scenes: ["Cyclone chargé", "Couloir d’orage"], states: ["naissante", "active", "instable", "observée", "analysée", "dissipée"], actions: ["observe", "analyze", "avoid"], defaultAction: "observe", inspectable: false, traversable: true, discoverable: true, family: "phenomenon", research: ["meteorology", "electricity", "energy"], tags: ["weather", "storm", "cyclone", "electric", "phenomenon", "danger", "glowing"], spawnCost: 12, maxPerZone: 1, minDistance: 18, maxSlope: 10, radius: 3.25, volume: "large", curiosity: 0.95, danger: 0.88, missions: ["analyse atmosphérique", "phénomène énergétique"], decision: "validated" },
+    { id: "PHE-ISLE-XL-001", type: "mobile_islet", label: "Îlot mobile", category: "phenomena", subtype: "levitating_mobile_islet", size: "XL", rarity: "rare", biomes: ["floating_islands", "mountain", "magnetic", "alien"], scenes: ["Archipel errant", "Rocher de sustentation"], states: ["en lévitation", "en dérive", "stabilisé", "observé", "analysé", "cartographié"], actions: ["observe", "inspect", "analyze", "track"], defaultAction: "observe", inspectable: true, obstacle: true, discoverable: true, family: "phenomenon", research: ["geology", "magnetism", "levitation"], tags: ["terrain", "floating", "mobile", "landmark", "phenomenon", "rare"], spawnCost: 14, maxPerZone: 1, minDistance: 18, maxSlope: 8, radius: 3.25, volume: "large", curiosity: 1, danger: 0.22, missions: ["cartographie aérienne", "anomalie géologique"], decision: "validated" },
+    { id: "BIO-CARN-L-001", type: "carnivorous_plant", label: "Plante carnivore", category: "flora", subtype: "alien_carnivorous_plant", size: "L", rarity: "uncommon", biomes: ["forest", "jungle", "swamp", "fungal", "alien"], scenes: ["Nid végétal", "Sous-bois prédateur"], states: ["fermée", "en veille", "ouverte", "alerte", "inspectée", "analysée", "récoltée"], actions: ["observe", "inspect", "analyze", "collect", "avoid"], defaultAction: "inspect", acquisitionAction: "collect", requiresInspectionBeforeCollect: true, afterInspectionAction: "collect", collectable: true, inspectable: true, obstacle: true, respawn: 420, inventoryKey: "carnivorous_sample", exploitability: "hazardous-harvest", family: "flora", resourceFamily: "biology", research: ["botany", "toxicology", "adaptation"], tags: ["plant", "carnivorous", "hazard", "living", "resource"], spawnCost: 6, maxPerZone: 2, minDistance: 7, maxSlope: 24, radius: 1.35, volume: "large", curiosity: 0.9, harvest: 0.42, danger: 0.62, missions: ["flore dangereuse", "échantillon biologique"], decision: "validated" },
+    { id: "EQP-DRON-M-001", type: "scout_drone", label: "Drone éclaireur", category: "equipment", subtype: "craftable_scout_drone", size: "M", rarity: "rare", biomes: ["base", "camp", "all"], scenes: ["Atelier robotique", "Plateforme de reconnaissance"], states: ["planifié", "assemblé", "inactif", "actif", "endommagé", "réparé"], actions: ["inspect", "activate", "repair", "dismantle"], defaultAction: "inspect", inspectable: true, traversable: true, family: "equipment", research: ["robotics", "navigation", "mapping"], tags: ["equipment", "drone", "scout", "craftable", "mobile"], spawnCost: 9, maxPerZone: 1, minDistance: 5, maxSlope: 12, radius: 1.7, volume: "medium", curiosity: 0.55, danger: 0, missions: ["cartographie automatisée", "exploration avancée"], note: "Assemblage disponible à la base finale ; repère périodiquement un objet inconnu de la carte active.", decision: "validated" },
+    { id: "EQP-DRON-M-002", type: "harvest_drone", label: "Drone récolteur", category: "equipment", subtype: "craftable_harvest_drone", size: "M", rarity: "rare", biomes: ["base", "camp", "all"], scenes: ["Atelier robotique", "Plateforme logistique"], states: ["planifié", "assemblé", "inactif", "actif", "chargé", "endommagé", "réparé"], actions: ["inspect", "activate", "repair", "dismantle"], defaultAction: "inspect", inspectable: true, traversable: true, family: "equipment", research: ["robotics", "logistics", "harvesting"], tags: ["equipment", "drone", "harvest", "craftable", "mobile"], spawnCost: 9, maxPerZone: 1, minDistance: 5, maxSlope: 12, radius: 1.7, volume: "medium", curiosity: 0.48, danger: 0, missions: ["collecte automatisée", "logistique avancée"], note: "Assemblage disponible à la base finale ; récolte périodiquement une ressource commune et sûre de la carte active.", decision: "validated" }
   ]);
 
   const PRODUCTION_OBJECT_LIBRARY = Object.freeze(Object.fromEntries(PRODUCTION_SPECS.map((spec) => [
@@ -950,11 +1239,13 @@
       interaction: {
         actions: spec.actions,
         defaultAction: spec.defaultAction || spec.actions[0],
-        acquisitionAction: spec.collectable ? (spec.actions.includes("salvage") ? "salvage" : "collect") : null,
+        acquisitionAction: spec.collectable ? (spec.acquisitionAction || (spec.actions.includes("salvage") ? "salvage" : "collect")) : null,
+        requiresInspectionBeforeCollect: Boolean(spec.requiresInspectionBeforeCollect),
+        afterInspectionAction: spec.afterInspectionAction || null,
         removeFromWorld: Boolean(spec.collectable) && !spec.persistentResource,
         respawnSeconds: spec.collectable ? spec.respawn : null,
         animation: spec.collectable ? {
-          [spec.actions.includes("salvage") ? "salvage" : "collect"]:
+          [spec.acquisitionAction || (spec.actions.includes("salvage") ? "salvage" : "collect")]:
             spec.size === "S"
               ? ["Harvers_Samall"]
               : ["giant_mushroom", "bush", "tree_fallen"].includes(spec.type)

@@ -70,6 +70,83 @@
         Object.freeze({ type: "patte_creature", offset: [-2.5, 0, -1.8], variant: 1 })
       ])
     }),
+    translucent_encounter: Object.freeze({
+      id: "MSC-NPC-TRANSLUCENT-001", biomes: Object.freeze(["crystalline", "aquatic", "alien"]), rarity: "story", radius: 8,
+      objects: Object.freeze([
+        Object.freeze({ type: "npc_translucent", offset: [0, 0, 0], variant: 0 }),
+        Object.freeze({ type: "crystal", offset: [-1.8, 0, 1.4], variant: 1 }),
+        Object.freeze({ type: "spore", offset: [1.7, 0, -1.2], variant: 0 })
+      ])
+    }),
+    rocky_encounter: Object.freeze({
+      id: "MSC-NPC-ROCKY-001", biomes: Object.freeze(["mountain", "desert", "ruins", "alien"]), rarity: "story", radius: 8,
+      objects: Object.freeze([
+        Object.freeze({ type: "npc_rocky", offset: [0, 0, 0], variant: 0 }),
+        Object.freeze({ type: "rock", offset: [-2.1, 0, 1.4], variant: 1 }),
+        Object.freeze({ type: "stele", offset: [2, 0, -1.3], variant: 0 })
+      ])
+    }),
+    charged_crystals: Object.freeze({
+      id: "MSC-CHARGED-CRYSTALS-001", biomes: Object.freeze(["crystalline", "desert", "magnetic", "electrical", "alien"]), rarity: "rare", radius: 7,
+      objects: Object.freeze([
+        Object.freeze({ type: "energy_crystal", offset: [0, 0, 0], variant: 0 }),
+        Object.freeze({ type: "crystal", offset: [-1.8, 0, 1.2], variant: 1 }),
+        Object.freeze({ type: "needle", offset: [1.6, 0, 1.4], variant: 2 }),
+        Object.freeze({ type: "rock", offset: [2.2, 0, -1.5], variant: 0 })
+      ])
+    }),
+    abandoned_drone_site: Object.freeze({
+      id: "MSC-ABANDONED-DRONE-001", biomes: Object.freeze(["ruins", "desert", "city", "magnetic", "electrical", "alien"]), rarity: "rare", radius: 8,
+      objects: Object.freeze([
+        Object.freeze({ type: "abandoned_drone", offset: [0, 0, 0], variant: 0 }),
+        Object.freeze({ type: "debris", offset: [-2, 0, 1.3], variant: 2 }),
+        Object.freeze({ type: "debris", offset: [2.1, 0, -1], variant: 1 }),
+        Object.freeze({ type: "magnetic_ore", offset: [-2.4, 0, -1.8], variant: 0 })
+      ])
+    }),
+    nocturnal_den: Object.freeze({
+      id: "MSC-NOCTURNAL-DEN-001", biomes: Object.freeze(["forest", "jungle", "swamp", "desert", "alien"]), rarity: "uncommon", radius: 8,
+      objects: Object.freeze([
+        Object.freeze({ type: "nocturnal_animal", offset: [0, 0, 0], variant: 0 }),
+        Object.freeze({ type: "spore", offset: [-1.7, 0, 1.2], variant: 1 }),
+        Object.freeze({ type: "frond", offset: [1.8, 0, 1.1], variant: 2 }),
+        Object.freeze({ type: "rock", offset: [0.7, 0, -2.1], variant: 1 })
+      ])
+    }),
+    local_storm: Object.freeze({
+      id: "MSC-LOCAL-STORM-001", biomes: Object.freeze(["magnetic", "electrical", "crystalline", "alien"]), rarity: "rare", radius: 11,
+      objects: Object.freeze([
+        Object.freeze({ type: "electrostatic_storm", offset: [0, 0, 0], variant: 0 }),
+        Object.freeze({ type: "magnetic_ore", offset: [-4.2, 0, 2.6], variant: 1 }),
+        Object.freeze({ type: "rock", offset: [4.4, 0, -2.2], variant: 2 })
+      ])
+    }),
+    suspended_island: Object.freeze({
+      id: "MSC-SUSPENDED-ISLAND-001", biomes: Object.freeze(["floating_islands", "mountain", "magnetic", "alien"]), rarity: "rare", radius: 11,
+      objects: Object.freeze([
+        Object.freeze({ type: "mobile_islet", offset: [0, 0, 0], variant: 0 }),
+        Object.freeze({ type: "crystal", offset: [-4.1, 0, 2.4], variant: 2 }),
+        Object.freeze({ type: "frond", offset: [4, 0, -2.5], variant: 1 })
+      ])
+    }),
+    predator_flora: Object.freeze({
+      id: "MSC-PREDATOR-FLORA-001", biomes: Object.freeze(["forest", "jungle", "swamp", "fungal", "alien"]), rarity: "uncommon", radius: 8,
+      objects: Object.freeze([
+        Object.freeze({ type: "carnivorous_plant", offset: [0, 0, 0], variant: 0 }),
+        Object.freeze({ type: "carnivorous_plant", offset: [2.8, 0, 1.5], variant: 1 }),
+        Object.freeze({ type: "fiber", offset: [-2, 0, 1.2], variant: 0 }),
+        Object.freeze({ type: "spore", offset: [-1.2, 0, -2], variant: 2 })
+      ])
+    }),
+    drone_workshop: Object.freeze({
+      id: "MSC-DRONE-WORKSHOP-001", biomes: Object.freeze(["all"]), rarity: "constructed", radius: 8,
+      objects: Object.freeze([
+        Object.freeze({ type: "scout_drone", offset: [-1.8, 0, 0], variant: 0 }),
+        Object.freeze({ type: "harvest_drone", offset: [1.8, 0, 0], variant: 0 }),
+        Object.freeze({ type: "wood_plane", offset: [0, 0, -2.2], variant: 1 }),
+        Object.freeze({ type: "wall", offset: [0, 0, 2.8], variant: 0 })
+      ])
+    }),
     shelter_camp: Object.freeze({
       id: "MSC-SHELTER-CAMP-001", biomes: Object.freeze(["all"]), rarity: "constructed", radius: 9,
       objects: Object.freeze([

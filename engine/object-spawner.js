@@ -73,6 +73,10 @@
       if (root) {
         root.userData.instanceId = instanceId;
         root.userData.variant = options.variant || 0;
+        root.userData.catalogId = definition.id;
+        root.userData.libraryType = type;
+        root.userData.functional = definition;
+        root.userData.specialRuntimeRoot = true;
       }
       if (instance.hitbox) {
         instance.hitbox.userData.instanceId = instanceId;
@@ -294,6 +298,14 @@
         next() * (mapBudget.landmarksMax - mapBudget.landmarksMin + 1)
       );
       const landmarkTemplate = BF.MicroScenes.getMapLandmark(population.profileId);
+      const generatedSpecialScenes = definition.generated
+        ? (definition.generator?.microSceneIds || [])
+          .map((id) => BF.MicroScenes.get(id))
+          .filter((scene) => scene && [
+            "charged_crystals", "abandoned_drone_site", "nocturnal_den",
+            "local_storm", "suspended_island", "predator_flora"
+          ].includes(Object.keys(BF.MicroScenes.data).find((key) => BF.MicroScenes.data[key] === scene)))
+        : [];
       const landmarkObjectBudget = landmarks.length
         ? landmarks.length
         : landmarkCount * landmarkTemplate.length;
@@ -439,11 +451,19 @@
           const rotation = next() * Math.PI * 2;
           const cosine = Math.cos(rotation);
           const sine = Math.sin(rotation);
-          landmarkTemplate.forEach(([type, offsetX, offsetZ, variant]) => {
+          const specialChance = ["magnetic", "electrical", "floating_islands", "curiosity"]
+            .includes(definition.generator?.biomeId) ? 0.72 : 0.34;
+          const specialScene = landmarkIndex === 0 && generatedSpecialScenes.length && next() < specialChance
+            ? generatedSpecialScenes[Math.floor(next() * generatedSpecialScenes.length)]
+            : null;
+          const activeLandmark = specialScene
+            ? specialScene.objects.map((entry) => [entry.type, entry.offset[0], entry.offset[2], entry.variant || 0])
+            : landmarkTemplate;
+          activeLandmark.forEach(([type, offsetX, offsetZ, variant]) => {
             const x = center.x + offsetX * cosine - offsetZ * sine;
             const z = center.z + offsetX * sine + offsetZ * cosine;
             const object = placeObject(type, x, z, variant, rotation + next() * 0.45);
-            object.root.userData.biomeLandmark = population.profileId;
+            object.root.userData.biomeLandmark = specialScene?.id || population.profileId;
           });
         }
       }
