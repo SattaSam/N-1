@@ -6,6 +6,55 @@
   const A = Missions.ActionType;
   const SECONDARY_CAMP_BAG_THRESHOLD = 10;
   const DEFAULT_SITE_INTERACTION_RADIUS = 12;
+  const PRIMARY_MAP_ID = "crystal";
+  const START_CAPSULE_FALLBACK = Object.freeze({ x: 0.8, y: 0, z: -0.9 });
+  const startupPlacement = (sceneId, position, rotation) => Object.freeze({
+    sceneId,
+    position: Object.freeze(position),
+    rotation: Object.freeze(rotation)
+  });
+  const STARTUP_STAGES = Object.freeze({
+    camp: Object.freeze({
+      stage: 1,
+      sceneId: "MSC-CUSTOM-CAMP",
+      placements: Object.freeze([
+        startupPlacement("MSC-CUSTOM-CAMP", [4.4049, 0.85, 2.318], [0, 2.356194, 0])
+      ]),
+      skillId: "carpentry",
+      skillTitle: "Menuiserie : transformer le bois en planches",
+      insight: "Je pourrais transformer ce bois en planches.",
+      costs: Object.freeze([{ keys: Object.freeze(["wood"]), amount: 10 }])
+    }),
+    shelter: Object.freeze({
+      stage: 2,
+      sceneId: "MSC-CUSTOM-CAMP-BASE",
+      placements: Object.freeze([
+        startupPlacement("MSC-CUSTOM-CAMP-BASE", [-0.4399, 1.85, 4.9833], [0, 1.308997, 0])
+      ]),
+      skillId: "weaving",
+      skillTitle: "Tissage : transformer les plantes fibreuses en textile",
+      insight: "Ces plantes peuvent être transformées en tissu.",
+      costs: Object.freeze([
+        { keys: Object.freeze(["wood"]), amount: 100 },
+        { keys: Object.freeze(["fiber"]), amount: 100 }
+      ])
+    }),
+    base: Object.freeze({
+      stage: 3,
+      sceneId: "MSC-CUSTOM-CAMP-BASE-REINFORCED",
+      placements: Object.freeze([
+        startupPlacement("MSC-CUSTOM-CAMP-BASE-REINFORCED", [-2.7567, 2.6, 4.768], [0, 1.308997, 0]),
+        startupPlacement("MSC-CUSTOM-CAMP-BASE", [-3.1166, 3.6, 3.895], [0, -0.785398, 0])
+      ]),
+      skillId: "mineral-transformation",
+      skillTitle: "Transformation des minéraux",
+      insight: "Les matériaux de cette planète peuvent être utilisés pour des constructions avancées.",
+      costs: Object.freeze([
+        { keys: Object.freeze(["fiber"]), amount: 1000 },
+        { keys: Object.freeze(["crystal", "magnetic_ore"]), amount: 1000 }
+      ])
+    })
+  });
 
   const leaf = (id, title, type, target, metric) => ({
     id,
@@ -37,8 +86,13 @@
     ),
     exploration_complete: mission(
       "exploration_complete", "Exploration approfondie",
-      "Explorer intégralement une map.", 60,
-      [leaf("exploration-complete-map", "Atteindre 100 % d’exploration", A.EXPLORE_ZONE, 100, "max-map-percent")], "map"
+      "Explorer intégralement la map actuelle.", 60,
+      [leaf("exploration-complete-map", "Map actuelle à 100 %", A.EXPLORE_ZONE, 100, "current-map-percent")], "map"
+    ),
+    exploration_total: mission(
+      "exploration_total", "Exploration totale",
+      "Explorer à 100 % tous les biomes découverts.", 58,
+      [leaf("exploration-total-biomes", "Tous les biomes découverts à 100 %", A.EXPLORE_ZONE, 100, "all-discovered-biomes-percent")], "global"
     ),
     collection_samples: mission(
       "collection_samples", "Échantillons de base",
@@ -127,6 +181,11 @@
     )
   };
 
+  catalog.exploration_complete.evolving = true;
+  catalog.exploration_complete.passivePriorityAxis = "Exploration";
+  catalog.exploration_total.evolving = true;
+  catalog.exploration_total.passivePriorityAxis = "Exploration";
+
   catalog.engineering_1.unlockMetric = "distinct-rock-types";
   catalog.engineering_1.unlockTarget = 5;
   catalog.engineering_1.journalIntro =
@@ -150,9 +209,15 @@
         "bluefox:map-exploration-changed",
         "bluefox:map-expertise-changed",
         "bluefox:journal-entry",
-        "bluefox:site-progression"
+        "bluefox:site-progression",
+        "bluefox:map-state"
       ];
-      this.onChange = () => this.schedule();
+      this.onChange = (event) => {
+        if (event.type === "bluefox:map-state") {
+          global.setTimeout(() => this.renderStartupSite(), 0);
+        }
+        this.schedule();
+      };
       this.onTransition = (event) => {
         const facts = this.manager.memory.state.facts;
         facts.mapTransitions = (Number(facts.mapTransitions) || 0) + 1;
@@ -165,6 +230,7 @@
       BF.registerSiteAnchor = (mapId, anchor, interactionRadius) =>
         this.registerSiteAnchor(mapId, anchor, interactionRadius);
       this.evaluate();
+      global.setTimeout(() => this.renderStartupSite(), 0);
     }
 
     retireInvalidSiteUpgrades() {
@@ -317,6 +383,334 @@
       }, 0);
     }
 
+    inventoryAmount(keys) {
+      if (BF.availableInventory) return BF.availableInventory(keys);
+      const progression = BF.getProgressionState?.() || {};
+      return (Array.isArray(keys) ? keys : [keys]).reduce((total, key) =>
+        total + (Number(progression.inventory?.[key]) || 0) +
+          (Number(progression.campStorage?.[key]) || 0), 0
+      );
+    }
+
+    mineralInventoryKeys() {
+      const keys = new Set(["crystal", "magnetic_ore"]);
+      BF.ObjectLibrary?.list?.({ status: "active" }).forEach((definition) => {
+        const tags = new Set(definition.spawn?.tags || []);
+        const descriptor = `${definition.resource?.family || ""} ${definition.resource?.inventoryKey || ""}`.toLowerCase();
+        if (
+          definition.gameplay?.collectable === true &&
+          definition.resource?.inventoryKey &&
+          (tags.has("mineral") || tags.has("crystal") || /mineral|minerai|crystal|cristal|ore/.test(descriptor))
+        ) {
+          keys.add(definition.resource.inventoryKey);
+        }
+      });
+      return [...keys];
+    }
+
+    isStudyEvent(event) {
+      return ["PHENOMENON_OBSERVED", "OBJECT_INSPECTED", "OBJECT_ANALYZED"]
+        .includes(event.type);
+    }
+
+    matchesPlant(event) {
+      const tags = new Set(event.tags || []);
+      const descriptor = `${event.objectId || ""} ${event.family || ""} ${event.inventoryKey || ""}`.toLowerCase();
+      return tags.has("plant") || tags.has("tree") ||
+        /flora|plant|tree|arbre|bush|buisson|branch|branche|fiber|fibre|frond|cactus/.test(descriptor);
+    }
+
+    matchesWoodSpecimen(event) {
+      const tags = new Set(event.tags || []);
+      const descriptor = `${event.objectId || ""} ${event.family || ""} ${event.inventoryKey || ""}`.toLowerCase();
+      return tags.has("wood") || tags.has("tree") ||
+        /tree|arbre|bush|buisson|branch|branche|wood/.test(descriptor);
+    }
+
+    matchesRock(event) {
+      const tags = new Set(event.tags || []);
+      const descriptor = `${event.objectId || ""} ${event.family || ""} ${event.inventoryKey || ""}`.toLowerCase();
+      return tags.has("mineral") || tags.has("rock") || tags.has("crystal") ||
+        /geolog|rock|roche|mineral|minerai|crystal|cristal|ore/.test(descriptor);
+    }
+
+    startMapStudyEvents(predicate) {
+      return this.eventHistory().filter((event) =>
+        (event.mapId || PRIMARY_MAP_ID) === PRIMARY_MAP_ID &&
+        this.isStudyEvent(event) && predicate.call(this, event)
+      );
+    }
+
+    startMapWoodSpecimenIds() {
+      const ids = new Set();
+      const interactables = this.manager.engine?.currentMapId === PRIMARY_MAP_ID
+        ? this.manager.engine.currentMap?.interactables || []
+        : [];
+      interactables.forEach((object) => {
+        const data = object?.userData || object?.parent?.userData || {};
+        const definition = data.functional || object?.parent?.userData?.functional;
+        if (!definition) return;
+        const probe = {
+          objectId: definition.id,
+          family: definition.resource?.family || definition.knowledge?.family,
+          inventoryKey: definition.resource?.inventoryKey,
+          tags: definition.spawn?.tags || []
+        };
+        if (this.matchesWoodSpecimen(probe)) {
+          ids.add(data.instanceId || object?.parent?.userData?.instanceId || definition.id);
+        }
+      });
+      return ids;
+    }
+
+    startupMetric(name) {
+      if (name === "available-wood") return this.inventoryAmount("wood");
+      if (name === "available-fiber") return this.inventoryAmount("fiber");
+      if (name === "available-minerals") {
+        return this.inventoryAmount(this.mineralInventoryKeys());
+      }
+      if (name === "plant-studies") {
+        return this.startMapStudyEvents(this.matchesPlant).length;
+      }
+      if (name === "rock-studies") {
+        return this.startMapStudyEvents(this.matchesRock).length;
+      }
+      if (name === "wood-specimens-studied") {
+        const required = this.startMapWoodSpecimenIds();
+        const studied = new Set(this.startMapStudyEvents(this.matchesWoodSpecimen)
+          .map((event) => event.instanceId || event.objectId).filter(Boolean));
+        if (!required.size) return 0;
+        return [...required].filter((id) => studied.has(id)).length;
+      }
+      return 0;
+    }
+
+    updateStartupTree(missionId, tree) {
+      const baseId = this.manager.definition(missionId)?.baseMissionId;
+      const config = STARTUP_STAGES[baseId];
+      if (!config || this.manager.definition(missionId)?.scopeId !== PRIMARY_MAP_ID) {
+        return false;
+      }
+      const currentStage = Number(
+        this.manager.memory.state.siteProgression?.[PRIMARY_MAP_ID]?.stage
+      ) || 0;
+      if (currentStage >= config.stage) return false;
+      let changed = false;
+      tree.root.walk((node) => {
+        const metric = node.params?.startupMetric;
+        if (!metric || !node.isLeaf) return;
+        if (metric === "wood-specimens-studied") {
+          node.target = Math.max(1, this.startMapWoodSpecimenIds().size);
+        }
+        const value = Math.min(node.target, this.startupMetric(metric));
+        if (node.progress === value) return;
+        node.progress = value;
+        if (value < node.target && node.status === Missions.MissionStatus.COMPLETED) {
+          node.status = Missions.MissionStatus.ACTIVE;
+          node.completedAt = 0;
+        }
+        changed = true;
+      });
+      if (changed) {
+        tree.refresh();
+        this.manager.memory.saveTree(tree);
+      }
+      return changed;
+    }
+
+    unlockStartupSkill(config) {
+      const facts = this.manager.memory.state.facts;
+      facts.researchSkills = facts.researchSkills || {};
+      if (facts.researchSkills[config.skillId]) return false;
+      facts.researchSkills[config.skillId] = {
+        id: config.skillId,
+        title: config.skillTitle,
+        unlockedAt: Date.now(),
+        mapId: PRIMARY_MAP_ID
+      };
+      const skillRegistryAvailable = typeof BF.unlockResearchSkill === "function";
+      BF.unlockResearchSkill?.(facts.researchSkills[config.skillId]);
+      BF.reachProgressionMilestone?.(`skill-${config.skillId}`, {
+        title: config.skillTitle,
+        category: "research-skill",
+        mapId: PRIMARY_MAP_ID
+      });
+      if (!skillRegistryAvailable) {
+        global.dispatchEvent(new CustomEvent("bluefox:research-skill-unlocked", {
+          detail: { ...facts.researchSkills[config.skillId] }
+        }));
+      }
+      return true;
+    }
+
+    publishStartupJournal(config) {
+      const entry = {
+        id: `startup-insight-${config.stage}`,
+        at: Date.now(),
+        type: "research-discovery",
+        title: config.skillTitle,
+        text: config.insight,
+        mapId: PRIMARY_MAP_ID,
+        important: true
+      };
+      if (!BF.addJournalEntry?.(entry)) {
+        global.dispatchEvent(new CustomEvent("bluefox:journal-entry", {
+          detail: entry
+        }));
+      }
+      this.manager.engine?.callbacks?.onAction?.(config.insight);
+    }
+
+    startupCapsuleAnchor() {
+      const anchor = BF.maps?.[PRIMARY_MAP_ID]?.crashSite?.capsuleAnchor;
+      return {
+        x: Number.isFinite(Number(anchor?.x)) ? Number(anchor.x) : START_CAPSULE_FALLBACK.x,
+        y: Number.isFinite(Number(anchor?.y)) ? Number(anchor.y) : START_CAPSULE_FALLBACK.y,
+        z: Number.isFinite(Number(anchor?.z)) ? Number(anchor.z) : START_CAPSULE_FALLBACK.z
+      };
+    }
+
+    completeStartupStage(missionId, tree) {
+      const definition = this.manager.definition(missionId);
+      const config = STARTUP_STAGES[definition?.baseMissionId];
+      if (!config || definition.scopeId !== PRIMARY_MAP_ID || !tree.root.isComplete) {
+        return false;
+      }
+      const facts = this.manager.memory.state.facts;
+      facts.startupStageRewards = facts.startupStageRewards || {};
+      if (facts.startupStageRewards[config.stage]) return false;
+      const costs = config.stage === 3
+        ? [config.costs[0], { keys: this.mineralInventoryKeys(), amount: 1000 }]
+        : config.costs;
+      if (costs.some((cost) => this.inventoryAmount(cost.keys) < cost.amount)) {
+        return false;
+      }
+      facts.startupStageRewards[config.stage] = {
+        status: "committing",
+        at: Date.now()
+      };
+      costs.forEach((cost) => {
+        const removed = BF.consumeInventoryPool?.(cost.keys, cost.amount) || 0;
+        if (removed !== cost.amount) {
+          throw new Error(`Consommation incomplète du palier ${config.stage}.`);
+        }
+      });
+      this.unlockStartupSkill(config);
+      this.publishStartupJournal(config);
+      const siteAnchor = this.startupCapsuleAnchor();
+      const changed = this.registerSiteStage(PRIMARY_MAP_ID, config.stage, {
+        anchor: siteAnchor,
+        interactionRadius: 12,
+        microSceneId: config.sceneId,
+        microSceneIds: config.placements.map((placement) => placement.sceneId),
+        skillId: config.skillId
+      });
+      facts.startupStageRewards[config.stage] = {
+        status: "completed",
+        at: Date.now(),
+        sceneId: config.sceneId,
+        skillId: config.skillId
+      };
+      this.manager.memory.save();
+      this.renderStartupSite();
+      return changed || true;
+    }
+
+    clearRenderedStartupSite() {
+      const rendered = this.renderedStartupSite;
+      if (!rendered) return;
+      const currentMap = this.manager.engine?.currentMap;
+      const interactables = currentMap?.interactables;
+      const colliders = currentMap?.colliders;
+      rendered.records.forEach((record) => {
+        if (Array.isArray(interactables) && record.instance?.hitbox) {
+          const index = interactables.indexOf(record.instance.hitbox);
+          if (index >= 0) interactables.splice(index, 1);
+        }
+        if (Array.isArray(colliders)) {
+          for (let index = colliders.length - 1; index >= 0; index -= 1) {
+            if (colliders[index]?.owner === record.root) colliders.splice(index, 1);
+          }
+        }
+      });
+      (rendered.roots || []).forEach((root) => {
+        root.removeFromParent();
+        BF.disposeObject?.(root);
+      });
+      this.renderedStartupSite = null;
+    }
+
+    renderStartupSite() {
+      const engine = this.manager.engine;
+      const stage = Number(
+        this.manager.memory.state.siteProgression?.[PRIMARY_MAP_ID]?.stage
+      ) || 0;
+      if (engine?.currentMapId !== PRIMARY_MAP_ID || !engine.currentMap?.group || !stage) {
+        this.clearRenderedStartupSite();
+        return false;
+      }
+      const config = Object.values(STARTUP_STAGES).find((item) => item.stage === stage);
+      if (
+        !config ||
+        !BF.ObjectSpawner ||
+        config.placements.some((placement) => !BF.MicroScenes?.get(placement.sceneId))
+      ) return false;
+      if (
+        this.renderedStartupSite?.stage === stage &&
+        this.renderedStartupSite?.mapGroup === engine.currentMap.group
+      ) return true;
+      this.clearRenderedStartupSite();
+      const spawner = new BF.ObjectSpawner({
+        THREE: engine.THREE,
+        scene: engine.currentMap.group
+      });
+      const capsuleAnchor = this.startupCapsuleAnchor();
+      const roots = [];
+      const records = [];
+      config.placements.forEach((placement, placementIndex) => {
+        const root = new engine.THREE.Group();
+        root.position.set(
+          capsuleAnchor.x + placement.position[0],
+          capsuleAnchor.y + placement.position[1],
+          capsuleAnchor.z + placement.position[2]
+        );
+        root.rotation.set(...placement.rotation);
+        root.userData.startupSiteStage = stage;
+        root.userData.startupMicroSceneId = placement.sceneId;
+        root.userData.startupPlacementIndex = placementIndex;
+        engine.currentMap.group.add(root);
+        roots.push(root);
+        records.push(...spawner.spawnMicroScene(placement.sceneId, {
+          origin: { x: 0, y: 0, z: 0 },
+          scene: root,
+          force: true,
+          source: `startup-site-stage-${stage}`
+        }));
+      });
+      records.forEach((record) => {
+        record.root.userData.startupSiteStage = stage;
+        if (record.instance?.hitbox) engine.currentMap.interactables.push(record.instance.hitbox);
+        (record.instance?.colliders || []).forEach((collider) => {
+          record.root.updateWorldMatrix(true, false);
+          const position = record.root.localToWorld(collider.offset.clone());
+          engine.currentMap.colliders.push({
+            position,
+            radius: collider.radius,
+            owner: record.root,
+            startupSiteStage: stage
+          });
+        });
+      });
+      this.renderedStartupSite = {
+        stage,
+        mapGroup: engine.currentMap.group,
+        roots,
+        records
+      };
+      BF.registerSiteAnchor?.(PRIMARY_MAP_ID, capsuleAnchor, 12);
+      return records.length > 0;
+    }
+
     metric(name) {
       const exploration = BF.getExplorationSummary?.() || { maps: {} };
       const maps = Object.values(exploration.maps || {});
@@ -331,8 +725,22 @@
       })[0] || { minerals: 0, plants: 0, other: 0 };
       const sites = Object.values(this.manager.memory.state.siteProgression || {});
       const facts = this.manager.memory.state.facts || {};
+      const currentMapId = this.manager.engine?.currentMapId;
+      const currentMap = exploration.maps?.[currentMapId];
+      const discoveredMaps = maps.filter((map) => Number(map.surfacePercent) > 0);
+      const completedDiscoveredMaps = discoveredMaps.filter(
+        (map) => Number(map.surfacePercent) >= 100
+      );
+      const totalBiomePercent = discoveredMaps.length
+        ? discoveredMaps.reduce((sum, map) => sum + Math.min(100, Number(map.surfacePercent) || 0), 0) /
+          discoveredMaps.length
+        : 0;
       const metricMap = {
         "max-map-percent": Math.max(0, ...maps.map((map) => Number(map.surfacePercent) || 0)),
+        "current-map-percent": Number(currentMap?.surfacePercent) || 0,
+        "all-discovered-biomes-percent": completedDiscoveredMaps.length === discoveredMaps.length && discoveredMaps.length
+          ? 100
+          : totalBiomePercent,
         "maps-80": maps.filter((map) => Number(map.surfacePercent) >= 80).length,
         "same-map-minerals": sampleMap.minerals,
         "same-map-plants": sampleMap.plants,
@@ -368,13 +776,42 @@
       return Math.max(0, Number(metricMap[name]) || 0);
     }
 
+    metricLabel(name) {
+      const exploration = BF.getExplorationSummary?.() || { maps: {} };
+      const maps = Object.values(exploration.maps || {}).filter(
+        (map) => Number(map.surfacePercent) > 0
+      );
+      if (name === "current-map-percent") {
+        const mapId = this.manager.engine?.currentMapId;
+        const percent = Number(exploration.maps?.[mapId]?.surfacePercent) || 0;
+        const mapName = BF.maps?.[mapId]?.name || mapId || "Map actuelle";
+        return `${mapName} · ${Math.round(percent)} %`;
+      }
+      if (name === "all-discovered-biomes-percent") {
+        const completed = maps.filter((map) => Number(map.surfacePercent) >= 100).length;
+        return `${completed}/${maps.length} biome${maps.length > 1 ? "s" : ""} à 100 %`;
+      }
+      return "";
+    }
+
     updateTree(tree) {
       let changed = false;
       tree.root.walk((node) => {
         const metric = node.params?.catalogMetric;
         if (!metric || !node.isLeaf) return;
         const value = Math.min(node.target, this.metric(metric));
+        const progressLabel = this.metricLabel(metric);
+        if (progressLabel && node.params.progressLabel !== progressLabel) {
+          node.params.progressLabel = progressLabel;
+          changed = true;
+        }
         if (node.progress === value) return;
+        if (value < node.target && node.isComplete) {
+          node.status = Missions.MissionStatus.ACTIVE;
+          node.completedAt = 0;
+          tree.root.status = Missions.MissionStatus.ACTIVE;
+          tree.root.completedAt = 0;
+        }
         node.progress = value;
         changed = true;
       });
@@ -410,7 +847,7 @@
       if (!status || status === "hidden" || status === "available") {
         this.manager.startMission(definition.id, {
           primary: false,
-          autoPrimaryEligible: false,
+          autoPrimaryEligible: Boolean(definition.passivePriorityAxis),
           source: "catalogue",
           reason: "Progression réelle détectée dans le registre central."
         });
@@ -422,10 +859,15 @@
     evaluate() {
       let changed = false;
       [...this.manager.trees.entries()].forEach(([missionId, tree]) => {
+        changed = this.updateStartupTree(missionId, tree) || changed;
+      });
+      [...this.manager.trees.entries()].forEach(([missionId, tree]) => {
         if (!tree.root.isComplete) return;
         const definition = this.manager.definition(missionId);
         const stage = { camp: 1, shelter: 2, base: 3 }[definition?.baseMissionId];
-        if (stage) changed = this.registerSiteStage(definition.scopeId, stage) || changed;
+        if (stage) {
+          changed = this.completeStartupStage(missionId, tree) || changed;
+        }
       });
       Object.values(catalog).forEach((definition) => {
         changed = this.unlockCatalogMission(definition) || changed;
@@ -433,6 +875,16 @@
         if (!tree) return;
         if (this.updateTree(tree)) {
           this.manager.memory.saveTree(tree);
+          changed = true;
+        }
+        const lifecycle = this.manager.memory.state.missionLifecycle?.[definition.id];
+        if (definition.evolving && lifecycle?.status === "completed" && !tree.root.isComplete) {
+          lifecycle.status = "active";
+          lifecycle.completedAt = 0;
+          lifecycle.autoPrimaryEligible = Boolean(definition.passivePriorityAxis);
+          if (!this.manager.activeMissionIds.includes(definition.id)) {
+            this.manager.activeMissionIds.push(definition.id);
+          }
           changed = true;
         }
       });
@@ -506,6 +958,11 @@
       );
       const primaryMapId = this.primaryBaseMapId();
       site.isPrimary = mapId === primaryMapId;
+      if (detail.microSceneId) site.microSceneId = detail.microSceneId;
+      if (Array.isArray(detail.microSceneIds)) {
+        site.microSceneIds = detail.microSceneIds.slice();
+      }
+      if (detail.skillId) site.skillId = detail.skillId;
       const completedId = [null, `camp@${mapId}`, `shelter@${mapId}`, `base@${mapId}`][nextStage];
       const nextId = nextStage === 1 && site.isPrimary
         ? `shelter@${mapId}`
@@ -527,12 +984,16 @@
       this.manager.syncLifecycleFromTrees();
       this.manager.memory.save();
       this.manager.publish();
+      global.dispatchEvent(new CustomEvent("bluefox:site-progression", {
+        detail: { ...site, previousStage: nextStage - 1 }
+      }));
       return true;
     }
 
     dispose() {
       this.events.forEach((type) => global.removeEventListener(type, this.onChange));
       global.removeEventListener("bluefox:map-transition-completed", this.onTransition);
+      this.clearRenderedStartupSite();
     }
   }
 

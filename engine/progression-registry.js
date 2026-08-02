@@ -247,6 +247,43 @@
       return removed;
     }
 
+    availableInventory(keys) {
+      return [...new Set((Array.isArray(keys) ? keys : [keys]).map(cleanKey))]
+        .reduce((total, key) => total +
+          (Number(this.state.inventory[key]) || 0) +
+          (Number(this.state.campStorage[key]) || 0), 0);
+    }
+
+    consumeInventoryPool(keys, amount = 1) {
+      const safeKeys = [...new Set(
+        (Array.isArray(keys) ? keys : [keys]).map(cleanKey)
+      )];
+      const requested = Math.max(0, Number(amount) || 0);
+      if (!requested || this.availableInventory(safeKeys) < requested) return 0;
+      let remaining = requested;
+      const removedByKey = {};
+      [this.state.inventory, this.state.campStorage].forEach((bucket) => {
+        safeKeys.forEach((key) => {
+          if (!remaining) return;
+          const available = Math.max(0, Number(bucket[key]) || 0);
+          const removed = Math.min(available, remaining);
+          bucket[key] = available - removed;
+          remaining -= removed;
+          removedByKey[key] = (removedByKey[key] || 0) + removed;
+        });
+      });
+      Object.entries(removedByKey).forEach(([key, removed]) =>
+        this.increment(this.state.consumed, key, removed)
+      );
+      this.save();
+      this.publishChange("inventory-pool-consumed", {
+        inventoryKeys: safeKeys,
+        quantity: requested,
+        removedByKey
+      });
+      return requested;
+    }
+
     depositInventory(key, amount = 1) {
       const safeKey = cleanKey(key);
       const requested = Math.max(0, Number(amount) || 0);
@@ -382,6 +419,9 @@
   BF.progression = registry;
   BF.getProgressionState = () => registry.snapshot();
   BF.consumeInventory = (key, amount) => registry.consumeInventory(key, amount);
+  BF.availableInventory = (keys) => registry.availableInventory(keys);
+  BF.consumeInventoryPool = (keys, amount) =>
+    registry.consumeInventoryPool(keys, amount);
   BF.depositInventory = (key, amount) => registry.depositInventory(key, amount);
   BF.withdrawInventory = (key, amount) => registry.withdrawInventory(key, amount);
   BF.depositAllInventory = () => registry.depositAllInventory();

@@ -31,7 +31,8 @@
     research: {
       domains: {},
       maps: {},
-      discoveries: {}
+      discoveries: {},
+      skills: {}
     },
     masteries: {
       actions: {},
@@ -234,6 +235,47 @@
       this.state.journal = this.state.journal.slice(-MAX_JOURNAL_ENTRIES);
     }
 
+    addJournalEntry(entry) {
+      if (!entry?.id || this.state.journal.some((item) => item.id === entry.id)) {
+        return false;
+      }
+      const normalized = {
+        id: cleanKey(entry.id),
+        at: Number(entry.at) || Date.now(),
+        type: entry.type || "progression",
+        title: entry.title || "Progression",
+        text: entry.text || "",
+        mapId: entry.mapId ?? null,
+        zoneId: entry.zoneId ?? null,
+        important: Boolean(entry.important)
+      };
+      this.state.journal.push(normalized);
+      this.state.journal = this.state.journal.slice(-MAX_JOURNAL_ENTRIES);
+      this.save();
+      global.dispatchEvent(new CustomEvent("bluefox:journal-entry", {
+        detail: clone(normalized)
+      }));
+      return true;
+    }
+
+    unlockResearchSkill(skill) {
+      if (!skill?.id) return false;
+      this.state.research.skills = this.state.research.skills || {};
+      const id = cleanKey(skill.id);
+      if (this.state.research.skills[id]) return false;
+      this.state.research.skills[id] = {
+        id,
+        title: skill.title || id,
+        unlockedAt: Number(skill.unlockedAt) || Date.now(),
+        mapId: skill.mapId ?? null
+      };
+      this.save();
+      global.dispatchEvent(new CustomEvent("bluefox:research-skill-unlocked", {
+        detail: clone(this.state.research.skills[id])
+      }));
+      return true;
+    }
+
     consume(event) {
       if (!event?.id || !event?.type || this.processedIds.has(event.id)) return false;
       this.processedIds.add(event.id);
@@ -290,6 +332,8 @@
   BF.multiProgression = system;
   BF.getMultiProgressionState = () => system.snapshot();
   BF.getMapProgressionIndicators = (mapId) => system.getMapIndicators(mapId);
+  BF.addJournalEntry = (entry) => system.addJournalEntry(entry);
+  BF.unlockResearchSkill = (skill) => system.unlockResearchSkill(skill);
   BF.resetMultiProgression = () => system.reset();
   system.connect();
 })(window);

@@ -5,6 +5,7 @@
   const STORAGE_KEY = "bluefox_map_exploration_v1";
   const VERSION = 1;
   const DEFAULT_GRID = 12;
+  const DEFAULT_REVEAL_RADIUS = 4;
   const EXPLORATION_THRESHOLDS = [10, 25, 50, 75, 100];
   const EXPERTISE_THRESHOLDS = [10, 25, 50, 100, 200];
 
@@ -20,6 +21,7 @@
     planetId: null,
     gridSize,
     bounds: 27,
+    revealRadius: DEFAULT_REVEAL_RADIUS,
     visitedSectors: {},
     visitedZones: {},
     surfacePercent: 0,
@@ -97,7 +99,11 @@
       if (!this.state.maps[key]) {
         this.state.maps[key] = createMapState(key, Math.max(4, Number(gridSize) || DEFAULT_GRID));
       }
-      return this.state.maps[key];
+      const map = this.state.maps[key];
+      map.revealRadius = Math.max(0, Number(map.revealRadius) || DEFAULT_REVEAL_RADIUS);
+      map.visitedSectors = map.visitedSectors || {};
+      map.totalSectors = map.gridSize * map.gridSize;
+      return map;
     }
 
     sectorFor(map, x, z) {
@@ -107,6 +113,53 @@
       const column = Math.floor(normalizedX * map.gridSize);
       const row = Math.floor(normalizedZ * map.gridSize);
       return { column, row, key: `${column}:${row}` };
+    }
+
+    sectorsWithinRadius(map, x, z, radius = DEFAULT_REVEAL_RADIUS) {
+      const bounds = Math.max(1, Number(map.bounds) || 27);
+      const gridSize = Math.max(4, Number(map.gridSize) || DEFAULT_GRID);
+      const cellSize = (bounds * 2) / gridSize;
+      const safeRadius = Math.max(0, Number(radius) || 0);
+      const minimumColumn = clamp(Math.floor((x - safeRadius + bounds) / cellSize), 0, gridSize - 1);
+      const maximumColumn = clamp(Math.floor((x + safeRadius + bounds) / cellSize), 0, gridSize - 1);
+      const minimumRow = clamp(Math.floor((z - safeRadius + bounds) / cellSize), 0, gridSize - 1);
+      const maximumRow = clamp(Math.floor((z + safeRadius + bounds) / cellSize), 0, gridSize - 1);
+      const sectors = [];
+
+      for (let column = minimumColumn; column <= maximumColumn; column += 1) {
+        const cellMinX = -bounds + column * cellSize;
+        const cellMaxX = cellMinX + cellSize;
+        const nearestX = clamp(x, cellMinX, cellMaxX);
+        for (let row = minimumRow; row <= maximumRow; row += 1) {
+          const cellMinZ = -bounds + row * cellSize;
+          const cellMaxZ = cellMinZ + cellSize;
+          const nearestZ = clamp(z, cellMinZ, cellMaxZ);
+          if (Math.hypot(x - nearestX, z - nearestZ) <= safeRadius) {
+            sectors.push({ column, row, key: `${column}:${row}` });
+          }
+        }
+      }
+      return sectors;
+    }
+
+    nextUnexploredTarget(mapId, origin = {}) {
+      const map = this.ensureMap(mapId);
+      const bounds = Math.max(1, Number(map.bounds) || 27);
+      const cellSize = (bounds * 2) / map.gridSize;
+      const originX = Number(origin.x) || 0;
+      const originZ = Number(origin.z) || 0;
+      const candidates = [];
+      for (let column = 0; column < map.gridSize; column += 1) {
+        for (let row = 0; row < map.gridSize; row += 1) {
+          const key = `${column}:${row}`;
+          if (map.visitedSectors[key]) continue;
+          const x = -bounds + (column + 0.5) * cellSize;
+          const z = -bounds + (row + 0.5) * cellSize;
+          candidates.push({ key, x, z, distance: Math.hypot(x - originX, z - originZ) });
+        }
+      }
+      candidates.sort((left, right) => left.distance - right.distance);
+      return candidates[0] || null;
     }
 
     reach(type, map, threshold) {
@@ -150,7 +203,10 @@
       const x = Number(detail.x);
       const z = Number(detail.z);
       const sector = this.sectorFor(map, x, z);
-      const firstVisit = !map.visitedSectors[sector.key];
+      const revealRadius = Math.max(0, Number(detail.revealRadius) || map.revealRadius);
+      map.revealRadius = revealRadius;
+      const newlyVisited = this.sectorsWithinRadius(map, x, z, revealRadius)
+        .filter((candidate) => !map.visitedSectors[candidate.key]);
 
       if (map.lastPosition) {
         const dx = x - map.lastPosition.x;
@@ -163,11 +219,13 @@
       if (detail.zoneId != null) {
         map.visitedZones[cleanKey(detail.zoneId)] = map.visitedZones[cleanKey(detail.zoneId)] || Date.now();
       }
-      if (firstVisit) {
-        map.visitedSectors[sector.key] = {
-          at: Date.now(),
-          zoneId: detail.zoneId ?? null
-        };
+      if (newlyVisited.length) {
+        newlyVisited.forEach((candidate) => {
+          map.visitedSectors[candidate.key] = {
+            at: Date.now(),
+            zoneId: detail.zoneId ?? null
+          };
+        });
         map.sectorCount = Object.keys(map.visitedSectors).length;
         map.surfacePercent = Math.min(100, Number(((map.sectorCount / map.totalSectors) * 100).toFixed(2)));
       }
@@ -175,12 +233,15 @@
       this.evaluateMilestones(map);
       this.save();
 
-      if (firstVisit) {
+      if (newlyVisited.length) {
         const eventDetail = {
           mapId: map.mapId,
           planetId: map.planetId,
           zoneId: detail.zoneId ?? null,
           sector: sector.key,
+          sectors: newlyVisited.map((candidate) => candidate.key),
+          revealedSectorCount: newlyVisited.length,
+          revealRadius,
           sectorCount: map.sectorCount,
           totalSectors: map.totalSectors,
           surfacePercent: map.surfacePercent
@@ -191,9 +252,9 @@
           mapId: map.mapId,
           planetId: map.planetId,
           zoneId: detail.zoneId
-        }, 1);
+        }, newlyVisited.length);
       }
-      return firstVisit;
+      return newlyVisited.length > 0;
     }
 
     syncExpertise(detail) {
@@ -251,5 +312,7 @@
   BF.recordMapPosition = (detail) => tracker.recordPosition(detail);
   BF.getMapExplorationState = (mapId) => tracker.getMap(mapId);
   BF.getExplorationSummary = () => tracker.getSummary();
+  BF.getNextUnexploredMapTarget = (mapId, origin) =>
+    tracker.nextUnexploredTarget(mapId, origin);
   BF.resetMapExploration = (mapId) => tracker.reset(mapId);
 })(window);

@@ -103,11 +103,11 @@
     );
     const copy = document.createElement("div");
     copy.appendChild(createTextElement("b", "", node.title));
-    const detail = node.status === "locked"
+    const detail = node.params?.progressLabel || (node.status === "locked"
       ? "Prérequis en attente"
       : active
         ? "Action en cours"
-        : `${Math.min(progress, target)}/${target}`;
+        : `${Math.min(progress, target)}/${target}`);
     copy.appendChild(createTextElement("small", "", detail));
     row.appendChild(copy);
 

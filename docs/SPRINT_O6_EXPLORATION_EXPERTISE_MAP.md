@@ -3,9 +3,17 @@
 ## Livré
 
 - Mesure de l'exploration par grille de secteurs (12 × 12 par défaut).
+- Révélation des secteurs dans un rayon de reconnaissance de 4 m autour de
+  BlueFox : longer un obstacle suffit à explorer la surface qu’il occupe.
 - Pourcentage de surface parcourue distinct du nombre de Zones visitées.
 - Distance parcourue par Map.
 - Paliers d'exploration : 10 %, 25 %, 50 %, 75 %, 100 %.
+- Mission locale évolutive : pourcentage de la Map actuelle.
+- Mission passive « Exploration totale » : tous les biomes découverts doivent
+  atteindre 100 %. Elle se réouvre lorsqu’un nouveau biome est découvert.
+- Un curseur Exploration supérieur à 50 % augmente progressivement la priorité
+  autonome de ces missions, sans autoriser l’exploration hors ligne d’une Map
+  inconnue et sans dépasser les besoins vitaux.
 - Paliers d'expertise : 10, 25, 50, 100, 200 points.
 - Synchronisation automatique avec les indicateurs d'expertise du Sprint O5.
 - Enregistrement des paliers dans le registre central O4.
@@ -37,7 +45,9 @@ BlueFox3D.recordMapPosition?.({
 });
 ```
 
-Le module ignore automatiquement les positions répétées dans un secteur déjà visité. Il peut donc être appelé à chaque frame, mais un appel toutes les 250 à 500 ms est préférable.
+Le module ignore automatiquement les positions qui ne révèlent aucun nouveau
+secteur dans le rayon de reconnaissance. Il peut donc être appelé à chaque
+frame, mais un appel toutes les 250 à 500 ms est préférable.
 
 ## Diagnostic console
 

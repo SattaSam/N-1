@@ -27,6 +27,7 @@
           `${engine.currentMapId}:${zone.index}`
         )
       ).length;
+      const explorationMaps = Object.values(BF.getExplorationSummary?.().maps || {});
       let energy = null;
       const survival = BF.getSurvivalState?.();
       try {
@@ -44,6 +45,12 @@
         mapId: engine.currentMapId,
         resources,
         unexploredZones,
+        explorationPercent: Number(
+          BF.getMapExplorationState?.(engine.currentMapId)?.surfacePercent
+        ) || 0,
+        hasIncompleteDiscoveredMaps: explorationMaps.some(
+          (map) => Number(map.surfacePercent) > 0 && Number(map.surfacePercent) < 100
+        ),
         canRoutine: !engine.currentRoutine,
         needs: {
           rest: survival?.needs?.rest === true || (energy != null && energy < 35),
@@ -104,13 +111,45 @@
               engine.character.root.position.distanceTo(left.center) -
               engine.character.root.position.distanceTo(right.center)
             )[0];
-          if (!zone) return false;
-          engine.pendingZoneExploration = zone;
-          engine.character.setTarget(zone.center);
-          engine.showWorldMarker(zone.center);
-          engine.callbacks.onStatus(
-            `Mission : BlueFox reconnaît ${zone.name}.`
+          if (zone) {
+            engine.pendingZoneExploration = zone;
+            engine.character.setTarget(zone.center);
+            engine.showWorldMarker(zone.center);
+            engine.callbacks.onStatus(`Mission : BlueFox reconnaît ${zone.name}.`);
+            return true;
+          }
+          if (action.params?.catalogMetric === "all-discovered-biomes-percent") {
+            const incompleteMap = Object.values(BF.getExplorationSummary?.().maps || {})
+              .filter((map) => Number(map.surfacePercent) > 0 && Number(map.surfacePercent) < 100)
+              .sort((left, right) => Number(left.surfacePercent) - Number(right.surfacePercent))
+              .find((map) => map.mapId !== engine.currentMapId);
+            const route = incompleteMap
+              ? engine.findKnownRoute?.(engine.currentMapId, incompleteMap.mapId)
+              : null;
+            const nextMapId = Array.isArray(route) ? route[1] : null;
+            const gate = nextMapId
+              ? engine.currentMap.gates.find(
+                (candidate) => candidate.userData.exit.targetMap === nextMapId
+              )
+              : null;
+            if (gate) {
+              engine.pendingGate = gate;
+              engine.character.setTarget(gate.position, "run");
+              engine.callbacks.onStatus(
+                `Mission : BlueFox rejoint ${BF.maps?.[incompleteMap.mapId]?.name || "un biome incomplet"}.`
+              );
+              return true;
+            }
+          }
+          const target = BF.getNextUnexploredMapTarget?.(
+            engine.currentMapId,
+            engine.character.root.position
           );
+          if (!target) return false;
+          const position = new engine.THREE.Vector3(target.x, 0, target.z);
+          engine.character.setTarget(position);
+          engine.showWorldMarker(position);
+          engine.callbacks.onStatus("Mission : BlueFox cartographie un secteur encore incomplet.");
           return true;
         }
         case Missions.ActionType.RESEARCH:

@@ -31,7 +31,11 @@
         score += available ? 60 : -100;
       }
       if (type === Missions.ActionType.EXPLORE_ZONE) {
-        score += context.unexploredZones > 0 ? 70 : -100;
+        score += context.unexploredZones > 0 ||
+          context.explorationPercent < 100 ||
+          context.hasIncompleteDiscoveredMaps
+          ? 70
+          : -100;
       }
       if (type === Missions.ActionType.RESEARCH) {
         score += context.canRoutine ? 45 : -100;

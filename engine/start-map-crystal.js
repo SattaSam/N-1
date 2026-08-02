@@ -51,6 +51,23 @@
     })
   ]);
 
+  /*
+   * Objets tutoriels fixes : positions choisies hors de la capsule, des trois
+   * emprises de construction, de l'entrée et des cinq repères historiques.
+   * Ils sont ajoutés aux landmarks avant la population aléatoire : le moteur
+   * réserve donc leur rayon et ne peut rien générer par-dessus.
+   */
+  const tutorialLandmarks = Object.freeze([
+    Object.freeze(["bush", -19, 4, 0, 0.523599]),
+    Object.freeze(["bush", 18, 4, 2, -0.785398]),
+    Object.freeze(["tree_fallen", -15, -18, 1, 1.047198])
+  ]);
+
+  const tutorialPopulationBudget = Object.freeze({
+    targetObjects: 68,
+    resources: 18
+  });
+
   Object.assign(BF.maps.crystal, {
     name: "Site du crash",
     zones: ["Zone du crash"],
@@ -61,6 +78,8 @@
     exits: {},
     profile: "crystalline",
     constructionExclusionZones,
+    tutorialLandmarks,
+    populationBudget: tutorialPopulationBudget,
     crashSite: Object.freeze({
       capsuleAsset: "./assets/models/BlueFox_Capsule_Depart.glb",
       capsuleAnchor: Object.freeze({ x: 0.8, y: 0, z: -0.9 }),
@@ -141,7 +160,20 @@
   if (!originalPopulateMap.__bluefoxCrashSiteProtected) {
     const protectedPopulateMap = function populateMapWithConstructionProtection(options = {}) {
       const instanceStart = this.instances.length;
-      const result = originalPopulateMap.call(this, options);
+      const fixedLandmarks = options.definition?.id === "crystal"
+        ? options.definition.tutorialLandmarks || []
+        : [];
+      const landmarks = [...(options.landmarks || [])];
+      fixedLandmarks.forEach((landmark) => {
+        const alreadyRegistered = landmarks.some((entry) =>
+          entry[0] === landmark[0] && entry[1] === landmark[1] && entry[2] === landmark[2]
+        );
+        if (!alreadyRegistered) landmarks.push([...landmark]);
+      });
+      const populatedOptions = fixedLandmarks.length
+        ? { ...options, landmarks }
+        : options;
+      const result = originalPopulateMap.call(this, populatedOptions);
       const zones = options.definition?.constructionExclusionZones || [];
       if (!zones.length) return result;
 
@@ -197,6 +229,8 @@
     capsuleAnchor: { ...BF.maps.crystal.crashSite.capsuleAnchor },
     capsuleRotation: BF.maps.crystal.crashSite.capsuleRotation,
     capsuleScale: BF.maps.crystal.crashSite.capsuleScale,
+    tutorialPopulationBudget: { ...BF.maps.crystal.populationBudget },
+    tutorialLandmarks: BF.maps.crystal.tutorialLandmarks.map((landmark) => [...landmark]),
     zones: BF.maps.crystal.constructionExclusionZones.map((zone) => ({
       ...zone,
       center: zone.center ? { ...zone.center } : undefined,

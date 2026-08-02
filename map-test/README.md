@@ -2,6 +2,19 @@
 
 Lancer `LANCER_MAP_TEST.bat`. Le module utilise les catalogues et constructeurs du moteur du jeu sans portail, journal ni navigation inter-map.
 
+## Préréglage — évolution de la zone de départ
+
+Au lancement, `map-test` charge une map spéciale de trois plateaux utilisant la
+même texture de crash et la capsule 3D validée :
+
+1. camp avec feu (`MSC-CUSTOM-CAMP`) ;
+2. abri renforcé en bois (`MSC-CUSTOM-CAMP-BASE`) ;
+3. camp de base avec murs en pierre (`MSC-CUSTOM-CAMP-BASE-REINFORCED`).
+
+Les trois structures restent sélectionnables, déplaçables et orientables avec
+les outils habituels. Le bouton **Charger la map spéciale · 3 étapes** rétablit
+à tout moment leurs positions de référence.
+
 ## Flux de travail
 
 1. Choisir de 1 à 6 plateaux et un profil de biome.

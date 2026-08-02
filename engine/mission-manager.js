@@ -289,6 +289,17 @@
       return total ? completed / total : 0;
     }
 
+    playerPriority(axis) {
+      if (!axis) return 50;
+      try {
+        const save = JSON.parse(global.localStorage.getItem("bluefox_odyssey_save_v1") || "null");
+        const value = Number(save?.priorities?.[axis]);
+        return Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 50;
+      } catch {
+        return 50;
+      }
+    }
+
     assessMission(missionId, context) {
       const tree = this.trees.get(missionId);
       const definition = this.definition(missionId);
@@ -297,6 +308,12 @@
       const progress = tree ? this.treeProgress(tree) : 0;
       let score = Number(definition?.priority) || 0;
       const reasons = [];
+      if (definition?.passivePriorityAxis) {
+        const playerPriority = this.playerPriority(definition.passivePriorityAxis);
+        const influence = Math.max(0, playerPriority - 50) * 1.6;
+        score += influence;
+        if (influence > 0) reasons.push(`curseur ${definition.passivePriorityAxis} à ${Math.round(playerPriority)} %`);
+      }
       if (lifecycle.narrativePriority > 0) {
         score += lifecycle.narrativePriority * 2;
         reasons.push("priorité narrative");

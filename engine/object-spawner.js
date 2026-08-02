@@ -276,13 +276,20 @@
       const ambientCluster = BF.MicroScenes.getMapCluster("ambient");
       const plateauCount = BF.clamp(zoneRegions.length || 1, 1, 6);
       const mapBudget = MAP_OBJECT_BUDGETS[plateauCount];
-      const targetObjectBudget = Math.round(
-        mapBudget.min + next() * (mapBudget.max - mapBudget.min)
-      );
-      const resourceCount = Math.round(
-        mapBudget.resourcesMin +
-        next() * (mapBudget.resourcesMax - mapBudget.resourcesMin)
-      );
+      const lockedBudget = definition.populationBudget || {};
+      const targetObjectBudget = Number.isFinite(Number(lockedBudget.targetObjects))
+        ? BF.clamp(Math.round(Number(lockedBudget.targetObjects)), mapBudget.min, mapBudget.max)
+        : Math.round(mapBudget.min + next() * (mapBudget.max - mapBudget.min));
+      const resourceCount = Number.isFinite(Number(lockedBudget.resources))
+        ? BF.clamp(
+            Math.round(Number(lockedBudget.resources)),
+            mapBudget.resourcesMin,
+            Math.min(mapBudget.resourcesMax, targetObjectBudget)
+          )
+        : Math.round(
+            mapBudget.resourcesMin +
+            next() * (mapBudget.resourcesMax - mapBudget.resourcesMin)
+          );
       const landmarkCount = mapBudget.landmarksMin + Math.floor(
         next() * (mapBudget.landmarksMax - mapBudget.landmarksMin + 1)
       );

@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "../cuo-lab/vendor/OrbitControls.js";
+import { GLTFLoader } from "../cuo-lab/vendor/GLTFLoader.js";
 
 const BF = window.BlueFox3D;
 const library = BF.ObjectLibrary;
@@ -40,6 +41,13 @@ const LAYOUTS = Object.freeze({
   5:[[-54,27],[0,27],[54,27],[-27,-27],[27,-27]],
   6:[[-54,27],[0,27],[54,27],[-54,-27],[0,-27],[54,-27]]
 });
+const EVOLUTION_STAGES = Object.freeze([
+  Object.freeze({ id: "MSC-CUSTOM-CAMP", label: "ÉTAPE 1 · CAMP + FEU", height: 0.5 }),
+  Object.freeze({ id: "MSC-CUSTOM-CAMP-BASE", label: "ÉTAPE 2 · ABRI RENFORCÉ EN BOIS", height: 1.5 }),
+  Object.freeze({ id: "MSC-CUSTOM-CAMP-BASE-REINFORCED", label: "ÉTAPE 3 · CAMP DE BASE + MURS EN PIERRE", height: 2.15 })
+]);
+const STARTING_GROUND_URL = "../Images/01_0Crash_Crystal.png";
+const CAPSULE_URL = "../assets/models/BlueFox_Capsule_Depart.glb";
 const PALETTES = Object.freeze({
   volcanic:{ground:0x4c2928,accent:0xff7247}, frozen:{ground:0x718b9d,accent:0xbcefff},
   forest:{ground:0x47644f,accent:0x79f0b2}, ruins:{ground:0x4c5e58,accent:0x72e5bd},
@@ -71,6 +79,7 @@ const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 const clock = new THREE.Clock();
 let generatedConfig = null;
+let capsuleTemplatePromise = null;
 
 const toast = (message) => {
   const element = document.querySelector("#toast");
@@ -119,10 +128,11 @@ fox.position.set(0,.35,10);
 scene.add(fox);
 
 const catalogTerrains = () => (window.BLUEFOX_MAP_ASSETS?.catalog?.maps || []).flatMap(map => map.terrains || []).map(item => item.url);
-function plateauTexture(index) {
+function plateauTexture(index, forcedUrl = null) {
   const urls = catalogTerrains();
-  if (!urls.length) return null;
-  const texture = new THREE.TextureLoader().load(urls[index % urls.length]);
+  const url = forcedUrl || urls[index % urls.length];
+  if (!url) return null;
+  const texture = new THREE.TextureLoader().load(url);
   texture.colorSpace = THREE.SRGBColorSpace;
   return texture;
 }
@@ -132,21 +142,123 @@ function clearMap() {
   mapRoot = new THREE.Group(); scene.add(mapRoot);
   plateaus=[]; sceneInstances=[]; selectedScene=null; spawner=null; foxAction=null; foxTarget=null;
 }
-function createPlateaus(count, profile) {
+function createPlateaus(count, profile, options = {}) {
   clearMap();
   const palette = PALETTES[profile] || PALETTES.alien;
   LAYOUTS[count].forEach(([x,z],index) => {
-    const material = new THREE.MeshStandardMaterial({map:plateauTexture(index),color:palette.ground,roughness:.9});
+    const material = new THREE.MeshStandardMaterial({map:plateauTexture(index, options.groundUrl),color:options.neutralGround ? 0xffffff : palette.ground,roughness:.9});
     const slab = new THREE.Mesh(new THREE.BoxGeometry(54,.65,54),material);
     slab.position.set(x,0,z); slab.receiveShadow=true; slab.userData.plateauIndex=index; mapRoot.add(slab); plateaus.push(slab);
   });
   spawner = new BF.ObjectSpawner({THREE,scene:mapRoot,palette,random:Math.random});
-  LAYOUTS[count].forEach(([x,z]) => spawner.populateBiome(profile,{bounds:{minX:x-24,maxX:x+24,minZ:z-24,maxZ:z+24,y:.35},budget:10,scene:mapRoot,palette}));
+  if (options.populate !== false) {
+    LAYOUTS[count].forEach(([x,z]) => spawner.populateBiome(profile,{bounds:{minX:x-24,maxX:x+24,minZ:z-24,maxZ:z+24,y:.35},budget:10,scene:mapRoot,palette}));
+  }
   fox.position.set(LAYOUTS[count][0][0],.35,LAYOUTS[count][0][1]+10);
   controls.target.copy(fox.position);
   generatedConfig={count,profile,palette,terrainUrls:catalogTerrains().slice(0,count)};
   setState(`Map ${count} plateau${count>1?"x":""} générée · autonomie active.`);
 }
+
+function createStageLabel(text, x, z) {
+  const labelCanvas = document.createElement("canvas");
+  labelCanvas.width = 1024;
+  labelCanvas.height = 128;
+  const context = labelCanvas.getContext("2d");
+  context.fillStyle = "rgba(3, 17, 29, 0.9)";
+  context.roundRect(8, 8, 1008, 112, 26);
+  context.fill();
+  context.strokeStyle = "#72dff5";
+  context.lineWidth = 5;
+  context.stroke();
+  context.fillStyle = "#e8f8ff";
+  context.font = "700 42px Segoe UI, sans-serif";
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.fillText(text, 512, 65);
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(labelCanvas), depthTest: false }));
+  sprite.position.set(x, 9.5, z - 18);
+  sprite.scale.set(22, 2.75, 1);
+  sprite.renderOrder = 20;
+  mapRoot.add(sprite);
+}
+
+async function capsuleTemplate() {
+  if (!capsuleTemplatePromise) {
+    capsuleTemplatePromise = new GLTFLoader().loadAsync(CAPSULE_URL).then((gltf) => gltf.scene);
+  }
+  return capsuleTemplatePromise;
+}
+
+async function addCapsule(x, z) {
+  const source = await capsuleTemplate();
+  const capsule = source.clone(true);
+  capsule.name = "Capsule_Depart_Validation";
+  capsule.rotation.y = Math.PI * 0.12;
+  capsule.traverse((child) => {
+    if (!child.isMesh) return;
+    child.geometry = child.geometry.clone();
+    child.material = Array.isArray(child.material)
+      ? child.material.map((material) => material.clone())
+      : child.material.clone();
+    child.castShadow = true;
+    child.receiveShadow = true;
+  });
+  let bounds = new THREE.Box3().setFromObject(capsule);
+  const size = bounds.getSize(new THREE.Vector3());
+  capsule.scale.setScalar(8 / Math.max(size.x, size.y, size.z, 0.001));
+  bounds = new THREE.Box3().setFromObject(capsule);
+  const center = bounds.getCenter(new THREE.Vector3());
+  capsule.position.set(x - center.x, 0.35 - bounds.min.y, z - center.z);
+  mapRoot.add(capsule);
+  return capsule;
+}
+
+function addStage(stage, index) {
+  const [cx, cz] = LAYOUTS[3][index];
+  if (!BF.MicroScenes.get(stage.id)) throw new Error(`Micro-scène absente : ${stage.id}`);
+  const root = new THREE.Group();
+  root.position.set(cx, stage.height, cz + 8);
+  root.userData.microSceneId = stage.id;
+  root.userData.instanceIndex = index;
+  root.userData.initial = { position: root.position.clone(), rotation: root.rotation.clone() };
+  mapRoot.add(root);
+  const records = spawner.spawnMicroScene(stage.id,{origin:{x:0,y:0,z:0},scene:root,force:true,source:`map-test:evolution:${stage.id}`});
+  records.forEach(record => { record.root.userData.microSceneRoot = root; });
+  sceneInstances.push({ id: stage.id, root, records });
+  createStageLabel(stage.label, cx, cz);
+}
+
+async function createEvolutionValidationMap() {
+  const button = document.querySelector("#evolution-preset");
+  button.disabled = true;
+  setState("Chargement des trois capsules et des étapes de construction…");
+  try {
+    document.querySelector("#plateau-count").value = "3";
+    profileSelect.value = "crystalline";
+    createPlateaus(3, "crystalline", { populate: false, groundUrl: STARTING_GROUND_URL, neutralGround: true });
+    queue = EVOLUTION_STAGES.map((stage) => stage.id);
+    renderQueue();
+    sceneInstances = [];
+    EVOLUTION_STAGES.forEach(addStage);
+    await Promise.all(LAYOUTS[3].map(([x, z]) => addCapsule(x, z - 6)));
+    generatedConfig.specialPreset = "starting-zone-evolution-validation";
+    generatedConfig.terrainUrls = Array(3).fill("Images/01_0Crash_Crystal.png");
+    controls.target.set(0, 0, 0);
+    camera.position.set(75, 82, 115);
+    fox.position.set(LAYOUTS[3][0][0] - 10, .35, LAYOUTS[3][0][1] + 14);
+    updateTransform();
+    setState("Map spéciale prête · comparez les trois étapes puis ajustez leur placement.");
+    toast("Map de validation des 3 étapes chargée.");
+  } catch (error) {
+    console.error(error);
+    setState(`Échec du préréglage : ${error.message}`);
+    toast(`Échec : ${error.message}`);
+  } finally {
+    button.disabled = false;
+  }
+}
+document.querySelector("#evolution-preset").addEventListener("click", createEvolutionValidationMap);
 function distributeMicroScenes() {
   if (!spawner) createPlateaus(Number(document.querySelector("#plateau-count").value),profileSelect.value);
   const previousRecords = new Set(sceneInstances.flatMap(entry => entry.records));
@@ -219,4 +331,4 @@ document.querySelector("#save-map").addEventListener("click",async()=>{const nam
 
 function resize(){const width=canvas.clientWidth,height=canvas.clientHeight;if(canvas.width!==Math.floor(width*renderer.getPixelRatio())||canvas.height!==Math.floor(height*renderer.getPixelRatio())){renderer.setSize(width,height,false);camera.aspect=width/Math.max(1,height);camera.updateProjectionMatrix();}}
 function loop(){requestAnimationFrame(loop);const dt=Math.min(.05,clock.getDelta()),now=performance.now();resize();controls.update();updateFox(dt,now);renderer.render(scene,camera);}
-createPlateaus(6,"forest");refreshIndex();renderQueue();loop();
+createEvolutionValidationMap();refreshIndex();renderQueue();loop();

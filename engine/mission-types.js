@@ -40,7 +40,7 @@
       id: "camp",
       title: "Établir un camp",
       description:
-        "Créer un point de repos, de sécurité et d’alimentation avant tout refuge durable.",
+        "Collecter dix bois et étudier tous les arbres, buissons et branches de la zone de départ afin de découvrir la menuiserie.",
       priority: 120,
       instanceScope: "map",
       journalIntro: "Cette zone est encore nouvelle pour moi. Je veux d’abord y établir un camp simple : un endroit où reprendre des forces et observer les environs avant d’envisager une installation durable.",
@@ -48,13 +48,22 @@
         id: "camp-root",
         title: "Établir un camp",
         type: "objective",
-        children: [{
-          id: "camp-establish",
-          title: "Sécuriser un camp provisoire",
-          type: ActionType.OBSERVE,
-          target: 1,
-          params: { subject: "camp", duration: 4200 }
-        }]
+        children: [
+          {
+            id: "camp-wood",
+            title: "Réunir 10 bois",
+            type: ActionType.COLLECT,
+            target: 10,
+            params: { startupMetric: "available-wood", kind: "wood" }
+          },
+          {
+            id: "camp-wood-knowledge",
+            title: "Étudier chaque arbre, buisson et branche de la zone de départ",
+            type: ActionType.INSPECT,
+            target: 1,
+            params: { startupMetric: "wood-specimens-studied" }
+          }
+        ]
       }
     },
     foundation: {
@@ -104,7 +113,7 @@
       id: "shelter",
       title: "Transformer le camp en refuge",
       description:
-        "Renforcer un camp déjà établi pour créer un refuge durable sur cette map.",
+        "Réunir cent bois et cent plantes fibreuses, puis étudier cent plantes pour renforcer l’abri.",
       priority: 110,
       instanceScope: "map",
       journalIntro: "Le camp tient bon. Je pense pouvoir le renforcer en refuge durable sans épuiser les ressources de cette zone. Mon ambition est d’y disposer d’un véritable point d’appui sûr.",
@@ -114,70 +123,25 @@
         type: "objective",
         children: [
           {
-            id: "shelter-zone-analysis",
-            title: "Analyser la zone du camp",
-            type: "objective",
-            children: [
-              {
-                id: "shelter-zone-reach",
-                title: "Reconnaître le plateau",
-                type: ActionType.EXPLORE_ZONE,
-                target: 1,
-                params: {}
-              },
-              {
-                id: "shelter-zone-crystal",
-                title: "Identifier un cristal",
-                type: ActionType.COLLECT,
-                target: 1,
-                requires: ["shelter-zone-reach"],
-                params: { kind: "crystal" }
-              },
-              {
-                id: "shelter-zone-fiber",
-                title: "Identifier des fibres",
-                type: ActionType.COLLECT,
-                target: 1,
-                requires: ["shelter-zone-reach"],
-                params: { kind: "fiber" }
-              },
-              {
-                id: "shelter-zone-structure",
-                title: "Identifier une structure locale",
-                type: ActionType.OBSERVE,
-                target: 1,
-                requires: ["shelter-zone-reach"],
-                params: { subject: "structure", duration: 5200 }
-              },
-              {
-                id: "shelter-zone-map",
-                title: "Cartographier les ressources",
-                type: ActionType.RESEARCH,
-                target: 1,
-                requires: [
-                  "shelter-zone-crystal",
-                  "shelter-zone-fiber",
-                  "shelter-zone-structure"
-                ],
-                params: { duration: 6500 }
-              }
-            ]
-          },
-          {
-            id: "shelter-crystals",
-            title: "Stabiliser une source d’énergie",
+            id: "shelter-wood",
+            title: "Réunir 100 bois",
             type: ActionType.COLLECT,
-            target: 3,
-            requires: ["shelter-zone-analysis"],
-            params: { kind: "crystal" }
+            target: 100,
+            params: { startupMetric: "available-wood", kind: "wood" }
           },
           {
             id: "shelter-fibers",
-            title: "Collecter des fibres",
+            title: "Réunir 100 plantes fibreuses",
             type: ActionType.COLLECT,
-            target: 5,
-            requires: ["shelter-zone-analysis"],
-            params: { kind: "fiber" }
+            target: 100,
+            params: { startupMetric: "available-fiber", kind: "fiber" }
+          },
+          {
+            id: "shelter-plant-knowledge",
+            title: "Observer, inspecter ou analyser 100 plantes",
+            type: ActionType.ANALYZE,
+            target: 100,
+            params: { startupMetric: "plant-studies" }
           }
         ]
       }
@@ -186,7 +150,7 @@
       id: "base",
       title: "Faire évoluer le refuge en base",
       description:
-        "Développer un refuge existant en base locale capable de débloquer de nouveaux projets.",
+        "Réunir mille plantes fibreuses et mille minéraux ou cristaux, puis étudier cent éléments rocheux pour établir la base principale complète.",
       priority: 105,
       instanceScope: "map",
       journalIntro: "Ce refuge est désormais fiable. Je veux le faire évoluer en base locale afin qu’il soutienne des projets plus complexes et déverrouille de nouvelles possibilités de recherche.",
@@ -194,13 +158,29 @@
         id: "base-root",
         title: "Établir une base locale",
         type: "objective",
-        children: [{
-          id: "base-upgrade",
-          title: "Renforcer les installations du refuge",
-          type: ActionType.BUILD,
-          target: 1,
-          params: { subject: "base" }
-        }]
+        children: [
+          {
+            id: "base-fibers",
+            title: "Réunir 1 000 plantes fibreuses",
+            type: ActionType.COLLECT,
+            target: 1000,
+            params: { startupMetric: "available-fiber", kind: "fiber" }
+          },
+          {
+            id: "base-minerals",
+            title: "Réunir 1 000 minéraux ou cristaux",
+            type: ActionType.COLLECT,
+            target: 1000,
+            params: { startupMetric: "available-minerals", kind: "mineral" }
+          },
+          {
+            id: "base-rock-knowledge",
+            title: "Observer, inspecter ou analyser 100 éléments rocheux",
+            type: ActionType.ANALYZE,
+            target: 100,
+            params: { startupMetric: "rock-studies" }
+          }
+        ]
       }
     },
     energy: {
