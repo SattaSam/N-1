@@ -205,18 +205,25 @@
       opacity: 0.8
     });
     const body = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.5, 0.68, 2.35, 6),
+      new THREE.BoxGeometry(1.05, 2.65, 0.48),
       stoneMaterial
     );
-    body.position.y = 1.17;
-    body.rotation.y = variant * 0.4;
+    body.position.y = 1.32;
+    body.rotation.y = variant * 0.16;
     root.add(body);
+    const crown = new THREE.Mesh(
+      new THREE.BoxGeometry(1.28, 0.22, 0.66),
+      stoneMaterial
+    );
+    crown.position.y = 2.62;
+    crown.rotation.y = body.rotation.y;
+    root.add(crown);
     for (let index = 0; index < 3; index += 1) {
       const rune = new THREE.Mesh(
         new THREE.BoxGeometry(0.3, 0.055, 0.035),
         glowMaterial
       );
-      rune.position.set(0, 0.78 + index * 0.43, 0.53);
+      rune.position.set(0, 0.76 + index * 0.52, 0.26);
       rune.rotation.z = index % 2 ? 0.55 : -0.2;
       root.add(rune);
     }
@@ -256,8 +263,10 @@
     const beacon = new THREE.PointLight(palette.accent, 4, 7);
     beacon.position.y = 3;
     root.add(beacon);
+    const hitbox = makeHitbox(THREE, root, 2.45, 4.25, "arch");
     return {
       root: setShadows(root),
+      hitbox,
       colliders: [
         { offset: new THREE.Vector3(-1.55, 0, 0), radius: 0.72 },
         { offset: new THREE.Vector3(1.55, 0, 0), radius: 0.72 }
@@ -269,18 +278,25 @@
   const luminousPool = (THREE, palette, variant = 0) => {
     const root = new THREE.Group();
     root.name = "LuminousPool";
+    const rimShape = new THREE.Shape();
+    rimShape.moveTo(-1.75, 0);
+    rimShape.bezierCurveTo(-1.45, -1.05, -0.2, -1.2, 0.45, -0.85);
+    rimShape.bezierCurveTo(1.45, -0.95, 1.9, -0.25, 1.55, 0.5);
+    rimShape.bezierCurveTo(1.25, 1.15, 0.25, 1.05, -0.35, 0.82);
+    rimShape.bezierCurveTo(-1.2, 1.08, -1.85, 0.72, -1.75, 0);
+    const waterShape = rimShape.clone();
     const rim = new THREE.Mesh(
-      new THREE.RingGeometry(1.1, 1.6, 40),
+      new THREE.ExtrudeGeometry(rimShape, { depth: 0.12, bevelEnabled: true, bevelSize: 0.2, bevelThickness: 0.08, bevelSegments: 2 }),
       material(THREE, {
         color: 0x526e75,
         roughness: 0.85
       })
     );
-    rim.rotation.x = -Math.PI / 2;
-    rim.position.y = 0.035;
+    rim.rotation.x = Math.PI / 2;
+    rim.position.y = 0.08;
     root.add(rim);
     const water = new THREE.Mesh(
-      new THREE.CircleGeometry(1.1, 40),
+      new THREE.ShapeGeometry(waterShape, 40),
       new THREE.MeshBasicMaterial({
         color: palette.accent,
         transparent: true,
@@ -289,9 +305,11 @@
       })
     );
     water.rotation.x = -Math.PI / 2;
-    water.position.y = 0.045;
+    water.scale.setScalar(0.82);
+    water.position.y = 0.16;
     root.add(water);
-    const hitbox = makeHitbox(THREE, root, 1.45, 0.32, "discovery");
+    root.rotation.y = variant * 0.47;
+    const hitbox = makeHitbox(THREE, root, 1.7, 0.42, "discovery");
     return {
       root: setShadows(root),
       hitbox,
@@ -496,28 +514,323 @@
   const technologicalRelic = (THREE, palette, variant = 0) => {
     const root = new THREE.Group();
     root.name = "TechnologicalRelic";
-    const shell = material(THREE, { color: 0x4d5d6c, roughness: 0.42, metalness: 0.75 });
+    const shell = material(THREE, { color: 0xe3e7e9, roughness: 0.28, metalness: 0.88 });
     const core = material(THREE, {
-      color: palette.accent,
-      emissive: palette.accent,
+      color: 0xb86cff,
+      emissive: 0x7f24dd,
       emissiveIntensity: 1.35,
       roughness: 0.18,
       metalness: 0.35
     });
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.64, 1.3, 8), shell);
-    body.position.y = 0.65;
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.05, 1.25, 0.82), shell);
+    body.position.y = 0.68;
     body.rotation.y = variant * 0.28;
     root.add(body);
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.48, 0.08, 8, 24), core);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.43, 0.075, 8, 24), core);
     ring.position.y = 0.82;
     ring.rotation.x = Math.PI / 2;
     root.add(ring);
-    const beacon = new THREE.PointLight(palette.accent, 3.2, 5.5);
+    for (let index = 0; index < 4; index += 1) {
+      const node = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.06), core);
+      node.position.set(index % 2 ? 0.34 : -0.34, 0.42 + Math.floor(index / 2) * 0.5, 0.44);
+      root.add(node);
+    }
+    const beacon = new THREE.PointLight(0xa743ff, 3.2, 5.5);
     beacon.position.y = 1.05;
     root.add(beacon);
     const hitbox = makeHitbox(THREE, root, 0.78, 1.6, "tech_relic");
     return { root: setShadows(root), hitbox, colliders: [{ offset: new THREE.Vector3(), radius: 0.58 }], kind: "tech_relic" };
   };
+
+  const productionObject = (THREE, palette, variant, type) => {
+    const root = new THREE.Group();
+    root.name = type.replace(/(^|_)([a-z])/g, (_, separator, letter) => letter.toUpperCase());
+    const green = material(THREE, { color: 0x458f69, roughness: 0.72 });
+    const luminousGreen = material(THREE, { color: 0x70f2a7, emissive: 0x1c7a55, emissiveIntensity: 0.85, roughness: 0.48 });
+    const violet = material(THREE, { color: 0xb567ff, emissive: 0x6920b8, emissiveIntensity: 1.15, roughness: 0.3 });
+    const stone = material(THREE, { color: 0x53606b, roughness: 0.92, metalness: 0.04 });
+    const metal = material(THREE, { color: 0x9aa4aa, roughness: 0.38, metalness: 0.86 });
+    const darkMetal = material(THREE, { color: 0x343d43, roughness: 0.48, metalness: 0.78 });
+    const water = new THREE.MeshBasicMaterial({ color: 0x48ccec, transparent: true, opacity: 0.48, side: THREE.DoubleSide });
+    let hitbox = null;
+    let colliders = [];
+    let kind = type;
+
+    if (type === "strong_rock" || type === "large_rock") {
+      const scale = type === "large_rock" ? 2.15 : 1.25;
+      for (let index = 0; index < (type === "large_rock" ? 5 : 3); index += 1) {
+        const chunk = new THREE.Mesh(new THREE.DodecahedronGeometry(scale * (0.62 + (index % 3) * 0.14), 0), stone);
+        chunk.position.set((index - 2) * scale * 0.42, scale * (0.42 + (index % 2) * 0.18), ((index * 7) % 3 - 1) * scale * 0.32);
+        chunk.scale.set(1.15, 0.9 + index * 0.05, 0.72);
+        chunk.rotation.set(index * 0.17, index * 0.63 + variant, index * 0.11);
+        root.add(chunk);
+      }
+      const radius = type === "large_rock" ? 2.35 : 1.25;
+      hitbox = makeHitbox(THREE, root, radius, type === "large_rock" ? 3.6 : 2.1, type);
+      colliders = [{ offset: new THREE.Vector3(), radius }];
+    } else if (type === "crystalline_tree" || type === "luminescent_tree") {
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.62, 4.4, 7), type === "crystalline_tree" ? metal : green);
+      trunk.position.y = 2.2;
+      root.add(trunk);
+      for (let index = 0; index < 9; index += 1) {
+        const angle = index * 2.399 + variant * 0.3;
+        const crown = new THREE.Mesh(
+          type === "crystalline_tree" ? new THREE.OctahedronGeometry(0.72 + (index % 3) * 0.18, 0) : new THREE.SphereGeometry(0.72 + (index % 3) * 0.14, 12, 9),
+          type === "crystalline_tree" ? violet : luminousGreen
+        );
+        crown.position.set(Math.cos(angle) * (0.8 + index % 2), 3.4 + (index % 4) * 0.52, Math.sin(angle) * (0.8 + index % 2));
+        crown.scale.y = type === "crystalline_tree" ? 1.35 : 0.72;
+        root.add(crown);
+      }
+      hitbox = makeHitbox(THREE, root, 1.5, 5.6, type);
+      colliders = [{ offset: new THREE.Vector3(), radius: 0.72 }];
+    } else if (type === "fluorescent_vegetation") {
+      for (let index = 0; index < 12; index += 1) {
+        const angle = index * 2.399;
+        const blade = new THREE.Mesh(new THREE.CapsuleGeometry(0.055, 0.7 + (index % 4) * 0.16, 4, 7), index % 3 ? luminousGreen : violet);
+        blade.position.set(Math.cos(angle) * (0.25 + index * 0.035), 0.42 + (index % 4) * 0.08, Math.sin(angle) * (0.25 + index * 0.035));
+        blade.rotation.z = Math.cos(angle) * 0.35;
+        blade.rotation.x = Math.sin(angle) * 0.35;
+        root.add(blade);
+      }
+      hitbox = makeHitbox(THREE, root, 0.72, 1.2, type);
+    } else if (type === "tree_fallen") {
+      const branch = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.25, 2.5, 7), material(THREE, { color: 0x70543a, roughness: 0.94 }));
+      branch.rotation.z = Math.PI / 2;
+      branch.position.y = 0.23;
+      root.add(branch);
+      for (let index = 0; index < 3; index += 1) {
+        const twig = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.09, 0.8, 6), branch.material);
+        twig.position.set(-0.65 + index * 0.62, 0.42, index % 2 ? 0.16 : -0.12);
+        twig.rotation.z = index % 2 ? -0.72 : 0.72;
+        root.add(twig);
+      }
+      hitbox = makeHitbox(THREE, root, 1.25, 0.75, type);
+      colliders = [{ offset: new THREE.Vector3(), radius: 1.05 }];
+    } else if (type === "luminescent_tree") {
+      // Couvert par le constructeur d'arbre partagé ci-dessus.
+    } else if (type === "survival_bag") {
+      const bag = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.86, 0.34), material(THREE, { color: 0x315a73, roughness: 0.84 }));
+      bag.position.y = 0.45;
+      bag.geometry.translate(0, 0, 0);
+      root.add(bag);
+      const flap = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.28, 0.08), material(THREE, { color: 0x6dd6e9, roughness: 0.55 }));
+      flap.position.set(0, 0.65, 0.21);
+      root.add(flap);
+      const strap = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.035, 6, 18, Math.PI), darkMetal);
+      strap.position.set(0, 0.7, -0.2);
+      root.add(strap);
+      hitbox = makeHitbox(THREE, root, 0.52, 1.1, type);
+    } else if (type === "giant_mushroom") {
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.62, 3, 10), material(THREE, { color: 0xcad9bd, roughness: 0.88 }));
+      stem.position.y = 1.5;
+      root.add(stem);
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(1.55, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), violet);
+      cap.scale.y = 0.65;
+      cap.position.y = 3.05;
+      root.add(cap);
+      for (let index = 0; index < 7; index += 1) {
+        const spot = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), luminousGreen);
+        const angle = index * 2.399;
+        spot.position.set(Math.cos(angle) * (0.45 + index * 0.09), 3.65 - index * 0.045, Math.sin(angle) * (0.45 + index * 0.09));
+        root.add(spot);
+      }
+      hitbox = makeHitbox(THREE, root, 1.65, 4.1, type);
+      colliders = [{ offset: new THREE.Vector3(), radius: 0.68 }];
+    } else if (type === "watercourse") {
+      const shape = new THREE.Shape();
+      shape.moveTo(-4.8, -1.2);
+      shape.bezierCurveTo(-2.6, -1.8, -1.2, 0.5, 0.2, -0.4);
+      shape.bezierCurveTo(1.8, -1.3, 3.1, 0.6, 4.8, -0.2);
+      shape.lineTo(4.8, 1.15);
+      shape.bezierCurveTo(2.7, 1.7, 1.5, 0.1, -0.1, 1.05);
+      shape.bezierCurveTo(-1.8, 2, -3.3, -0.1, -4.8, 0.4);
+      shape.closePath();
+      const stream = new THREE.Mesh(new THREE.ShapeGeometry(shape), water);
+      stream.rotation.x = -Math.PI / 2;
+      stream.position.y = 0.04;
+      root.add(stream);
+      [-3.4, -1.2, 1.4, 3.5].forEach((x, index) => {
+        const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.32 + (index % 2) * 0.12, 0), stone);
+        rock.position.set(x, 0.18, index % 2 ? 0.78 : -0.62);
+        root.add(rock);
+      });
+      hitbox = makeHitbox(THREE, root, 4.8, 0.35, type);
+    } else if (type === "rare_biological_resource") {
+      const pod = new THREE.Mesh(new THREE.IcosahedronGeometry(0.46, 2), violet);
+      pod.position.y = 0.62;
+      root.add(pod);
+      for (let index = 0; index < 6; index += 1) {
+        const tendril = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.07, 0.75, 6), luminousGreen);
+        const angle = index * Math.PI / 3;
+        tendril.position.set(Math.cos(angle) * 0.34, 0.28, Math.sin(angle) * 0.34);
+        tendril.rotation.z = Math.cos(angle) * 0.48;
+        tendril.rotation.x = Math.sin(angle) * 0.48;
+        root.add(tendril);
+      }
+      hitbox = makeHitbox(THREE, root, 0.68, 1.25, type);
+    } else if (type === "metallic_dune") {
+      for (let index = 0; index < 7; index += 1) {
+        const ridge = new THREE.Mesh(new THREE.ConeGeometry(1.4 + index * 0.18, 0.65 + (index % 3) * 0.25, 4), index % 2 ? metal : darkMetal);
+        ridge.position.set((index - 3) * 1.05, ridge.geometry.parameters.height / 2, Math.sin(index * 1.7) * 1.25);
+        ridge.scale.z = 1.7;
+        ridge.rotation.y = Math.PI / 4 + variant * 0.13;
+        root.add(ridge);
+      }
+      hitbox = makeHitbox(THREE, root, 4.6, 1.4, type);
+      colliders = [{ offset: new THREE.Vector3(), radius: 4.2 }];
+    } else if (type === "ancient_machine_wreck") {
+      const hull = new THREE.Mesh(new THREE.BoxGeometry(3.3, 1.35, 1.8), darkMetal);
+      hull.position.y = 0.72;
+      hull.rotation.set(0.08, variant * 0.22, -0.12);
+      root.add(hull);
+      for (let index = 0; index < 3; index += 1) {
+        const gear = new THREE.Mesh(new THREE.TorusGeometry(0.52 + index * 0.13, 0.13, 7, 12), metal);
+        gear.position.set(-1.15 + index * 1.1, 0.85 + index * 0.18, 0.96);
+        gear.rotation.y = 0.18 * index;
+        root.add(gear);
+        const light = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), violet);
+        light.position.set(-1.1 + index * 1.1, 1.15, -0.96);
+        root.add(light);
+      }
+      hitbox = makeHitbox(THREE, root, 2.1, 2.2, type);
+      colliders = [{ offset: new THREE.Vector3(), radius: 1.8 }];
+    } else if (type === "fog_bank") {
+      const fogMaterial = new THREE.MeshBasicMaterial({ color: 0xb5d5d9, transparent: true, opacity: 0.16, depthWrite: false });
+      for (let index = 0; index < 11; index += 1) {
+        const cloud = new THREE.Mesh(new THREE.SphereGeometry(1.4 + (index % 3) * 0.6, 12, 8), fogMaterial);
+        cloud.scale.set(1.8, 0.48, 1.05);
+        cloud.position.set((index % 4 - 1.5) * 2.4, 0.55 + (index % 3) * 0.35, (Math.floor(index / 4) - 1) * 2.4);
+        root.add(cloud);
+      }
+      hitbox = makeHitbox(THREE, root, 4.8, 2.6, type);
+    } else if (type === "submerged_ruins") {
+      const floor = new THREE.Mesh(new THREE.BoxGeometry(6.8, 0.34, 5.2), stone);
+      floor.position.y = 0.17;
+      root.add(floor);
+      [[-2.5, 1.1], [2.3, 1.3], [-2.2, -1.5], [2.5, -1.4]].forEach(([x, z], index) => {
+        const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.62, 2 + (index % 2) * 0.7, 0.62), stone);
+        pillar.position.set(x, pillar.geometry.parameters.height / 2, z);
+        pillar.rotation.z = index * 0.06;
+        root.add(pillar);
+      });
+      const flooded = new THREE.Mesh(new THREE.PlaneGeometry(6.4, 4.8), water);
+      flooded.rotation.x = -Math.PI / 2;
+      flooded.position.y = 0.48;
+      root.add(flooded);
+      hitbox = makeHitbox(THREE, root, 4.1, 3.1, type);
+      colliders = [{ offset: new THREE.Vector3(-2.5, 0, 1.1), radius: 0.45 }, { offset: new THREE.Vector3(2.3, 0, 1.3), radius: 0.45 }];
+    } else if (type === "amphibian_species") {
+      const skin = material(THREE, { color: variant % 2 ? 0x70cfa5 : 0x56a9b9, roughness: 0.68 });
+      const body = new THREE.Mesh(new THREE.SphereGeometry(0.65, 16, 10), skin);
+      body.scale.set(1.25, 0.7, 0.9);
+      body.position.y = 0.55;
+      root.add(body);
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.45, 14, 9), skin);
+      head.position.set(0.68, 0.72, 0);
+      root.add(head);
+      [-1, 1].forEach((side) => {
+        const eye = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 6), violet);
+        eye.position.set(0.92, 0.92, side * 0.25);
+        root.add(eye);
+        const leg = new THREE.Mesh(new THREE.CapsuleGeometry(0.08, 0.62, 4, 7), skin);
+        leg.position.set(-0.25, 0.23, side * 0.62);
+        leg.rotation.x = side * 0.8;
+        root.add(leg);
+      });
+      hitbox = makeHitbox(THREE, root, 0.95, 1.4, type);
+      colliders = [{ offset: new THREE.Vector3(), radius: 0.72 }];
+    } else if (type === "bush") {
+      for (let index = 0; index < 8; index += 1) {
+        const angle = index * 2.399;
+        const crown = new THREE.Mesh(new THREE.DodecahedronGeometry(0.55 + (index % 3) * 0.13, 1), index % 4 ? green : luminousGreen);
+        crown.position.set(Math.cos(angle) * 0.62, 0.55 + (index % 3) * 0.28, Math.sin(angle) * 0.62);
+        root.add(crown);
+      }
+      hitbox = makeHitbox(THREE, root, 1.15, 1.65, type);
+      colliders = [{ offset: new THREE.Vector3(), radius: 0.8 }];
+    }
+
+    root.rotation.y = variant * 0.31;
+    return { root: setShadows(root), hitbox, colliders, kind };
+  };
+
+  const buildProduction = (type) => (THREE, palette, variant = 0) =>
+    productionObject(THREE, palette, variant, type);
+
+  const PRODUCTION_SPECS = Object.freeze([
+    { id: "NAT-ROCK-M-002", type: "strong_rock", label: "Roche solide", category: "natural_decor", subtype: "solid_rock", size: "M", rarity: "common", biomes: ["all"], scenes: ["Éboulis", "Balisage naturel", "Abri minéral"], states: ["présente", "repérée", "observée", "cartographiée"], actions: ["observe", "inspect"], inspectable: true, obstacle: true, family: "geology", tags: ["decor", "mineral", "obstacle", "border-separator"], spawnCost: 2, maxPerZone: 12, minDistance: 1.3, maxSlope: 50, radius: 1.15, volume: "medium", note: "Formes saillantes et découpées, sans arrondis.", decision: "validated" },
+    { id: "NAT-ROCK-XL-001", type: "large_rock", label: "Roche obstacle", category: "natural_decor", subtype: "alien_large_rock", size: "XL", rarity: "common", biomes: ["all"], scenes: ["Éboulis", "Séparateur de bordure"], states: ["présente", "repérée", "observée", "cartographiée"], actions: ["observe", "inspect"], inspectable: true, obstacle: true, family: "geology", tags: ["decor", "mineral", "obstacle", "border-separator"], spawnCost: 2, maxPerZone: 18, minDistance: 10, maxSlope: 12, radius: 2.2, volume: "large", note: "Grand séparateur rocheux anguleux.", decision: "validated" },
+    { id: "DOC-NAT-TREE-L-002", type: "crystalline_tree", label: "Arbre cristallin", category: "natural_decor", subtype: "crystalline_alien_tree", size: "L", rarity: "rare", biomes: ["forest", "crystalline", "alien"], scenes: ["Forêt cristalline", "Bosquet résonant"], states: ["présent", "lumineux", "résonant", "inspecté", "analysé"], actions: ["observe", "inspect", "analyze"], defaultAction: "inspect", inspectable: true, obstacle: true, discoverable: true, family: "flora", research: ["botany", "crystallography", "energy"], tags: ["plant", "crystal", "glowing", "landmark"], spawnCost: 7, maxPerZone: 3, minDistance: 5, maxSlope: 24, radius: 1.5, volume: "large", curiosity: 0.9, danger: 0.05, decision: "validated" },
+    { id: "DOC-BIO-FLUV-S-001", type: "fluorescent_vegetation", label: "Végétation fluorescente", category: "flora", subtype: "fluorescent_ground_vegetation", size: "S", rarity: "common", biomes: ["forest", "jungle", "swamp", "alien"], scenes: ["Sous-bois fluorescent", "Rive lumineuse"], states: ["dormante", "lumineuse", "inspectée", "récoltée", "repousse"], actions: ["observe", "inspect", "collect", "analyze"], defaultAction: "inspect", collectable: true, inspectable: true, respawn: 120, inventoryKey: "fluorescent_biomass", exploitability: "harvestable", family: "flora", resourceFamily: "biomass", research: ["botany", "bioluminescence", "energy"], tags: ["resource", "plant", "glowing", "ground_cover"], spawnCost: 1, maxPerZone: 12, minDistance: 0.8, maxSlope: 30, radius: 0.5, volume: "small", curiosity: 0.55, harvest: 0.35, decision: "validated" },
+    { id: "DOC-RES-WOOD-M-001", type: "tree_fallen", label: "Branche", category: "resources", subtype: "fallen_alien_branch", size: "M", rarity: "common", biomes: ["forest", "jungle", "swamp", "plain", "alien"], scenes: ["Bois mort", "Camp de construction"], states: ["au sol", "repérée", "inspectée", "collectée", "transformée"], actions: ["observe", "inspect", "collect", "transform"], defaultAction: "collect", collectable: true, inspectable: true, obstacle: true, respawn: 210, inventoryKey: "wood", exploitability: "combustible/transformable", family: "flora", resourceFamily: "wood", research: ["botany", "materials", "engineering"], tags: ["resource", "wood", "construction", "obstacle"], spawnCost: 3, maxPerZone: 6, minDistance: 2.2, maxSlope: 24, radius: 1.2, volume: "medium", curiosity: 0.45, harvest: 0.72, missions: ["camp", "construction refuge", "fabrication de planches"], note: "5 cristaux + 1 branche permettent de produire du bois de construction.", decision: "validated" },
+    { id: "DOC-NAT-TREE-L-001", type: "luminescent_tree", label: "Arbre luminescent", category: "natural_decor", subtype: "luminescent_alien_tree", size: "L", rarity: "uncommon", biomes: ["forest", "jungle", "swamp", "alien"], scenes: ["Clairière luminescente", "Forêt photoréactive"], states: ["présent", "lumineux", "inspecté", "analysé"], actions: ["observe", "inspect", "analyze"], defaultAction: "inspect", inspectable: true, obstacle: true, discoverable: true, family: "flora", research: ["botany", "biology", "bioluminescence"], tags: ["plant", "glowing", "landmark"], spawnCost: 6, maxPerZone: 5, minDistance: 4.2, maxSlope: 25, radius: 1.5, volume: "large", curiosity: 0.82, note: "Intégration autorisée par le CUO Production.", decision: "corrected" },
+    { id: "DOC-EQP-BAG-S-001", type: "survival_bag", label: "Sac de survie", category: "equipment", subtype: "survival_inventory_bag", size: "S", rarity: "uncommon", biomes: ["starting-map", "crash-site", "base"], scenes: ["Épave initiale", "Camp de départ"], states: ["rangé", "repéré", "inspecté", "équipé", "endommagé", "réparé"], actions: ["observe", "inspect", "collect", "equip", "repair"], defaultAction: "collect", collectable: true, inspectable: true, respawn: 3600, inventoryKey: "survival_bag", exploitability: "equipable", family: "equipment", resourceFamily: "equipment", research: ["survival", "engineering"], tags: ["equipment", "inventory", "survival", "unique"], spawnCost: 8, maxPerZone: 1, minDistance: 8, maxSlope: 10, radius: 0.55, volume: "small", curiosity: 0.8, harvest: 1, missions: ["augmenter la capacité de collecte", "équipement de survie"], effects: { inventoryCapacityMultiplier: 2 }, note: "Double la capacité d’inventaire de BlueFox.", decision: "corrected" },
+    { id: "DOC-NAT-MUSH-L-001", type: "giant_mushroom", label: "Champignon géant", category: "natural_decor", subtype: "giant_alien_fungus", size: "L", rarity: "uncommon", biomes: ["forest", "jungle", "swamp", "mushroom"], scenes: ["Colonie fongique", "Arche de sporophores"], states: ["dormant", "sporulant", "observé", "analysé", "récolté", "repousse"], actions: ["observe", "inspect", "analyze", "collect", "transform"], defaultAction: "inspect", collectable: true, inspectable: true, obstacle: true, respawn: 210, inventoryKey: "fungal_sample", exploitability: "harvestable", family: "flora", resourceFamily: "fungus", research: ["mycology", "biology", "food"], tags: ["resource", "fungus", "spore", "landmark"], spawnCost: 6, maxPerZone: 3, minDistance: 4.5, maxSlope: 22, radius: 1.65, volume: "large", curiosity: 0.75, harvest: 0.62, danger: 0.45, missions: ["étude fongique", "source d’alimentation riche"], effects: { baseTransformationRations: 10, energyRecovery: 1, fatigueDecayMultiplier: 0.75 }, decision: "corrected" },
+    { id: "DOC-ENV-WATR-XL-001", type: "watercourse", label: "Cours d’eau", category: "environment", subtype: "alien_watercourse", size: "XL", rarity: "common", biomes: ["forest", "jungle", "swamp", "coast", "aquatic"], scenes: ["Rive vivante", "Gué", "Source"], states: ["calme", "rapide", "pollué", "lumineux", "analysé"], actions: ["observe", "inspect", "analyze", "drink", "cross"], defaultAction: "inspect", inspectable: true, obstacle: true, traversable: true, discoverable: true, family: "phenomenon", research: ["hydrology", "chemistry", "biology"], tags: ["environment", "liquid", "corridor", "phenomenon", "traversable"], spawnCost: 10, maxPerZone: 1, minDistance: 12, maxSlope: 8, radius: 4.8, volume: "large", curiosity: 0.6, danger: 0.08, missions: ["trouver de l’eau", "analyser un milieu", "franchir un obstacle"], effects: { contextualLines: ["Juste assez profond pour me rafraîchir les coussinets.", "Ce filet d’eau me rafraîchit les pattes."] }, decision: "corrected" },
+    { id: "DOC-RES-BIOR-S-001", type: "rare_biological_resource", label: "Ressource biologique rare", category: "resources", subtype: "rare_biological_sample", size: "S", rarity: "rare", biomes: ["forest", "jungle", "swamp", "aquatic", "alien"], scenes: ["Niche biologique rare", "Organisme symbiotique"], states: ["présente", "identifiée", "analysée", "récoltée", "régénération"], actions: ["observe", "inspect", "analyze", "collect"], defaultAction: "inspect", collectable: true, inspectable: true, respawn: 180, inventoryKey: "rare_biomass", exploitability: "harvestable", family: "biology", resourceFamily: "biology", research: ["biology", "nutrition", "survival", "adaptation"], tags: ["resource", "biological", "rare", "discovery", "drone-collectable"], spawnCost: 1, maxPerZone: 2, minDistance: 6, maxSlope: 28, radius: 0.6, volume: "small", curiosity: 1, harvest: 0.72, danger: 0.05, missions: ["recherche avancée", "collecte rare", "projet biologique"], note: "Collecte future possible par drones.", decision: "corrected" },
+    { id: "DOC-TER-DUNE-XL-001", type: "metallic_dune", label: "Dune métallique", category: "terrain_feature", subtype: "magnetic_metal_dune", size: "XL", rarity: "common", biomes: ["desert", "volcanic", "magnetic"], scenes: ["Mer de dunes métalliques", "Crête magnétique"], states: ["stable", "mouvante", "chargée", "cartographiée"], actions: ["observe", "inspect", "analyze", "traverse"], inspectable: true, obstacle: true, traversable: true, family: "geology", research: ["geology", "magnetism", "materials"], tags: ["terrain", "metal", "magnetic", "obstacle", "traversable"], spawnCost: 10, maxPerZone: 2, minDistance: 12, maxSlope: 18, radius: 4.6, volume: "large", curiosity: 0.4, danger: 0.15, missions: ["cartographie", "franchissement", "étude magnétique"], decision: "corrected" },
+    { id: "DOC-RUI-MACH-L-001", type: "ancient_machine_wreck", label: "Carcasse d’ancienne machine", category: "ruins", subtype: "ancient_machine_wreck", size: "L", rarity: "uncommon", biomes: ["desert", "ruins", "crash-site", "magnetic", "electric"], scenes: ["Cimetière de machines", "Épave ensablée"], states: ["enfouie", "repérée", "inspectée", "analysée", "fouillée", "sécurisée"], actions: ["observe", "inspect", "analyze", "salvage"], defaultAction: "inspect", collectable: true, inspectable: true, obstacle: true, persistentResource: true, respawn: 43200, inventoryKey: "ancient_components", exploitability: "salvageable", family: "technology", resourceFamily: "technology", research: ["engineering", "archaeology", "materials"], tags: ["ruin", "technology", "component", "evidence", "landmark"], spawnCost: 6, maxPerZone: 2, minDistance: 8, maxSlope: 16, radius: 2.1, volume: "large", curiosity: 1, harvest: 0.75, danger: 0.18, missions: ["fouille technologique", "composants", "enquête civilisationnelle"], note: "Machine cubique, rouages et points violets clignotants.", decision: "corrected" },
+    { id: "DOC-PHE-FOG-XL-001", type: "fog_bank", label: "Banc de brouillard", category: "phenomena", subtype: "dense_alien_fog", size: "XL", rarity: "common", biomes: ["swamp", "forest", "coast", "aquatic"], scenes: ["Nappe de brume", "Passage masqué"], states: ["léger", "dense", "toxique", "lumineux", "dissipé"], actions: ["observe", "analyze", "avoid", "traverse"], inspectable: true, traversable: true, family: "phenomenon", research: ["meteorology", "chemistry"], tags: ["weather", "fog", "visibility", "phenomenon", "danger", "traversable"], spawnCost: 4, maxPerZone: 1, minDistance: 12, maxSlope: 12, radius: 4.8, volume: "large", curiosity: 0.35, danger: 0.9, missions: ["navigation à visibilité réduite", "analyse atmosphérique"], effects: { traversalEnergyDelta: -0.1 }, note: "Traverser la brume réduit l’énergie de 10 %.", decision: "corrected" },
+    { id: "DOC-RUI-SUBM-XL-001", type: "submerged_ruins", label: "Ruines immergées", category: "ruins", subtype: "submerged_ancient_ruins", size: "XL", rarity: "rare", biomes: ["swamp", "aquatic", "coast", "oceanic", "archipelago"], scenes: ["Sanctuaire immergé", "Cité noyée"], states: ["submergées", "repérées", "accessibles", "inspectées", "analysées", "cartographiées"], actions: ["observe", "inspect", "analyze", "explore"], defaultAction: "inspect", inspectable: true, obstacle: true, discoverable: true, family: "ancient-ruin", research: ["archaeology", "hydrology", "ancient-technology"], tags: ["ruin", "underwater", "landmark", "discovery", "rare"], spawnCost: 10, maxPerZone: 1, minDistance: 14, maxSlope: 8, radius: 4.1, volume: "large", curiosity: 0.75, missions: ["explorer des ruines", "cartographier", "enquête civilisationnelle"], note: "Réservé aux maps humides et océaniques, apparition rare.", decision: "corrected" },
+    { id: "DOC-FAU-AMPH-M-001", type: "amphibian_species", label: "Espèce amphibie", category: "fauna", subtype: "alien_amphibian_species", size: "M", rarity: "uncommon", biomes: ["swamp", "aquatic", "coast"], scenes: ["Colonie amphibie", "Rive de reproduction"], states: ["immergée", "terrestre", "curieuse", "effrayée", "sociale", "hostile"], actions: ["observe", "track", "contact", "feed", "avoid"], inspectable: true, traversable: true, family: "fauna", research: ["zoology", "ecology", "adaptation", "behavior"], tags: ["fauna", "amphibian", "mobile", "living"], spawnCost: 4, maxPerZone: 5, minDistance: 3, maxSlope: 18, radius: 0.95, volume: "medium", curiosity: 0.65, danger: 0.2, missions: ["observer une espèce", "premier contact", "étude inter-biomes"], effects: { dangerDependsOnStanding: true }, note: "Validation visuelle obligatoire avant distribution dans les biomes.", decision: "corrected", visualValidationRequired: true },
+    { id: "DOC-BIO-BUSH-M-001", type: "bush", label: "Buisson", category: "flora", subtype: "alien_bush", size: "M", rarity: "common", biomes: ["plain", "forest", "jungle", "swamp", "coast", "alien"], scenes: ["Lisière boisée", "Camp de construction"], states: ["présent", "identifié", "analysé", "récolté", "régénéré", "transformé"], actions: ["observe", "inspect", "analyze", "collect", "transform"], defaultAction: "collect", collectable: true, inspectable: true, traversable: true, respawn: 210, inventoryKey: "wood", exploitability: "combustible/transformable", family: "flora", resourceFamily: "wood", research: ["flora", "engineering"], tags: ["resource", "wood", "plant", "construction"], spawnCost: 4, maxPerZone: 4, minDistance: 0.75, maxSlope: 4, radius: 1.5, volume: "medium", curiosity: 0.25, harvest: 0.4, missions: ["feu de camp", "construction refuge", "fabrication de planches"], effects: { campRecipeBush: 5, refugeRecipe: { crystal: 6, bush: 2 } }, note: "5 buissons pour le feu/camp ; 6 cristaux + 2 buissons pour le refuge.", decision: "corrected" }
+  ]);
+
+  const PRODUCTION_OBJECT_LIBRARY = Object.freeze(Object.fromEntries(PRODUCTION_SPECS.map((spec) => [
+    spec.type,
+    Object.freeze({
+      id: spec.id,
+      type: spec.type,
+      label: spec.label,
+      category: spec.category,
+      subtype: spec.subtype,
+      size: spec.size,
+      rarity: spec.rarity,
+      status: "active",
+      biomes: spec.biomes,
+      microScenes: spec.scenes,
+      states: spec.states,
+      missionLinks: spec.missions || [],
+      placement: Object.freeze({ edgeWeight: 0.5, centerWeight: 0.5, minSlope: 0, maxSlope: spec.maxSlope }),
+      gameplay: Object.freeze({
+        interactive: true,
+        collectable: Boolean(spec.collectable),
+        inspectable: Boolean(spec.inspectable),
+        destructible: false,
+        obstacle: Boolean(spec.obstacle),
+        traversable: Boolean(spec.traversable),
+        discoverable: Boolean(spec.discoverable)
+      }),
+      ai: Object.freeze({ curiosity: spec.curiosity || 0, harvestPriority: spec.harvest || 0, danger: spec.danger || 0 }),
+      interaction: {
+        actions: spec.actions,
+        defaultAction: spec.defaultAction || spec.actions[0],
+        acquisitionAction: spec.collectable ? (spec.actions.includes("salvage") ? "salvage" : "collect") : null,
+        removeFromWorld: Boolean(spec.collectable) && !spec.persistentResource,
+        respawnSeconds: spec.collectable ? spec.respawn : null,
+        animation: spec.collectable ? {
+          [spec.actions.includes("salvage") ? "salvage" : "collect"]:
+            spec.size === "S"
+              ? ["Harvers_Samall"]
+              : ["giant_mushroom", "bush", "tree_fallen"].includes(spec.type)
+                ? ["Harvers_Samall", "Harvest_Medium", "Harvers_Samall"]
+                : ["Harvest_Heavy", "Harvest_Medium", "Harvest_Heavy"]
+        } : null
+      },
+      knowledge: { family: spec.family, discoverable: true, uniqueByVariant: true },
+      observation: { events: spec.inspectable ? ["OBJECT_SEEN", "OBJECT_INSPECTED", "OBJECT_ANALYZED"] : ["OBJECT_SEEN", "PHENOMENON_OBSERVED"] },
+      resource: spec.collectable ? { family: spec.resourceFamily, exploitability: spec.exploitability, inventoryKey: spec.inventoryKey } : null,
+      research: spec.research?.length ? { domains: spec.research } : null,
+      situation: { tags: spec.tags },
+      decision: spec.effects || null,
+      progression: { mapExpertise: spec.rarity === "rare" ? 4 : 2, discovery: 1, journal: spec.rarity === "rare" },
+      production: Object.freeze({ decision: spec.decision, note: spec.note || null, visualValidationRequired: Boolean(spec.visualValidationRequired) }),
+      spawnProfile: Object.freeze({ spawnCost: spec.spawnCost, maxPerZone: spec.maxPerZone, minDistance: spec.minDistance }),
+      mapPlacement: Object.freeze({ radius: spec.radius, volume: spec.volume }),
+      build: buildProduction(spec.type)
+    })
+  ])));
 
 
   const FUNCTIONAL_FIELDS = Object.freeze([
@@ -617,7 +930,7 @@
       size: "S",
       rarity: "common",
       status: "active",
-      biomes: ["forest", "jungle", "swamp"],
+      biomes: ["forest", "jungle", "swamp", "volcanic", "frozen", "ruins", "aquatic", "desert", "crystalline", "alien"],
       placement: Object.freeze({
         edgeWeight: 0.4,
         centerWeight: 0.6,
@@ -660,7 +973,7 @@
     magnetic_ore: Object.freeze({
       id: "RES-MAGN-M-001", type: "magnetic_ore", label: "Minerai magnétique",
       category: "resources", subtype: "magnetic_ore_cluster", size: "M", rarity: "uncommon",
-      status: "active", biomes: ["mountain", "cave", "desert", "ruins"],
+      status: "active", biomes: ["mountain", "cave", "desert", "ruins", "volcanic", "frozen", "crystalline", "alien"],
       placement: Object.freeze({ edgeWeight: 0.4, centerWeight: 0.6, minSlope: 0, maxSlope: 42 }),
       gameplay: Object.freeze({ interactive: true, collectable: true, inspectable: true, destructible: false, obstacle: true }),
       ai: Object.freeze({ curiosity: 0.9, harvestPriority: 0.88, danger: 0.05 }),
@@ -736,6 +1049,7 @@
       situation: { tags: ["technology", "ruin", "component", "landmark"] },
       decision: { mayTriggerProject: true, extractionForbiddenUntilAnalyzed: true },
       progression: { mapExpertise: 4, discovery: 1, journal: true },
+      production: { decision: "validated", note: "Design technologique blanc métallisé avec lueur violette." },
       build: technologicalRelic
     }),
 
@@ -866,6 +1180,7 @@
       situation: { tags: ["ruin", "landmark", "evidence"] },
       decision: { mayTriggerProject: true },
       progression: { mapExpertise: 3, discovery: 1, journal: true },
+      production: { decision: "corrected", note: "Silhouette rectangulaire plutôt que cylindrique." },
       build: ancientStele
     }),
 
@@ -886,8 +1201,9 @@
         maxSlope: 12
       }),
       gameplay: Object.freeze({
-        interactive: false,
+        interactive: true,
         collectable: false,
+        inspectable: true,
         destructible: false,
         obstacle: true,
         traversable: true
@@ -897,6 +1213,19 @@
         harvestPriority: 0,
         danger: 0
       }),
+      interaction: {
+        actions: ["observe", "inspect", "traverse"],
+        defaultAction: "inspect",
+        removeFromWorld: false,
+        contextualLines: ["Une trace de civilisation."],
+        animation: { observe: ["Ear_Right"], inspect: ["Ear_Right"] }
+      },
+      knowledge: { family: "ancient-ruin", discoverable: true, uniqueByInstance: true },
+      observation: { events: ["OBJECT_SEEN", "OBJECT_INSPECTED"] },
+      research: { domains: ["archaeology", "geology", "ancient-technology"] },
+      situation: { tags: ["ruin", "landmark", "traversable", "evidence"] },
+      progression: { mapExpertise: 3, discovery: 1, journal: true },
+      production: { decision: "corrected", note: "Inspectable ; annonce : Une trace de civilisation." },
       build: traversableArch
     }),
 
@@ -919,7 +1248,7 @@
       gameplay: Object.freeze({
         interactive: true,
         collectable: false,
-        inspectable: false,
+        inspectable: true,
         destructible: false,
         obstacle: false,
         discoverable: true
@@ -930,17 +1259,18 @@
         danger: 0.1
       }),
       interaction: {
-        actions: ["observe"],
-        defaultAction: "observe",
-        defaultManualAction: "observe",
+        actions: ["observe", "inspect", "analyze"],
+        defaultAction: "inspect",
+        defaultManualAction: "inspect",
         removeFromWorld: false,
         animation: { observe: ["Ear_Right"] }
       },
       knowledge: { family: "phenomenon", discoverable: true, uniqueByInstance: true },
       observation: { events: ["OBJECT_SEEN", "PHENOMENON_OBSERVED"] },
-      research: { domains: ["biology", "chemistry", "energy"] },
+      research: { domains: ["biology", "chemistry", "energy", "engineering"] },
       situation: { tags: ["liquid", "bioluminescent", "environmental-phenomenon"] },
       progression: { mapExpertise: 2, discovery: 1, journal: true },
+      production: { decision: "corrected", note: "Forme organique en haricot, rotations de placement variées." },
       build: luminousPool
     }),
 
@@ -983,7 +1313,7 @@
       size: "S",
       rarity: "common",
       status: "active",
-      biomes: ["forest", "jungle", "swamp", "tundra"],
+      biomes: ["forest", "jungle", "swamp", "tundra", "frozen", "ruins", "aquatic", "desert", "crystalline", "alien"],
       placement: Object.freeze({
         edgeWeight: 0.5,
         centerWeight: 0.5,
@@ -1013,7 +1343,7 @@
       size: "S",
       rarity: "uncommon",
       status: "active",
-      biomes: ["forest", "jungle", "swamp", "cave"],
+      biomes: ["forest", "jungle", "swamp", "cave", "volcanic", "frozen", "ruins", "aquatic", "alien"],
       placement: Object.freeze({
         edgeWeight: 0.55,
         centerWeight: 0.45,
@@ -1043,7 +1373,7 @@
       size: "S",
       rarity: "common",
       status: "active",
-      biomes: ["ruins", "desert", "forest", "mountain"],
+      biomes: ["ruins", "desert", "forest", "mountain", "volcanic", "crystalline", "alien"],
       placement: Object.freeze({
         edgeWeight: 0.65,
         centerWeight: 0.35,
@@ -1062,7 +1392,9 @@
         danger: 0
       }),
       build: ruinDebris
-    })
+    }),
+
+    ...PRODUCTION_OBJECT_LIBRARY
   };
 
 
@@ -1108,7 +1440,7 @@
   });
 
   const freezeDefinition = (definition) => {
-    const overrides = SPAWN_OVERRIDES[definition.type] || {};
+    const overrides = { ...(definition.spawnProfile || {}), ...(SPAWN_OVERRIDES[definition.type] || {}) };
     const radius = SIZE_RADIUS[definition.size] || SIZE_RADIUS.M;
     const spawn = Object.freeze({
       spawnCost: overrides.spawnCost ?? Math.max(1, Math.round(radius * 3)),
@@ -1131,6 +1463,11 @@
     const functional = normalizeFunctional({ ...definition, interaction });
     return Object.freeze({
       ...definition,
+      biomes: Object.freeze([...(definition.biomes || [])]),
+      microScenes: Object.freeze([...(definition.microScenes || [])]),
+      states: Object.freeze([...(definition.states || [])]),
+      missionLinks: Object.freeze([...(definition.missionLinks || [])]),
+      production: freezeFunctionalValue(definition.production),
       placement: Object.freeze({ ...definition.placement }),
       gameplay,
       ai: Object.freeze({ ...definition.ai }),
@@ -1151,7 +1488,7 @@
   );
 
   BF.ObjectLibrary = Object.freeze({
-    schemaVersion: 3,
+    schemaVersion: 4,
     functionalFields: FUNCTIONAL_FIELDS,
     data: OBJECT_LIBRARY,
 
@@ -1184,7 +1521,7 @@
     },
 
     getMapPlacement(type) {
-      return MAP_PLACEMENT[type] || Object.freeze({ radius: 0.7, volume: "small" });
+      return OBJECT_LIBRARY[type]?.mapPlacement || MAP_PLACEMENT[type] || Object.freeze({ radius: 0.7, volume: "small" });
     },
 
     listByTag(tag) {

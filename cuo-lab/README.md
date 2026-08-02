@@ -22,3 +22,12 @@ Les entrées uniquement documentaires du tableur CUO ne peuvent pas être matér
 - Clic droit + mouvement : rotation libre de la caméra.
 - Maj ou Ctrl + clic droit : déplacement latéral de la caméra.
 - Molette : zoom centré sur la position du pointeur.
+- **Centrer sur l’objet** et **Centrer sur BlueFox** reproduisent un recentrage assisté proche du jeu.
+- Activer **Déplacer les objets**, puis faire glisser un objet du plateau test avec le clic gauche.
+- Le panneau de transformation applique des rotations X, Y et Z par pas de 15° et peut restaurer la transformation de dépôt initiale.
+
+## Micro-scènes Custom
+
+Le bouton **Sauvegarder la micro-scène** enregistre tous les objets du plateau test sous un code `MSC-CUSTOM-NOM-DE-LA-SCENE`.
+
+Le serveur met à jour `data/custom-micro-scenes.json` et `data/custom-micro-scenes.js`. Le moteur charge ce registre au démarrage et `BlueFox3D.MicroScenes.plan(code, origine, rotation)` peut ensuite reproduire la scène, y compris les rotations X, Y et Z de chaque objet.

@@ -19,13 +19,13 @@ scene.background = new THREE.Color(0x06111b);
 scene.fog = new THREE.Fog(0x06111b, 80, 155);
 
 const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 240);
-camera.position.set(0, 43, 66);
+camera.position.set(0, 78, 130);
 const controls = new OrbitControls(camera, canvas);
 controls.target.set(0, 0, 0);
 controls.enableDamping = true;
 controls.dampingFactor = 0.09;
 controls.minDistance = 6;
-controls.maxDistance = 125;
+controls.maxDistance = 210;
 controls.maxPolarAngle = Math.PI * 0.48;
 controls.rotateSpeed = 0.72;
 controls.panSpeed = 1.15;
@@ -47,8 +47,8 @@ sun.shadow.camera.top = 55;
 sun.shadow.camera.bottom = -55;
 scene.add(sun);
 
-const PLATFORM = Object.freeze({ width: 50, depth: 44, y: 0.3 });
-const PLATFORM_CENTERS = Object.freeze({ showroom: -25, sandbox: 25 });
+const PLATFORM = Object.freeze({ width: 96, depth: 100, y: 0.3 });
+const PLATFORM_CENTERS = Object.freeze({ showroom: -48, sandbox: 48 });
 const platforms = [];
 function makePlatform(name, x, color) {
   const root = new THREE.Group();
@@ -92,6 +92,9 @@ const objectRoots = [];
 let nextLabId = 1;
 let selected = null;
 let selectionVisual = null;
+let moveMode = false;
+let objectDrag = null;
+let cameraTransition = null;
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 
@@ -107,16 +110,21 @@ function createCatalogObject(type, position, origin = "sandbox", variant = 0) {
   root.userData.labId = nextLabId++;
   root.userData.labOrigin = origin;
   root.userData.labInstance = instance;
+  root.userData.labVariant = variant;
   groundObject(instance);
+  root.userData.labInitialTransform = {
+    position: root.position.clone(),
+    rotation: root.rotation.clone()
+  };
   scene.add(root);
   objectRoots.push(root);
   return root;
 }
 
 function populateShowroom() {
-  const columns = 4;
-  const xStep = 10.8;
-  const zStep = 10.2;
+  const columns = 5;
+  const xStep = 18;
+  const zStep = 16;
   const startX = PLATFORM_CENTERS.showroom - ((columns - 1) * xStep) / 2;
   const rows = Math.ceil(catalog.length / columns);
   const startZ = -((rows - 1) * zStep) / 2 + 1;
@@ -225,15 +233,31 @@ function updateSelectionVisual() {
 
 function selectObject(root) {
   selected = root;
+  document.querySelector("#focus-selected").disabled = !root;
   if (!root) {
     document.querySelector("#selection-details").textContent = "Sélectionnez un objet.";
     clearSelectionVisual();
+    updateTransformWindow();
     return;
   }
   const definition = root.userData.labInstance.definition;
   const colliders = root.userData.labInstance.colliders || [];
   document.querySelector("#selection-details").innerHTML = `<b>${definition.label}</b><br>${definition.id} · ${definition.category} · taille ${definition.size}<br>Rareté : ${definition.rarity} · hitbox : ${root.userData.labInstance.hitbox ? "oui" : "non"} · collisions : ${colliders.length}`;
   updateSelectionVisual();
+  updateTransformWindow();
+}
+
+function updateTransformWindow() {
+  const panel = document.querySelector("#transform-window");
+  const editable = moveMode && selected?.userData.labOrigin === "sandbox";
+  panel.hidden = !editable;
+  if (!editable) return;
+  document.querySelector("#transform-object-name").textContent = selected.userData.labInstance.definition.label;
+  panel.querySelectorAll(".axis-control").forEach((row) => {
+    const axis = row.dataset.axis;
+    const degrees = Math.round(THREE.MathUtils.radToDeg(selected.rotation[axis]));
+    row.querySelector("output").textContent = `${degrees}°`;
+  });
 }
 
 function clampToSandbox(point) {
@@ -264,10 +288,40 @@ canvas.addEventListener("drop", (event) => {
 
 let pointerDown = null;
 canvas.addEventListener("pointerdown", (event) => {
-  if (event.button === 0) pointerDown = { x: event.clientX, y: event.clientY };
+  if (event.button === 0) {
+    setPointer(event.clientX, event.clientY);
+    const objectHit = raycaster.intersectObjects(objectRoots, true).find((hit) => !hit.object.userData.labDecoration);
+    const root = objectHit && labRootFromObject(objectHit.object);
+    if (moveMode && root?.userData.labOrigin === "sandbox") {
+      selectObject(root);
+      objectDrag = { root, moved: false, startX: event.clientX, startY: event.clientY };
+      canvas.setPointerCapture(event.pointerId);
+      canvas.classList.add("object-drag");
+    } else {
+      pointerDown = { x: event.clientX, y: event.clientY };
+    }
+  }
   if (event.button === 2) canvas.classList.add("camera-drag");
 });
+canvas.addEventListener("pointermove", (event) => {
+  if (!objectDrag) return;
+  setPointer(event.clientX, event.clientY);
+  const hit = raycaster.intersectObject(sandboxPlatform, false)[0];
+  if (!hit) return;
+  const target = clampToSandbox(hit.point.clone());
+  objectDrag.root.position.x = target.x;
+  objectDrag.root.position.z = target.z;
+  objectDrag.moved = objectDrag.moved || Math.hypot(event.clientX - objectDrag.startX, event.clientY - objectDrag.startY) > 3;
+  updateSelectionVisual();
+});
 canvas.addEventListener("pointerup", (event) => {
+  if (event.button === 0 && objectDrag) {
+    objectDrag = null;
+    canvas.releasePointerCapture(event.pointerId);
+    canvas.classList.remove("object-drag");
+    updateTransformWindow();
+    return;
+  }
   if (event.button !== 0 || !pointerDown || Math.hypot(event.clientX - pointerDown.x, event.clientY - pointerDown.y) > 5) return;
   pointerDown = null;
   setPointer(event.clientX, event.clientY);
@@ -335,16 +389,124 @@ function rotateSelected(angle) {
   if (!selected) return;
   selected.rotation.y += angle;
   updateSelectionVisual();
+  updateTransformWindow();
+}
+
+document.querySelectorAll(".axis-control button").forEach((button) => {
+  button.addEventListener("click", () => {
+    if (!selected || selected.userData.labOrigin !== "sandbox") return;
+    const axis = button.closest(".axis-control").dataset.axis;
+    selected.rotation[axis] += THREE.MathUtils.degToRad(Number(button.dataset.step));
+    updateSelectionVisual();
+    updateTransformWindow();
+  });
+});
+document.querySelector("#reset-transform").addEventListener("click", () => {
+  if (!selected?.userData.labInitialTransform) return;
+  selected.position.copy(selected.userData.labInitialTransform.position);
+  selected.rotation.copy(selected.userData.labInitialTransform.rotation);
+  updateSelectionVisual();
+  updateTransformWindow();
+});
+
+function focusOnObject(object, minimumDistance = 14) {
+  if (!object) return;
+  const box = new THREE.Box3().setFromObject(object);
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3()).length();
+  const direction = camera.position.clone().sub(controls.target);
+  if (direction.lengthSq() < 0.01) direction.set(0.55, 0.65, 1);
+  direction.normalize();
+  const destination = center.clone().addScaledVector(direction, Math.max(minimumDistance, size * 2.2));
+  cameraTransition = { target: center, position: destination };
 }
 
 function focusPlateau(x) {
-  controls.target.set(x, 0, 0);
-  camera.position.set(x, 34, 48);
-  controls.update();
+  cameraTransition = {
+    target: new THREE.Vector3(x, 0, 0),
+    position: new THREE.Vector3(x, 64, 92)
+  };
 }
 document.querySelector("#focus-showroom").addEventListener("click", () => focusPlateau(PLATFORM_CENTERS.showroom));
 document.querySelector("#focus-sandbox").addEventListener("click", () => focusPlateau(PLATFORM_CENTERS.sandbox));
+document.querySelector("#focus-selected").addEventListener("click", () => focusOnObject(selected));
+document.querySelector("#focus-fox").addEventListener("click", () => focusOnObject(fox, 16));
+document.querySelector("#move-mode").addEventListener("click", (event) => {
+  moveMode = !moveMode;
+  event.currentTarget.setAttribute("aria-pressed", String(moveMode));
+  event.currentTarget.textContent = moveMode ? "Déplacement actif" : "Déplacer les objets";
+  canvas.classList.toggle("move-mode", moveMode);
+  updateTransformWindow();
+  showToast(moveMode ? "Mode déplacement : sélectionnez puis glissez un objet du plateau test." : "Mode déplacement désactivé.");
+});
 document.querySelector("#reload-cuo").addEventListener("click", () => location.reload());
+
+const sceneDialog = document.querySelector("#micro-scene-dialog");
+const sceneNameInput = document.querySelector("#micro-scene-name");
+const slugSceneName = (value) => String(value || "")
+  .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  .toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "SANS-NOM";
+const updateSceneCode = () => {
+  document.querySelector("#micro-scene-code").textContent = `MSC-CUSTOM-${slugSceneName(sceneNameInput.value)}`;
+};
+sceneNameInput.addEventListener("input", updateSceneCode);
+document.querySelector("#save-micro-scene").addEventListener("click", () => {
+  const count = objectRoots.filter((root) => root.userData.labOrigin === "sandbox").length;
+  if (!count) return showToast("Ajoutez au moins un objet sur le plateau test.");
+  sceneNameInput.value = "";
+  updateSceneCode();
+  document.querySelector("#micro-scene-summary").textContent = `${count} objet${count > 1 ? "s" : ""} du plateau test seront enregistrés.`;
+  sceneDialog.showModal();
+  sceneNameInput.focus();
+});
+
+function buildCustomMicroScene(name) {
+  const roots = objectRoots.filter((root) => root.userData.labOrigin === "sandbox");
+  const center = roots.reduce((sum, root) => sum.add(root.position), new THREE.Vector3()).multiplyScalar(1 / roots.length);
+  center.y = PLATFORM.y;
+  const objects = roots.map((root) => ({
+    type: root.userData.labInstance.definition.type,
+    offset: [root.position.x - center.x, root.position.y - center.y, root.position.z - center.z].map((value) => Number(value.toFixed(4))),
+    variant: root.userData.labVariant || 0,
+    rotation: [root.rotation.x, root.rotation.y, root.rotation.z].map((value) => Number(value.toFixed(6)))
+  }));
+  const radius = Math.max(1, ...roots.map((root) => {
+    const placementRadius = library.getMapPlacement(root.userData.labInstance.definition.type).radius;
+    return Math.hypot(root.position.x - center.x, root.position.z - center.z) + placementRadius;
+  }));
+  return {
+    id: `MSC-CUSTOM-${slugSceneName(name)}`,
+    key: `custom_${slugSceneName(name).toLowerCase().replace(/-/g, "_")}`,
+    name: name.trim(),
+    biomes: ["all"],
+    rarity: "custom",
+    radius: Number(radius.toFixed(2)),
+    objects
+  };
+}
+
+document.querySelector("#micro-scene-form").addEventListener("submit", async (event) => {
+  if (event.submitter?.value === "cancel") return;
+  event.preventDefault();
+  if (!sceneNameInput.reportValidity()) return;
+  const template = buildCustomMicroScene(sceneNameInput.value);
+  try {
+    const json = JSON.stringify(template).replace(/[^\x00-\x7F]/g, (character) =>
+      `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`
+    );
+    const response = await fetch("/api/custom-micro-scenes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: json
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "Sauvegarde refusée");
+    sceneDialog.close();
+    showToast(`${template.id} sauvegardée pour le moteur.`);
+  } catch (error) {
+    showToast(`Échec de sauvegarde : ${error.message}`);
+  }
+});
 
 const windowElement = document.querySelector("#catalog-window");
 document.querySelector("#minimize-window").addEventListener("click", () => windowElement.classList.toggle("minimized"));
@@ -399,7 +561,7 @@ function animate() {
     PLATFORM_CENTERS.showroom - PLATFORM.width / 2 + 0.7,
     PLATFORM_CENTERS.sandbox + PLATFORM.width / 2 - 0.7
   );
-  foxTarget.z = THREE.MathUtils.clamp(foxTarget.z, -21.3, 21.3);
+  foxTarget.z = THREE.MathUtils.clamp(foxTarget.z, -PLATFORM.depth / 2 + 0.7, PLATFORM.depth / 2 - 0.7);
   const direction = foxTarget.clone().sub(fox.position);
   if (direction.lengthSq() > 0.01) {
     const step = Math.min(direction.length(), dt * 4.5);
@@ -407,6 +569,15 @@ function animate() {
     fox.rotation.y = Math.atan2(-direction.z, direction.x);
   }
   resize();
+  if (cameraTransition) {
+    camera.position.lerp(cameraTransition.position, 0.12);
+    controls.target.lerp(cameraTransition.target, 0.12);
+    if (camera.position.distanceTo(cameraTransition.position) < 0.04 && controls.target.distanceTo(cameraTransition.target) < 0.04) {
+      camera.position.copy(cameraTransition.position);
+      controls.target.copy(cameraTransition.target);
+      cameraTransition = null;
+    }
+  }
   controls.update();
   renderer.render(scene, camera);
 }

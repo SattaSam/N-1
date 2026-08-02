@@ -3,7 +3,7 @@
 
   const BF = global.BlueFox3D = global.BlueFox3D || {};
 
-  const TEMPLATES = Object.freeze({
+  const BUILTIN_TEMPLATES = Object.freeze({
     crystal_grove: Object.freeze({
       id: "MSC-CRYSTAL-GROVE-001", biomes: Object.freeze(["all"]), rarity: "uncommon", radius: 5,
       objects: Object.freeze([
@@ -45,6 +45,34 @@
     })
   });
 
+  const CUSTOM_TEMPLATES = Object.freeze(Object.fromEntries(
+    (Array.isArray(global.BlueFoxCustomMicroScenes) ? global.BlueFoxCustomMicroScenes : [])
+      .filter((template) =>
+        /^MSC-CUSTOM-[A-Z0-9-]+$/.test(template?.id || "") &&
+        Array.isArray(template?.objects) &&
+        template.objects.length > 0
+      )
+      .map((template) => {
+        const key = String(template.key || template.id).toLowerCase().replace(/[^a-z0-9_]+/g, "_");
+        return [key, Object.freeze({
+          id: template.id,
+          name: String(template.name || template.id),
+          biomes: Object.freeze([...(template.biomes || ["all"])]),
+          rarity: template.rarity || "custom",
+          radius: Math.max(1, Number(template.radius) || 1),
+          custom: true,
+          objects: Object.freeze(template.objects.map((entry) => Object.freeze({
+            type: entry.type,
+            offset: Object.freeze([...(entry.offset || [0, 0, 0])].map((value) => Number(value) || 0)),
+            variant: Math.max(0, Number(entry.variant) || 0),
+            rotation: Object.freeze([...(entry.rotation || [0, 0, 0])].map((value) => Number(value) || 0))
+          })))
+        })];
+      })
+  ));
+
+  const TEMPLATES = Object.freeze({ ...BUILTIN_TEMPLATES, ...CUSTOM_TEMPLATES });
+
   const MAP_LANDMARKS = Object.freeze({
     volcanic: Object.freeze([["rock", -1.25, 0.25, 2], ["rock", 1.1, 0.5, 1], ["needle", 0, -0.45, 2], ["debris", 0.2, 1.25, 0]].map(Object.freeze)),
     frozen: Object.freeze([["needle", 0, 0, 2], ["needle", -1.15, 0.8, 1], ["needle", 1.2, 0.65, 0], ["rock", 0.15, 1.55, 1]].map(Object.freeze)),
@@ -76,10 +104,14 @@
       const cos = Math.cos(rotation), sin = Math.sin(rotation);
       return template.objects.map((entry) => {
         const [x, y, z] = entry.offset;
+        const [rotationX = 0, rotationY = 0, rotationZ = 0] = entry.rotation || [];
         return Object.freeze({
           type: entry.type, variant: entry.variant || 0,
           position: Object.freeze({ x: origin.x + x * cos - z * sin, y: origin.y + y, z: origin.z + x * sin + z * cos }),
-          rotation
+          rotation: rotationY + rotation,
+          rotationX,
+          rotationY: rotationY + rotation,
+          rotationZ
         });
       });
     }

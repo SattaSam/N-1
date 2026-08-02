@@ -60,7 +60,11 @@
       const root = instance.root;
       if (root) {
         root.position.set(position.x || 0, position.y || 0, position.z || 0);
-        root.rotation.y = options.rotation || 0;
+        root.rotation.set(
+          options.rotationX || 0,
+          options.rotationY ?? options.rotation ?? 0,
+          options.rotationZ || 0
+        );
         root.scale.setScalar(options.scale || 1);
         root.userData.spawnSource = options.source || "object-spawner";
         (options.scene || this.scene)?.add(root);
@@ -85,7 +89,17 @@
     spawnMicroScene(id, options = {}) {
       if (!BF.MicroScenes) throw new Error("ObjectSpawner nécessite MicroScenes.");
       const plan = BF.MicroScenes.plan(id, options.origin, options.rotation || 0);
-      return plan.map((entry) => this.spawn(entry.type, { ...options, position: entry.position, rotation: entry.rotation, variant: entry.variant, force: options.force ?? true, source: id })).filter(Boolean);
+      return plan.map((entry) => this.spawn(entry.type, {
+        ...options,
+        position: entry.position,
+        rotation: entry.rotation,
+        rotationX: entry.rotationX,
+        rotationY: entry.rotationY,
+        rotationZ: entry.rotationZ,
+        variant: entry.variant,
+        force: options.force ?? true,
+        source: id
+      })).filter(Boolean);
     }
 
     populateBiome(biome, options = {}) {

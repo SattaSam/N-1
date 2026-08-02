@@ -18,6 +18,10 @@
         <div class="top-actions">
           <button id="focus-showroom">Plateau catalogue</button>
           <button id="focus-sandbox">Plateau test</button>
+          <button id="focus-selected" disabled>Centrer sur l’objet</button>
+          <button id="focus-fox">Centrer sur BlueFox</button>
+          <button id="move-mode" aria-pressed="false">Déplacer les objets</button>
+          <button id="save-micro-scene">Sauvegarder la micro-scène</button>
           <button id="reload-cuo" title="Relit le fichier CUO depuis le disque">Actualiser le CUO</button>
         </div>
       </header>
@@ -52,7 +56,26 @@
         </div>
       </aside>
 
-      <div class="help">Caméra : clic droit + glisser/rotation · Maj ou Ctrl + clic droit/déplacement · molette/zoom vers le pointeur · clic gauche/déplacement BlueFox · ZQSD/WASD</div>
+      <aside id="transform-window" class="transform-window" hidden>
+        <strong>Transformation de l’objet</strong>
+        <small id="transform-object-name">Aucun objet sélectionné</small>
+        <div class="axis-control" data-axis="x"><b>X</b><button data-step="-15">−15°</button><output>0°</output><button data-step="15">+15°</button></div>
+        <div class="axis-control" data-axis="y"><b>Y</b><button data-step="-15">−15°</button><output>0°</output><button data-step="15">+15°</button></div>
+        <div class="axis-control" data-axis="z"><b>Z</b><button data-step="-15">−15°</button><output>0°</output><button data-step="15">+15°</button></div>
+        <button id="reset-transform">Réinitialiser position et rotation</button>
+      </aside>
+
+      <dialog id="micro-scene-dialog">
+        <form id="micro-scene-form" method="dialog">
+          <h2>Sauvegarder une micro-scène</h2>
+          <label>Nom de la scène<input id="micro-scene-name" required maxlength="48" placeholder="ex. Clairière violette"></label>
+          <p>Code généré : <code id="micro-scene-code">MSC-CUSTOM-CLAIRIERE-VIOLETTE</code></p>
+          <p id="micro-scene-summary"></p>
+          <div class="dialog-actions"><button value="cancel">Annuler</button><button id="confirm-micro-scene" value="default">Enregistrer</button></div>
+        </form>
+      </dialog>
+
+      <div class="help">Caméra : clic droit + glisser/rotation · Maj/Ctrl + clic droit/déplacement · molette/zoom · mode objets : clic gauche + glisser sur le plateau test</div>
       <div id="toast" role="status"></div>
     </main>
     <script src="../engine/bluefox3d-core.js"></script>
