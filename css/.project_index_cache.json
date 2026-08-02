@@ -1,0 +1,2951 @@
+{
+  "version": "4.0",
+  "generated_utc": "2026-07-28T17:36:55+00:00",
+  "files": {
+    "assets/Capsule.png": {
+      "size_bytes": 4240931,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "acd36c2f492c",
+      "data": {
+        "path": "assets/Capsule.png",
+        "name": "Capsule.png",
+        "extension": ".png",
+        "size_bytes": 4240931,
+        "size_human": "4.04 Mo",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "acd36c2f492c",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "assets/maps/CONVENTION_IMAGES.txt": {
+      "size_bytes": 1465,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "1d85ec48a212",
+      "data": {
+        "path": "assets/maps/CONVENTION_IMAGES.txt",
+        "name": "CONVENTION_IMAGES.txt",
+        "extension": ".txt",
+        "size_bytes": 1465,
+        "size_human": "1.43 Ko",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": 36,
+        "category": "Texte / Code",
+        "sha1_12": "1d85ec48a212",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Cahier_des_Charges_BlueFox_Odyssey.docx": {
+      "size_bytes": 40283,
+      "modified_utc": "2026-07-27T17:54:14+00:00",
+      "sha1_12": "f2f0342c6238",
+      "data": {
+        "path": "Cahier_des_Charges_BlueFox_Odyssey.docx",
+        "name": "Cahier_des_Charges_BlueFox_Odyssey.docx",
+        "extension": ".docx",
+        "size_bytes": 40283,
+        "size_human": "39.34 Ko",
+        "modified_utc": "2026-07-27T17:54:14+00:00",
+        "line_count": null,
+        "category": "Autre",
+        "sha1_12": "f2f0342c6238",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "css/style.css": {
+      "size_bytes": 1779,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "0657c77a150f",
+      "data": {
+        "path": "css/style.css",
+        "name": "style.css",
+        "extension": ".css",
+        "size_bytes": 1779,
+        "size_human": "1.74 Ko",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": 23,
+        "category": "Texte / Code",
+        "sha1_12": "0657c77a150f",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "data/config.json": {
+      "size_bytes": 238,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "084ccad2e5d5",
+      "data": {
+        "path": "data/config.json",
+        "name": "config.json",
+        "extension": ".json",
+        "size_bytes": 238,
+        "size_human": "238 o",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": 16,
+        "category": "Texte / Code",
+        "sha1_12": "084ccad2e5d5",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "docs/ARCHITECTURE_TECHNIQUE.md": {
+      "size_bytes": 2760,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "c1fc1abf1007",
+      "data": {
+        "path": "docs/ARCHITECTURE_TECHNIQUE.md",
+        "name": "ARCHITECTURE_TECHNIQUE.md",
+        "extension": ".md",
+        "size_bytes": 2760,
+        "size_human": "2.70 Ko",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": 81,
+        "category": "Texte / Code",
+        "sha1_12": "c1fc1abf1007",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "docs/CONVENTIONS_MAPS_IMAGES.md": {
+      "size_bytes": 2039,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "49bf1aa36303",
+      "data": {
+        "path": "docs/CONVENTIONS_MAPS_IMAGES.md",
+        "name": "CONVENTIONS_MAPS_IMAGES.md",
+        "extension": ".md",
+        "size_bytes": 2039,
+        "size_human": "1.99 Ko",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": 68,
+        "category": "Texte / Code",
+        "sha1_12": "49bf1aa36303",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "docs/DEV_HISTORIQUE.md": {
+      "size_bytes": 1434,
+      "modified_utc": "2026-07-27T23:41:19+00:00",
+      "sha1_12": "ee3b3bc21fca",
+      "data": {
+        "path": "docs/DEV_HISTORIQUE.md",
+        "name": "DEV_HISTORIQUE.md",
+        "extension": ".md",
+        "size_bytes": 1434,
+        "size_human": "1.40 Ko",
+        "modified_utc": "2026-07-27T23:41:19+00:00",
+        "line_count": 48,
+        "category": "Texte / Code",
+        "sha1_12": "ee3b3bc21fca",
+        "cached": false,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "docs/ETAT_REPRISE.md": {
+      "size_bytes": 453,
+      "modified_utc": "2026-07-27T23:41:19+00:00",
+      "sha1_12": "1b8380ae0b83",
+      "data": {
+        "path": "docs/ETAT_REPRISE.md",
+        "name": "ETAT_REPRISE.md",
+        "extension": ".md",
+        "size_bytes": 453,
+        "size_human": "453 o",
+        "modified_utc": "2026-07-27T23:41:19+00:00",
+        "line_count": 20,
+        "category": "Texte / Code",
+        "sha1_12": "1b8380ae0b83",
+        "cached": false,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "docs/GENERER_CATALOGUE_IMAGES.bat": {
+      "size_bytes": 280,
+      "modified_utc": "2026-07-27T17:54:14+00:00",
+      "sha1_12": "fadac198efcd",
+      "data": {
+        "path": "docs/GENERER_CATALOGUE_IMAGES.bat",
+        "name": "GENERER_CATALOGUE_IMAGES.bat",
+        "extension": ".bat",
+        "size_bytes": 280,
+        "size_human": "280 o",
+        "modified_utc": "2026-07-27T17:54:14+00:00",
+        "line_count": 12,
+        "category": "Texte / Code",
+        "sha1_12": "fadac198efcd",
+        "cached": false,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "docs/MASTER.md": {
+      "size_bytes": 1597,
+      "modified_utc": "2026-07-27T23:41:19+00:00",
+      "sha1_12": "893218555fda",
+      "data": {
+        "path": "docs/MASTER.md",
+        "name": "MASTER.md",
+        "extension": ".md",
+        "size_bytes": 1597,
+        "size_human": "1.56 Ko",
+        "modified_utc": "2026-07-27T23:41:19+00:00",
+        "line_count": 43,
+        "category": "Texte / Code",
+        "sha1_12": "893218555fda",
+        "cached": false,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "docs/MASTER_BLUEFOX_ODYSSEY.md": {
+      "size_bytes": 2637,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "6beab31614bf",
+      "data": {
+        "path": "docs/MASTER_BLUEFOX_ODYSSEY.md",
+        "name": "MASTER_BLUEFOX_ODYSSEY.md",
+        "extension": ".md",
+        "size_bytes": 2637,
+        "size_human": "2.58 Ko",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": 63,
+        "category": "Texte / Code",
+        "sha1_12": "6beab31614bf",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "docs/PLAN_TESTS_V0.16.20.md": {
+      "size_bytes": 2258,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "ca51836d973b",
+      "data": {
+        "path": "docs/PLAN_TESTS_V0.16.20.md",
+        "name": "PLAN_TESTS_V0.16.20.md",
+        "extension": ".md",
+        "size_bytes": 2258,
+        "size_human": "2.21 Ko",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": 63,
+        "category": "Texte / Code",
+        "sha1_12": "ca51836d973b",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "docs/README.md": {
+      "size_bytes": 597,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "6f47097001b5",
+      "data": {
+        "path": "docs/README.md",
+        "name": "README.md",
+        "extension": ".md",
+        "size_bytes": 597,
+        "size_human": "597 o",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": 14,
+        "category": "Texte / Code",
+        "sha1_12": "6f47097001b5",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "docs/ROADMAP_TODO.md": {
+      "size_bytes": 1820,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "b6d6ea674214",
+      "data": {
+        "path": "docs/ROADMAP_TODO.md",
+        "name": "ROADMAP_TODO.md",
+        "extension": ".md",
+        "size_bytes": 1820,
+        "size_human": "1.78 Ko",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": 51,
+        "category": "Texte / Code",
+        "sha1_12": "b6d6ea674214",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "engine/bluefox3d-core.js": {
+      "size_bytes": 1810,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "1892fa108b85",
+      "data": {
+        "path": "engine/bluefox3d-core.js",
+        "name": "bluefox3d-core.js",
+        "extension": ".js",
+        "size_bytes": 1810,
+        "size_human": "1.77 Ko",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": 54,
+        "category": "Texte / Code",
+        "sha1_12": "1892fa108b85",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "engine/camera-controller.js": {
+      "size_bytes": 12857,
+      "modified_utc": "2026-07-27T22:05:05+00:00",
+      "sha1_12": "83946bdb8807",
+      "data": {
+        "path": "engine/camera-controller.js",
+        "name": "camera-controller.js",
+        "extension": ".js",
+        "size_bytes": 12857,
+        "size_human": "12.56 Ko",
+        "modified_utc": "2026-07-27T22:05:05+00:00",
+        "line_count": 359,
+        "category": "Texte / Code",
+        "sha1_12": "83946bdb8807",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "engine/character-controller.js": {
+      "size_bytes": 16949,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "968ec00b3ea5",
+      "data": {
+        "path": "engine/character-controller.js",
+        "name": "character-controller.js",
+        "extension": ".js",
+        "size_bytes": 16949,
+        "size_human": "16.55 Ko",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": 455,
+        "category": "Texte / Code",
+        "sha1_12": "968ec00b3ea5",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "engine/exploration-hud.css": {
+      "size_bytes": 4096,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "5d25cab40d8d",
+      "data": {
+        "path": "engine/exploration-hud.css",
+        "name": "exploration-hud.css",
+        "extension": ".css",
+        "size_bytes": 4096,
+        "size_human": "4.00 Ko",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": 204,
+        "category": "Texte / Code",
+        "sha1_12": "5d25cab40d8d",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "engine/map-registry.js": {
+      "size_bytes": 44255,
+      "modified_utc": "2026-07-28T17:32:02+00:00",
+      "sha1_12": "75858f09cf6f",
+      "data": {
+        "path": "engine/map-registry.js",
+        "name": "map-registry.js",
+        "extension": ".js",
+        "size_bytes": 44255,
+        "size_human": "43.22 Ko",
+        "modified_utc": "2026-07-28T17:32:02+00:00",
+        "line_count": 1213,
+        "category": "Texte / Code",
+        "sha1_12": "75858f09cf6f",
+        "cached": false,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "engine/object-library.js": {
+      "size_bytes": 13346,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "e98d6a2de9d3",
+      "data": {
+        "path": "engine/object-library.js",
+        "name": "object-library.js",
+        "extension": ".js",
+        "size_bytes": 13346,
+        "size_human": "13.03 Ko",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": 459,
+        "category": "Texte / Code",
+        "sha1_12": "e98d6a2de9d3",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "engine/path-planner.js": {
+      "size_bytes": 6834,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "c08d6b6728bc",
+      "data": {
+        "path": "engine/path-planner.js",
+        "name": "path-planner.js",
+        "extension": ".js",
+        "size_bytes": 6834,
+        "size_human": "6.67 Ko",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": 200,
+        "category": "Texte / Code",
+        "sha1_12": "c08d6b6728bc",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "engine/ui-enhancements.css": {
+      "size_bytes": 13761,
+      "modified_utc": "2026-07-27T22:33:49+00:00",
+      "sha1_12": "c58860382c54",
+      "data": {
+        "path": "engine/ui-enhancements.css",
+        "name": "ui-enhancements.css",
+        "extension": ".css",
+        "size_bytes": 13761,
+        "size_human": "13.44 Ko",
+        "modified_utc": "2026-07-27T22:33:49+00:00",
+        "line_count": 680,
+        "category": "Texte / Code",
+        "sha1_12": "c58860382c54",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "engine/ui-enhancements.js": {
+      "size_bytes": 24651,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "9e72690d617d",
+      "data": {
+        "path": "engine/ui-enhancements.js",
+        "name": "ui-enhancements.js",
+        "extension": ".js",
+        "size_bytes": 24651,
+        "size_human": "24.07 Ko",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": 626,
+        "category": "Texte / Code",
+        "sha1_12": "9e72690d617d",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "engine/world-engine.js": {
+      "size_bytes": 84910,
+      "modified_utc": "2026-07-28T17:22:06+00:00",
+      "sha1_12": "23b98430d621",
+      "data": {
+        "path": "engine/world-engine.js",
+        "name": "world-engine.js",
+        "extension": ".js",
+        "size_bytes": 84910,
+        "size_human": "82.92 Ko",
+        "modified_utc": "2026-07-28T17:22:06+00:00",
+        "line_count": 2178,
+        "category": "Texte / Code",
+        "sha1_12": "23b98430d621",
+        "cached": false,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "game.css": {
+      "size_bytes": 16100508,
+      "modified_utc": "2026-07-27T17:54:14+00:00",
+      "sha1_12": "c2241538116c",
+      "data": {
+        "path": "game.css",
+        "name": "game.css",
+        "extension": ".css",
+        "size_bytes": 16100508,
+        "size_human": "15.35 Mo",
+        "modified_utc": "2026-07-27T17:54:14+00:00",
+        "line_count": null,
+        "category": "Texte / Code",
+        "sha1_12": "c2241538116c",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "game.js": {
+      "size_bytes": 28940314,
+      "modified_utc": "2026-07-27T23:03:53+00:00",
+      "sha1_12": "2d54296f8add",
+      "data": {
+        "path": "game.js",
+        "name": "game.js",
+        "extension": ".js",
+        "size_bytes": 28940314,
+        "size_human": "27.60 Mo",
+        "modified_utc": "2026-07-27T23:03:53+00:00",
+        "line_count": null,
+        "category": "Texte / Code",
+        "sha1_12": "2d54296f8add",
+        "cached": false,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "generate_project_index.py": {
+      "size_bytes": 63464,
+      "modified_utc": "2026-07-27T17:54:14+00:00",
+      "sha1_12": "36949852cb8a",
+      "data": {
+        "path": "generate_project_index.py",
+        "name": "generate_project_index.py",
+        "extension": ".py",
+        "size_bytes": 63464,
+        "size_human": "61.98 Ko",
+        "modified_utc": "2026-07-27T17:54:14+00:00",
+        "line_count": 1944,
+        "category": "Texte / Code",
+        "sha1_12": "36949852cb8a",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/.2Jungle envahissant les ruines d’une civilisation.png.HQIbXc": {
+      "size_bytes": 1417216,
+      "modified_utc": "2026-07-27T17:54:14+00:00",
+      "sha1_12": "3553632a3311",
+      "data": {
+        "path": "Images/.2Jungle envahissant les ruines d’une civilisation.png.HQIbXc",
+        "name": ".2Jungle envahissant les ruines d’une civilisation.png.HQIbXc",
+        "extension": ".hqibxc",
+        "size_bytes": 1417216,
+        "size_human": "1.35 Mo",
+        "modified_utc": "2026-07-27T17:54:14+00:00",
+        "line_count": null,
+        "category": "Autre",
+        "sha1_12": "3553632a3311",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/010_1.png": {
+      "size_bytes": 2613968,
+      "modified_utc": "2026-07-27T17:54:14+00:00",
+      "sha1_12": "e24ad30d49a4",
+      "data": {
+        "path": "Images/010_1.png",
+        "name": "010_1.png",
+        "extension": ".png",
+        "size_bytes": 2613968,
+        "size_human": "2.49 Mo",
+        "modified_utc": "2026-07-27T17:54:14+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "e24ad30d49a4",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/010_2.png": {
+      "size_bytes": 3514974,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "3e3364cab015",
+      "data": {
+        "path": "Images/010_2.png",
+        "name": "010_2.png",
+        "extension": ".png",
+        "size_bytes": 3514974,
+        "size_human": "3.35 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "3e3364cab015",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/010_3.png": {
+      "size_bytes": 2394070,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "e5ec1bdd9369",
+      "data": {
+        "path": "Images/010_3.png",
+        "name": "010_3.png",
+        "extension": ".png",
+        "size_bytes": 2394070,
+        "size_human": "2.28 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "e5ec1bdd9369",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/011_1.png": {
+      "size_bytes": 2605548,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "9f500756a133",
+      "data": {
+        "path": "Images/011_1.png",
+        "name": "011_1.png",
+        "extension": ".png",
+        "size_bytes": 2605548,
+        "size_human": "2.48 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "9f500756a133",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/011_2.png": {
+      "size_bytes": 3598831,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "c8aaa7d74914",
+      "data": {
+        "path": "Images/011_2.png",
+        "name": "011_2.png",
+        "extension": ".png",
+        "size_bytes": 3598831,
+        "size_human": "3.43 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "c8aaa7d74914",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/011_3.png": {
+      "size_bytes": 2317536,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "5661d7cee537",
+      "data": {
+        "path": "Images/011_3.png",
+        "name": "011_3.png",
+        "extension": ".png",
+        "size_bytes": 2317536,
+        "size_human": "2.21 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "5661d7cee537",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/012-1.png": {
+      "size_bytes": 2215938,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "8ea6673e9e0a",
+      "data": {
+        "path": "Images/012-1.png",
+        "name": "012-1.png",
+        "extension": ".png",
+        "size_bytes": 2215938,
+        "size_human": "2.11 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "8ea6673e9e0a",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/012-2.png": {
+      "size_bytes": 1941983,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "4498d4b9cc33",
+      "data": {
+        "path": "Images/012-2.png",
+        "name": "012-2.png",
+        "extension": ".png",
+        "size_bytes": 1941983,
+        "size_human": "1.85 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "4498d4b9cc33",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/012_2.png": {
+      "size_bytes": 1941983,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "4498d4b9cc33",
+      "data": {
+        "path": "Images/012_2.png",
+        "name": "012_2.png",
+        "extension": ".png",
+        "size_bytes": 1941983,
+        "size_human": "1.85 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "4498d4b9cc33",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/013_1.png": {
+      "size_bytes": 2472406,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "e311b49c355e",
+      "data": {
+        "path": "Images/013_1.png",
+        "name": "013_1.png",
+        "extension": ".png",
+        "size_bytes": 2472406,
+        "size_human": "2.36 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "e311b49c355e",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/013_2.png": {
+      "size_bytes": 1941983,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "4498d4b9cc33",
+      "data": {
+        "path": "Images/013_2.png",
+        "name": "013_2.png",
+        "extension": ".png",
+        "size_bytes": 1941983,
+        "size_human": "1.85 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "4498d4b9cc33",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/013_3.png": {
+      "size_bytes": 2460378,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "ffab4d93e1b9",
+      "data": {
+        "path": "Images/013_3.png",
+        "name": "013_3.png",
+        "extension": ".png",
+        "size_bytes": 2460378,
+        "size_human": "2.35 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "ffab4d93e1b9",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/014-1.png": {
+      "size_bytes": 3355861,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "36362f389358",
+      "data": {
+        "path": "Images/014-1.png",
+        "name": "014-1.png",
+        "extension": ".png",
+        "size_bytes": 3355861,
+        "size_human": "3.20 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "36362f389358",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/014_2.png": {
+      "size_bytes": 2472406,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "e311b49c355e",
+      "data": {
+        "path": "Images/014_2.png",
+        "name": "014_2.png",
+        "extension": ".png",
+        "size_bytes": 2472406,
+        "size_human": "2.36 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "e311b49c355e",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/014_3.png": {
+      "size_bytes": 2458914,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "4ae1981a781b",
+      "data": {
+        "path": "Images/014_3.png",
+        "name": "014_3.png",
+        "extension": ".png",
+        "size_bytes": 2458914,
+        "size_human": "2.35 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "4ae1981a781b",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/015_1.png": {
+      "size_bytes": 3425506,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "d39b47fd737b",
+      "data": {
+        "path": "Images/015_1.png",
+        "name": "015_1.png",
+        "extension": ".png",
+        "size_bytes": 3425506,
+        "size_human": "3.27 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "d39b47fd737b",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/015_2.png": {
+      "size_bytes": 3126044,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "f5253adf8a25",
+      "data": {
+        "path": "Images/015_2.png",
+        "name": "015_2.png",
+        "extension": ".png",
+        "size_bytes": 3126044,
+        "size_human": "2.98 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "f5253adf8a25",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/016_1.png": {
+      "size_bytes": 2477935,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "029932cbd2d8",
+      "data": {
+        "path": "Images/016_1.png",
+        "name": "016_1.png",
+        "extension": ".png",
+        "size_bytes": 2477935,
+        "size_human": "2.36 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "029932cbd2d8",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/016_2.png": {
+      "size_bytes": 3593635,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "e5b2e362e54a",
+      "data": {
+        "path": "Images/016_2.png",
+        "name": "016_2.png",
+        "extension": ".png",
+        "size_bytes": 3593635,
+        "size_human": "3.43 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "e5b2e362e54a",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/016_3.png": {
+      "size_bytes": 1961968,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "0f4ff34fa0b6",
+      "data": {
+        "path": "Images/016_3.png",
+        "name": "016_3.png",
+        "extension": ".png",
+        "size_bytes": 1961968,
+        "size_human": "1.87 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "0f4ff34fa0b6",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/017_1.png": {
+      "size_bytes": 3580132,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "bc7e30d49ac5",
+      "data": {
+        "path": "Images/017_1.png",
+        "name": "017_1.png",
+        "extension": ".png",
+        "size_bytes": 3580132,
+        "size_human": "3.41 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "bc7e30d49ac5",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/017_2.png": {
+      "size_bytes": 3422597,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "5416358ddf66",
+      "data": {
+        "path": "Images/017_2.png",
+        "name": "017_2.png",
+        "extension": ".png",
+        "size_bytes": 3422597,
+        "size_human": "3.26 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "5416358ddf66",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/017_3.png": {
+      "size_bytes": 1839616,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "cb738369611c",
+      "data": {
+        "path": "Images/017_3.png",
+        "name": "017_3.png",
+        "extension": ".png",
+        "size_bytes": 1839616,
+        "size_human": "1.75 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "cb738369611c",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/017_4.png": {
+      "size_bytes": 1260582,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "d23f7b4a03b6",
+      "data": {
+        "path": "Images/017_4.png",
+        "name": "017_4.png",
+        "extension": ".png",
+        "size_bytes": 1260582,
+        "size_human": "1.20 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "d23f7b4a03b6",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/018_1.png": {
+      "size_bytes": 3208810,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "0688b3be0a6e",
+      "data": {
+        "path": "Images/018_1.png",
+        "name": "018_1.png",
+        "extension": ".png",
+        "size_bytes": 3208810,
+        "size_human": "3.06 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "0688b3be0a6e",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/018_2.png": {
+      "size_bytes": 3537262,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "60fae30d4ac2",
+      "data": {
+        "path": "Images/018_2.png",
+        "name": "018_2.png",
+        "extension": ".png",
+        "size_bytes": 3537262,
+        "size_human": "3.37 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "60fae30d4ac2",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/018_3.png": {
+      "size_bytes": 2024578,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "1916c5e75315",
+      "data": {
+        "path": "Images/018_3.png",
+        "name": "018_3.png",
+        "extension": ".png",
+        "size_bytes": 2024578,
+        "size_human": "1.93 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "1916c5e75315",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/019_1.png": {
+      "size_bytes": 3435377,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "c24381528d66",
+      "data": {
+        "path": "Images/019_1.png",
+        "name": "019_1.png",
+        "extension": ".png",
+        "size_bytes": 3435377,
+        "size_human": "3.28 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "c24381528d66",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/019_2.png": {
+      "size_bytes": 3547454,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "663e60e78414",
+      "data": {
+        "path": "Images/019_2.png",
+        "name": "019_2.png",
+        "extension": ".png",
+        "size_bytes": 3547454,
+        "size_human": "3.38 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "663e60e78414",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/019_3.png": {
+      "size_bytes": 3685999,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "e63cc1b8e0d7",
+      "data": {
+        "path": "Images/019_3.png",
+        "name": "019_3.png",
+        "extension": ".png",
+        "size_bytes": 3685999,
+        "size_human": "3.52 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "e63cc1b8e0d7",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/01_1.png": {
+      "size_bytes": 2529307,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "a9e11d429848",
+      "data": {
+        "path": "Images/01_1.png",
+        "name": "01_1.png",
+        "extension": ".png",
+        "size_bytes": 2529307,
+        "size_human": "2.41 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "a9e11d429848",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/01_2.png": {
+      "size_bytes": 2572170,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "69f4c5ad9482",
+      "data": {
+        "path": "Images/01_2.png",
+        "name": "01_2.png",
+        "extension": ".png",
+        "size_bytes": 2572170,
+        "size_human": "2.45 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "69f4c5ad9482",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/01_3.png": {
+      "size_bytes": 2360859,
+      "modified_utc": "2026-07-27T17:54:15+00:00",
+      "sha1_12": "f3b5df25935b",
+      "data": {
+        "path": "Images/01_3.png",
+        "name": "01_3.png",
+        "extension": ".png",
+        "size_bytes": 2360859,
+        "size_human": "2.25 Mo",
+        "modified_utc": "2026-07-27T17:54:15+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "f3b5df25935b",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/020-1.png": {
+      "size_bytes": 3299607,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "ece350e32a04",
+      "data": {
+        "path": "Images/020-1.png",
+        "name": "020-1.png",
+        "extension": ".png",
+        "size_bytes": 3299607,
+        "size_human": "3.15 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "ece350e32a04",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/020_2.png": {
+      "size_bytes": 3415090,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "8569df01d2de",
+      "data": {
+        "path": "Images/020_2.png",
+        "name": "020_2.png",
+        "extension": ".png",
+        "size_bytes": 3415090,
+        "size_human": "3.26 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "8569df01d2de",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/020_3.png": {
+      "size_bytes": 3501630,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "f735fe90f01d",
+      "data": {
+        "path": "Images/020_3.png",
+        "name": "020_3.png",
+        "extension": ".png",
+        "size_bytes": 3501630,
+        "size_human": "3.34 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "f735fe90f01d",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/021_1.png": {
+      "size_bytes": 3366898,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "ad909c3b90cc",
+      "data": {
+        "path": "Images/021_1.png",
+        "name": "021_1.png",
+        "extension": ".png",
+        "size_bytes": 3366898,
+        "size_human": "3.21 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "ad909c3b90cc",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/021_2.png": {
+      "size_bytes": 3373545,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "e24e30784b2d",
+      "data": {
+        "path": "Images/021_2.png",
+        "name": "021_2.png",
+        "extension": ".png",
+        "size_bytes": 3373545,
+        "size_human": "3.22 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "e24e30784b2d",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/022_1.png": {
+      "size_bytes": 3645507,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "7b95927ccb42",
+      "data": {
+        "path": "Images/022_1.png",
+        "name": "022_1.png",
+        "extension": ".png",
+        "size_bytes": 3645507,
+        "size_human": "3.48 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "7b95927ccb42",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/022_2.png": {
+      "size_bytes": 3962664,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "8eb33fd22ce6",
+      "data": {
+        "path": "Images/022_2.png",
+        "name": "022_2.png",
+        "extension": ".png",
+        "size_bytes": 3962664,
+        "size_human": "3.78 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "8eb33fd22ce6",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/023_1.png": {
+      "size_bytes": 2629362,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "b9329573ee72",
+      "data": {
+        "path": "Images/023_1.png",
+        "name": "023_1.png",
+        "extension": ".png",
+        "size_bytes": 2629362,
+        "size_human": "2.51 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "b9329573ee72",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/023_2.png": {
+      "size_bytes": 2013761,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "e0e133469281",
+      "data": {
+        "path": "Images/023_2.png",
+        "name": "023_2.png",
+        "extension": ".png",
+        "size_bytes": 2013761,
+        "size_human": "1.92 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "e0e133469281",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/023_3.png": {
+      "size_bytes": 2393066,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "3e0873c45755",
+      "data": {
+        "path": "Images/023_3.png",
+        "name": "023_3.png",
+        "extension": ".png",
+        "size_bytes": 2393066,
+        "size_human": "2.28 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "3e0873c45755",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/023_4.png": {
+      "size_bytes": 2679537,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "8f736f7c1412",
+      "data": {
+        "path": "Images/023_4.png",
+        "name": "023_4.png",
+        "extension": ".png",
+        "size_bytes": 2679537,
+        "size_human": "2.56 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "8f736f7c1412",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/024_1.png": {
+      "size_bytes": 3557662,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "2f4e1fc338ad",
+      "data": {
+        "path": "Images/024_1.png",
+        "name": "024_1.png",
+        "extension": ".png",
+        "size_bytes": 3557662,
+        "size_human": "3.39 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "2f4e1fc338ad",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/024_2.png": {
+      "size_bytes": 2168870,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "b23116a3a42b",
+      "data": {
+        "path": "Images/024_2.png",
+        "name": "024_2.png",
+        "extension": ".png",
+        "size_bytes": 2168870,
+        "size_human": "2.07 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "b23116a3a42b",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/024_3.png": {
+      "size_bytes": 3435128,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "58ce5961a09a",
+      "data": {
+        "path": "Images/024_3.png",
+        "name": "024_3.png",
+        "extension": ".png",
+        "size_bytes": 3435128,
+        "size_human": "3.28 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "58ce5961a09a",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/024_4.png": {
+      "size_bytes": 1983442,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "6dcfd1446556",
+      "data": {
+        "path": "Images/024_4.png",
+        "name": "024_4.png",
+        "extension": ".png",
+        "size_bytes": 1983442,
+        "size_human": "1.89 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "6dcfd1446556",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/025_1.png": {
+      "size_bytes": 2034482,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "94a562775bd8",
+      "data": {
+        "path": "Images/025_1.png",
+        "name": "025_1.png",
+        "extension": ".png",
+        "size_bytes": 2034482,
+        "size_human": "1.94 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "94a562775bd8",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/025_2.png": {
+      "size_bytes": 1904533,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "a98f632908eb",
+      "data": {
+        "path": "Images/025_2.png",
+        "name": "025_2.png",
+        "extension": ".png",
+        "size_bytes": 1904533,
+        "size_human": "1.82 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "a98f632908eb",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/025_3.png": {
+      "size_bytes": 3433963,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "93551c375fb3",
+      "data": {
+        "path": "Images/025_3.png",
+        "name": "025_3.png",
+        "extension": ".png",
+        "size_bytes": 3433963,
+        "size_human": "3.27 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "93551c375fb3",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/026_2.png": {
+      "size_bytes": 1524600,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "6c2e9dc6cc26",
+      "data": {
+        "path": "Images/026_2.png",
+        "name": "026_2.png",
+        "extension": ".png",
+        "size_bytes": 1524600,
+        "size_human": "1.45 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "6c2e9dc6cc26",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/026_3.png": {
+      "size_bytes": 2055452,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "b6ce4f0d524b",
+      "data": {
+        "path": "Images/026_3.png",
+        "name": "026_3.png",
+        "extension": ".png",
+        "size_bytes": 2055452,
+        "size_human": "1.96 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "b6ce4f0d524b",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/026_4.png": {
+      "size_bytes": 3696560,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "c5110338a83f",
+      "data": {
+        "path": "Images/026_4.png",
+        "name": "026_4.png",
+        "extension": ".png",
+        "size_bytes": 3696560,
+        "size_human": "3.53 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "c5110338a83f",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/026_5.png": {
+      "size_bytes": 3279070,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "a0d755a6e399",
+      "data": {
+        "path": "Images/026_5.png",
+        "name": "026_5.png",
+        "extension": ".png",
+        "size_bytes": 3279070,
+        "size_human": "3.13 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "a0d755a6e399",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/027-2.png": {
+      "size_bytes": 2035185,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "fec2dbb3e245",
+      "data": {
+        "path": "Images/027-2.png",
+        "name": "027-2.png",
+        "extension": ".png",
+        "size_bytes": 2035185,
+        "size_human": "1.94 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "fec2dbb3e245",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/027_1.png": {
+      "size_bytes": 1366971,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "49fabe40df19",
+      "data": {
+        "path": "Images/027_1.png",
+        "name": "027_1.png",
+        "extension": ".png",
+        "size_bytes": 1366971,
+        "size_human": "1.30 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "49fabe40df19",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/027_3.png": {
+      "size_bytes": 2230929,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "02ad2b047e5b",
+      "data": {
+        "path": "Images/027_3.png",
+        "name": "027_3.png",
+        "extension": ".png",
+        "size_bytes": 2230929,
+        "size_human": "2.13 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "02ad2b047e5b",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/027_5.png": {
+      "size_bytes": 3355861,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "36362f389358",
+      "data": {
+        "path": "Images/027_5.png",
+        "name": "027_5.png",
+        "extension": ".png",
+        "size_bytes": 3355861,
+        "size_human": "3.20 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "36362f389358",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/02_1.png": {
+      "size_bytes": 2613090,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "79b878e2d53a",
+      "data": {
+        "path": "Images/02_1.png",
+        "name": "02_1.png",
+        "extension": ".png",
+        "size_bytes": 2613090,
+        "size_human": "2.49 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "79b878e2d53a",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/02_2.png": {
+      "size_bytes": 2389322,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "0423832c7fde",
+      "data": {
+        "path": "Images/02_2.png",
+        "name": "02_2.png",
+        "extension": ".png",
+        "size_bytes": 2389322,
+        "size_human": "2.28 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "0423832c7fde",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/03_1.png": {
+      "size_bytes": 3577288,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "17a8efd0fb07",
+      "data": {
+        "path": "Images/03_1.png",
+        "name": "03_1.png",
+        "extension": ".png",
+        "size_bytes": 3577288,
+        "size_human": "3.41 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "17a8efd0fb07",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/03_2.png": {
+      "size_bytes": 2529307,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "a9e11d429848",
+      "data": {
+        "path": "Images/03_2.png",
+        "name": "03_2.png",
+        "extension": ".png",
+        "size_bytes": 2529307,
+        "size_human": "2.41 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "a9e11d429848",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/04_1.png": {
+      "size_bytes": 3598831,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "c8aaa7d74914",
+      "data": {
+        "path": "Images/04_1.png",
+        "name": "04_1.png",
+        "extension": ".png",
+        "size_bytes": 3598831,
+        "size_human": "3.43 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "c8aaa7d74914",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/04_2.png": {
+      "size_bytes": 1684649,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "fd6e70dc42ca",
+      "data": {
+        "path": "Images/04_2.png",
+        "name": "04_2.png",
+        "extension": ".png",
+        "size_bytes": 1684649,
+        "size_human": "1.61 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "fd6e70dc42ca",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/04_3.png": {
+      "size_bytes": 3753356,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "ae021185ea67",
+      "data": {
+        "path": "Images/04_3.png",
+        "name": "04_3.png",
+        "extension": ".png",
+        "size_bytes": 3753356,
+        "size_human": "3.58 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "ae021185ea67",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/05_1.png": {
+      "size_bytes": 3753356,
+      "modified_utc": "2026-07-27T17:54:16+00:00",
+      "sha1_12": "ae021185ea67",
+      "data": {
+        "path": "Images/05_1.png",
+        "name": "05_1.png",
+        "extension": ".png",
+        "size_bytes": 3753356,
+        "size_human": "3.58 Mo",
+        "modified_utc": "2026-07-27T17:54:16+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "ae021185ea67",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/05_2.png": {
+      "size_bytes": 1845021,
+      "modified_utc": "2026-07-27T17:54:17+00:00",
+      "sha1_12": "bae29f97d749",
+      "data": {
+        "path": "Images/05_2.png",
+        "name": "05_2.png",
+        "extension": ".png",
+        "size_bytes": 1845021,
+        "size_human": "1.76 Mo",
+        "modified_utc": "2026-07-27T17:54:17+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "bae29f97d749",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/05_3.png": {
+      "size_bytes": 2470044,
+      "modified_utc": "2026-07-27T17:54:17+00:00",
+      "sha1_12": "83d9e0ee24ec",
+      "data": {
+        "path": "Images/05_3.png",
+        "name": "05_3.png",
+        "extension": ".png",
+        "size_bytes": 2470044,
+        "size_human": "2.36 Mo",
+        "modified_utc": "2026-07-27T17:54:17+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "83d9e0ee24ec",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/05_4.png": {
+      "size_bytes": 3435377,
+      "modified_utc": "2026-07-27T17:54:17+00:00",
+      "sha1_12": "c24381528d66",
+      "data": {
+        "path": "Images/05_4.png",
+        "name": "05_4.png",
+        "extension": ".png",
+        "size_bytes": 3435377,
+        "size_human": "3.28 Mo",
+        "modified_utc": "2026-07-27T17:54:17+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "c24381528d66",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/06_1.png": {
+      "size_bytes": 3306031,
+      "modified_utc": "2026-07-27T17:54:17+00:00",
+      "sha1_12": "d5f44d921f2d",
+      "data": {
+        "path": "Images/06_1.png",
+        "name": "06_1.png",
+        "extension": ".png",
+        "size_bytes": 3306031,
+        "size_human": "3.15 Mo",
+        "modified_utc": "2026-07-27T17:54:17+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "d5f44d921f2d",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/06_2.png": {
+      "size_bytes": 3561126,
+      "modified_utc": "2026-07-27T17:54:17+00:00",
+      "sha1_12": "fedb279b067d",
+      "data": {
+        "path": "Images/06_2.png",
+        "name": "06_2.png",
+        "extension": ".png",
+        "size_bytes": 3561126,
+        "size_human": "3.40 Mo",
+        "modified_utc": "2026-07-27T17:54:17+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "fedb279b067d",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/07_1.png": {
+      "size_bytes": 3577288,
+      "modified_utc": "2026-07-27T17:54:17+00:00",
+      "sha1_12": "17a8efd0fb07",
+      "data": {
+        "path": "Images/07_1.png",
+        "name": "07_1.png",
+        "extension": ".png",
+        "size_bytes": 3577288,
+        "size_human": "3.41 Mo",
+        "modified_utc": "2026-07-27T17:54:17+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "17a8efd0fb07",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/07_2.png": {
+      "size_bytes": 2572170,
+      "modified_utc": "2026-07-27T17:54:17+00:00",
+      "sha1_12": "69f4c5ad9482",
+      "data": {
+        "path": "Images/07_2.png",
+        "name": "07_2.png",
+        "extension": ".png",
+        "size_bytes": 2572170,
+        "size_human": "2.45 Mo",
+        "modified_utc": "2026-07-27T17:54:17+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "69f4c5ad9482",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/07_3.png": {
+      "size_bytes": 2739090,
+      "modified_utc": "2026-07-27T17:54:17+00:00",
+      "sha1_12": "2205c14a149d",
+      "data": {
+        "path": "Images/07_3.png",
+        "name": "07_3.png",
+        "extension": ".png",
+        "size_bytes": 2739090,
+        "size_human": "2.61 Mo",
+        "modified_utc": "2026-07-27T17:54:17+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "2205c14a149d",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/08_1.png": {
+      "size_bytes": 3415090,
+      "modified_utc": "2026-07-27T17:54:17+00:00",
+      "sha1_12": "8569df01d2de",
+      "data": {
+        "path": "Images/08_1.png",
+        "name": "08_1.png",
+        "extension": ".png",
+        "size_bytes": 3415090,
+        "size_human": "3.26 Mo",
+        "modified_utc": "2026-07-27T17:54:17+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "8569df01d2de",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/08_2.png": {
+      "size_bytes": 2084840,
+      "modified_utc": "2026-07-27T17:54:17+00:00",
+      "sha1_12": "824d8611dd3d",
+      "data": {
+        "path": "Images/08_2.png",
+        "name": "08_2.png",
+        "extension": ".png",
+        "size_bytes": 2084840,
+        "size_human": "1.99 Mo",
+        "modified_utc": "2026-07-27T17:54:17+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "824d8611dd3d",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/08_3.png": {
+      "size_bytes": 3299607,
+      "modified_utc": "2026-07-27T17:54:17+00:00",
+      "sha1_12": "ece350e32a04",
+      "data": {
+        "path": "Images/08_3.png",
+        "name": "08_3.png",
+        "extension": ".png",
+        "size_bytes": 3299607,
+        "size_human": "3.15 Mo",
+        "modified_utc": "2026-07-27T17:54:17+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "ece350e32a04",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/08_4.png": {
+      "size_bytes": 2062621,
+      "modified_utc": "2026-07-27T17:54:17+00:00",
+      "sha1_12": "f27fd43be9b8",
+      "data": {
+        "path": "Images/08_4.png",
+        "name": "08_4.png",
+        "extension": ".png",
+        "size_bytes": 2062621,
+        "size_human": "1.97 Mo",
+        "modified_utc": "2026-07-27T17:54:17+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "f27fd43be9b8",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/09_1.png": {
+      "size_bytes": 3753356,
+      "modified_utc": "2026-07-27T17:54:17+00:00",
+      "sha1_12": "ae021185ea67",
+      "data": {
+        "path": "Images/09_1.png",
+        "name": "09_1.png",
+        "extension": ".png",
+        "size_bytes": 3753356,
+        "size_human": "3.58 Mo",
+        "modified_utc": "2026-07-27T17:54:17+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "ae021185ea67",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/09_2.png": {
+      "size_bytes": 3561126,
+      "modified_utc": "2026-07-27T17:54:17+00:00",
+      "sha1_12": "fedb279b067d",
+      "data": {
+        "path": "Images/09_2.png",
+        "name": "09_2.png",
+        "extension": ".png",
+        "size_bytes": 3561126,
+        "size_human": "3.40 Mo",
+        "modified_utc": "2026-07-27T17:54:17+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "fedb279b067d",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/09_3.png": {
+      "size_bytes": 3514974,
+      "modified_utc": "2026-07-27T17:54:17+00:00",
+      "sha1_12": "3e3364cab015",
+      "data": {
+        "path": "Images/09_3.png",
+        "name": "09_3.png",
+        "extension": ".png",
+        "size_bytes": 3514974,
+        "size_human": "3.35 Mo",
+        "modified_utc": "2026-07-27T17:54:17+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "3e3364cab015",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/10Landes vitrifiées aux herbes rouges et mousses pâles.png": {
+      "size_bytes": 2985700,
+      "modified_utc": "2026-07-27T17:54:17+00:00",
+      "sha1_12": "517f4b8e8a84",
+      "data": {
+        "path": "Images/10Landes vitrifiées aux herbes rouges et mousses pâles.png",
+        "name": "10Landes vitrifiées aux herbes rouges et mousses pâles.png",
+        "extension": ".png",
+        "size_bytes": 2985700,
+        "size_human": "2.85 Mo",
+        "modified_utc": "2026-07-27T17:54:17+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "517f4b8e8a84",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/11Plaine rocheuse à végétation éparse.png": {
+      "size_bytes": 2749670,
+      "modified_utc": "2026-07-27T17:54:17+00:00",
+      "sha1_12": "c063e723984a",
+      "data": {
+        "path": "Images/11Plaine rocheuse à végétation éparse.png",
+        "name": "11Plaine rocheuse à végétation éparse.png",
+        "extension": ".png",
+        "size_bytes": 2749670,
+        "size_human": "2.62 Mo",
+        "modified_utc": "2026-07-27T17:54:17+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "c063e723984a",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/12Désert cristallin au sol craquelé .png": {
+      "size_bytes": 3131211,
+      "modified_utc": "2026-07-27T17:54:17+00:00",
+      "sha1_12": "ebbc4f510a48",
+      "data": {
+        "path": "Images/12Désert cristallin au sol craquelé .png",
+        "name": "12Désert cristallin au sol craquelé .png",
+        "extension": ".png",
+        "size_bytes": 3131211,
+        "size_human": "2.99 Mo",
+        "modified_utc": "2026-07-27T17:54:17+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "ebbc4f510a48",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/13Monde cristallin monumental.png": {
+      "size_bytes": 3098520,
+      "modified_utc": "2026-07-27T17:54:17+00:00",
+      "sha1_12": "391b5176882c",
+      "data": {
+        "path": "Images/13Monde cristallin monumental.png",
+        "name": "13Monde cristallin monumental.png",
+        "extension": ".png",
+        "size_bytes": 3098520,
+        "size_human": "2.95 Mo",
+        "modified_utc": "2026-07-27T17:54:17+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "391b5176882c",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/14Désert magnétique aux roches en lévitation.png": {
+      "size_bytes": 2720838,
+      "modified_utc": "2026-07-27T17:54:17+00:00",
+      "sha1_12": "0c071dc8e2b8",
+      "data": {
+        "path": "Images/14Désert magnétique aux roches en lévitation.png",
+        "name": "14Désert magnétique aux roches en lévitation.png",
+        "extension": ".png",
+        "size_bytes": 2720838,
+        "size_human": "2.59 Mo",
+        "modified_utc": "2026-07-27T17:54:17+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "0c071dc8e2b8",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/15Désert de dunes extraterrestres.png": {
+      "size_bytes": 2746412,
+      "modified_utc": "2026-07-27T17:54:17+00:00",
+      "sha1_12": "dd58e3565af9",
+      "data": {
+        "path": "Images/15Désert de dunes extraterrestres.png",
+        "name": "15Désert de dunes extraterrestres.png",
+        "extension": ".png",
+        "size_bytes": 2746412,
+        "size_human": "2.62 Mo",
+        "modified_utc": "2026-07-27T17:54:17+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "dd58e3565af9",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/16Désert aride avec oasis opaline.png": {
+      "size_bytes": 2991077,
+      "modified_utc": "2026-07-27T17:54:17+00:00",
+      "sha1_12": "d0b6b312f016",
+      "data": {
+        "path": "Images/16Désert aride avec oasis opaline.png",
+        "name": "16Désert aride avec oasis opaline.png",
+        "extension": ".png",
+        "size_bytes": 2991077,
+        "size_human": "2.85 Mo",
+        "modified_utc": "2026-07-27T17:54:17+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "d0b6b312f016",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/17Monde volcanique et rivières de lave.png": {
+      "size_bytes": 3027112,
+      "modified_utc": "2026-07-27T17:54:17+00:00",
+      "sha1_12": "1e34522fe95c",
+      "data": {
+        "path": "Images/17Monde volcanique et rivières de lave.png",
+        "name": "17Monde volcanique et rivières de lave.png",
+        "extension": ".png",
+        "size_bytes": 3027112,
+        "size_human": "2.89 Mo",
+        "modified_utc": "2026-07-27T17:54:17+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "1e34522fe95c",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/18Banquise fracturée et cavernes de glace.png": {
+      "size_bytes": 2994847,
+      "modified_utc": "2026-07-27T17:54:17+00:00",
+      "sha1_12": "487f125f1933",
+      "data": {
+        "path": "Images/18Banquise fracturée et cavernes de glace.png",
+        "name": "18Banquise fracturée et cavernes de glace.png",
+        "extension": ".png",
+        "size_bytes": 2994847,
+        "size_human": "2.86 Mo",
+        "modified_utc": "2026-07-27T17:54:17+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "487f125f1933",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/19Toundra extraterrestre enneigée.png": {
+      "size_bytes": 3039559,
+      "modified_utc": "2026-07-27T17:54:17+00:00",
+      "sha1_12": "112f7e9e79b6",
+      "data": {
+        "path": "Images/19Toundra extraterrestre enneigée.png",
+        "name": "19Toundra extraterrestre enneigée.png",
+        "extension": ".png",
+        "size_bytes": 3039559,
+        "size_human": "2.90 Mo",
+        "modified_utc": "2026-07-27T17:54:17+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "112f7e9e79b6",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/1Jungle extraterrestre bioluminescente.png": {
+      "size_bytes": 2825722,
+      "modified_utc": "2026-07-27T17:54:17+00:00",
+      "sha1_12": "1a7d333974fc",
+      "data": {
+        "path": "Images/1Jungle extraterrestre bioluminescente.png",
+        "name": "1Jungle extraterrestre bioluminescente.png",
+        "extension": ".png",
+        "size_bytes": 2825722,
+        "size_human": "2.69 Mo",
+        "modified_utc": "2026-07-27T17:54:17+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "1a7d333974fc",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/20Archipel tropical extraterrestre.png": {
+      "size_bytes": 2997063,
+      "modified_utc": "2026-07-27T17:54:17+00:00",
+      "sha1_12": "44ffd5dd3970",
+      "data": {
+        "path": "Images/20Archipel tropical extraterrestre.png",
+        "name": "20Archipel tropical extraterrestre.png",
+        "extension": ".png",
+        "size_bytes": 2997063,
+        "size_human": "2.86 Mo",
+        "modified_utc": "2026-07-27T17:54:17+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "44ffd5dd3970",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/21Côte tropicale et grandes plages .png": {
+      "size_bytes": 3074380,
+      "modified_utc": "2026-07-27T17:54:17+00:00",
+      "sha1_12": "a3ba19751c68",
+      "data": {
+        "path": "Images/21Côte tropicale et grandes plages .png",
+        "name": "21Côte tropicale et grandes plages .png",
+        "extension": ".png",
+        "size_bytes": 3074380,
+        "size_human": "2.93 Mo",
+        "modified_utc": "2026-07-27T17:54:17+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "a3ba19751c68",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/22Côte de galets et falaises sombres.png": {
+      "size_bytes": 3083956,
+      "modified_utc": "2026-07-27T17:54:17+00:00",
+      "sha1_12": "39146a45392d",
+      "data": {
+        "path": "Images/22Côte de galets et falaises sombres.png",
+        "name": "22Côte de galets et falaises sombres.png",
+        "extension": ".png",
+        "size_bytes": 3083956,
+        "size_human": "2.94 Mo",
+        "modified_utc": "2026-07-27T17:54:17+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "39146a45392d",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/23Monde sous-marin bioluminescent.png": {
+      "size_bytes": 2808384,
+      "modified_utc": "2026-07-27T17:54:17+00:00",
+      "sha1_12": "1fcc0a774864",
+      "data": {
+        "path": "Images/23Monde sous-marin bioluminescent.png",
+        "name": "23Monde sous-marin bioluminescent.png",
+        "extension": ".png",
+        "size_bytes": 2808384,
+        "size_human": "2.68 Mo",
+        "modified_utc": "2026-07-27T17:54:17+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "1fcc0a774864",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/24Mégalopole extraterrestre abandonnée et reconquise par la nature.png": {
+      "size_bytes": 3178648,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "19deb4db3a30",
+      "data": {
+        "path": "Images/24Mégalopole extraterrestre abandonnée et reconquise par la nature.png",
+        "name": "24Mégalopole extraterrestre abandonnée et reconquise par la nature.png",
+        "extension": ".png",
+        "size_bytes": 3178648,
+        "size_human": "3.03 Mo",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "19deb4db3a30",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/25Îles flottantes et cascades aériennes.png": {
+      "size_bytes": 2919923,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "6c74d08b4b63",
+      "data": {
+        "path": "Images/25Îles flottantes et cascades aériennes.png",
+        "name": "25Îles flottantes et cascades aériennes.png",
+        "extension": ".png",
+        "size_bytes": 2919923,
+        "size_human": "2.78 Mo",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "6c74d08b4b63",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/26BisZone de Magetisme.png": {
+      "size_bytes": 3028729,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "29fee01eac23",
+      "data": {
+        "path": "Images/26BisZone de Magetisme.png",
+        "name": "26BisZone de Magetisme.png",
+        "extension": ".png",
+        "size_bytes": 3028729,
+        "size_human": "2.89 Mo",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "29fee01eac23",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/26Zone de magnetisme.png": {
+      "size_bytes": 3162621,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "0e0a91d0058a",
+      "data": {
+        "path": "Images/26Zone de magnetisme.png",
+        "name": "26Zone de magnetisme.png",
+        "extension": ".png",
+        "size_bytes": 3162621,
+        "size_human": "3.02 Mo",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "0e0a91d0058a",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/27Zone de curiosity.png": {
+      "size_bytes": 2665420,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "1e53673bf097",
+      "data": {
+        "path": "Images/27Zone de curiosity.png",
+        "name": "27Zone de curiosity.png",
+        "extension": ".png",
+        "size_bytes": 2665420,
+        "size_human": "2.54 Mo",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "1e53673bf097",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/2Jungle envahissant les ruines d’une civilisation.png": {
+      "size_bytes": 2974589,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "da0ca162b26c",
+      "data": {
+        "path": "Images/2Jungle envahissant les ruines d’une civilisation.png",
+        "name": "2Jungle envahissant les ruines d’une civilisation.png",
+        "extension": ".png",
+        "size_bytes": 2974589,
+        "size_human": "2.84 Mo",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "da0ca162b26c",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/3Forêt fongique aux champignons géants.png": {
+      "size_bytes": 2781692,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "165f8ed9da0f",
+      "data": {
+        "path": "Images/3Forêt fongique aux champignons géants.png",
+        "name": "3Forêt fongique aux champignons géants.png",
+        "extension": ".png",
+        "size_bytes": 2781692,
+        "size_human": "2.65 Mo",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "165f8ed9da0f",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/4Savane.png": {
+      "size_bytes": 2814032,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "b9e249164459",
+      "data": {
+        "path": "Images/4Savane.png",
+        "name": "4Savane.png",
+        "extension": ".png",
+        "size_bytes": 2814032,
+        "size_human": "2.68 Mo",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "b9e249164459",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/5Prairie céladon aux végétaux en voiles2.png": {
+      "size_bytes": 2582321,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "495c85cfbc2c",
+      "data": {
+        "path": "Images/5Prairie céladon aux végétaux en voiles2.png",
+        "name": "5Prairie céladon aux végétaux en voiles2.png",
+        "extension": ".png",
+        "size_bytes": 2582321,
+        "size_human": "2.46 Mo",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "495c85cfbc2c",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/6Forêt d’ambre aux arbres et racines luminescentes.png": {
+      "size_bytes": 3335020,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "fd1ed95c5f48",
+      "data": {
+        "path": "Images/6Forêt d’ambre aux arbres et racines luminescentes.png",
+        "name": "6Forêt d’ambre aux arbres et racines luminescentes.png",
+        "extension": ".png",
+        "size_bytes": 3335020,
+        "size_human": "3.18 Mo",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "fd1ed95c5f48",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/7Marais d’ambre et végétation aquatique.png": {
+      "size_bytes": 3047911,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "6114f0eb1ec4",
+      "data": {
+        "path": "Images/7Marais d’ambre et végétation aquatique.png",
+        "name": "7Marais d’ambre et végétation aquatique.png",
+        "extension": ".png",
+        "size_bytes": 3047911,
+        "size_human": "2.91 Mo",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "6114f0eb1ec4",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/8Marais flottant extraterrestre.png": {
+      "size_bytes": 3111439,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "c71f32256287",
+      "data": {
+        "path": "Images/8Marais flottant extraterrestre.png",
+        "name": "8Marais flottant extraterrestre.png",
+        "extension": ".png",
+        "size_bytes": 3111439,
+        "size_human": "2.97 Mo",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "c71f32256287",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/9Steppe de verre et failles turquoise.png": {
+      "size_bytes": 3060205,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "99922a715def",
+      "data": {
+        "path": "Images/9Steppe de verre et failles turquoise.png",
+        "name": "9Steppe de verre et failles turquoise.png",
+        "extension": ".png",
+        "size_bytes": 3060205,
+        "size_human": "2.92 Mo",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "99922a715def",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/Capsule.png": {
+      "size_bytes": 3779846,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "58bf27fd8dd0",
+      "data": {
+        "path": "Images/Capsule.png",
+        "name": "Capsule.png",
+        "extension": ".png",
+        "size_bytes": 3779846,
+        "size_human": "3.60 Mo",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": null,
+        "category": "Asset",
+        "sha1_12": "58bf27fd8dd0",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/images-catalog.js": {
+      "size_bytes": 7138,
+      "modified_utc": "2026-07-27T19:36:11+00:00",
+      "sha1_12": "b78dec801883",
+      "data": {
+        "path": "Images/images-catalog.js",
+        "name": "images-catalog.js",
+        "extension": ".js",
+        "size_bytes": 7138,
+        "size_human": "6.97 Ko",
+        "modified_utc": "2026-07-27T19:36:11+00:00",
+        "line_count": 1,
+        "category": "Texte / Code",
+        "sha1_12": "b78dec801883",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/images.txt": {
+      "size_bytes": 184,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "be7299a51ca0",
+      "data": {
+        "path": "Images/images.txt",
+        "name": "images.txt",
+        "extension": ".txt",
+        "size_bytes": 184,
+        "size_human": "184 o",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": 5,
+        "category": "Texte / Code",
+        "sha1_12": "be7299a51ca0",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Images/LISEZ_MOI.txt": {
+      "size_bytes": 744,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "c118addbebcb",
+      "data": {
+        "path": "Images/LISEZ_MOI.txt",
+        "name": "LISEZ_MOI.txt",
+        "extension": ".txt",
+        "size_bytes": 744,
+        "size_human": "744 o",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": 19,
+        "category": "Texte / Code",
+        "sha1_12": "c118addbebcb",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "index.html": {
+      "size_bytes": 2811,
+      "modified_utc": "2026-07-27T17:54:14+00:00",
+      "sha1_12": "f0c678f0e130",
+      "data": {
+        "path": "index.html",
+        "name": "index.html",
+        "extension": ".html",
+        "size_bytes": 2811,
+        "size_human": "2.75 Ko",
+        "modified_utc": "2026-07-27T17:54:14+00:00",
+        "line_count": 66,
+        "category": "Texte / Code",
+        "sha1_12": "f0c678f0e130",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "journal.css": {
+      "size_bytes": 3172,
+      "modified_utc": "2026-07-27T17:54:14+00:00",
+      "sha1_12": "5a30758a9a51",
+      "data": {
+        "path": "journal.css",
+        "name": "journal.css",
+        "extension": ".css",
+        "size_bytes": 3172,
+        "size_human": "3.10 Ko",
+        "modified_utc": "2026-07-27T17:54:14+00:00",
+        "line_count": 189,
+        "category": "Texte / Code",
+        "sha1_12": "5a30758a9a51",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "LANCER_BLUEFOX.bat": {
+      "size_bytes": 346,
+      "modified_utc": "2026-07-27T17:54:14+00:00",
+      "sha1_12": "7a601de333db",
+      "data": {
+        "path": "LANCER_BLUEFOX.bat",
+        "name": "LANCER_BLUEFOX.bat",
+        "extension": ".bat",
+        "size_bytes": 346,
+        "size_human": "346 o",
+        "modified_utc": "2026-07-27T17:54:14+00:00",
+        "line_count": 14,
+        "category": "Texte / Code",
+        "sha1_12": "7a601de333db",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "map-assets.js": {
+      "size_bytes": 5372,
+      "modified_utc": "2026-07-27T17:54:14+00:00",
+      "sha1_12": "bee57a05f453",
+      "data": {
+        "path": "map-assets.js",
+        "name": "map-assets.js",
+        "extension": ".js",
+        "size_bytes": 5372,
+        "size_human": "5.25 Ko",
+        "modified_utc": "2026-07-27T17:54:14+00:00",
+        "line_count": 182,
+        "category": "Texte / Code",
+        "sha1_12": "bee57a05f453",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "README_LANCEMENT.txt": {
+      "size_bytes": 31830,
+      "modified_utc": "2026-07-27T17:54:14+00:00",
+      "sha1_12": "6bde91727932",
+      "data": {
+        "path": "README_LANCEMENT.txt",
+        "name": "README_LANCEMENT.txt",
+        "extension": ".txt",
+        "size_bytes": 31830,
+        "size_human": "31.08 Ko",
+        "modified_utc": "2026-07-27T17:54:14+00:00",
+        "line_count": 566,
+        "category": "Texte / Code",
+        "sha1_12": "6bde91727932",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Savegarde BFO": {
+      "size_bytes": 31,
+      "modified_utc": "2026-07-27T17:54:14+00:00",
+      "sha1_12": "e7fe429319ba",
+      "data": {
+        "path": "Savegarde BFO",
+        "name": "Savegarde BFO",
+        "extension": "",
+        "size_bytes": 31,
+        "size_human": "31 o",
+        "modified_utc": "2026-07-27T17:54:14+00:00",
+        "line_count": null,
+        "category": "Sans extension",
+        "sha1_12": "e7fe429319ba",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "Savegarde BFO.txt": {
+      "size_bytes": 31,
+      "modified_utc": "2026-07-27T17:54:14+00:00",
+      "sha1_12": "e7fe429319ba",
+      "data": {
+        "path": "Savegarde BFO.txt",
+        "name": "Savegarde BFO.txt",
+        "extension": ".txt",
+        "size_bytes": 31,
+        "size_human": "31 o",
+        "modified_utc": "2026-07-27T17:54:14+00:00",
+        "line_count": 1,
+        "category": "Texte / Code",
+        "sha1_12": "e7fe429319ba",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "TODO.md": {
+      "size_bytes": 1516,
+      "modified_utc": "2026-07-28T16:17:09+00:00",
+      "sha1_12": "4e8381533b71",
+      "data": {
+        "path": "TODO.md",
+        "name": "TODO.md",
+        "extension": ".md",
+        "size_bytes": 1516,
+        "size_human": "1.48 Ko",
+        "modified_utc": "2026-07-28T16:17:09+00:00",
+        "line_count": 47,
+        "category": "Texte / Code",
+        "sha1_12": "4e8381533b71",
+        "cached": false,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "tools/bluefox-local-server.ps1": {
+      "size_bytes": 4107,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "65c200da8992",
+      "data": {
+        "path": "tools/bluefox-local-server.ps1",
+        "name": "bluefox-local-server.ps1",
+        "extension": ".ps1",
+        "size_bytes": 4107,
+        "size_human": "4.01 Ko",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": 124,
+        "category": "Texte / Code",
+        "sha1_12": "65c200da8992",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "tools/generer-catalogue-images.mjs": {
+      "size_bytes": 980,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "3831daf6799e",
+      "data": {
+        "path": "tools/generer-catalogue-images.mjs",
+        "name": "generer-catalogue-images.mjs",
+        "extension": ".mjs",
+        "size_bytes": 980,
+        "size_human": "980 o",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": null,
+        "category": "Autre",
+        "sha1_12": "3831daf6799e",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "tools/generer-catalogue-images.ps1": {
+      "size_bytes": 931,
+      "modified_utc": "2026-07-27T17:54:18+00:00",
+      "sha1_12": "ce4595a9a342",
+      "data": {
+        "path": "tools/generer-catalogue-images.ps1",
+        "name": "generer-catalogue-images.ps1",
+        "extension": ".ps1",
+        "size_bytes": 931,
+        "size_human": "931 o",
+        "modified_utc": "2026-07-27T17:54:18+00:00",
+        "line_count": 27,
+        "category": "Texte / Code",
+        "sha1_12": "ce4595a9a342",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    },
+    "VERIFIER_ET_REPARER_IMAGES.bat": {
+      "size_bytes": 618,
+      "modified_utc": "2026-07-27T17:54:14+00:00",
+      "sha1_12": "f95eddce5905",
+      "data": {
+        "path": "VERIFIER_ET_REPARER_IMAGES.bat",
+        "name": "VERIFIER_ET_REPARER_IMAGES.bat",
+        "extension": ".bat",
+        "size_bytes": 618,
+        "size_human": "618 o",
+        "modified_utc": "2026-07-27T17:54:14+00:00",
+        "line_count": 26,
+        "category": "Texte / Code",
+        "sha1_12": "f95eddce5905",
+        "cached": true,
+        "gdscript": null,
+        "scene": null
+      }
+    }
+  }
+}

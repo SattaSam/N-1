@@ -1,0 +1,392 @@
+(function (global) {
+  "use strict";
+
+  const BF = global.BlueFox3D = global.BlueFox3D || {};
+  const STORAGE_KEY = "bluefox_progression_registry_v1";
+  const LEGACY_STORAGE_KEY = "bluefox_odyssey_save_v1";
+  const VERSION = 1;
+  const MAX_HISTORY = 500;
+
+  const clone = (value) => value == null ? value : JSON.parse(JSON.stringify(value));
+  const cleanKey = (value, fallback = "unknown") => {
+    const key = String(value ?? "").trim();
+    return key || fallback;
+  };
+
+  const defaultState = () => ({
+    version: VERSION,
+    updatedAt: Date.now(),
+    counters: {
+      global: {},
+      planets: {},
+      maps: {},
+      zones: {},
+      factions: {},
+      missions: {}
+    },
+    inventory: {},
+    campStorage: {},
+    deposited: {},
+    consumed: {},
+    discoveries: {
+      objects: {},
+      instances: {},
+      variants: {},
+      maps: {},
+      zones: {},
+      phenomena: {}
+    },
+    expertise: {
+      maps: {},
+      planets: {},
+      global: 0
+    },
+    milestones: {},
+    migrations: {
+      legacyInventoryImported: false,
+      legacyOfflineReconciled: false
+    },
+    history: []
+  });
+
+  const mergeState = (saved) => {
+    const base = defaultState();
+    if (!saved || saved.version !== VERSION) return base;
+    return {
+      ...base,
+      ...saved,
+      counters: {
+        ...base.counters,
+        ...(saved.counters || {})
+      },
+      inventory: { ...(saved.inventory || {}) },
+      campStorage: { ...(saved.campStorage || {}) },
+      deposited: { ...(saved.deposited || {}) },
+      consumed: { ...(saved.consumed || {}) },
+      discoveries: {
+        ...base.discoveries,
+        ...(saved.discoveries || {})
+      },
+      expertise: {
+        ...base.expertise,
+        ...(saved.expertise || {})
+      },
+      milestones: { ...(saved.milestones || {}) },
+      migrations: {
+        ...base.migrations,
+        ...(saved.migrations || {})
+      },
+      history: Array.isArray(saved.history) ? saved.history.slice(-MAX_HISTORY) : []
+    };
+  };
+
+  class ProgressionRegistry {
+    constructor(storage = global.localStorage) {
+      this.storage = storage;
+      this.state = defaultState();
+      this.unsubscribe = null;
+      this.load();
+    }
+
+    load() {
+      try {
+        this.state = mergeState(JSON.parse(this.storage.getItem(STORAGE_KEY) || "null"));
+      } catch (error) {
+        console.warn("Registre central de progression illisible, réinitialisation.", error);
+        this.state = defaultState();
+      }
+      this.importLegacyInventoryOnce();
+      return this.state;
+    }
+
+    importLegacyInventoryOnce() {
+      if (this.state.migrations.legacyInventoryImported) return false;
+      this.state.migrations.legacyInventoryImported = true;
+
+      if (Object.keys(this.state.inventory).length) {
+        this.save();
+        return false;
+      }
+
+      try {
+        const legacy = JSON.parse(
+          this.storage.getItem("bluefox_odyssey_save_v1") || "null"
+        );
+        const resources = legacy?.resources;
+        if (resources && typeof resources === "object" && !Array.isArray(resources)) {
+          Object.entries(resources).forEach(([key, amount]) => {
+            const quantity = Math.max(0, Number(amount) || 0);
+            if (quantity > 0) this.state.inventory[cleanKey(key)] = quantity;
+          });
+        }
+      } catch (error) {
+        console.warn("Migration de l’ancien inventaire indisponible.", error);
+      }
+      this.save();
+      return true;
+    }
+
+    save() {
+      this.state.updatedAt = Date.now();
+      try {
+        this.storage.setItem(STORAGE_KEY, JSON.stringify(this.state));
+        if (this.state.migrations.legacyOfflineReconciled) {
+          this.syncLegacyInventory();
+        }
+        return true;
+      } catch (error) {
+        console.warn("Sauvegarde du registre central indisponible.", error);
+        return false;
+      }
+    }
+
+    syncLegacyInventory() {
+      try {
+        const legacy = JSON.parse(
+          this.storage.getItem(LEGACY_STORAGE_KEY) || "null"
+        );
+        if (!legacy || typeof legacy !== "object" || Array.isArray(legacy)) {
+          return false;
+        }
+        this.storage.setItem(LEGACY_STORAGE_KEY, JSON.stringify({
+          ...legacy,
+          resources: { ...this.state.inventory },
+          inventorySource: "progression-registry-v1"
+        }));
+        return true;
+      } catch (error) {
+        console.warn("Synchronisation de l’inventaire historique indisponible.", error);
+        return false;
+      }
+    }
+
+    completeLegacyOfflineReconciliation() {
+      if (this.state.migrations.legacyOfflineReconciled) return false;
+      this.state.migrations.legacyOfflineReconciled = true;
+      this.save();
+      this.publishChange("legacy-offline-reconciled");
+      return true;
+    }
+
+    publishChange(reason, event = null) {
+      global.dispatchEvent(new CustomEvent("bluefox:progression-changed", {
+        detail: {
+          reason,
+          event: clone(event),
+          snapshot: this.snapshot()
+        }
+      }));
+    }
+
+    increment(bucket, key, amount = 1) {
+      const safeKey = cleanKey(key);
+      bucket[safeKey] = (Number(bucket[safeKey]) || 0) + Math.max(0, Number(amount) || 0);
+      return bucket[safeKey];
+    }
+
+    scopedBucket(scope, id) {
+      const collection = this.state.counters[scope];
+      if (!collection) return this.state.counters.global;
+      if (scope === "global") return collection;
+      const safeId = cleanKey(id);
+      collection[safeId] = collection[safeId] || {};
+      return collection[safeId];
+    }
+
+    incrementScopes(event, amount) {
+      const keys = [
+        event.type,
+        event.family ? `${event.type}:${event.family}` : null,
+        event.objectId ? `${event.type}:object:${event.objectId}` : null
+      ].filter(Boolean);
+      const scopes = [
+        ["global", "global"],
+        ["planets", event.planetId],
+        ["maps", event.mapId],
+        ["zones", event.mapId != null && event.zoneId != null ? `${event.mapId}:${event.zoneId}` : null],
+        ["factions", event.factionId],
+        ["missions", event.missionId]
+      ];
+      scopes.forEach(([scope, id]) => {
+        if (scope !== "global" && id == null) return;
+        const bucket = this.scopedBucket(scope, id);
+        keys.forEach((key) => this.increment(bucket, key, amount));
+      });
+    }
+
+    rememberDiscovery(collection, key, event) {
+      if (key == null || key === "") return false;
+      const safeKey = cleanKey(key);
+      if (collection[safeKey]) return false;
+      collection[safeKey] = {
+        at: event.at || Date.now(),
+        mapId: event.mapId ?? null,
+        zoneId: event.zoneId ?? null,
+        objectId: event.objectId ?? null,
+        instanceId: event.instanceId ?? null
+      };
+      return true;
+    }
+
+    addInventory(key, amount = 1) {
+      return this.increment(this.state.inventory, cleanKey(key), amount);
+    }
+
+    consumeInventory(key, amount = 1) {
+      const safeKey = cleanKey(key);
+      const requested = Math.max(0, Number(amount) || 0);
+      const available = Number(this.state.inventory[safeKey]) || 0;
+      const removed = Math.min(available, requested);
+      this.state.inventory[safeKey] = available - removed;
+      this.increment(this.state.consumed, safeKey, removed);
+      this.save();
+      this.publishChange("inventory-consumed", {
+        inventoryKey: safeKey,
+        quantity: removed
+      });
+      return removed;
+    }
+
+    depositInventory(key, amount = 1) {
+      const safeKey = cleanKey(key);
+      const requested = Math.max(0, Number(amount) || 0);
+      const available = Number(this.state.inventory[safeKey]) || 0;
+      const moved = Math.min(available, requested);
+      this.state.inventory[safeKey] = available - moved;
+      this.increment(this.state.campStorage, safeKey, moved);
+      this.increment(this.state.deposited, safeKey, moved);
+      this.save();
+      this.publishChange("inventory-deposited", {
+        inventoryKey: safeKey,
+        quantity: moved
+      });
+      return moved;
+    }
+
+    withdrawInventory(key, amount = 1) {
+      const safeKey = cleanKey(key);
+      const requested = Math.max(0, Number(amount) || 0);
+      const stored = Number(this.state.campStorage[safeKey]) || 0;
+      const moved = Math.min(stored, requested);
+      this.state.campStorage[safeKey] = stored - moved;
+      this.increment(this.state.inventory, safeKey, moved);
+      this.save();
+      this.publishChange("inventory-withdrawn", {
+        inventoryKey: safeKey,
+        quantity: moved
+      });
+      return moved;
+    }
+
+    depositAllInventory() {
+      let moved = 0;
+      Object.entries({ ...this.state.inventory }).forEach(([key, amount]) => {
+        moved += this.depositInventory(key, Number(amount) || 0);
+      });
+      return moved;
+    }
+
+    reachMilestone(id, detail = {}) {
+      const safeId = cleanKey(id);
+      if (this.state.milestones[safeId]) return false;
+      this.state.milestones[safeId] = {
+        id: safeId,
+        at: Date.now(),
+        ...clone(detail)
+      };
+      this.save();
+      global.dispatchEvent(new CustomEvent("bluefox:progression-milestone", {
+        detail: clone(this.state.milestones[safeId])
+      }));
+      return true;
+    }
+
+    consume(event) {
+      if (!event?.type || !event.id) return false;
+      if (this.state.history.some((entry) => entry.id === event.id)) return false;
+
+      const quantity = Math.max(0, Number(event.quantity) || 0);
+      this.incrementScopes(event, quantity || 1);
+
+      if ([
+        BF.ObjectEvents?.types.RESOURCE_COLLECTED,
+        BF.ObjectEvents?.types.RESOURCE_EXTRACTED
+      ].includes(event.type)) {
+        this.addInventory(event.inventoryKey || event.detail?.inventoryKey || event.detail?.kind || event.family, quantity || 1);
+      }
+
+      const discoveryEvent = [
+        BF.ObjectEvents?.types.OBJECT_SEEN,
+        BF.ObjectEvents?.types.OBJECT_INSPECTED,
+        BF.ObjectEvents?.types.OBJECT_ANALYZED,
+        BF.ObjectEvents?.types.PHENOMENON_OBSERVED,
+        BF.ObjectEvents?.types.KNOWLEDGE_ACQUIRED
+      ].includes(event.type);
+
+      if (discoveryEvent) {
+        this.rememberDiscovery(this.state.discoveries.objects, event.objectId, event);
+        this.rememberDiscovery(this.state.discoveries.instances, event.instanceId, event);
+        if (event.objectId != null && event.variant != null) {
+          this.rememberDiscovery(this.state.discoveries.variants, `${event.objectId}:${event.variant}`, event);
+        }
+        this.rememberDiscovery(this.state.discoveries.maps, event.mapId, event);
+        if (event.mapId != null && event.zoneId != null) {
+          this.rememberDiscovery(this.state.discoveries.zones, `${event.mapId}:${event.zoneId}`, event);
+        }
+        if (event.type === BF.ObjectEvents?.types.PHENOMENON_OBSERVED) {
+          this.rememberDiscovery(this.state.discoveries.phenomena, event.instanceId || event.objectId, event);
+        }
+      }
+
+      const expertise = Math.max(0, Number(event.progression?.mapExpertise ?? event.detail?.mapExpertise ?? (discoveryEvent ? 1 : 0)) || 0);
+      if (expertise > 0) {
+        if (event.mapId != null) this.increment(this.state.expertise.maps, event.mapId, expertise);
+        if (event.planetId != null) this.increment(this.state.expertise.planets, event.planetId, expertise);
+        this.state.expertise.global += expertise;
+      }
+
+      this.state.history.push(clone(event));
+      this.state.history = this.state.history.slice(-MAX_HISTORY);
+      this.save();
+      this.publishChange("event-consumed", event);
+      return true;
+    }
+
+    connect() {
+      if (this.unsubscribe || !BF.ObjectEvents?.subscribe) return Boolean(this.unsubscribe);
+      this.unsubscribe = BF.ObjectEvents.subscribe((event) => this.consume(event));
+      return true;
+    }
+
+    disconnect() {
+      this.unsubscribe?.();
+      this.unsubscribe = null;
+    }
+
+    snapshot() {
+      return clone(this.state);
+    }
+
+    reset() {
+      this.state = defaultState();
+      this.state.migrations.legacyInventoryImported = true;
+      this.state.migrations.legacyOfflineReconciled = true;
+      this.save();
+      this.publishChange("inventory-reset");
+      return this.snapshot();
+    }
+  }
+
+  const registry = new ProgressionRegistry();
+  BF.ProgressionRegistry = ProgressionRegistry;
+  BF.progression = registry;
+  BF.getProgressionState = () => registry.snapshot();
+  BF.consumeInventory = (key, amount) => registry.consumeInventory(key, amount);
+  BF.depositInventory = (key, amount) => registry.depositInventory(key, amount);
+  BF.withdrawInventory = (key, amount) => registry.withdrawInventory(key, amount);
+  BF.depositAllInventory = () => registry.depositAllInventory();
+  BF.completeLegacyInventoryReconciliation = () =>
+    registry.completeLegacyOfflineReconciliation();
+  BF.reachProgressionMilestone = (id, detail) => registry.reachMilestone(id, detail);
+  registry.connect();
+})(window);

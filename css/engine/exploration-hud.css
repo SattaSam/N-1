@@ -1,0 +1,204 @@
+.compass-pad {
+  position: absolute !important;
+  display: block !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  width: 138px;
+  height: 138px;
+  box-sizing: border-box;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background:
+    radial-gradient(circle, transparent 0 38%, rgba(71, 206, 255, .16) 39% 41%, transparent 42%),
+    radial-gradient(circle, rgba(3, 14, 29, .78), rgba(3, 14, 29, .18) 68%, transparent 70%) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+.compass-pad button {
+  position: absolute !important;
+  width: 42px;
+  height: 30px;
+  border: 0 !important;
+  color: #c8f7ff !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  text-shadow: 0 0 8px #31d6ff;
+}
+
+.compass-pad .north {
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.compass-pad .south {
+  right: auto;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.compass-pad .west {
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+}
+
+.compass-pad .east {
+  top: 50%;
+  right: 0;
+  left: auto;
+  transform: translateY(-50%);
+}
+
+.compass-pad button:hover {
+  color: #fff !important;
+  box-shadow: none !important;
+}
+
+.compass-pad .north:hover,
+.compass-pad .south:hover {
+  transform: translateX(-50%) scale(1.08) !important;
+}
+
+.compass-pad .west:hover,
+.compass-pad .east:hover {
+  transform: translateY(-50%) scale(1.08) !important;
+}
+
+.compass-pad > span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+  overflow: visible !important;
+  border: 1px solid rgba(117, 234, 255, .55);
+}
+
+.bluefox-compass-needle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3px;
+  height: 25px;
+  border-radius: 3px;
+  background: linear-gradient(#ff3e4e 0 55%, #eaf8ff 56% 100%);
+  box-shadow: 0 0 8px #ff3048;
+  transform-origin: 50% 100%;
+  pointer-events: none;
+  transition: transform .12s linear;
+}
+
+.bluefox-compass-needle::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -5px;
+  transform: translateX(-50%);
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 8px solid #ff3e4e;
+}
+
+.bluefox-camera-button {
+  position: absolute;
+  z-index: 15;
+  left: 172px;
+  bottom: 132px;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(111, 214, 255, .5);
+  border-radius: 50%;
+  color: #c8f7ff;
+  background: #071a2de8;
+  box-shadow: 0 8px 22px #0008, 0 0 14px #42d7ff33;
+  font-size: 23px;
+  cursor: pointer;
+}
+
+.bluefox-speech-button {
+  position: absolute;
+  z-index: 15;
+  left: 220px;
+  bottom: 132px;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(111, 214, 255, .5);
+  border-radius: 50%;
+  color: #c8f7ff;
+  background: #071a2de8;
+  box-shadow: 0 8px 22px #0008, 0 0 14px #42d7ff33;
+  font-size: 17px;
+  cursor: pointer;
+}
+
+.bluefox-speech-button.disabled {
+  color: #718895;
+  border-color: rgba(113, 136, 149, .45);
+  opacity: .72;
+  filter: grayscale(1);
+}
+
+.bluefox-speech-hidden .speech-bubble {
+  display: none !important;
+}
+
+.bluefox-camera-button.free {
+  color: #ff8390;
+  border-color: #ff6475;
+}
+
+.bluefox-click-marker {
+  position: fixed;
+  z-index: 40;
+  width: 38px;
+  height: 38px;
+  border: 2px solid #75eaff;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.bluefox-click-marker.active {
+  animation: bluefox-click .48s ease-out;
+}
+
+@keyframes bluefox-click {
+  0% {
+    opacity: .95;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(.18);
+  }
+}
+
+@media (max-width: 900px) {
+  .bluefox-camera-button {
+    left: 130px;
+    bottom: 142px;
+  }
+
+  .bluefox-speech-button {
+    left: 178px;
+    bottom: 142px;
+  }
+}
+
+.day-block.night {
+  border-color: rgba(114, 144, 255, .42);
+  background: linear-gradient(180deg, rgba(10, 24, 55, .96), rgba(3, 11, 31, .92));
+  box-shadow: 0 0 24px rgba(67, 98, 255, .18);
+}
+
+.day-block.night span,
+.day-block.night small {
+  color: #9eb8ff;
+}

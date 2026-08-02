@@ -1,0 +1,189 @@
+.journal-layout {
+  grid-template-columns: minmax(310px, 42%) minmax(440px, 58%);
+  width: 100%;
+  height: calc(100dvh - 76px);
+  min-height: 0;
+  max-width: 1380px;
+}
+
+.journal-portrait {
+  position: relative;
+  min-height: 0;
+  height: 100%;
+  isolation: isolate;
+  overflow: hidden;
+  background: #020914;
+}
+
+.journal-window-biome,
+.journal-capsule,
+.journal-bluefox-stage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.journal-window-biome {
+  z-index: 0;
+  background-position: center;
+  background-size: cover;
+  transform: scale(1.04);
+}
+
+.journal-window-biome-live {
+  filter: saturate(.92) contrast(1.04) brightness(.82);
+  animation: journal-biome-perspective 18s ease-in-out infinite alternate;
+  will-change: transform, background-position;
+}
+
+@keyframes journal-biome-perspective {
+  from {
+    background-position: 47% 50%;
+    transform: scale(1.05) translate3d(-.5%, 0, 0);
+  }
+  to {
+    background-position: 53% 48%;
+    transform: scale(1.09) translate3d(.5%, -.4%, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .journal-window-biome-live {
+    animation: none;
+  }
+}
+
+.journal-capsule {
+  z-index: 1;
+  display: block;
+  object-fit: cover;
+  object-position: center;
+  pointer-events: none;
+}
+
+.journal-bluefox-stage {
+  z-index: 2;
+  inset: 18% 5% 0;
+  width: 90%;
+  height: 82%;
+  pointer-events: none;
+  filter: drop-shadow(0 14px 22px rgba(0, 0, 0, .62));
+}
+
+.journal-bluefox-stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.journal-portrait::after {
+  position: absolute;
+  z-index: 3;
+  inset: auto 0 0;
+  height: 24%;
+  content: "";
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgba(1, 7, 17, .64));
+}
+
+.full-screen-panel:has(.journal-layout) {
+  overflow: hidden;
+  padding: 38px 18px 12px;
+}
+
+.full-screen-panel:has(.journal-layout) > .eyebrow {
+  display: none;
+}
+
+.full-screen-panel:has(.journal-layout) > h2 {
+  height: 32px;
+  margin: -30px auto 6px;
+  font-size: 20px;
+  line-height: 32px;
+}
+
+.full-screen-panel:has(.journal-layout) .drawer-close {
+  top: 8px;
+  right: 12px;
+}
+
+.journal-report {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 18px 20px;
+}
+
+.journal-report > p {
+  margin: 4px 0 8px;
+}
+
+.journal-heading {
+  flex: 0 0 auto;
+}
+
+.project-cards {
+  flex: 0 0 auto;
+  margin: 8px 0 10px;
+}
+
+.project-cards article {
+  padding: 9px;
+}
+
+.living-notes {
+  flex: 0 0 auto;
+  margin-bottom: 8px;
+}
+
+.living-notes article {
+  padding: 9px;
+}
+
+.living-notes p {
+  margin-bottom: 0;
+}
+
+.journal-report > h3 {
+  flex: 0 0 auto;
+  margin: 3px 0 5px;
+}
+
+.journal-list {
+  min-height: 90px;
+  flex: 1 1 auto;
+  overflow-y: auto;
+}
+
+.map-transition {
+  position: absolute;
+  z-index: 30;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #dffaff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .18em;
+  pointer-events: none;
+  opacity: 0;
+  background: #020914;
+  transition: opacity .32s ease;
+}
+
+.map-transition.active {
+  opacity: 1;
+}
+
+@media (max-width: 900px) {
+  .journal-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .journal-portrait {
+    min-height: 58vh;
+  }
+}

@@ -1,0 +1,61 @@
+.settings-content .trait-row {
+  grid-template-columns: minmax(105px, auto) minmax(150px, 1fr) minmax(105px, auto);
+  align-items: center;
+}
+
+.settings-content .trait-bipolar-row input[type="range"] {
+  direction: rtl;
+  width: 100%;
+  height: 5px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #7458e8 0%, #8067df 45%, #2b9ee8 100%);
+  accent-color: #5f71e8;
+  appearance: none;
+}
+
+.settings-content .trait-bipolar-row input[type="range"]::-webkit-slider-thumb {
+  width: 15px;
+  height: 15px;
+  border: 2px solid #dff8ff;
+  border-radius: 50%;
+  background: #6774e9;
+  box-shadow: 0 0 8px rgba(92, 130, 235, .55);
+  appearance: none;
+}
+
+.settings-content .trait-bipolar-row input[type="range"]::-moz-range-track {
+  height: 5px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #7458e8 0%, #8067df 45%, #2b9ee8 100%);
+}
+
+.settings-content .trait-pole {
+  color: #cdeeff;
+  font-size: 10px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.settings-content .trait-pole-left {
+  text-align: right;
+}
+
+.settings-content .trait-balance-value {
+  color: #cdeeff;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: right;
+  white-space: nowrap;
+}
+
+@media (max-width: 650px) {
+  .settings-content .trait-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .settings-content .trait-balance-value {
+    text-align: left;
+  }
+}
