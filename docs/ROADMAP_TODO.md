@@ -1,10 +1,30 @@
 # BlueFox Odyssey — Roadmap et TODO
 
-Mise à jour : **1er août 2026**
+Mise à jour : **2 août 2026**
 
 Cette page est la **seule TODO active**.
 
-## P0 — Valider le point de sauvegarde catalogue
+## P0 — Banc de validation CUO
+
+- [ ] Créer un point d’entrée de test séparé du jeu principal.
+- [ ] Construire une Map neutre sans texture composée de deux plateaux.
+- [ ] Réserver le premier plateau au showroom automatique XL → L → M → S.
+- [ ] Laisser autour de chaque objet un anneau praticable par BlueFox.
+- [ ] Réserver le second plateau au placement libre par glisser-déposer.
+- [ ] Charger le catalogue complet sans IA, missions ni autonomie.
+- [ ] Ajouter une caméra libre : rotation, déplacement et zoom non contraints.
+- [ ] Garder uniquement le déplacement manuel simplifié de BlueFox.
+- [ ] Afficher les hitbox, collisions, rayons d’interaction et points d’approche.
+- [ ] Ajouter une fenêtre réductible, agrandissable et redimensionnable.
+- [ ] Filtrer le catalogue par nom, type/catégorie et taille.
+- [ ] Glisser un objet du catalogue vers un plateau pour l’instancier.
+- [ ] Afficher nom, ID CUO, taille et catégorie de l’objet sélectionné.
+- [ ] Permettre la suppression et le repositionnement des instances de test.
+- [ ] Tester chaque objet avant toute activation dans les biomes du jeu.
+
+Référence détaillée : `docs/CUO_BANC_VALIDATION_3D.md`.
+
+## P1 — Valider le point cumulatif et le générateur
 
 - [ ] Installer les ZIP des Sprints 1, 2, 3 et 4 dans l’ordre.
 - [ ] Vérifier l’absence d’erreur JavaScript au chargement.
@@ -40,7 +60,7 @@ Cette page est la **seule TODO active**.
 - [ ] Tester « Suggérer à BlueFox de s’y rendre » sur une Zone adjacente puis distante.
 - [ ] Effectuer le point Git seulement après validation.
 
-## P1 — Atteindre 75 % de stabilité du socle 3D
+## P2 — Atteindre 75 % de stabilité du socle 3D
 
 - [ ] Vérifier le cyclorama sur 16:9, tablette et smartphone.
 - [ ] Mesurer les blocages près des portails, ressources et arches.
@@ -48,16 +68,18 @@ Cette page est la **seule TODO active**.
 - [ ] Vérifier le recul maximal, le recentrage et le suivi libre.
 - [ ] Valider l’affichage portrait, notamment 4:5 en 1250 × 1562.
 
-## P2 — Enrichir le catalogue sans toucher à MapRegistry
+## P3 — Intégrer le CUO sans toucher à MapRegistry
 
-- [ ] Ajouter progressivement de nouvelles familles dans `object-library.js`.
+- [ ] Auditer les 36 lignes du CUO consolidé : 14 exécutables et 22 documentaires.
+- [ ] Valider dans le banc 3D taille, géométrie, hitbox, collision et interaction.
+- [ ] Ajouter progressivement les objets validés dans `object-library.js`.
 - [ ] Étendre les profils dans `biome-rules.js`.
 - [ ] Ajouter des compositions dans `micro-scenes.js`.
 - [ ] Tester chaque ajout sur au moins deux biomes.
 - [ ] Maintenir une graine stable par Zone.
 - [ ] Garantir les corridors entre portails.
 
-## P3 — Gameplay
+## P4 — Gameplay
 
 - [ ] Construction réelle du premier refuge.
 - [x] Fondation technique des missions hiérarchiques persistantes — M0.
@@ -81,7 +103,7 @@ Cette page est la **seule TODO active**.
 - [ ] Créatures et protocole de contact.
 - [ ] Conséquences graduelles des choix du joueur.
 
-## P4 — Narration et interface
+## P5 — Narration et interface
 
 - [ ] Enrichir les connaissances seulement après découverte.
 - [ ] Produire des synthèses liées aux observations réelles.

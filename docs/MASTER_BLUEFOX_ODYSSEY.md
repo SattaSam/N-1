@@ -1,8 +1,8 @@
 # BlueFox Odyssey — Document maître
 
-Version logicielle de référence : **V0.16.20 + Sprints Missions 1 à 4**
+Version logicielle de référence : **V0.16.20 + correctifs cumulatifs + générateur V1**
 
-Point documentaire : **1er août 2026 — moteur multi-missions et interfaces**
+Point documentaire : **2 août 2026 — générateur semi-aléatoire et préparation CUO**
 
 Statut : **candidat à valider dans le jeu avant le prochain point Git**
 
@@ -15,7 +15,9 @@ sans le contrôler en permanence.
 
 BlueFox continue d’observer, se déplacer, récolter, se nourrir, se reposer et
 rechercher lorsqu’un menu est ouvert. La première exploration d’une Zone
-inconnue reste une décision active du joueur.
+inconnue reste une décision active du joueur. L’autonomie peut reconnaître un
+plateau dans le cadre d’une mission, mais ne crée ni ne franchit spontanément
+un passage vers une nouvelle Map.
 
 ## Vocabulaire officiel
 
@@ -100,6 +102,47 @@ source unique des définitions d’objets. Il n’existe pas de
 L’ajout ordinaire d’un objet ne doit pas nécessiter de modification de
 `map-registry.js`.
 
+Le CUO documentaire consolidé contient **36 objets** : **14 objets actuellement
+matérialisables** et **22 objets documentaires à intégrer**. Les PNJ, la faune,
+les habitations, les technologies et les structures spéciales exigent une
+validation visuelle avant leur activation dans le jeu.
+
+## Générateur semi-aléatoire V1
+
+Crystal est une Map narrative fixe de départ, 1/1, associée au crash de la
+capsule et à la future base principale. Elle est exclue des tirages ordinaires.
+
+La progression initiale est : Crystal, puis Maps inconnues de 2, 4 et 6
+plateaux. Les générations suivantes utilisent de 1 à 6 plateaux selon les
+pondérations validées. Une seed unique par partie rend chaque définition
+reproductible ; la définition complète est également sauvegardée afin de
+résister aux futures évolutions des règles.
+
+Le générateur conserve au maximum cinq familles de ressources par Map. Les
+budgets planifiés vont de 60–75 objets pour une Map 1/1 à 132–150 objets pour
+une Map 6/6, avec 1 à 3 micro-scènes principales sur une Map 6/6.
+
+Les textures suivent la politique suivante lors des replis : 85 % de
+réutilisation des textures associées au décor, 13 % de textures d’un autre
+décor du même biome et 2 % d’exceptions explicitement compatibles. Aucun repli
+global non filtré n’est autorisé. Une combinaison générée reste inchangée au
+rechargement.
+
+## Prochain chantier — intégration CUO
+
+Le prochain chantier prioritaire est l’intégration contrôlée du CUO complet :
+
+1. audit du catalogue consolidé ;
+2. validation des métadonnées et coûts de spawn ;
+3. matérialisation dans un banc 3D distinct ;
+4. validation visuelle, collision et interaction ;
+5. raccordement progressif aux biomes et micro-scènes ;
+6. activation dans le moteur principal après validation.
+
+Le banc de validation est spécifié dans
+`docs/CUO_BANC_VALIDATION_3D.md`. Il ne doit charger ni IA, ni missions, ni
+autonomie et ne doit pas modifier le comportement du jeu principal.
+
 ## État connu
 
 - Base PC : **V0.16.20**.
@@ -111,6 +154,10 @@ L’ajout ordinaire d’un objet ne doit pas nécessiter de modification de
   syntaxique vérifiée, **test de lancement réel encore requis**.
 - Correctif cumulatif portails/carte Planète : contrôles statiques réussis,
   **validation visuelle et fonctionnelle dans le jeu encore requise**.
+- Générateur V1 : tables, seed, génération incrémentielle, persistance,
+  cohérence des textures et budgets 1–6 intégrés ; **validation prolongée en
+  jeu requise**.
+- Prochain travail validé : **banc 3D de validation puis intégration CUO**.
 - Stabilité du socle 3D estimée avant ce test : **environ 72 %**.
 - Objectif du prochain jalon : **75 %**.
 - Avancement global estimatif : **environ 28 %**.

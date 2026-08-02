@@ -1,6 +1,6 @@
 # BlueFox Odyssey — Architecture technique
 
-Référence : **V0.16.20 + correctifs cumulatifs du 29 juillet 2026**
+Référence : **V0.16.20 + correctifs cumulatifs et générateur V1 du 2 août 2026**
 
 ## Démarrage
 
@@ -25,16 +25,17 @@ procédure de test valide.
 2. `Images/images-catalog.js`
 3. `engine/bluefox3d-core.js`
 4. `engine/object-library.js`
-5. `engine/biome-rules.js`
-6. `engine/micro-scenes.js`
-7. `engine/object-spawner.js`
-8. `engine/map-registry.js`
-9. `engine/path-planner.js`
-10. `engine/character-controller.js`
-11. `engine/camera-controller.js`
-12. `engine/world-engine.js`
-13. `game.js`
-14. `engine/ui-enhancements.js`
+5. `engine/object-event-registry.js`
+6. `engine/map-generation-rules.js`
+7. `engine/biome-rules.js`
+8. `engine/micro-scenes.js`
+9. `engine/object-spawner.js`
+10. `engine/map-registry.js`
+11. `engine/map-generator.js`
+12. modules de déplacement, missions et progression
+13. `engine/world-engine.js`
+14. `game.js`
+15. ponts UI et `engine/ui-enhancements.js`
 
 Les quatre modules du catalogue doivent exister et être chargés avant
 `map-registry.js`. Toute modification de cet ordre exige un test de lancement.
@@ -52,6 +53,8 @@ Les quatre modules du catalogue doivent exister et être chargés avant
 | Fixer l’ordre de démarrage | `index.html` |
 | Piloter monde, transitions et autonomie | `engine/world-engine.js` |
 | Afficher et manipuler la carte Planète | `engine/ui-enhancements.js` et `engine/ui-enhancements.css` |
+| Définir les pondérations de génération | `engine/map-generation-rules.js` |
+| Générer et restaurer les définitions procédurales | `engine/map-generator.js` |
 
 ## Discipline des hotfixes cumulatifs
 
@@ -133,6 +136,30 @@ historique ne doit pas imposer un identifiant divergent.
   n’est pas une téléportation.
 - Une action directe du joueur annule l’itinéraire suggéré.
 
+## Génération procédurale des Maps
+
+`engine/map-generation-rules.js` contient les données stables : biomes,
+pondérations, tailles, richesse, affinités, ressources et classes de
+micro-scènes. `engine/map-generator.js` applique ces règles au moment d’une
+demande de première exploration.
+
+Ordre de restauration obligatoire :
+
+1. restaurer les définitions de Maps générées ;
+2. restaurer les découvertes ;
+3. restaurer les noms ;
+4. restaurer les liaisons topologiques ;
+5. restaurer la position de BlueFox.
+
+Crystal n’est jamais générée. Une nouvelle Map est créée uniquement pendant
+une partie active, après une demande du joueur vers une terre inconnue. Son nom
+n’est annoncé qu’après franchissement et enregistrement de la découverte.
+
+La sélection des textures privilégie les images associées au panorama. Les
+textures associées peuvent être répétées. Les exceptions sont limitées aux
+biomes identiques ou explicitement compatibles ; volcanique et glaciaire ne
+reçoivent aucun repli étranger.
+
 ## Déplacement, caméra et panorama
 
 - Pathfinding avec points de passage, lissage et recalcul en cas de blocage.
@@ -155,6 +182,8 @@ Principales clés locales :
 - `bluefox_engine_discovered_maps_v2`
 - `bluefox_discovered_zones_v1`
 - `bluefox_generated_topology_v1`
+- `bluefox_generated_maps_v1`
+- `bluefox_planet_seed_v1`
 - `bluefox_map_names_v1`
 - `bluefox_planet_clock_v1`
 - `bluefox_odyssey_save_v1`
@@ -169,6 +198,19 @@ ne peut plus réécrire l'inventaire central. La mémoire M0 ne possède plus de
 copie d'inventaire.
 
 Les Maps procédurales sont régénérées à partir de leurs définitions et graines.
+
+## Banc 3D de validation CUO
+
+Le banc CUO est un point d’entrée autonome, distinct de `index.html`. Il peut
+réutiliser `bluefox3d-core.js` et `object-library.js`, mais ne charge pas le
+moteur de missions, l’autonomie, la météo, la sauvegarde de partie ni les menus
+du jeu.
+
+Il contient deux plateaux neutres : showroom automatique sur le premier,
+placement libre sur le second. Les objets sont instanciés exclusivement par
+les fonctions publiques de `ObjectLibrary` afin que le modèle validé soit le
+même que celui du moteur principal. La spécification complète se trouve dans
+`docs/CUO_BANC_VALIDATION_3D.md`.
 # Extension M0 — Fondation IA
 
 La couche de missions M0 est composée de six modules indépendants chargés avant

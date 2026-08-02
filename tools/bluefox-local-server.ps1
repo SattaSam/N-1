@@ -1,17 +1,31 @@
+param(
+    [string]$StartPage = "index.html",
+    [string]$WindowTitle = "BlueFox Odyssey"
+)
+
 $ErrorActionPreference = "Stop"
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $listener = $null
-$preferredPort = 8765
-$port = $preferredPort
-try {
-    $listener = [System.Net.Sockets.TcpListener]::new(
-        [System.Net.IPAddress]::Loopback,
-        $preferredPort
-    )
-    $listener.Start()
-} catch {
-    throw "Le port stable $preferredPort est deja occupe. Fermez l'autre serveur BlueFox (ou sa fenetre PowerShell), puis relancez. Aucun port aleatoire n'est utilise afin de proteger les sauvegardes."
+$port = 0
+
+foreach ($attempt in 1..32) {
+    $candidate = Get-Random -Minimum 49152 -Maximum 60000
+    try {
+        $listener = [System.Net.Sockets.TcpListener]::new(
+            [System.Net.IPAddress]::Loopback,
+            $candidate
+        )
+        $listener.Start()
+        $port = $candidate
+        break
+    } catch {
+        $listener = $null
+    }
+}
+
+if ($null -eq $listener) {
+    throw "Aucun port local temporaire n'a pu etre ouvert."
 }
 
 $mimeTypes = @{
@@ -32,9 +46,10 @@ $mimeTypes = @{
     ".mp3"  = "audio/mpeg"
 }
 
-$url = "http://127.0.0.1:$port/index.html"
+$safeStartPage = $StartPage.TrimStart("/").Replace("\", "/")
+$url = "http://127.0.0.1:$port/$safeStartPage"
 Write-Host ""
-Write-Host "BlueFox Odyssey fonctionne en local sur :" -ForegroundColor Cyan
+Write-Host "$WindowTitle fonctionne en local sur :" -ForegroundColor Cyan
 Write-Host $url -ForegroundColor White
 Write-Host ""
 Write-Host "Gardez cette fenetre ouverte pendant le jeu."

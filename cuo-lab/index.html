@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#07131e">
+    <title>BlueFox CUO Lab</title>
+    <link rel="stylesheet" href="./cuo-lab.css">
+    <script type="importmap">
+      {"imports":{"three":"./vendor/three.module.min.js"}}
+    </script>
+  </head>
+  <body>
+    <main id="lab">
+      <canvas id="viewport" aria-label="Banc de validation 3D du CUO"></canvas>
+      <header class="topbar">
+        <div><strong>BLUEFOX · CUO LAB</strong><small id="catalog-status">Chargement du catalogue…</small></div>
+        <div class="top-actions">
+          <button id="focus-showroom">Plateau catalogue</button>
+          <button id="focus-sandbox">Plateau test</button>
+          <button id="reload-cuo" title="Relit le fichier CUO depuis le disque">Actualiser le CUO</button>
+        </div>
+      </header>
+
+      <section id="catalog-window" class="tool-window" aria-label="Inventaire CUO">
+        <div id="window-handle" class="window-title">
+          <span>Inventaire CUO</span>
+          <span class="window-actions">
+            <button id="minimize-window" title="Réduire">—</button>
+            <button id="maximize-window" title="Agrandir">□</button>
+          </span>
+        </div>
+        <div class="window-content">
+          <div class="filters">
+            <input id="name-filter" type="search" placeholder="Filtrer par nom ou identifiant…">
+            <select id="category-filter"><option value="">Toutes catégories</option></select>
+            <select id="size-filter">
+              <option value="">Toutes tailles</option><option>XL</option><option>L</option><option>M</option><option>S</option>
+            </select>
+          </div>
+          <p class="hint">Glisser un objet sur le plateau test. Un clic dans la scène sélectionne un objet ou déplace BlueFox.</p>
+          <div id="catalog-list" class="catalog-list"></div>
+        </div>
+      </section>
+
+      <aside id="inspector" class="inspector">
+        <strong>Inspection</strong>
+        <div id="selection-details">Sélectionnez un objet.</div>
+        <label><input id="show-hitboxes" type="checkbox" checked> Afficher hitbox et collision</label>
+        <div class="inspector-actions">
+          <button id="rotate-left">↶ 15°</button><button id="rotate-right">↷ 15°</button><button id="delete-object">Supprimer</button>
+        </div>
+      </aside>
+
+      <div class="help">Caméra : clic droit + glisser/rotation · Maj ou Ctrl + clic droit/déplacement · molette/zoom vers le pointeur · clic gauche/déplacement BlueFox · ZQSD/WASD</div>
+      <div id="toast" role="status"></div>
+    </main>
+    <script src="../engine/bluefox3d-core.js"></script>
+    <script src="../engine/object-library.js"></script>
+    <script type="module" src="./cuo-lab.js"></script>
+  </body>
+</html>

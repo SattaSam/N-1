@@ -1,8 +1,8 @@
 # Documents de référence — BlueFox Odyssey
 
-Référence logicielle : **V0.16.20 + Sprints Missions 1 à 4**
+Référence logicielle : **V0.16.20 + correctifs cumulatifs + générateur V1**
 
-Point documentaire : **1er août 2026 — moteur multi-missions et interfaces**
+Point documentaire : **2 août 2026 — générateur semi-aléatoire et préparation CUO**
 
 ## Documents faisant autorité
 
@@ -14,6 +14,7 @@ Point documentaire : **1er août 2026 — moteur multi-missions et interfaces**
 6. [PLAN_TESTS_V0.16.20.md](PLAN_TESTS_V0.16.20.md) — validation fonctionnelle avant promotion du point de sauvegarde.
 7. [DEV_HISTORIQUE.md](DEV_HISTORIQUE.md) — décisions, incidents et livraisons.
 8. [SPRINT_M0_FONDATION_IA.md](SPRINT_M0_FONDATION_IA.md) — architecture et test express du premier système de missions.
+9. [CUO_BANC_VALIDATION_3D.md](CUO_BANC_VALIDATION_3D.md) — spécification du banc autonome de matérialisation, hitbox et validation des objets.
 
 ## Fichiers de compatibilité
 
