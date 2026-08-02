@@ -18,7 +18,7 @@
       stage: 1,
       sceneId: "MSC-CUSTOM-CAMP",
       placements: Object.freeze([
-        startupPlacement("MSC-CUSTOM-CAMP", [4.4049, 0.85, 2.318], [0, 2.356194, 0])
+        startupPlacement("MSC-CUSTOM-CAMP", [6.174798, 0.25, 3.249376], [0, 2.356194, 0])
       ]),
       skillId: "carpentry",
       skillTitle: "Menuiserie : transformer le bois en planches",
@@ -29,7 +29,7 @@
       stage: 2,
       sceneId: "MSC-CUSTOM-CAMP-BASE",
       placements: Object.freeze([
-        startupPlacement("MSC-CUSTOM-CAMP-BASE", [-0.4399, 1.85, 4.9833], [0, 1.308997, 0])
+        startupPlacement("MSC-CUSTOM-CAMP-BASE", [-0.4399, 1.25, 4.9833], [0, 1.308997, 0])
       ]),
       skillId: "weaving",
       skillTitle: "Tissage : transformer les plantes fibreuses en textile",
@@ -43,9 +43,11 @@
       stage: 3,
       sceneId: "MSC-CUSTOM-CAMP-BASE-REINFORCED",
       placements: Object.freeze([
-        startupPlacement("MSC-CUSTOM-CAMP-BASE-REINFORCED", [-2.7567, 2.6, 4.768], [0, 1.308997, 0]),
-        startupPlacement("MSC-CUSTOM-CAMP-BASE", [-3.1166, 3.6, 3.895], [0, -0.785398, 0])
+        startupPlacement("MSC-CUSTOM-CAMP-BASE-REINFORCED", [-2.7567, 1.5, 4.768], [0, 1.308997, 0]),
+        startupPlacement("MSC-CUSTOM-CAMP-BASE", [-3.1166, 2.5, 3.895], [0, -0.785398, 0])
       ]),
+      characterSafetyRadius: 8.5,
+      characterSafeDistance: 13,
       skillId: "mineral-transformation",
       skillTitle: "Transformation des minéraux",
       insight: "Les matériaux de cette planète peuvent être utilisés pour des constructions avancées.",
@@ -570,6 +572,49 @@
       };
     }
 
+    protectCharacterFromStartupSite(config, capsuleAnchor) {
+      const engine = this.manager.engine;
+      const character = engine?.character;
+      const position = character?.root?.position;
+      const radius = Math.max(0, Number(config.characterSafetyRadius) || 0);
+      if (!position || !radius || !engine.THREE) return false;
+      const overlaps = config.placements.some((placement) => {
+        const x = capsuleAnchor.x + placement.position[0];
+        const z = capsuleAnchor.z + placement.position[2];
+        return Math.hypot(position.x - x, position.z - z) < radius;
+      });
+      if (!overlaps) return false;
+
+      const primary = config.placements[0];
+      const length = Math.hypot(primary.position[0], primary.position[2]) || 1;
+      const distance = Math.max(radius + 2, Number(config.characterSafeDistance) || 13);
+      const requested = new engine.THREE.Vector3(
+        capsuleAnchor.x + primary.position[0] / length * distance,
+        0,
+        capsuleAnchor.z + primary.position[2] / length * distance
+      );
+      const safe = character.pathPlanner?.nearestClearGoal
+        ? character.pathPlanner.nearestClearGoal(
+            requested,
+            engine.currentMap?.colliders || [],
+            Number(character.radius) || 0.45,
+            0.45
+          )
+        : requested;
+      engine.pendingInteraction = null;
+      character.cancelInteraction?.();
+      character.root.position.copy(safe);
+      character.root.position.y = 0;
+      character.lastSafePosition?.copy?.(character.root.position);
+      character.setTarget?.(character.root.position);
+      character.stop?.();
+      engine.savePosition?.();
+      engine.callbacks?.onStatus?.(
+        "BlueFox s’écarte avant l’installation de la base pour ne pas rester coincé dans la structure."
+      );
+      return true;
+    }
+
     completeStartupStage(missionId, tree) {
       const definition = this.manager.definition(missionId);
       const config = STARTUP_STAGES[definition?.baseMissionId];
@@ -665,6 +710,7 @@
         scene: engine.currentMap.group
       });
       const capsuleAnchor = this.startupCapsuleAnchor();
+      this.protectCharacterFromStartupSite(config, capsuleAnchor);
       const roots = [];
       const records = [];
       config.placements.forEach((placement, placementIndex) => {

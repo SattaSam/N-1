@@ -29,7 +29,7 @@ window.BlueFoxCustomMaps = [
                                       "id":  "MSC-CUSTOM-CAMP-BASE",
                                       "position":  [
                                                        -0.4399,
-                                                       1.85,
+                                                       1.25,
                                                        -1.0167
                                                    ],
                                       "rotation":  [
@@ -42,7 +42,7 @@ window.BlueFoxCustomMaps = [
                                       "id":  "MSC-CUSTOM-CAMP-BASE-REINFORCED",
                                       "position":  [
                                                        51.2433,
-                                                       2.6,
+                                                       1.5,
                                                        -1.232
                                                    ],
                                       "rotation":  [
@@ -54,9 +54,9 @@ window.BlueFoxCustomMaps = [
                                   {
                                       "id":  "MSC-CUSTOM-CAMP",
                                       "position":  [
-                                                       -49.5951,
-                                                       0.85,
-                                                       -3.682
+                                                       -47.8253,
+                                                       0.25,
+                                                       -2.7506
                                                    ],
                                       "rotation":  [
                                                        0,
@@ -68,7 +68,7 @@ window.BlueFoxCustomMaps = [
                                       "id":  "MSC-CUSTOM-CAMP-BASE",
                                       "position":  [
                                                        50.8834,
-                                                       3.6,
+                                                       2.5,
                                                        -2.105
                                                    ],
                                       "rotation":  [
