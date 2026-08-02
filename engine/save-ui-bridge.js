@@ -10,6 +10,17 @@
     1: "bluefox_save_slot_1_v1",
     2: "bluefox_save_slot_2_v1"
   });
+  const SAVE_UI_CONFIG = Object.freeze({
+    version: "save-ui-locked-v3",
+    targetSelector: ".settings-content",
+    rootId: "bluefox-save-game-controls",
+    actionClass: "save-game-actions",
+    actions: Object.freeze([
+      Object.freeze({ id: "save", label: "Sauvegarder" }),
+      Object.freeze({ id: "load", label: "Charger" }),
+      Object.freeze({ id: "new", label: "Nouvelle partie" })
+    ])
+  });
   const RESERVED_KEYS = new Set([
     ...Object.values(SLOT_KEYS),
     "bluefox_last_manual_save_v1",
@@ -88,4 +99,142 @@
   BF.loadGame=(slot="auto")=>restoreSnapshot(slot);
   BF.getSaveSlots=()=>({auto:readSnapshot("auto"),backup:readSnapshot("backup"),1:readSnapshot(1),2:readSnapshot(2)});
   BF.getSaveDiagnostics=()=>({...diagnostics});
+
+  const formatDate = snapshot => snapshot?.savedAt
+    ? new Intl.DateTimeFormat("fr-FR", {
+        dateStyle: "short",
+        timeStyle: "short"
+      }).format(new Date(snapshot.savedAt))
+    : "Vide";
+  const button = (label,className,onClick) => {
+    const node=global.document.createElement("button");
+    node.type="button";
+    node.className=className||"";
+    node.textContent=label;
+    node.addEventListener("click",onClick);
+    return node;
+  };
+  const closePopover = root => root.querySelector(".save-game-popover")?.remove();
+  const showSaveChoices = root => {
+    closePopover(root);
+    const popover=global.document.createElement("div");
+    popover.className="save-game-popover";
+    [1,2].forEach(slot=>popover.append(button(
+      `Emplacement ${slot} · ${formatDate(readSnapshot(slot))}`,
+      "save-slot-button",
+      ()=>{
+        const saved=BF.createManualSave(slot);
+        root.querySelector(".save-game-status").textContent=saved
+          ? `Partie sauvegardée dans l’emplacement ${slot}.`
+          : `Échec de la sauvegarde dans l’emplacement ${slot}.`;
+        closePopover(root);
+      }
+    )));
+    root.append(popover);
+  };
+  const showLoadChoices = root => {
+    closePopover(root);
+    const popover=global.document.createElement("div");
+    popover.className="save-game-popover";
+    [["auto","Automatique"],[1,"Emplacement 1"],[2,"Emplacement 2"]]
+      .forEach(([slot,label])=>{
+        const snapshot=readSnapshot(slot);
+        const loadButton=button(
+          `${label} · ${formatDate(snapshot)}`,
+          "load-slot-button",
+          ()=>BF.loadGame(slot)
+        );
+        loadButton.disabled=!snapshot;
+        popover.append(loadButton);
+      });
+    root.append(popover);
+  };
+  const startNewGame = () => {
+    clearActive();
+    global.localStorage.removeItem(SLOT_KEYS.auto);
+    global.localStorage.removeItem(SLOT_KEYS.backup);
+    global.localStorage.removeItem(ACTIVE_SLOT_KEY);
+    global.localStorage.removeItem(RESTORED_AT_KEY);
+    global.localStorage.removeItem(LAST_SESSION_END_KEY);
+    const startedAt=Date.now();
+    global.localStorage.setItem("bluefox_new_game_start_v1",String(startedAt));
+    global.localStorage.setItem("bluefox_last_start_map_v1","crystal");
+    global.location.reload();
+  };
+  const showNewGameConfirmation = root => {
+    closePopover(root);
+    const popover=global.document.createElement("div");
+    popover.className="save-game-popover new-game-confirmation";
+    const warning=global.document.createElement("p");
+    warning.textContent="Réinitialiser la progression active ? Les sauvegardes manuelles 1 et 2 seront conservées.";
+    popover.append(
+      warning,
+      button("Annuler","new-game-cancel-button",()=>closePopover(root)),
+      button("Confirmer","new-game-confirm-button",startNewGame)
+    );
+    root.append(popover);
+  };
+  const buildSaveControls = () => {
+    const root=global.document.createElement("section");
+    root.id=SAVE_UI_CONFIG.rootId;
+    root.className="save-game-controls";
+    root.dataset.saveUiVersion=SAVE_UI_CONFIG.version;
+    const title=global.document.createElement("h3");
+    title.textContent="SAUVEGARDE";
+    const status=global.document.createElement("p");
+    status.className="save-game-status";
+    status.textContent="Sauvegarde automatique active · 2 emplacements manuels.";
+    const actions=global.document.createElement("div");
+    actions.className=SAVE_UI_CONFIG.actionClass;
+    actions.append(
+      button("Sauvegarder","save-game-button",()=>showSaveChoices(root)),
+      button("Charger","load-game-button",()=>showLoadChoices(root)),
+      button("Nouvelle partie","new-game-button",()=>showNewGameConfirmation(root))
+    );
+    root.append(title,status,actions);
+    return root;
+  };
+  const hasLockedContract = root => {
+    if (!root || root.dataset.saveUiVersion!==SAVE_UI_CONFIG.version) return false;
+    const labels=[...root.querySelectorAll(`.${SAVE_UI_CONFIG.actionClass} > button`)]
+      .map(node=>node.textContent.trim());
+    return labels.length===SAVE_UI_CONFIG.actions.length &&
+      SAVE_UI_CONFIG.actions.every((action,index)=>labels[index]===action.label);
+  };
+  const ensureSaveControls = () => {
+    const target=global.document.querySelector(SAVE_UI_CONFIG.targetSelector);
+    if (!target) return false;
+    let root=global.document.getElementById(SAVE_UI_CONFIG.rootId);
+    if (root && root.parentElement!==target) root.remove();
+    root=global.document.getElementById(SAVE_UI_CONFIG.rootId);
+    if (!hasLockedContract(root)) {
+      root?.remove();
+      root=buildSaveControls();
+      target.append(root);
+    }
+    return true;
+  };
+  let mountScheduled=false;
+  const scheduleSaveControls = () => {
+    if (mountScheduled) return;
+    mountScheduled=true;
+    const run=()=>{mountScheduled=false;ensureSaveControls();};
+    (global.requestAnimationFrame||global.setTimeout)(run);
+  };
+  const saveUiObserver=new MutationObserver(scheduleSaveControls);
+  saveUiObserver.observe(global.document.documentElement,{childList:true,subtree:true});
+  global.addEventListener("DOMContentLoaded",scheduleSaveControls,{once:true});
+  scheduleSaveControls();
+  Object.defineProperty(BF,"saveUiConfig",{
+    value:SAVE_UI_CONFIG,
+    writable:false,
+    configurable:false,
+    enumerable:true
+  });
+  BF.refreshSaveUI=ensureSaveControls;
+  BF.getSaveUiDiagnostics=()=>Object.freeze({
+    version:SAVE_UI_CONFIG.version,
+    targetPresent:Boolean(global.document.querySelector(SAVE_UI_CONFIG.targetSelector)),
+    controlsPresent:hasLockedContract(global.document.getElementById(SAVE_UI_CONFIG.rootId))
+  });
 })(window);
