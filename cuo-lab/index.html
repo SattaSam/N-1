@@ -52,17 +52,36 @@
         <div id="selection-details">Sélectionnez un objet.</div>
         <label><input id="show-hitboxes" type="checkbox" checked> Afficher hitbox et collision</label>
         <div class="inspector-actions">
-          <button id="rotate-left">↶ 15°</button><button id="rotate-right">↷ 15°</button><button id="delete-object">Supprimer</button>
+          <button id="rotate-left">↶ 15°</button>
+          <button id="rotate-right">↷ 15°</button>
+          <button id="delete-object">Supprimer</button>
         </div>
       </aside>
 
       <aside id="transform-window" class="transform-window" hidden>
         <strong>Transformation de l’objet</strong>
         <small id="transform-object-name">Aucun objet sélectionné</small>
-        <div class="axis-control" data-axis="x"><b>X</b><button data-step="-15">−15°</button><output>0°</output><button data-step="15">+15°</button></div>
-        <div class="axis-control" data-axis="y"><b>Y</b><button data-step="-15">−15°</button><output>0°</output><button data-step="15">+15°</button></div>
-        <div class="axis-control" data-axis="z"><b>Z</b><button data-step="-15">−15°</button><output>0°</output><button data-step="15">+15°</button></div>
-        <button id="reset-transform">Réinitialiser position et rotation</button>
+
+        <div class="position-control">
+          <b>Hauteur</b>
+          <button id="position-down" type="button">− 0,25</button>
+          <input id="position-y" type="number" step="0.25" value="0.30" aria-label="Hauteur de l’objet">
+          <button id="position-up" type="button">+ 0,25</button>
+        </div>
+        <small class="axis-note">La hauteur peut être positive ou négative.</small>
+
+        <div class="axis-control" data-axis="x">
+          <b>X</b><button data-step="-15">−15°</button><output>0°</output><button data-step="15">+15°</button>
+        </div>
+        <div class="axis-control" data-axis="y">
+          <b>Y</b><button data-step="-15">−15°</button><output>0°</output><button data-step="15">+15°</button>
+        </div>
+        <div class="axis-control" data-axis="z">
+          <b>Z</b><button data-step="-15">−15°</button><output>0°</output><button data-step="15">+15°</button>
+        </div>
+
+        <button id="place-on-ground" type="button">Reposer sur le plateau</button>
+        <button id="reset-transform" type="button">Réinitialiser position et rotation</button>
       </aside>
 
       <dialog id="micro-scene-dialog">
@@ -71,7 +90,10 @@
           <label>Nom de la scène<input id="micro-scene-name" required maxlength="48" placeholder="ex. Clairière violette"></label>
           <p>Code généré : <code id="micro-scene-code">MSC-CUSTOM-CLAIRIERE-VIOLETTE</code></p>
           <p id="micro-scene-summary"></p>
-          <div class="dialog-actions"><button value="cancel">Annuler</button><button id="confirm-micro-scene" value="default">Enregistrer</button></div>
+          <div class="dialog-actions">
+            <button value="cancel">Annuler</button>
+            <button id="confirm-micro-scene" value="default">Enregistrer</button>
+          </div>
         </form>
       </dialog>
 
@@ -80,6 +102,6 @@
     </main>
     <script src="../engine/bluefox3d-core.js"></script>
     <script src="../engine/object-library.js?v=cuo-production-complete1"></script>
-    <script type="module" src="./cuo-lab.js"></script>
+    <script type="module" src="./cuo-lab.js?v=cuo-lab-plateau-fix1"></script>
   </body>
 </html>
