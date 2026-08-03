@@ -298,6 +298,32 @@
     return true;
   };
 
+  const treeKnowledgeCount = (engine = runtimeEngine) => {
+    const mapTypes = knownTypes[mapKey(engine)] || {};
+    return TREE_TYPES.reduce(
+      (count, type) => count + (mapTypes[type] ? 1 : 0),
+      0
+    );
+  };
+
+  const installStartupMetricSupport = () => {
+    const Controller = Missions.MissionCatalogController;
+    if (!Controller?.prototype?.startupMetric) return false;
+    const original = Controller.prototype.startupMetric;
+    if (original.__bluefoxMissionAwareMetric) return true;
+
+    const supported = function startupMetricMissionAware(name) {
+      if (name === "tree-specimens-studied") {
+        return treeKnowledgeCount(this.manager?.engine);
+      }
+      return original.call(this, name);
+    };
+    supported.__bluefoxMissionAwareMetric = true;
+    supported.__bluefoxOriginal = original;
+    Controller.prototype.startupMetric = supported;
+    return true;
+  };
+
   const installTreeMigration = () => {
     const Planner = Missions.MissionPlanner;
     if (!Planner?.prototype?.restoreOrCreate) return false;
@@ -490,6 +516,7 @@
   };
 
   installMissionDefinition();
+  installStartupMetricSupport();
   installTreeMigration();
   installPlannerScoring();
   installActionTargeting();
@@ -500,6 +527,7 @@
     installed: true,
     knownTypesByMap: JSON.parse(JSON.stringify(knownTypes)),
     treeTypes: [...TREE_TYPES],
-    runtimeMapId: runtimeEngine?.currentMapId || null
+    runtimeMapId: runtimeEngine?.currentMapId || null,
+    currentMapTreeKnowledge: treeKnowledgeCount(runtimeEngine)
   });
 })(window);
