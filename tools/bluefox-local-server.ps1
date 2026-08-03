@@ -4,14 +4,21 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $listener = $null
 $port = 0
+$utf8 = [System.Text.UTF8Encoding]::new($false)
+$savesRoot = Join-Path $projectRoot "saves"
+
+function Ensure-Directory {
+    param([string]$Path)
+    if (-not (Test-Path -LiteralPath $Path -PathType Container)) {
+        [void](New-Item -ItemType Directory -Path $Path -Force)
+    }
+}
 
 function Get-CustomMicroSceneTemplates {
     param([object]$Node)
-
     if ($null -eq $Node) { return }
     $idProperty = $Node.PSObject.Properties["id"]
     $objectsProperty = $Node.PSObject.Properties["objects"]
@@ -33,6 +40,75 @@ function Get-CustomMicroSceneTemplates {
     }
 }
 
+function Get-SavePath {
+    param([string]$Slot)
+    switch ($Slot) {
+        "auto"     { return Join-Path $savesRoot "autosave.json" }
+        "recovery" { return Join-Path $savesRoot "recovery.json" }
+        "1"        { return Join-Path $savesRoot "slot-1.json" }
+        "2"        { return Join-Path $savesRoot "slot-2.json" }
+        default    { throw "Emplacement de sauvegarde invalide." }
+    }
+}
+
+function Test-SaveDocument {
+    param([object]$Document)
+    if ($null -eq $Document) { throw "Sauvegarde vide." }
+    if ([string]$Document.format -ne "bluefox-save-file") {
+        throw "Format de sauvegarde invalide."
+    }
+    if ([int]$Document.schemaVersion -ne 1) {
+        throw "Version de sauvegarde non prise en charge."
+    }
+    if ($null -eq $Document.state) {
+        throw "État de sauvegarde absent."
+    }
+    if ([int64]$Document.savedAt -le 0) {
+        throw "Date de sauvegarde invalide."
+    }
+}
+
+function Write-AtomicJson {
+    param(
+        [string]$Path,
+        [string]$Json
+    )
+    Ensure-Directory -Path (Split-Path -Parent $Path)
+    $tempPath = "$Path.tmp"
+    [System.IO.File]::WriteAllText($tempPath, $Json, $utf8)
+    [void]($Json | ConvertFrom-Json)
+    if (Test-Path -LiteralPath $Path -PathType Leaf) {
+        [System.IO.File]::Replace($tempPath, $Path, $null, $true)
+    } else {
+        [System.IO.File]::Move($tempPath, $Path)
+    }
+}
+
+function Rotate-Autosaves {
+    Ensure-Directory -Path $savesRoot
+    for ($index = 5; $index -ge 2; $index--) {
+        $source = Join-Path $savesRoot ("autosave-{0}.json" -f ($index - 1))
+        $target = Join-Path $savesRoot ("autosave-{0}.json" -f $index)
+        if (Test-Path -LiteralPath $source -PathType Leaf) {
+            Copy-Item -LiteralPath $source -Destination $target -Force
+        }
+    }
+    $current = Join-Path $savesRoot "autosave.json"
+    $first = Join-Path $savesRoot "autosave-1.json"
+    if (Test-Path -LiteralPath $current -PathType Leaf) {
+        Copy-Item -LiteralPath $current -Destination $first -Force
+    }
+}
+
+function Read-SaveText {
+    param([string]$Slot)
+    $path = Get-SavePath -Slot $Slot
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+        return $null
+    }
+    return [System.IO.File]::ReadAllText($path)
+}
+
 foreach ($attempt in 1..32) {
     $candidate = Get-Random -Minimum 49152 -Maximum 60000
     try {
@@ -49,7 +125,7 @@ foreach ($attempt in 1..32) {
 }
 
 if ($null -eq $listener) {
-    throw "Aucun port local temporaire n'a pu etre ouvert."
+    throw "Aucun port local temporaire n'a pu être ouvert."
 }
 
 $mimeTypes = @{
@@ -70,14 +146,17 @@ $mimeTypes = @{
     ".mp3"  = "audio/mpeg"
 }
 
+Ensure-Directory -Path $savesRoot
+
 $safeStartPage = $StartPage.TrimStart("/").Replace("\", "/")
 $url = "http://127.0.0.1:$port/$safeStartPage"
 Write-Host ""
 Write-Host "$WindowTitle fonctionne en local sur :" -ForegroundColor Cyan
 Write-Host $url -ForegroundColor White
 Write-Host ""
-Write-Host "Gardez cette fenetre ouverte pendant le jeu."
-Write-Host "Fermez-la pour arreter le serveur local."
+Write-Host "Sauvegardes fichiers : $savesRoot" -ForegroundColor Green
+Write-Host "Gardez cette fenêtre ouverte pendant le jeu."
+Write-Host "Fermez-la pour arrêter le serveur local."
 Start-Process $url
 
 try {
@@ -87,11 +166,12 @@ try {
             $stream = $client.GetStream()
             $reader = [System.IO.StreamReader]::new(
                 $stream,
-                [System.Text.Encoding]::ASCII,
+                [System.Text.Encoding]::UTF8,
                 $false,
                 4096,
                 $true
             )
+
             $requestLine = $reader.ReadLine()
             $requestHeaders = @{}
             while ($true) {
@@ -106,7 +186,6 @@ try {
             }
 
             if ([string]::IsNullOrWhiteSpace($requestLine)) {
-                $client.Close()
                 continue
             }
 
@@ -115,22 +194,39 @@ try {
             $requestTarget = $parts[1].Split("?")[0]
             $requestBody = ""
             $contentLength = 0
+
             if ($requestHeaders.ContainsKey("content-length")) {
-                [void][int]::TryParse($requestHeaders["content-length"], [ref]$contentLength)
+                [void][int]::TryParse(
+                    $requestHeaders["content-length"],
+                    [ref]$contentLength
+                )
             }
+
             if ($contentLength -gt 0) {
-                if ($contentLength -gt 1048576) { throw "Corps de requete trop volumineux." }
-                $bodyChars = New-Object char[] $contentLength
+                if ($contentLength -gt 8388608) {
+                    throw "Corps de requête trop volumineux."
+                }
+                $buffer = New-Object byte[] $contentLength
                 $bodyRead = 0
                 while ($bodyRead -lt $contentLength) {
-                    $readNow = $reader.Read($bodyChars, $bodyRead, $contentLength - $bodyRead)
+                    $readNow = $stream.Read(
+                        $buffer,
+                        $bodyRead,
+                        $contentLength - $bodyRead
+                    )
                     if ($readNow -le 0) { break }
                     $bodyRead += $readNow
                 }
-                $requestBody = -join $bodyChars[0..([Math]::Max(0, $bodyRead - 1))]
+                $requestBody = [System.Text.Encoding]::UTF8.GetString(
+                    $buffer,
+                    0,
+                    $bodyRead
+                )
             }
+
             $decodedPath = [System.Net.WebUtility]::UrlDecode($requestTarget)
             if ($decodedPath -eq "/") { $decodedPath = "/index.html" }
+
             $relativePath = $decodedPath.TrimStart("/").Replace("/", "\")
             $candidatePath = [System.IO.Path]::GetFullPath(
                 (Join-Path $projectRoot $relativePath)
@@ -141,7 +237,65 @@ try {
             $status = "200 OK"
             $body = $null
             $contentType = "application/octet-stream"
-            if ($method -eq "GET" -and $decodedPath -eq "/api/custom-maps/next-index") {
+
+            if ($decodedPath -match '^/api/saves/(auto|recovery|1|2)$') {
+                $slot = $matches[1]
+                $contentType = "application/json; charset=utf-8"
+                try {
+                    if ($method -eq "GET") {
+                        $saveText = Read-SaveText -Slot $slot
+                        if ($null -eq $saveText) {
+                            $status = "404 Not Found"
+                            $body = [System.Text.Encoding]::UTF8.GetBytes(
+                                '{"error":"Sauvegarde absente."}'
+                            )
+                        } else {
+                            [void]($saveText | ConvertFrom-Json)
+                            $body = [System.Text.Encoding]::UTF8.GetBytes($saveText)
+                        }
+                    } elseif ($method -eq "POST") {
+                        $document = $requestBody | ConvertFrom-Json
+                        Test-SaveDocument -Document $document
+                        if ([string]$document.slot -ne $slot) {
+                            throw "L'emplacement du document ne correspond pas à l'URL."
+                        }
+                        if ($slot -eq "auto") {
+                            Rotate-Autosaves
+                        }
+                        $path = Get-SavePath -Slot $slot
+                        Write-AtomicJson -Path $path -Json $requestBody
+                        $verifiedText = [System.IO.File]::ReadAllText($path)
+                        $verified = $verifiedText | ConvertFrom-Json
+                        Test-SaveDocument -Document $verified
+                        $body = [System.Text.Encoding]::UTF8.GetBytes($verifiedText)
+                    } elseif ($method -eq "DELETE" -and $slot -eq "auto") {
+                        @(
+                            "autosave.json",
+                            "autosave-1.json",
+                            "autosave-2.json",
+                            "autosave-3.json",
+                            "autosave-4.json",
+                            "autosave-5.json"
+                        ) | ForEach-Object {
+                            $path = Join-Path $savesRoot $_
+                            if (Test-Path -LiteralPath $path -PathType Leaf) {
+                                Remove-Item -LiteralPath $path -Force
+                            }
+                        }
+                        $status = "204 No Content"
+                        $body = [byte[]]@()
+                    } else {
+                        $status = "405 Method Not Allowed"
+                        $body = [System.Text.Encoding]::UTF8.GetBytes(
+                            '{"error":"Méthode non autorisée."}'
+                        )
+                    }
+                } catch {
+                    $status = "400 Bad Request"
+                    $response = ConvertTo-Json @{ error = $_.Exception.Message }
+                    $body = [System.Text.Encoding]::UTF8.GetBytes($response)
+                }
+            } elseif ($method -eq "GET" -and $decodedPath -eq "/api/custom-maps/next-index") {
                 $contentType = "application/json; charset=utf-8"
                 try {
                     $customMapsPath = Join-Path $projectRoot "data\custom-maps.json"
@@ -154,9 +308,15 @@ try {
                     }
                     $knownNumbers = @($customMaps | ForEach-Object { [int]$_.number })
                     Get-ChildItem -LiteralPath (Join-Path $projectRoot "Images") -File | ForEach-Object {
-                        if ($_.BaseName -match '^(\d+)[^\d_]') { $knownNumbers += [int]$matches[1] }
+                        if ($_.BaseName -match '^(\d+)[^\d_]') {
+                            $knownNumbers += [int]$matches[1]
+                        }
                     }
-                    $nextNumber = if ($knownNumbers.Count) { ($knownNumbers | Measure-Object -Maximum).Maximum + 1 } else { 1 }
+                    $nextNumber = if ($knownNumbers.Count) {
+                        ($knownNumbers | Measure-Object -Maximum).Maximum + 1
+                    } else {
+                        1
+                    }
                     $response = ConvertTo-Json @{ number = $nextNumber }
                     $body = [System.Text.Encoding]::UTF8.GetBytes($response)
                 } catch {
@@ -176,29 +336,44 @@ try {
                     }
                     $plateauCount = [int]$draft.plateauCount
                     if ($plateauCount -lt 1 -or $plateauCount -gt 6) {
-                        throw "Le nombre de plateaux doit etre compris entre 1 et 6."
+                        throw "Le nombre de plateaux doit être compris entre 1 et 6."
                     }
                     if (@($draft.terrainUrls).Count -lt $plateauCount) {
                         throw "Une texture de terrain est requise pour chaque plateau."
                     }
                     $microScenes = @($draft.microScenes)
-                    if ($microScenes.Count -gt 200) { throw "Trop de micro-scenes pour une map." }
-                    foreach ($placement in $microScenes) {
-                        if ([string]$placement.id -notmatch '^MSC-[A-Z0-9-]+$') { throw "Code de micro-scene invalide." }
-                        if (@($placement.position).Count -ne 3 -or @($placement.rotation).Count -ne 3) { throw "Transformation de micro-scene incomplete." }
+                    if ($microScenes.Count -gt 200) {
+                        throw "Trop de micro-scènes pour une map."
                     }
+                    foreach ($placement in $microScenes) {
+                        if ([string]$placement.id -notmatch '^MSC-[A-Z0-9-]+$') {
+                            throw "Code de micro-scène invalide."
+                        }
+                        if (@($placement.position).Count -ne 3 -or @($placement.rotation).Count -ne 3) {
+                            throw "Transformation de micro-scène incomplète."
+                        }
+                    }
+
                     $customJsonPath = Join-Path $projectRoot "data\custom-maps.json"
                     $customJsPath = Join-Path $projectRoot "data\custom-maps.js"
                     $maps = @()
                     if (Test-Path -LiteralPath $customJsonPath -PathType Leaf) {
                         $existingText = [System.IO.File]::ReadAllText($customJsonPath)
-                        if (-not [string]::IsNullOrWhiteSpace($existingText)) { $maps = @($existingText | ConvertFrom-Json) }
+                        if (-not [string]::IsNullOrWhiteSpace($existingText)) {
+                            $maps = @($existingText | ConvertFrom-Json)
+                        }
                     }
                     $knownNumbers = @($maps | ForEach-Object { [int]$_.number })
                     Get-ChildItem -LiteralPath (Join-Path $projectRoot "Images") -File | ForEach-Object {
-                        if ($_.BaseName -match '^(\d+)[^\d_]') { $knownNumbers += [int]$matches[1] }
+                        if ($_.BaseName -match '^(\d+)[^\d_]') {
+                            $knownNumbers += [int]$matches[1]
+                        }
                     }
-                    $number = if ($knownNumbers.Count) { ($knownNumbers | Measure-Object -Maximum).Maximum + 1 } else { 1 }
+                    $number = if ($knownNumbers.Count) {
+                        ($knownNumbers | Measure-Object -Maximum).Maximum + 1
+                    } else {
+                        1
+                    }
                     $padded = $number.ToString("00")
                     $index = "$padded-$($draft.slug)"
                     $map = [ordered]@{
@@ -218,10 +393,18 @@ try {
                     }
                     $maps += [pscustomobject]$map
                     $json = ConvertTo-Json -InputObject @($maps) -Depth 14
-                    $utf8 = [System.Text.UTF8Encoding]::new($false)
                     [System.IO.File]::WriteAllText($customJsonPath, $json, $utf8)
-                    [System.IO.File]::WriteAllText($customJsPath, "window.BlueFoxCustomMaps = $json;`n", $utf8)
-                    $response = ConvertTo-Json @{ status = "saved"; id = $map["id"]; index = $index; number = $number }
+                    [System.IO.File]::WriteAllText(
+                        $customJsPath,
+                        "window.BlueFoxCustomMaps = $json;`n",
+                        $utf8
+                    )
+                    $response = ConvertTo-Json @{
+                        status = "saved"
+                        id = $map["id"]
+                        index = $index
+                        number = $number
+                    }
                     $body = [System.Text.Encoding]::UTF8.GetBytes($response)
                 } catch {
                     $status = "400 Bad Request"
@@ -233,21 +416,21 @@ try {
                 try {
                     $template = $requestBody | ConvertFrom-Json
                     if ($null -eq $template -or $template.id -notmatch '^MSC-CUSTOM-[A-Z0-9-]{1,40}$') {
-                        throw "Code de micro-scene invalide."
+                        throw "Code de micro-scène invalide."
                     }
                     if ([string]::IsNullOrWhiteSpace([string]$template.name)) {
-                        throw "Nom de micro-scene manquant."
+                        throw "Nom de micro-scène manquant."
                     }
                     $templateObjects = @($template.objects)
                     if ($templateObjects.Count -lt 1 -or $templateObjects.Count -gt 200) {
-                        throw "Une micro-scene doit contenir entre 1 et 200 objets."
+                        throw "Une micro-scène doit contenir entre 1 et 200 objets."
                     }
                     foreach ($entry in $templateObjects) {
                         if ([string]$entry.type -notmatch '^[a-z0-9_]+$') {
-                            throw "Type d'objet invalide dans la micro-scene."
+                            throw "Type d'objet invalide dans la micro-scène."
                         }
                         if (@($entry.offset).Count -ne 3 -or @($entry.rotation).Count -ne 3) {
-                            throw "Transformation d'objet incomplete."
+                            throw "Transformation d'objet incomplète."
                         }
                     }
 
@@ -261,6 +444,7 @@ try {
                             $templates = @(Get-CustomMicroSceneTemplates -Node $existingRegistry)
                         }
                     }
+
                     $requestedId = [string]$template.id
                     $uniqueId = $requestedId
                     $suffix = 2
@@ -272,22 +456,23 @@ try {
                         $uniqueId = "$requestedId-$($suffix.ToString('000'))"
                         $suffix += 1
                     }
+
                     $template.id = $uniqueId
-                    $updatedTemplates = New-Object System.Collections.Generic.List[object]
-                    foreach ($existingTemplate in $templates) {
-                        [void]$updatedTemplates.Add($existingTemplate)
-                    }
-                    [void]$updatedTemplates.Add($template)
-                    $templates = [object[]]$updatedTemplates.ToArray()
+                    $templates = @($templates) + @($template)
                     $json = ConvertTo-Json -InputObject $templates -Depth 12
-                    $utf8 = [System.Text.UTF8Encoding]::new($false)
                     [System.IO.File]::WriteAllText($customJsonPath, $json, $utf8)
                     [System.IO.File]::WriteAllText(
                         $customJsPath,
                         "window.BlueFoxCustomMicroScenes = $json;`n",
                         $utf8
                     )
-                    $response = ConvertTo-Json @{ status = "saved"; id = $uniqueId; count = $templateObjects.Count; total = $templates.Count }
+
+                    $response = ConvertTo-Json @{
+                        status = "saved"
+                        id = $uniqueId
+                        count = $templateObjects.Count
+                        total = $templates.Count
+                    }
                     $body = [System.Text.Encoding]::UTF8.GetBytes($response)
                 } catch {
                     $status = "400 Bad Request"
@@ -316,14 +501,16 @@ try {
                 "HTTP/1.1 $status`r`n" +
                 "Content-Type: $contentType`r`n" +
                 "Content-Length: $($body.Length)`r`n" +
-                "Cache-Control: no-cache`r`n" +
+                "Cache-Control: no-cache, no-store, must-revalidate`r`n" +
                 "Connection: close`r`n`r`n"
             $headerBytes = [System.Text.Encoding]::ASCII.GetBytes($header)
             $stream.Write($headerBytes, 0, $headerBytes.Length)
-            if ($method -ne "HEAD") {
+            if ($method -ne "HEAD" -and $body.Length -gt 0) {
                 $stream.Write($body, 0, $body.Length)
             }
             $stream.Flush()
+        } catch {
+            Write-Warning $_.Exception.Message
         } finally {
             $client.Close()
         }
