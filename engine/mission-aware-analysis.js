@@ -284,7 +284,6 @@
       knowledge.target = 1;
       knowledge.params = {
         ...(knowledge.params || {}),
-        startupMetric: "tree-specimens-studied",
         subject: "tree",
         targetTypes: [...TREE_TYPES],
         acceptedInteractions: ["observe", "inspect", "analyze"]
@@ -295,32 +294,6 @@
       ...Missions.definitions,
       camp: Object.freeze(updated)
     });
-    return true;
-  };
-
-  const treeKnowledgeCount = (engine = runtimeEngine) => {
-    const mapTypes = knownTypes[mapKey(engine)] || {};
-    return TREE_TYPES.reduce(
-      (count, type) => count + (mapTypes[type] ? 1 : 0),
-      0
-    );
-  };
-
-  const installStartupMetricSupport = () => {
-    const Controller = Missions.MissionCatalogController;
-    if (!Controller?.prototype?.startupMetric) return false;
-    const original = Controller.prototype.startupMetric;
-    if (original.__bluefoxMissionAwareMetric) return true;
-
-    const supported = function startupMetricMissionAware(name) {
-      if (name === "tree-specimens-studied") {
-        return treeKnowledgeCount(this.manager?.engine);
-      }
-      return original.call(this, name);
-    };
-    supported.__bluefoxMissionAwareMetric = true;
-    supported.__bluefoxOriginal = original;
-    Controller.prototype.startupMetric = supported;
     return true;
   };
 
@@ -346,11 +319,11 @@
       node.target = 1;
       node.params = {
         ...(node.params || {}),
-        startupMetric: "tree-specimens-studied",
         subject: "tree",
         targetTypes: [...TREE_TYPES],
         acceptedInteractions: ["observe", "inspect", "analyze"]
       };
+      delete node.params.startupMetric;
       tree.refresh?.();
       this.memory.saveTree?.(tree);
       return tree;
@@ -516,7 +489,6 @@
   };
 
   installMissionDefinition();
-  installStartupMetricSupport();
   installTreeMigration();
   installPlannerScoring();
   installActionTargeting();
@@ -525,9 +497,9 @@
 
   BF.getMissionAwareAnalysisState = () => ({
     installed: true,
+    version: "mission-event-only-v3",
     knownTypesByMap: JSON.parse(JSON.stringify(knownTypes)),
     treeTypes: [...TREE_TYPES],
-    runtimeMapId: runtimeEngine?.currentMapId || null,
-    currentMapTreeKnowledge: treeKnowledgeCount(runtimeEngine)
+    runtimeMapId: runtimeEngine?.currentMapId || null
   });
 })(window);
