@@ -9,6 +9,7 @@ $listener = $null
 $port = 0
 $utf8 = [System.Text.UTF8Encoding]::new($false)
 $savesRoot = Join-Path $projectRoot "saves"
+$dataRoot = Join-Path $projectRoot "data"
 
 function Ensure-Directory {
     param([string]$Path)
@@ -84,6 +85,91 @@ function Write-AtomicJson {
     }
 }
 
+
+function Write-AtomicText {
+    param(
+        [string]$Path,
+        [string]$Text
+    )
+    Ensure-Directory -Path (Split-Path -Parent $Path)
+    $tempPath = "$Path.tmp"
+    [System.IO.File]::WriteAllText($tempPath, $Text, $utf8)
+    if (Test-Path -LiteralPath $Path -PathType Leaf) {
+        [System.IO.File]::Replace($tempPath, $Path, $null, $true)
+    } else {
+        [System.IO.File]::Move($tempPath, $Path)
+    }
+}
+
+function Read-HttpRequest {
+    param([System.IO.Stream]$Stream)
+
+    $headerBytes = [System.Collections.Generic.List[byte]]::new()
+    $matchState = 0
+    while ($matchState -lt 4) {
+        $value = $Stream.ReadByte()
+        if ($value -lt 0) { return $null }
+        $byte = [byte]$value
+        $headerBytes.Add($byte)
+        switch ($matchState) {
+            0 { if ($byte -eq 13) { $matchState = 1 } }
+            1 { if ($byte -eq 10) { $matchState = 2 } elseif ($byte -ne 13) { $matchState = 0 } }
+            2 { if ($byte -eq 13) { $matchState = 3 } else { $matchState = 0 } }
+            3 { if ($byte -eq 10) { $matchState = 4 } else { $matchState = 0 } }
+        }
+        if ($headerBytes.Count -gt 65536) {
+            throw "En-têtes HTTP trop volumineux."
+        }
+    }
+
+    $headerText = [System.Text.Encoding]::ASCII.GetString($headerBytes.ToArray())
+    $lines = $headerText -split "`r`n"
+    if ($lines.Count -lt 1 -or [string]::IsNullOrWhiteSpace($lines[0])) {
+        return $null
+    }
+
+    $parts = $lines[0].Split(" ")
+    if ($parts.Count -lt 2) { throw "Requête HTTP invalide." }
+    $headers = @{}
+    foreach ($line in $lines[1..($lines.Count - 1)]) {
+        if ([string]::IsNullOrWhiteSpace($line)) { continue }
+        $separator = $line.IndexOf(":")
+        if ($separator -gt 0) {
+            $name = $line.Substring(0, $separator).Trim().ToLowerInvariant()
+            $value = $line.Substring($separator + 1).Trim()
+            $headers[$name] = $value
+        }
+    }
+
+    $contentLength = 0
+    if ($headers.ContainsKey("content-length")) {
+        if (-not [int]::TryParse($headers["content-length"], [ref]$contentLength)) {
+            throw "Longueur de requête invalide."
+        }
+    }
+    if ($contentLength -gt 8388608) {
+        throw "Corps de requête trop volumineux."
+    }
+
+    $bodyBytes = New-Object byte[] $contentLength
+    $bodyRead = 0
+    while ($bodyRead -lt $contentLength) {
+        $readNow = $Stream.Read($bodyBytes, $bodyRead, $contentLength - $bodyRead)
+        if ($readNow -le 0) { break }
+        $bodyRead += $readNow
+    }
+    if ($bodyRead -ne $contentLength) {
+        throw "Corps de requête incomplet ($bodyRead/$contentLength octets)."
+    }
+
+    return [pscustomobject]@{
+        Method = $parts[0]
+        Target = $parts[1]
+        Headers = $headers
+        Body = [System.Text.Encoding]::UTF8.GetString($bodyBytes)
+    }
+}
+
 function Rotate-Autosaves {
     Ensure-Directory -Path $savesRoot
     for ($index = 5; $index -ge 2; $index--) {
@@ -147,6 +233,7 @@ $mimeTypes = @{
 }
 
 Ensure-Directory -Path $savesRoot
+Ensure-Directory -Path $dataRoot
 
 $safeStartPage = $StartPage.TrimStart("/").Replace("\", "/")
 $url = "http://127.0.0.1:$port/$safeStartPage"
@@ -154,7 +241,8 @@ Write-Host ""
 Write-Host "$WindowTitle fonctionne en local sur :" -ForegroundColor Cyan
 Write-Host $url -ForegroundColor White
 Write-Host ""
-Write-Host "Sauvegardes fichiers : $savesRoot" -ForegroundColor Green
+Write-Host "Sauvegardes de partie : $savesRoot" -ForegroundColor Green
+Write-Host "Maps et micro-scènes : $dataRoot" -ForegroundColor Green
 Write-Host "Gardez cette fenêtre ouverte pendant le jeu."
 Write-Host "Fermez-la pour arrêter le serveur local."
 Start-Process $url
@@ -164,65 +252,13 @@ try {
         $client = $listener.AcceptTcpClient()
         try {
             $stream = $client.GetStream()
-            $reader = [System.IO.StreamReader]::new(
-                $stream,
-                [System.Text.Encoding]::UTF8,
-                $false,
-                4096,
-                $true
-            )
+            $request = Read-HttpRequest -Stream $stream
+            if ($null -eq $request) { continue }
 
-            $requestLine = $reader.ReadLine()
-            $requestHeaders = @{}
-            while ($true) {
-                $headerLine = $reader.ReadLine()
-                if ([string]::IsNullOrEmpty($headerLine)) { break }
-                $separator = $headerLine.IndexOf(":")
-                if ($separator -gt 0) {
-                    $headerName = $headerLine.Substring(0, $separator).Trim().ToLowerInvariant()
-                    $headerValue = $headerLine.Substring($separator + 1).Trim()
-                    $requestHeaders[$headerName] = $headerValue
-                }
-            }
-
-            if ([string]::IsNullOrWhiteSpace($requestLine)) {
-                continue
-            }
-
-            $parts = $requestLine.Split(" ")
-            $method = $parts[0]
-            $requestTarget = $parts[1].Split("?")[0]
-            $requestBody = ""
-            $contentLength = 0
-
-            if ($requestHeaders.ContainsKey("content-length")) {
-                [void][int]::TryParse(
-                    $requestHeaders["content-length"],
-                    [ref]$contentLength
-                )
-            }
-
-            if ($contentLength -gt 0) {
-                if ($contentLength -gt 8388608) {
-                    throw "Corps de requête trop volumineux."
-                }
-                $buffer = New-Object byte[] $contentLength
-                $bodyRead = 0
-                while ($bodyRead -lt $contentLength) {
-                    $readNow = $stream.Read(
-                        $buffer,
-                        $bodyRead,
-                        $contentLength - $bodyRead
-                    )
-                    if ($readNow -le 0) { break }
-                    $bodyRead += $readNow
-                }
-                $requestBody = [System.Text.Encoding]::UTF8.GetString(
-                    $buffer,
-                    0,
-                    $bodyRead
-                )
-            }
+            $method = $request.Method
+            $requestTarget = $request.Target.Split("?")[0]
+            $requestHeaders = $request.Headers
+            $requestBody = $request.Body
 
             $decodedPath = [System.Net.WebUtility]::UrlDecode($requestTarget)
             if ($decodedPath -eq "/") { $decodedPath = "/index.html" }
@@ -298,7 +334,7 @@ try {
             } elseif ($method -eq "GET" -and $decodedPath -eq "/api/custom-maps/next-index") {
                 $contentType = "application/json; charset=utf-8"
                 try {
-                    $customMapsPath = Join-Path $projectRoot "data\custom-maps.json"
+                    $customMapsPath = Join-Path $dataRoot "custom-maps.json"
                     $customMaps = @()
                     if (Test-Path -LiteralPath $customMapsPath -PathType Leaf) {
                         $customMapsText = [System.IO.File]::ReadAllText($customMapsPath)
@@ -354,8 +390,8 @@ try {
                         }
                     }
 
-                    $customJsonPath = Join-Path $projectRoot "data\custom-maps.json"
-                    $customJsPath = Join-Path $projectRoot "data\custom-maps.js"
+                    $customJsonPath = Join-Path $dataRoot "custom-maps.json"
+                    $customJsPath = Join-Path $dataRoot "custom-maps.js"
                     $maps = @()
                     if (Test-Path -LiteralPath $customJsonPath -PathType Leaf) {
                         $existingText = [System.IO.File]::ReadAllText($customJsonPath)
@@ -393,12 +429,8 @@ try {
                     }
                     $maps += [pscustomobject]$map
                     $json = ConvertTo-Json -InputObject @($maps) -Depth 14
-                    [System.IO.File]::WriteAllText($customJsonPath, $json, $utf8)
-                    [System.IO.File]::WriteAllText(
-                        $customJsPath,
-                        "window.BlueFoxCustomMaps = $json;`n",
-                        $utf8
-                    )
+                    Write-AtomicJson -Path $customJsonPath -Json $json
+                    Write-AtomicText -Path $customJsPath -Text "window.BlueFoxCustomMaps = $json;`n"
                     $response = ConvertTo-Json @{
                         status = "saved"
                         id = $map["id"]
@@ -434,8 +466,8 @@ try {
                         }
                     }
 
-                    $customJsonPath = Join-Path $projectRoot "data\custom-micro-scenes.json"
-                    $customJsPath = Join-Path $projectRoot "data\custom-micro-scenes.js"
+                    $customJsonPath = Join-Path $dataRoot "custom-micro-scenes.json"
+                    $customJsPath = Join-Path $dataRoot "custom-micro-scenes.js"
                     $templates = @()
                     if (Test-Path -LiteralPath $customJsonPath -PathType Leaf) {
                         $existingText = [System.IO.File]::ReadAllText($customJsonPath)
@@ -460,12 +492,8 @@ try {
                     $template.id = $uniqueId
                     $templates = @($templates) + @($template)
                     $json = ConvertTo-Json -InputObject $templates -Depth 12
-                    [System.IO.File]::WriteAllText($customJsonPath, $json, $utf8)
-                    [System.IO.File]::WriteAllText(
-                        $customJsPath,
-                        "window.BlueFoxCustomMicroScenes = $json;`n",
-                        $utf8
-                    )
+                    Write-AtomicJson -Path $customJsonPath -Json $json
+                    Write-AtomicText -Path $customJsPath -Text "window.BlueFoxCustomMicroScenes = $json;`n"
 
                     $response = ConvertTo-Json @{
                         status = "saved"
@@ -504,11 +532,17 @@ try {
                 "Cache-Control: no-cache, no-store, must-revalidate`r`n" +
                 "Connection: close`r`n`r`n"
             $headerBytes = [System.Text.Encoding]::ASCII.GetBytes($header)
-            $stream.Write($headerBytes, 0, $headerBytes.Length)
-            if ($method -ne "HEAD" -and $body.Length -gt 0) {
-                $stream.Write($body, 0, $body.Length)
+            try {
+                $stream.Write($headerBytes, 0, $headerBytes.Length)
+                if ($method -ne "HEAD" -and $body.Length -gt 0) {
+                    $stream.Write($body, 0, $body.Length)
+                }
+                $stream.Flush()
+            } catch [System.IO.IOException] {
+                # La requête a déjà été traitée et les fichiers ont déjà été écrits.
+                # Une fermeture prématurée du navigateur ne doit pas invalider la sauvegarde.
+                Write-Host "Connexion navigateur fermée après traitement de la requête." -ForegroundColor DarkYellow
             }
-            $stream.Flush()
         } catch {
             Write-Warning $_.Exception.Message
         } finally {

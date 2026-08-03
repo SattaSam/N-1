@@ -1,83 +1,77 @@
 window.BlueFoxCustomMaps = [
-    {
-        "value":  [
-
-                  ],
-        "Count":  0
+  {
+    "id": "custom-map-28-place-fixe-camp",
+    "number": 28,
+    "index": "28-place-fixe-camp",
+    "name": "place fixe camp",
+    "plateauCount": 3,
+    "profile": "crystalline",
+    "terrainUrls": [
+      "Images/01_0Crash_Crystal.png",
+      "Images/01_0Crash_Crystal.png",
+      "Images/01_0Crash_Crystal.png"
+    ],
+    "terrainUrl": "Images/01_0Crash_Crystal.png",
+    "sceneUrl": "./Images/1Crystal site du crash.png",
+    "seed": 1176255096,
+    "palette": {
+      "ground": 5794690,
+      "accent": 7727359
     },
-    {
-        "id":  "custom-map-28-place-fixe-camp",
-        "number":  28,
-        "index":  "28-place-fixe-camp",
-        "name":  "place fixe camp",
-        "plateauCount":  3,
-        "profile":  "crystalline",
-        "terrainUrls":  [
-                            "Images/01_0Crash_Crystal.png",
-                            "Images/01_0Crash_Crystal.png",
-                            "Images/01_0Crash_Crystal.png"
-                        ],
-        "terrainUrl":  "Images/01_0Crash_Crystal.png",
-        "sceneUrl":  "./Images/1Crystal site du crash.png",
-        "seed":  1176255096,
-        "palette":  {
-                        "ground":  5794690,
-                        "accent":  7727359
-                    },
-        "customMicroScenes":  [
-                                  {
-                                      "id":  "MSC-CUSTOM-CAMP-BASE",
-                                      "position":  [
-                                                       -0.4399,
-                                                       1.25,
-                                                       -1.0167
-                                                   ],
-                                      "rotation":  [
-                                                       0,
-                                                       1.308997,
-                                                       0
-                                                   ]
-                                  },
-                                  {
-                                      "id":  "MSC-CUSTOM-CAMP-BASE-REINFORCED",
-                                      "position":  [
-                                                       51.2433,
-                                                       1.5,
-                                                       -1.232
-                                                   ],
-                                      "rotation":  [
-                                                       0,
-                                                       1.308997,
-                                                       0
-                                                   ]
-                                  },
-                                  {
-                                      "id":  "MSC-CUSTOM-CAMP",
-                                      "position":  [
-                                                       -47.8253,
-                                                       0.25,
-                                                       -2.7506
-                                                   ],
-                                      "rotation":  [
-                                                       0,
-                                                       2.356194,
-                                                       0
-                                                   ]
-                                  },
-                                  {
-                                      "id":  "MSC-CUSTOM-CAMP-BASE",
-                                      "position":  [
-                                                       50.8834,
-                                                       2.5,
-                                                       -2.105
-                                                   ],
-                                      "rotation":  [
-                                                       0,
-                                                       -0.785398,
-                                                       0
-                                                   ]
-                                  }
-                              ],
-        "createdAt":  "2026-08-02T18:14:19.1210335Z"
-    }
+    "customMicroScenes": [
+      {
+        "id": "MSC-CUSTOM-CAMP-BASE",
+        "position": [
+          -0.4399,
+          1.25,
+          -1.0167
+        ],
+        "rotation": [
+          0,
+          1.308997,
+          0
+        ]
+      },
+      {
+        "id": "MSC-CUSTOM-CAMP-BASE-REINFORCED",
+        "position": [
+          51.2433,
+          1.5,
+          -1.232
+        ],
+        "rotation": [
+          0,
+          1.308997,
+          0
+        ]
+      },
+      {
+        "id": "MSC-CUSTOM-CAMP",
+        "position": [
+          -47.8253,
+          0.25,
+          -2.7506
+        ],
+        "rotation": [
+          0,
+          2.356194,
+          0
+        ]
+      },
+      {
+        "id": "MSC-CUSTOM-CAMP-BASE",
+        "position": [
+          50.8834,
+          2.5,
+          -2.105
+        ],
+        "rotation": [
+          0,
+          -0.785398,
+          0
+        ]
+      }
+    ],
+    "createdAt": "2026-08-02T18:14:19.1210335Z"
+  }
 ];
