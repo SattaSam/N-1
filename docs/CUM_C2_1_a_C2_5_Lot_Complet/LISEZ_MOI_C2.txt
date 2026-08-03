@@ -1,0 +1,7 @@
+﻿CONTENU DU LOT C2
+
+1. Les cinq classeurs C2.1 à C2.5 décrivent le compilateur, le validateur, le générateur, les graphes et la documentation.
+2. CUM_C2_MASTER_ASSEMBLE.xlsx est le master C2 déjà assemblé.
+3. CUM_MASTER_GLOBAL_C2_ASSEMBLE.xlsx est le master global CUM + C2.
+4. Double-cliquez sur EXECUTER_C2.bat pour assembler localement, compiler les JSON, valider et produire le GraphML.
+5. Python 3 est requis ; openpyxl est installé automatiquement si possible.

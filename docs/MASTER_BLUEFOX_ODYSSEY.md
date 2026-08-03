@@ -2,9 +2,9 @@
 
 Version logicielle de référence : **V0.16.20 + correctifs cumulatifs + générateur V1**
 
-Point documentaire : **2 août 2026 — générateur semi-aléatoire et préparation CUO**
+Point documentaire : **3 août 2026 — CUM documentaire, catalogue de missions et préparation de la passe 2 dynamique**
 
-Statut : **candidat à valider dans le jeu avant le prochain point Git**
+Statut : **socle technique cumulatif à valider en jeu ; CUM documentaire en cours de consolidation, non encore raccordé au moteur**
 
 ## Vision
 
@@ -87,6 +87,53 @@ sac peut être vidé automatiquement au camp de base principal.
 - **Planète** : carte 2D déplaçable dans un faux globe, Zones découvertes,
   connexions topographiques, focus et suggestions de déplacement.
 
+
+## Catalogue Universel des Missions — CUM
+
+Le **Catalogue Universel des Missions (CUM)** devient le référentiel documentaire
+des missions de BlueFox Odyssey. Il complète le moteur M0 déjà intégré sans
+remplacer les missions historiques ni modifier leur source d’autorité.
+
+Le document source `BlueFox_Odyssey_Catalogue_Missions.docx` contient **35
+missions principales**, organisées en dix chapitres narratifs. Chaque mission
+possède un déclencheur formulé par BlueFox, un type, une description, trois
+sous-missions, des prérequis et une récompense ou un déblocage.
+
+La structure de travail retenue pour le CUM lisible est volontairement limitée à
+six vues :
+
+1. **Missions** — une mission principale par ligne ;
+2. **Objectifs** — une sous-mission ou un objectif par ligne ;
+3. **Narration** — pensées, commentaires de journal, réactions et obsessions ;
+4. **Dépendances** — prérequis, liens entre missions et conditions de réveil ;
+5. **Moteur** — événements, variables, portée, doublons et adaptation requise ;
+6. **Tableau de bord** — suivi de complétude et d’intégration.
+
+Principes validés :
+
+- les missions du CUM **alimentent ou complètent** les missions déjà intégrées ;
+- une mission principale peut exposer des missions filles ou objectifs
+  consultables et priorisables ;
+- les portées **Locale** et **Monde** doivent être distinguées ;
+- les missions dormantes sont persistantes mais invisibles avant leur réveil ;
+- certaines découvertes peuvent créer une **obsession** différée et faire
+  converger plusieurs indices ;
+- le déclencheur technique ne remplace jamais la pensée de BlueFox ni son entrée
+  de journal ;
+- les axes de personnalité et les émotions pourront pondérer les suggestions,
+  la narration et certaines branches sans imposer un profil exclusif.
+
+État au 3 août 2026 :
+
+- extraction structurée des 35 missions du Word : réalisée ;
+- première base en six feuilles : réalisée ;
+- prototypes étendus C0/C1/C2 : produits comme exploration documentaire, mais
+  **non autoritaires** pour le moteur ;
+- enrichissement exhaustif, audit des doublons et raccordement aux événements M0 :
+  à poursuivre ;
+- aucune donnée CUM nouvelle n’est encore chargée automatiquement par le jeu.
+
+
 ## Architecture du catalogue d’objets
 
 `engine/object-library.js` est le **Catalogue Universel des Objets** et la
@@ -128,9 +175,13 @@ décor du même biome et 2 % d’exceptions explicitement compatibles. Aucun rep
 global non filtré n’est autorisé. Une combinaison générée reste inchangée au
 rechargement.
 
-## Prochain chantier — intégration CUO
+## Prochains chantiers validés
 
-Le prochain chantier prioritaire est l’intégration contrôlée du CUO complet :
+Deux chantiers sont désormais conduits en parallèle, sans les confondre :
+
+### A. Passe 2 — comportements dynamiques et CUO
+
+L’intégration contrôlée du CUO complet reste nécessaire :
 
 1. audit du catalogue consolidé ;
 2. validation des métadonnées et coûts de spawn ;
@@ -138,6 +189,18 @@ Le prochain chantier prioritaire est l’intégration contrôlée du CUO complet
 4. validation visuelle, collision et interaction ;
 5. raccordement progressif aux biomes et micro-scènes ;
 6. activation dans le moteur principal après validation.
+
+
+### B. Consolidation du CUM
+
+1. vérifier l’extraction complète des 35 missions et des 105 sous-missions ;
+2. conserver intégralement les déclencheurs, prérequis et récompenses du Word ;
+3. classer chaque mission par projet, catégorie et portée ;
+4. détecter les doublons fonctionnels avec M0 et les missions historiques ;
+5. définir les événements et variables déjà disponibles dans le registre central ;
+6. isoler les adaptations réellement nécessaires avant tout changement de code ;
+7. préparer une cartographie humaine lisible des dépendances ;
+8. ne raccorder le CUM au moteur qu’après validation documentaire.
 
 Le banc de validation est spécifié dans
 `docs/CUO_BANC_VALIDATION_3D.md`. Il ne doit charger ni IA, ni missions, ni
@@ -157,7 +220,9 @@ autonomie et ne doit pas modifier le comportement du jeu principal.
 - Générateur V1 : tables, seed, génération incrémentielle, persistance,
   cohérence des textures et budgets 1–6 intégrés ; **validation prolongée en
   jeu requise**.
-- Prochain travail validé : **banc 3D de validation puis intégration CUO**.
+- Travail technique validé : **poursuite de la passe 2 dynamique, banc 3D et intégration CUO**.
+- Travail documentaire validé : **consolidation du CUM simplifié à partir des 35 missions du Word**.
+- Le CUM n’est pas encore une source de données active du moteur ; M0 reste autoritaire.
 - Stabilité du socle 3D estimée avant ce test : **environ 72 %**.
 - Objectif du prochain jalon : **75 %**.
 - Avancement global estimatif : **environ 28 %**.

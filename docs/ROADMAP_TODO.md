@@ -1,6 +1,6 @@
 # BlueFox Odyssey — Roadmap et TODO
 
-Mise à jour : **2 août 2026**
+Mise à jour : **3 août 2026**
 
 Cette page est la **seule TODO active**.
 
@@ -23,6 +23,30 @@ Cette page est la **seule TODO active**.
 - [ ] Tester chaque objet avant toute activation dans les biomes du jeu.
 
 Référence détaillée : `docs/CUO_BANC_VALIDATION_3D.md`.
+
+
+## P0 bis — Consolider le Catalogue Universel des Missions
+
+- [x] Baptiser et définir le Catalogue Universel des Missions — CUM.
+- [x] Conserver le document Word comme référence narrative d’origine.
+- [x] Extraire les 35 missions principales du catalogue Word.
+- [x] Définir une vue simplifiée en six feuilles maximum.
+- [x] Distinguer missions principales, objectifs, narration, dépendances, moteur
+  et tableau de bord.
+- [ ] Vérifier l’extraction complète des 105 sous-missions.
+- [ ] Vérifier que chaque sous-mission conserve ses deux prérequis.
+- [ ] Reprendre sans résumé toutes les récompenses et tous les déblocages.
+- [ ] Compléter les commentaires narratifs manquants sans altérer le texte source.
+- [ ] Classer chaque mission par projet, catégorie, portée Locale/Monde et phase.
+- [ ] Identifier les missions dormantes et celles éligibles aux obsessions.
+- [ ] Détecter les doublons avec les missions historiques et le catalogue M0.
+- [ ] Pour chaque doublon, décider : alimenter, compléter ou remplacer une
+  définition — ne jamais écraser implicitement.
+- [ ] Mapper les déclencheurs sur les événements déjà disponibles.
+- [ ] Mapper les progressions sur le registre central existant.
+- [ ] Recenser séparément les adaptations de code réellement nécessaires.
+- [ ] Produire une cartographie humaine lisible des chaînes et prérequis.
+- [ ] Valider le CUM documentaire avant toute lecture automatique par le moteur.
 
 ## P1 — Valider le point cumulatif et le générateur
 
@@ -95,7 +119,7 @@ Référence détaillée : `docs/CUO_BANC_VALIDATION_3D.md`.
   cartographie.
 - [ ] Définir les conditions futures d’activation de la mission énergie douce.
 - [ ] Relier les projets prioritaires aux besoins réels.
-- [ ] Ajouter les missions composées et sous-missions dynamiques.
+- [ ] Raccorder les missions composées et sous-missions dynamiques validées dans le CUM.
 - [ ] Ajouter la construction, le transport et la fabrication dans
   `ActionBridge`.
 - [ ] Alimentation et repos avec effets mesurés.
@@ -107,7 +131,7 @@ Référence détaillée : `docs/CUO_BANC_VALIDATION_3D.md`.
 
 - [ ] Enrichir les connaissances seulement après découverte.
 - [ ] Produire des synthèses liées aux observations réelles.
-- [ ] Développer émotions, événements et souvenirs.
+- [ ] Développer émotions, événements, souvenirs et obsessions après validation du CUM.
 - [x] Implémenter la carte 2D déplaçable dans un faux globe.
 - [ ] Valider et ajuster visuellement la carte Planète en conditions réelles.
 - [ ] Tester polices, panneaux et menus scrollables sur petits écrans.
