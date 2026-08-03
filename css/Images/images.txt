@@ -1,5 +1,0 @@
-les images començant par un chiffre seul sont celles des scènes ou des décors.
-ex : 2Foret perdue
-
-les image commençant par 0 sont les textures pour le plateau de jeu 3D
-ex : 01_1

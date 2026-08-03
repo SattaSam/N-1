@@ -7,6 +7,8 @@
   const LAST_SESSION_END_KEY = "bluefox_last_session_end_v1";
   const FILE_BOOTSTRAP_KEY = "bluefox_file_save_bootstrap_v1";
   const FILE_DIAGNOSTICS_KEY = "bluefox_file_save_diagnostics_v1";
+  const MANUAL_RESTORE_KEY = "bluefox_manual_restore_exact_v1";
+  const STARTUP_MODE_KEY = "bluefox_save_startup_mode_v1";
   const AUTOSAVE_INTERVAL_MS = 90000;
 
   const SLOT_KEYS = Object.freeze({
@@ -17,7 +19,7 @@
   });
 
   const SAVE_UI_CONFIG = Object.freeze({
-    version: "save-file-v3",
+    version: "save-file-v5-offline-modes",
     targetSelector: ".settings-content",
     rootId: "bluefox-save-game-controls",
     actionClass: "save-game-actions",
@@ -36,6 +38,8 @@
     "bluefox_save_diagnostics_v1",
     FILE_DIAGNOSTICS_KEY,
     FILE_BOOTSTRAP_KEY,
+    MANUAL_RESTORE_KEY,
+    STARTUP_MODE_KEY,
     ACTIVE_SLOT_KEY,
     RESTORED_AT_KEY,
     LAST_SESSION_END_KEY
@@ -68,7 +72,7 @@
 
   const persistRuntime = () => {
     const calls = [
-      () => BF.currentEngine?.savePosition?.(),
+      () => BF.currentEngine?.savePosition?.(true),
       () => BF.currentEngine?.saveDiscovery?.(),
       () => BF.currentEngine?.saveZoneDiscovery?.(),
       () => BF.currentEngine?.missionManager?.memory?.save?.(),
@@ -85,6 +89,11 @@
         errors.push(error);
       }
     });
+    try {
+      BF.flushPersistence?.("save-snapshot");
+    } catch (error) {
+      errors.push(error);
+    }
     return errors;
   };
 
@@ -106,6 +115,81 @@
       Number.isFinite(Number(snapshot.savedAt))
     );
 
+  const captureInventoryState = () => {
+    const progression = BF.getProgressionState?.() || BF.progression?.state || {};
+    return {
+      inventory: { ...(progression.inventory || {}) },
+      campStorage: { ...(progression.campStorage || {}) },
+      deposited: { ...(progression.deposited || {}) },
+      consumed: { ...(progression.consumed || {}) },
+      capturedAt: Date.now()
+    };
+  };
+
+  const normalizeInventoryState = (inventory) => ({
+    inventory: { ...(inventory?.inventory || {}) },
+    campStorage: { ...(inventory?.campStorage || {}) },
+    deposited: { ...(inventory?.deposited || {}) },
+    consumed: { ...(inventory?.consumed || {}) }
+  });
+
+  const injectAuthoritativeInventory = (snapshot) => {
+    const explicit = snapshot?.inventoryState;
+    if (!explicit || typeof explicit !== "object") return false;
+
+    const normalized = normalizeInventoryState(explicit);
+    const progressionKey = "bluefox_progression_registry_v1";
+    const legacyKey = "bluefox_odyssey_save_v1";
+
+    let progression = {};
+    try {
+      progression = JSON.parse(
+        global.localStorage.getItem(progressionKey) || "{}"
+      );
+    } catch {
+      progression = {};
+    }
+
+    progression = {
+      ...progression,
+      version: Number(progression.version) || 1,
+      inventory: normalized.inventory,
+      campStorage: normalized.campStorage,
+      deposited: normalized.deposited,
+      consumed: normalized.consumed,
+      migrations: {
+        ...(progression.migrations || {}),
+        legacyInventoryImported: true,
+        legacyOfflineReconciled: true
+      },
+      updatedAt: Number(snapshot.savedAt) || Date.now()
+    };
+    global.localStorage.setItem(
+      progressionKey,
+      JSON.stringify(progression)
+    );
+
+    let legacy = {};
+    try {
+      legacy = JSON.parse(
+        global.localStorage.getItem(legacyKey) || "{}"
+      );
+    } catch {
+      legacy = {};
+    }
+    global.localStorage.setItem(
+      legacyKey,
+      JSON.stringify({
+        ...legacy,
+        resources: { ...normalized.inventory },
+        inventorySource: "save-file-authoritative-v4",
+        savedAt: Number(snapshot.savedAt) || Date.now()
+      })
+    );
+
+    return true;
+  };
+
   const buildSnapshot = (slot) => {
     const runtimeErrors = persistRuntime();
     const snapshot = {
@@ -117,6 +201,7 @@
       slot: String(slot),
       savedAt: Date.now(),
       originAtSave: global.location.origin,
+      inventoryState: captureInventoryState(),
       state: captureState()
     };
     return { snapshot, runtimeErrors };
@@ -136,6 +221,16 @@
           slot: String(slot),
           savedAt: Number(value.savedAt) || 0,
           originAtSave: "legacy-localStorage",
+          inventoryState: (() => {
+            try {
+              const registry = JSON.parse(
+                value.state?.bluefox_progression_registry_v1 || "{}"
+              );
+              return normalizeInventoryState(registry);
+            } catch {
+              return normalizeInventoryState(null);
+            }
+          })(),
           state: value.state
         };
       }
@@ -154,9 +249,14 @@
       }
     }
     global.localStorage.setItem(SLOT_KEYS[slot], serialized);
-    global.localStorage.setItem(ACTIVE_SLOT_KEY, String(slot));
+    if (String(slot) === "auto") {
+      global.localStorage.setItem(ACTIVE_SLOT_KEY, "auto");
+      global.localStorage.setItem(
+        LAST_SESSION_END_KEY,
+        String(snapshot.savedAt)
+      );
+    }
     global.localStorage.setItem(RESTORED_AT_KEY, String(snapshot.savedAt));
-    global.localStorage.setItem(LAST_SESSION_END_KEY, String(snapshot.savedAt));
   };
 
   const fileRequest = async (path, options = {}) => {
@@ -192,7 +292,7 @@
     }
   };
 
-  const applySnapshot = (snapshot, slot) => {
+  const applySnapshot = (snapshot, slot, mode = "resume") => {
     if (!validSnapshot(snapshot)) {
       throw new Error("Instantané de sauvegarde invalide.");
     }
@@ -210,8 +310,24 @@
       }
     });
 
-    global.localStorage.setItem(ACTIVE_SLOT_KEY, String(slot));
+    injectAuthoritativeInventory(snapshot);
+    global.localStorage.setItem(ACTIVE_SLOT_KEY, "auto");
     global.localStorage.setItem(RESTORED_AT_KEY, String(snapshot.savedAt));
+
+    if (mode === "manual-exact") {
+      global.localStorage.setItem(
+        MANUAL_RESTORE_KEY,
+        JSON.stringify({
+          slot: String(slot),
+          savedAt: Number(snapshot.savedAt),
+          requestedAt: Date.now()
+        })
+      );
+      global.localStorage.setItem(STARTUP_MODE_KEY, "manual-exact");
+    } else {
+      global.localStorage.removeItem(MANUAL_RESTORE_KEY);
+      global.localStorage.setItem(STARTUP_MODE_KEY, "auto-resume");
+    }
   };
 
   const clearActive = () => {
@@ -289,33 +405,71 @@
     if (!snapshot) return false;
 
     await createRecoverySnapshot();
-    applySnapshot(snapshot, slot);
+    const manualExact = String(slot) !== "auto";
+    applySnapshot(
+      snapshot,
+      slot,
+      manualExact ? "manual-exact" : "resume"
+    );
     writeLocalCache(slot, snapshot);
     global.location.reload();
     return true;
   };
 
+  const announceStartupReady = (mode) => {
+    BF.fileSaveBootstrapReady = true;
+    BF.fileSaveStartupMode = mode;
+    global.localStorage.setItem(STARTUP_MODE_KEY, mode);
+    global.dispatchEvent(new CustomEvent(
+      "bluefox:file-save-ready",
+      { detail: { mode, at: Date.now() } }
+    ));
+  };
+
   const bootstrapFromFile = async () => {
     if (startupPromise) return startupPromise;
     startupPromise = (async () => {
-      const slot = global.localStorage.getItem(ACTIVE_SLOT_KEY) || "auto";
-      const fileSnapshot =
-        (await readFileSnapshot(slot)) ||
-        (slot !== "auto" ? await readFileSnapshot("auto") : null);
+      const manualRestore = (() => {
+        try {
+          return JSON.parse(
+            global.localStorage.getItem(MANUAL_RESTORE_KEY) || "null"
+          );
+        } catch {
+          return null;
+        }
+      })();
+
+      if (manualRestore?.savedAt) {
+        startupReady = true;
+        announceStartupReady("manual-exact");
+        return true;
+      }
+
+      const slot = "auto";
+      const fileSnapshot = await readFileSnapshot(slot);
       const localSnapshot =
         readLocalSnapshot(slot) ||
-        (slot === "auto" ? readLocalSnapshot("backup") : null);
+        readLocalSnapshot("backup");
       const restoredAt =
         Number(global.localStorage.getItem(RESTORED_AT_KEY)) || 0;
+      const bootstrapMarker = Number(
+        global.localStorage.getItem(FILE_BOOTSTRAP_KEY)
+      ) || 0;
+      const needsOriginBootstrap =
+        Boolean(fileSnapshot) &&
+        bootstrapMarker !== Number(fileSnapshot.savedAt);
 
       if (
         fileSnapshot &&
-        fileSnapshot.savedAt > Math.max(
-          restoredAt,
-          Number(localSnapshot?.savedAt) || 0
+        (
+          needsOriginBootstrap ||
+          fileSnapshot.savedAt > Math.max(
+            restoredAt,
+            Number(localSnapshot?.savedAt) || 0
+          )
         )
       ) {
-        applySnapshot(fileSnapshot, slot);
+        applySnapshot(fileSnapshot, slot, "resume");
         writeLocalCache(slot, fileSnapshot);
         diagnostics.restoredFromFile = true;
         global.localStorage.setItem(
@@ -327,6 +481,7 @@
       }
 
       startupReady = true;
+      announceStartupReady("auto-resume");
       return true;
     })();
     return startupPromise;
