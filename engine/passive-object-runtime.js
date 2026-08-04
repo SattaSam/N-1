@@ -251,16 +251,26 @@
     global.requestAnimationFrame?.(frame);
   };
 
-  const originalCreate = BF.ObjectLibrary.create.bind(BF.ObjectLibrary);
-  BF.ObjectLibrary.create = function createWithPassiveBehavior(THREE, type, palette, variant) {
-    const instance = originalCreate(THREE, type, palette, variant);
-    if (instance?.root) {
-      instance.root.userData.libraryType ||= type;
-      instance.root.userData.variant ??= variant || 0;
-      register(instance.root, instance.definition || BF.ObjectLibrary.get(type));
-    }
-    return instance;
+  const resolveCreatedObject = (instance, context = {}) => {
+    const root = instance?.root;
+    if (!root) return null;
+    const definition = instance.definition || context.definition ||
+      BF.ObjectLibrary.get?.(context.type || root.userData?.libraryType);
+    const type = context.type || definition?.type || root.userData?.libraryType;
+    if (!type) return null;
+    root.userData = root.userData || {};
+    root.userData.libraryType ||= type;
+    root.userData.variant ??= Number(context.variant || 0);
+    return { root, definition, type };
   };
+
+  BF.ObjectLibrary.registerCreateHook((instance, context) => {
+    const created = resolveCreatedObject(instance, context);
+    if (!created) return;
+    const attach = () => register(created.root, created.definition);
+    if (created.root.parent) attach();
+    else global.requestAnimationFrame?.(attach) || attach();
+  });
 
   BF.PassiveObjectRuntime = Object.freeze({
     version: VERSION,

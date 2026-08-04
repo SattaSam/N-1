@@ -405,8 +405,8 @@
         subject: object.userData.missionSubject || definition.type || object.userData.kind,
         mapId: this.currentMapId,
         zoneId: this.currentZoneIndex,
-        amount: 1,
-        quantity: 1,
+        amount: Math.max(1, Number(object.userData.resourceQuantity || anchor.userData.resourceQuantity || definition.resource?.quantity || 1)),
+        quantity: Math.max(1, Number(object.userData.resourceQuantity || anchor.userData.resourceQuantity || definition.resource?.quantity || 1)),
         interactionMode: mode,
         interactionSource: object.userData.requestedInteractionSource || "autonomy",
         interactionState: { ...state }
@@ -425,7 +425,9 @@
           anchor.visible = false;
         }
         const inventoryKey = definition.resource?.inventoryKey || definition.type || object.userData.kind;
-        this.callbacks.onCollect(inventoryKey);
+        for (let unit = 0; unit < detail.quantity; unit += 1) {
+          this.callbacks.onCollect(inventoryKey);
+        }
         const eventType = mode === "extract"
           ? BF.ObjectEvents.types.RESOURCE_EXTRACTED
           : BF.ObjectEvents.types.RESOURCE_COLLECTED;

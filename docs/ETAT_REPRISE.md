@@ -1,16 +1,10 @@
 # BLUEFOX ODYSSEY — ÉTAT DE REPRISE
 
-Date : 2026-08-03
+Date : 2026-08-02
 
 ## Reprendre ici
-
-Deux fils de travail sont ouverts :
-
-1. **Code / passe 2 dynamique** : reprendre depuis le dépôt GitHub actualisé et
-   les derniers fichiers cumulatifs validés de la passe 2 ; ne jamais réinjecter
-   une version plus ancienne au milieu des correctifs.
-2. **CUM documentaire** : reprendre depuis le Word source et le dernier classeur
-   simplifié ; vérifier l’exhaustivité avant tout mapping vers le moteur.
+Reprendre depuis les derniers fichiers cumulatifs locaux. Ne pas réimporter les
+fichiers GitHub tant que ces correctifs n’y ont pas été intégrés.
 
 ## État technique livré
 - Sprint 1 : moteur multi-missions, pilote unique et progression passive.
@@ -30,21 +24,6 @@ Deux fils de travail sont ouverts :
 - Autonomie : aucune première exploration spontanée d’une Map inconnue ; un
   trajet d’exploration demandé ne peut plus être remplacé par une collecte.
 
-
-## État du CUM
-
-- Nom officiel : **Catalogue Universel des Missions**.
-- Source narrative : catalogue Word de 22 pages.
-- Contenu source : **35 missions principales**, chacune avec trois sous-missions,
-  leurs prérequis, un déclencheur et une récompense.
-- Format de pilotage retenu : six feuilles — Missions, Objectifs, Narration,
-  Dépendances, Moteur et Tableau de bord.
-- Extraction initiale et assembleur : réalisés.
-- Audit exhaustif, enrichissement narratif et mapping M0 : à terminer.
-- Le CUM ne doit pas encore être présenté comme intégré au moteur.
-- Les prototypes documentaires C0/C1/C2 restent exploratoires et non
-  autoritaires.
-
 ## Première étape obligatoire
 1. lancer avec `LANCER_BLUEFOX.bat` ;
 2. vérifier la console au chargement ;
@@ -55,29 +34,12 @@ Deux fils de travail sont ouverts :
 
 ## Prochaine étape
 
-### Technique
-
-Poursuivre la passe 2 des comportements dynamiques depuis le dépôt actualisé,
-puis valider le banc CUO et les objets encore en attente.
-
-### Documentaire
-
-Finaliser le CUM simplifié :
-
-1. contrôler les 35 missions et 105 sous-missions ;
-2. conserver tous les prérequis et récompenses sans résumé destructeur ;
-3. classer les missions par projet, catégorie, portée et phase ;
-4. auditer les doublons avec M0 ;
-5. mapper uniquement les événements et variables réellement disponibles ;
-6. lister les adaptations de code séparément.
-
+Construire le banc 3D décrit dans `docs/CUO_BANC_VALIDATION_3D.md`, puis lancer
+l’intégration contrôlée des 22 objets documentaires restants du CUO.
 
 ## État de session
-
-- Sprints Missions 1 à 4 : livrés, validation en jeu requise ;
-- générateur V1 : intégré, validation prolongée requise ;
-- CUO et comportements dynamiques : passe 2 en cours ;
-- CUM : fondation documentaire réalisée, consolidation requise ;
-- aucune intégration automatique du CUM dans le moteur à ce stade ;
-- documents de référence : actualisés au 3 août 2026 ;
-- session close.
+- Sprints 1 à 4 : livrés, validation en jeu requise ;
+- documents de référence : mis à jour ;
+- générateur V1 et règles de cohérence : intégrés, validation prolongée requise ;
+- prochain chantier validé : banc 3D puis CUO ;
+- session documentaire du 2 août 2026 : close.

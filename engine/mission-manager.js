@@ -10,15 +10,14 @@
       this.memory = options.memory || new Missions.MissionMemory();
       this.planner = options.planner || new Missions.MissionPlanner(this.memory);
       this.bridge = options.bridge || new Missions.ActionBridge(this.engine);
-      this.primaryMissionId = this.resolveInitialMission(
-        options.missionId || "shelter"
-      );
-      this.activeMissionId = this.primaryMissionId;
+      this.primaryMissionId = this.resolveInitialMission(options.missionId || "");
+      this.activeMissionId = this.primaryMissionId || "";
       const rememberedIds = Array.isArray(this.memory.state.activeMissionIds)
         ? this.memory.state.activeMissionIds
         : [];
       this.activeMissionIds = [...new Set(
         [this.primaryMissionId, ...rememberedIds]
+          .filter(Boolean)
           .filter((id) => this.definition(id))
           .filter((id) => !this.isLegacyUnscopedSiteMission(id))
       )];
@@ -30,11 +29,14 @@
         id,
         this.planner.restoreOrCreate(id)
       ]));
-      this.tree = this.trees.get(this.primaryMissionId);
+      this.tree = this.primaryMissionId
+        ? this.trees.get(this.primaryMissionId) || null
+        : null;
       this.activeMissionIds.forEach((id) => this.ensureLifecycle(id, "active"));
-      this.selectionReason = this.memory.state.missionLifecycle[
-        this.primaryMissionId
-      ]?.selectionReason || "Mission reprise depuis la sauvegarde.";
+      this.selectionReason = this.primaryMissionId
+        ? this.memory.state.missionLifecycle[this.primaryMissionId]?.selectionReason ||
+          "Mission reprise depuis la sauvegarde."
+        : "Aucune mission active.";
       this.pendingPrimaryMissionId = null;
       this.pendingPauseMissionId = null;
       this.lastPriorityReviewAt = 0;
@@ -48,7 +50,7 @@
         event.detail || {}
       );
       global.addEventListener("bluefox:mission-trigger", this.onMissionTrigger);
-      this.memory.saveTree(this.tree);
+      if (this.tree) this.memory.saveTree(this.tree);
       this.catalogController = Missions.MissionCatalogController
         ? new Missions.MissionCatalogController(this)
         : null;
@@ -59,13 +61,15 @@
       this.memory.state.primaryMissionId = this.primaryMissionId;
       this.memory.state.activeMissionId = this.primaryMissionId;
       this.memory.state.activeMissionIds = [...this.activeMissionIds];
+      if (!this.primaryMissionId) return;
       const lifecycle = this.ensureLifecycle(this.primaryMissionId, "active");
       lifecycle.selectionReason = this.selectionReason || lifecycle.selectionReason || "";
       lifecycle.updatedAt = Date.now();
     }
 
     definition(missionId) {
-      return Missions.getDefinition?.(missionId) || Missions.definitions[missionId];
+      if (!missionId) return null;
+      return Missions.getDefinition?.(missionId) || Missions.definitions?.[missionId] || null;
     }
 
     isLegacyUnscopedSiteMission(missionId) {
@@ -93,26 +97,10 @@
     }
 
     resolveInitialMission(fallback) {
-      let legacyMissionId = "";
-      try {
-        const legacy = JSON.parse(
-          localStorage.getItem("bluefox_odyssey_save_v1") || "null"
-        );
-        legacyMissionId = legacy?.mission?.id || "";
-      } catch {
-        legacyMissionId = "";
-      }
-      const rememberedMissionId = Object.keys(
-        this.memory.state.missions || {}
-      ).length
-        ? this.memory.state.activeMissionId
-        : "";
-      const candidates = [rememberedMissionId, legacyMissionId, fallback, "camp"]
+      const candidates = [fallback]
+        .filter(Boolean)
         .filter((id) => !this.isLegacyUnscopedSiteMission(id));
-      const selected = candidates.find((id) =>
-        this.definition(id) && id !== "foundation"
-      );
-      return selected || "camp";
+      return candidates.find((id) => this.definition(id)) || "";
     }
 
     activateMission(missionId, options = {}) {
@@ -333,8 +321,19 @@
           (context.needs?.rest && action.type === Missions.ActionType.REST) ||
           (context.needs?.food && action.type === Missions.ActionType.EAT)
         ) {
-          score += 90;
-          reasons.push("besoin prioritaire");
+          score += 120;
+          reasons.push("besoin vital prioritaire");
+        }
+        const energy = Number(context.energy);
+        const costlyTypes = new Set([
+          Missions.ActionType.COLLECT,
+          Missions.ActionType.EXTRACT,
+          Missions.ActionType.BUILD,
+          Missions.ActionType.TRAVEL
+        ]);
+        if (Number.isFinite(energy) && energy < 35 && costlyTypes.has(action.type)) {
+          score -= energy < 25 ? 95 : 35;
+          reasons.push("coût énergétique défavorable");
         }
       } else {
         score -= 120;
@@ -370,6 +369,22 @@
         false,
         `Priorité automatique : ${best.reasons.join(", ")}.`
       );
+    }
+
+
+    hasActivePrimaryMission() {
+      if (!this.primaryMissionId || !this.tree) return false;
+      const lifecycle = this.memory.state.missionLifecycle?.[this.primaryMissionId];
+      return lifecycle?.status === "active" && !this.tree.root.isComplete;
+    }
+
+    primaryActionAssessment() {
+      if (!this.hasActivePrimaryMission()) return null;
+      return this.assessMission(this.primaryMissionId, this.bridge.context());
+    }
+
+    hasRunnablePrimaryMission() {
+      return Boolean(this.primaryActionAssessment()?.action);
     }
 
     applyPendingTransitions() {
@@ -562,6 +577,26 @@
     }
 
     getState() {
+      if (!this.tree) {
+        return {
+          version: "M2",
+          primaryMissionId: "",
+          activeMissionIds: [],
+          selectionReason: "Aucune mission active.",
+          pendingPrimaryMissionId: null,
+          pendingPrimaryMissionTitle: "",
+          missionId: "",
+          title: "",
+          description: "",
+          status: "idle",
+          currentAction: null,
+          available: [],
+          tree: null,
+          missions: [],
+          catalog: [],
+          inventory: { ...(BF.getProgressionState?.().inventory || {}) }
+        };
+      }
       return {
         version: "M2",
         primaryMissionId: this.primaryMissionId,

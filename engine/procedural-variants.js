@@ -173,13 +173,17 @@
     return true;
   };
 
-  const originalCreate = BF.ObjectLibrary.create.bind(BF.ObjectLibrary);
-  BF.ObjectLibrary.create = function createWithProceduralVariants(THREE, type, palette, variant = 0) {
-    const instance = originalCreate(THREE, type, palette, variant);
-    const definition = instance?.definition || BF.ObjectLibrary.get?.(type);
-    if (instance?.root) apply(instance.root, type, definition, variant);
-    return instance;
-  };
+  BF.ObjectLibrary.registerCreateHook((instance, context = {}) => {
+    const root = instance?.root;
+    const definition = instance?.definition || context.definition ||
+      BF.ObjectLibrary.get?.(context.type || root?.userData?.libraryType);
+    const type = context.type || definition?.type || root?.userData?.libraryType;
+    if (!root || !type) return;
+    const variant = Number(context.variant ?? root.userData?.variant ?? 0);
+    const attach = () => apply(root, type, definition, variant);
+    if (root.parent) attach();
+    else global.requestAnimationFrame?.(attach) || attach();
+  });
 
   BF.ProceduralVariants = Object.freeze({
     version: VERSION,

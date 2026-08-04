@@ -47,12 +47,12 @@
       const label = meter.querySelector("span");
       const value = meter.querySelector("b");
       const fill = meter.querySelector("em");
+      meter.hidden=!mission;
       if (!mission) {
-        if (label && label.textContent !== "MISSION À SUIVRE") {
-          label.textContent = "MISSION À SUIVRE";
-        }
-        if (value && value.textContent !== "—") value.textContent = "—";
-        if (fill && fill.style.width !== "0%") fill.style.width = "0%";
+        if(label) label.textContent="";
+        if(value) value.textContent="";
+        if(fill) fill.style.width="0%";
+        meter.removeAttribute("title");
         return;
       }
       const percent = Math.round((mission.progress || 0) * 100);
@@ -121,6 +121,7 @@
   }
 
   function render(state) {
+    renderTrackedMissionMeters(state||{});
     const card = document.querySelector(".mission-card");
     if (!card || !state?.tree?.root) return;
 

@@ -17,6 +17,9 @@
       this.transitioning = false;
       this.lastSavedAt = 0;
       this.lastAutonomyAt = performance.now();
+      this.autonomyActionStreak = 0;
+      this.autonomyBreakTarget = 2 + Math.floor(Math.random() * 2);
+      this.lastFatigueSpeechAt = -30000;
       this.lastSpeechAt = -10000;
       this.discoveredMaps = new Set(["crystal"]);
       this.discoveredZones = new Set();
@@ -189,8 +192,7 @@
       BF.getDiagnostics = () => this.getDiagnostics();
       if (BF.Missions?.MissionManager) {
         this.missionManager = BF.Missions.MissionManager.create({
-          engine: this,
-          missionId: `camp@${this.currentMapId}`
+          engine: this
         });
         BF.getMissionState = () => this.missionManager.getState();
         BF.startMission = (missionId, options) =>
@@ -1256,6 +1258,7 @@
         const object = hits[0].object;
         if (object.userData.active) {
           object.userData.requestedMovementMode = movementMode;
+          object.userData.requestedInteractionSource = "manual";
           this.targetInteraction(object);
         }
         return;
@@ -2113,7 +2116,8 @@
           profile.action,
           profile.animationHints
         );
-        this.interactionDuration = Math.max(900, duration * 1000);
+        const fatigueDuration = BF.getSurvivalState?.().fatigue?.actionDuration || 1;
+        this.interactionDuration = Math.max(900, duration * 1000 * fatigueDuration);
         this.callbacks.onAction(profile.actionText);
         if (this.speechVisible && now - this.lastSpeechAt > 3200) {
           this.callbacks.onSpeak(profile.speechText);
@@ -2134,6 +2138,12 @@
       }
       this.completedInteractions += 1;
       this.lastCompletedAction = profile.action;
+      const interactionSource = object.userData.requestedInteractionSource || "autonomy";
+      if (interactionSource === "autonomy") {
+        this.autonomyActionStreak += 1;
+      } else if (interactionSource === "manual") {
+        this.autonomyActionStreak = 0;
+      }
       const missionAction = this.missionActionForInteraction(profile.action);
       if (missionAction) {
         this.missionManager?.notifyActionCompleted(missionAction, {
@@ -2153,6 +2163,7 @@
       this.lastActivityAt = now;
       this.lastAutonomyAt = now - 5600;
       object.userData.requestedMovementMode = null;
+      object.userData.requestedInteractionSource = null;
       if (profile.removeFromWorld) {
         if (!Number.isFinite(profile.respawnMs) || profile.respawnMs <= 0) {
           console.error(
@@ -2183,7 +2194,47 @@
       if (now < this.postActionRecoveryUntil) return;
       if (now - this.lastAutonomyAt < 5000) return;
       if (this.character.root.position.distanceTo(this.character.target) > 0.2) return;
+
+      const survival = BF.getSurvivalState?.() || {};
+      const fatigue = survival.fatigue || { level: "normal", movement: 1, actionDuration: 1 };
+      this.character.fatigueSpeedMultiplier = fatigue.movement || 1;
+
+      // Une mission principale active et réalisable conserve toujours la main.
+      // L'autonomie libre n'intervient que si aucune mission prioritaire ne peut agir.
+      if (this.missionManager?.hasRunnablePrimaryMission?.()) return;
+
       this.lastAutonomyAt = now;
+      if (survival.needs?.criticalRest) {
+        if (this.speechVisible && now - this.lastFatigueSpeechAt > 15000) {
+          this.callbacks.onSpeak("Je suis fatigué, j’ai besoin de récupérer avant de continuer.");
+          this.lastFatigueSpeechAt = now;
+        }
+        this.startRoutine("critical-rest", now, 9000 + Math.random() * 6000, {
+          targetEnergy: 33,
+          pressureReduction: 3
+        });
+        return;
+      }
+
+      if (this.autonomyActionStreak >= this.autonomyBreakTarget) {
+        if (this.speechVisible && Math.random() < 0.45 && now - this.lastFatigueSpeechAt > 12000) {
+          const phrases = [
+            "Je prends un instant pour respirer.",
+            "Une petite pause, puis je reprends.",
+            "Je vais ralentir un peu.",
+            "Je reprends mon souffle."
+          ];
+          this.callbacks.onSpeak(phrases[Math.floor(Math.random() * phrases.length)]);
+          this.lastFatigueSpeechAt = now;
+        }
+        this.startRoutine("micro-rest", now, 2400 + Math.random() * 2200, {
+          restGain: fatigue.level === "heavy" ? 4.2 : 3.2,
+          pressureReduction: 0.75
+        });
+        this.autonomyActionStreak = 0;
+        this.autonomyBreakTarget = 2 + Math.floor(Math.random() * 2);
+        return;
+      }
 
       if (Math.random() < 0.08) {
         const duration = this.character.playAmbientObservation();
@@ -2194,15 +2245,21 @@
         }
       }
       const routineRoll = Math.random();
-      if (routineRoll < 0.12) {
-        this.startRoutine("rest", now, 7200);
+      if (survival.needs?.rest || routineRoll < 0.12) {
+        this.startRoutine("rest", now, survival.needs?.rest ? 8200 : 7200, {
+          restGain: survival.needs?.rest ? 18 : 12,
+          pressureReduction: 2
+        });
         return;
       }
       if (routineRoll < 0.2) {
         this.startRoutine("research", now, 6500);
         return;
       }
-      if (routineRoll < 0.25) {
+      // La ration est actée dans survival.rationRecipe mais sa consommation
+      // reste désactivée tant que l'inventaire CUO ne fournit pas deux types
+      // de plantes et une vraie ressource ration.
+      if (survival.needs?.food && BF.survival?.rationRecipe?.implemented) {
         this.startRoutine("food", now, 5200);
         return;
       }
@@ -2222,6 +2279,7 @@
       const resources = this.currentMap.interactables.filter((object) => this.canInteractWith(object, now));
       if (resources.length) {
         const object = resources[Math.floor(Math.random() * resources.length)];
+        object.userData.requestedInteractionSource = "autonomy";
         this.targetInteraction(object);
         return;
       }
@@ -2246,14 +2304,17 @@
       this.callbacks.onStatus("BlueFox poursuit une exploration locale autonome.");
     }
 
-    startRoutine(type, now, duration) {
+    startRoutine(type, now, duration, detail = {}) {
       this.character.stop();
       if (this.destinationMarker) this.destinationMarker.visible = false;
       if (this.pathLine) this.pathLine.visible = false;
-      this.currentRoutine = { type, startedAt: now, endsAt: now + duration };
-      this.character.playRoutine(type, duration / 1000);
+      this.currentRoutine = { type, startedAt: now, endsAt: now + duration, detail: { ...detail } };
+      const animationType = type === "micro-rest" || type === "critical-rest" ? "rest" : type;
+      this.character.playRoutine(animationType, duration / 1000);
       const messages = {
         rest: "BlueFox se repose quelques instants pour préserver ses forces.",
+        "micro-rest": "BlueFox marque une courte pause pour reprendre son souffle.",
+        "critical-rest": "BlueFox interrompt ses activités pour récupérer d’une fatigue critique.",
         research: "BlueFox analyse ses observations avant de poursuivre l’exploration.",
         food: "BlueFox prend une ration et vérifie ses réserves."
       };
@@ -2262,12 +2323,16 @@
 
     updateRoutine(now) {
       if (!this.currentRoutine || now < this.currentRoutine.endsAt) return;
-      const finished = this.currentRoutine.type;
+      const finishedRoutine = this.currentRoutine;
+      const finished = finishedRoutine.type;
       this.currentRoutine = null;
       this.character.cancelInteraction();
-      if (finished === "rest") this.callbacks.onRest();
+      if (["rest", "micro-rest", "critical-rest"].includes(finished)) this.callbacks.onRest();
+      BF.survival?.completeRoutine?.(finished, finishedRoutine.detail || {});
       const missionActionTypes = {
         rest: BF.Missions?.ActionType.REST,
+        "micro-rest": null,
+        "critical-rest": BF.Missions?.ActionType.REST,
         research: BF.Missions?.ActionType.RESEARCH,
         food: BF.Missions?.ActionType.EAT
       };
@@ -2288,6 +2353,7 @@
     }
 
     ensureActivity(now) {
+      if (this.missionManager?.hasRunnablePrimaryMission?.()) return;
       if (this.pendingGate) {
         if (this.character.speed > 0.08) {
           this.lastActivityAt = now;
@@ -2321,6 +2387,7 @@
       const resources = this.currentMap.interactables.filter((object) => this.canInteractWith(object, now));
       if (resources.length) {
         const object = resources[Math.floor(Math.random() * resources.length)];
+        object.userData.requestedInteractionSource = "autonomy";
         this.targetInteraction(object);
         this.callbacks.onAction(
           "BlueFox reprend spontanément son activité après avoir évalué les priorités locales."
@@ -2361,8 +2428,16 @@
 
     currentActivity() {
       if (this.currentRoutine) {
-        if (this.currentRoutine.type === "rest") {
-          return { key: "rest", label: "Repos et récupération des forces.", speech: "Je fais une courte pause avant de reprendre." };
+        if (["rest", "micro-rest", "critical-rest"].includes(this.currentRoutine.type)) {
+          return {
+            key: this.currentRoutine.type,
+            label: this.currentRoutine.type === "critical-rest"
+              ? "Repos prolongé après une fatigue critique."
+              : "Repos et récupération des forces.",
+            speech: this.currentRoutine.type === "critical-rest"
+              ? "Je dois récupérer avant de continuer."
+              : "Je fais une courte pause avant de reprendre."
+          };
         }
         if (this.currentRoutine.type === "research") {
           return { key: "research", label: "Recherche et analyse des observations récentes.", speech: "Je compare mes observations pour préparer la suite." };
@@ -2509,6 +2584,8 @@
           "Le passage a été interrompu proprement. BlueFox reprend son activité."
         );
       }
+      const fatigue = BF.getSurvivalState?.().fatigue;
+      this.character.fatigueSpeedMultiplier = fatigue?.movement || 1;
       this.character.update(dt);
       this.currentMap.update?.(this.clock.elapsedTime);
       this.updateBiomeParticles(dt, this.clock.elapsedTime);

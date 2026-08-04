@@ -53,7 +53,10 @@ function Get-SavePath {
 }
 
 function Test-SaveDocument {
-    param([object]$Document)
+    param(
+        [object]$Document,
+        [string]$ExpectedSlot = ""
+    )
     if ($null -eq $Document) { throw "Sauvegarde vide." }
     if ([string]$Document.format -ne "bluefox-save-file") {
         throw "Format de sauvegarde invalide."
@@ -61,12 +64,21 @@ function Test-SaveDocument {
     if ([int]$Document.schemaVersion -ne 1) {
         throw "Version de sauvegarde non prise en charge."
     }
-    if ($null -eq $Document.state) {
+    if ($null -eq $Document.PSObject.Properties["state"]) {
         throw "État de sauvegarde absent."
     }
     if ([int64]$Document.savedAt -le 0) {
         throw "Date de sauvegarde invalide."
     }
+    if (-not [string]::IsNullOrWhiteSpace($ExpectedSlot)) {
+        $slotProperty = $Document.PSObject.Properties["slot"]
+        if ($null -eq $slotProperty) {
+            $Document | Add-Member -NotePropertyName "slot" -NotePropertyValue $ExpectedSlot
+        } else {
+            $Document.slot = $ExpectedSlot
+        }
+    }
+    return $Document
 }
 
 function Write-AtomicJson {
@@ -76,13 +88,12 @@ function Write-AtomicJson {
     )
     Ensure-Directory -Path (Split-Path -Parent $Path)
     $tempPath = "$Path.tmp"
-    [System.IO.File]::WriteAllText($tempPath, $Json, $utf8)
     [void]($Json | ConvertFrom-Json)
+    [System.IO.File]::WriteAllText($tempPath, $Json, $utf8)
     if (Test-Path -LiteralPath $Path -PathType Leaf) {
-        [System.IO.File]::Replace($tempPath, $Path, $null, $true)
-    } else {
-        [System.IO.File]::Move($tempPath, $Path)
+        Remove-Item -LiteralPath $Path -Force
     }
+    Move-Item -LiteralPath $tempPath -Destination $Path -Force
 }
 
 
@@ -290,19 +301,20 @@ try {
                             $body = [System.Text.Encoding]::UTF8.GetBytes($saveText)
                         }
                     } elseif ($method -eq "POST") {
-                        $document = $requestBody | ConvertFrom-Json
-                        Test-SaveDocument -Document $document
-                        if ([string]$document.slot -ne $slot) {
-                            throw "L'emplacement du document ne correspond pas à l'URL."
+                        if ([string]::IsNullOrWhiteSpace($requestBody)) {
+                            throw "Corps de sauvegarde vide."
                         }
+                        $document = $requestBody | ConvertFrom-Json
+                        $document = Test-SaveDocument -Document $document -ExpectedSlot $slot
+                        $canonicalJson = ConvertTo-Json -InputObject $document -Depth 32 -Compress
                         if ($slot -eq "auto") {
                             Rotate-Autosaves
                         }
                         $path = Get-SavePath -Slot $slot
-                        Write-AtomicJson -Path $path -Json $requestBody
+                        Write-AtomicJson -Path $path -Json $canonicalJson
                         $verifiedText = [System.IO.File]::ReadAllText($path)
                         $verified = $verifiedText | ConvertFrom-Json
-                        Test-SaveDocument -Document $verified
+                        [void](Test-SaveDocument -Document $verified -ExpectedSlot $slot)
                         $body = [System.Text.Encoding]::UTF8.GetBytes($verifiedText)
                     } elseif ($method -eq "DELETE" -and $slot -eq "auto") {
                         @(
@@ -328,7 +340,12 @@ try {
                     }
                 } catch {
                     $status = "400 Bad Request"
-                    $response = ConvertTo-Json @{ error = $_.Exception.Message }
+                    $response = ConvertTo-Json @{
+                        error = $_.Exception.Message
+                        route = $decodedPath
+                        method = $method
+                    } -Compress
+                    Write-Warning "API sauvegarde : $($_.Exception.Message)"
                     $body = [System.Text.Encoding]::UTF8.GetBytes($response)
                 }
             } elseif ($method -eq "GET" -and $decodedPath -eq "/api/custom-maps/next-index") {

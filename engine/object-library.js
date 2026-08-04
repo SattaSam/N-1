@@ -1065,15 +1065,28 @@
     } else if (type === "mobile_islet") {
       const islandRoot = new THREE.Group();
       islandRoot.name = "FloatingMass";
-      islandRoot.position.y = 2.8;
+      // La masse reste réellement suspendue : même le plus long cône ne touche pas le sol.
+      islandRoot.position.y = 5.2;
       root.add(islandRoot);
       const top = new THREE.Mesh(new THREE.CylinderGeometry(3.1, 2.65, 0.62, 9), green);
       top.position.y = 0.25;
       islandRoot.add(top);
+      const platformUndersideY = top.position.y - 0.62 / 2;
       for (let index = 0; index < 9; index += 1) {
         const angle = index * 2.399;
-        const rock = new THREE.Mesh(new THREE.ConeGeometry(0.72 + (index % 3) * 0.22, 2.4 + (index % 4) * 0.55, 6), stone);
-        rock.position.set(Math.cos(angle) * (0.5 + index * 0.19), -1.05 - (index % 3) * 0.28, Math.sin(angle) * (0.5 + index * 0.19));
+        const coneHeight = 2.4 + (index % 4) * 0.55;
+        const rock = new THREE.Mesh(
+          new THREE.ConeGeometry(0.72 + (index % 3) * 0.22, coneHeight, 6),
+          stone
+        );
+        // ConeGeometry place sa pointe vers +Y par défaut. Le demi-tour met la pointe vers le bas.
+        // La base plane se retrouve alors en haut et est collée sous la plateforme.
+        rock.rotation.x = Math.PI;
+        rock.position.set(
+          Math.cos(angle) * (0.5 + index * 0.19),
+          platformUndersideY - coneHeight / 2,
+          Math.sin(angle) * (0.5 + index * 0.19)
+        );
         rock.rotation.z = Math.cos(angle) * 0.18;
         islandRoot.add(rock);
       }
@@ -1117,6 +1130,202 @@
       }
       hitbox = makeHitbox(THREE, root, 1.35, 3.25, type);
       colliders = [{ offset: new THREE.Vector3(), radius: 0.72 }];
+    } else if (type === "thermosap_moss") {
+      const plant = new THREE.Group();
+      root.add(plant);
+      for (let index = 0; index < 13; index += 1) {
+        const angle = index * 2.399 + variant * 0.23;
+        const radius = 0.12 + (index % 5) * 0.11;
+        const bulb = new THREE.Mesh(
+          new THREE.SphereGeometry(0.11 + (index % 3) * 0.025, 10, 7),
+          material(THREE, { color: 0x638c58, emissive: 0xff8b5d, emissiveIntensity: 0.55, roughness: 0.82 })
+        );
+        bulb.position.set(Math.cos(angle) * radius, 0.08 + (index % 2) * 0.035, Math.sin(angle) * radius);
+        bulb.scale.y = 0.48;
+        plant.add(bulb);
+      }
+      hitbox = makeHitbox(THREE, root, 0.56, 0.95, type);
+    } else if (type === "lunar_vine") {
+      const plant = new THREE.Group();
+      plant.name = "LunarVineBouquet";
+      root.add(plant);
+      const stemMaterial = material(THREE, { color: 0x4f9b78, roughness: 0.7 });
+      const leafMaterial = material(THREE, { color: 0x75b58b, emissive: 0x123f32, emissiveIntensity: 0.18, roughness: 0.76, side: THREE.DoubleSide });
+      const sphereMaterial = material(THREE, { color: 0xbcecff, emissive: 0x7ccfff, emissiveIntensity: 1.35, roughness: 0.2 });
+      const stemCount = 7 + (variant % 3);
+      let sphereAnchor = null;
+      for (let index = 0; index < stemCount; index += 1) {
+        const angle = (index / stemCount) * Math.PI * 2 + variant * 0.17;
+        const height = 2.55 + (index % 4) * 0.36 + (variant % 2) * 0.12;
+        const lean = 0.55 + (index % 3) * 0.18;
+        const baseX = Math.cos(angle) * 0.14;
+        const baseZ = Math.sin(angle) * 0.14;
+        const curve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(baseX, 0.05, baseZ),
+          new THREE.Vector3(baseX + Math.cos(angle) * 0.12, height * 0.34, baseZ + Math.sin(angle) * 0.12),
+          new THREE.Vector3(baseX + Math.cos(angle) * lean * 0.45, height * 0.72, baseZ + Math.sin(angle) * lean * 0.45),
+          new THREE.Vector3(baseX + Math.cos(angle) * lean, height, baseZ + Math.sin(angle) * lean)
+        ]);
+        const stem = new THREE.Mesh(new THREE.TubeGeometry(curve, 14, 0.025 + (index % 2) * 0.006, 6, false), stemMaterial);
+        plant.add(stem);
+        if (index === Math.floor(stemCount / 2)) sphereAnchor = curve.getPoint(0.72);
+        const leafCount = index % 3 === 0 ? 2 : 1;
+        for (let leafIndex = 0; leafIndex < leafCount; leafIndex += 1) {
+          const t = 0.28 + leafIndex * 0.2 + (index % 2) * 0.05;
+          const point = curve.getPoint(t);
+          const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 5), leafMaterial);
+          leaf.position.copy(point);
+          leaf.scale.set(1.75, 0.32, 0.62);
+          leaf.rotation.y = angle + leafIndex * 1.1;
+          leaf.rotation.z = (leafIndex ? -1 : 1) * 0.38;
+          plant.add(leaf);
+        }
+      }
+      const coreSphere = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 10), sphereMaterial);
+      coreSphere.name = "LunarCoreSphere";
+      coreSphere.position.copy(sphereAnchor || new THREE.Vector3(0, 2.2, 0));
+      plant.add(coreSphere);
+      hitbox = makeHitbox(THREE, root, 0.85, 3.8, type);
+    } else if (type === "prismatic_orchid") {
+      const plant = new THREE.Group();
+      plant.name = "PrismaticOrchid";
+      root.add(plant);
+      const stemMaterial = material(THREE, { color: 0x5965a8, roughness: 0.68 });
+      const leafMaterial = material(THREE, { color: 0x4d7f72, emissive: 0x183c38, emissiveIntensity: 0.2, roughness: 0.72, side: THREE.DoubleSide });
+      const flowerMaterial = material(THREE, { color: 0xd7a6ff, emissive: 0xc88cff, emissiveIntensity: 1.65, roughness: 0.24, metalness: 0.08 });
+      const leafCount = 1 + (variant % 2);
+      for (let leafIndex = 0; leafIndex < leafCount; leafIndex += 1) {
+        const palm = new THREE.Group();
+        const angle = leafIndex * Math.PI + variant * 0.32;
+        palm.rotation.y = angle;
+        for (let finger = -2; finger <= 2; finger += 1) {
+          const leaflet = new THREE.Mesh(new THREE.SphereGeometry(0.14, 9, 6), leafMaterial);
+          leaflet.scale.set(1.5, 0.22, 0.48);
+          leaflet.position.set(finger * 0.09, 0.18 + Math.abs(finger) * 0.025, 0.28 + (2 - Math.abs(finger)) * 0.05);
+          leaflet.rotation.z = finger * 0.18;
+          palm.add(leaflet);
+        }
+        plant.add(palm);
+      }
+      const stemCount = Math.min(3, 2 + (variant % 2));
+      for (let stemIndex = 0; stemIndex < stemCount; stemIndex += 1) {
+        const angle = (stemIndex / stemCount) * Math.PI * 2 + variant * 0.21;
+        const height = 0.95 + stemIndex * 0.14;
+        const curve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(Math.cos(angle) * 0.1, 0.08, Math.sin(angle) * 0.1),
+          new THREE.Vector3(Math.cos(angle) * 0.16, height * 0.5, Math.sin(angle) * 0.16),
+          new THREE.Vector3(Math.cos(angle) * 0.24, height, Math.sin(angle) * 0.24)
+        ]);
+        plant.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 10, 0.025, 6, false), stemMaterial));
+        const flowerCount = 2 + ((stemIndex + variant) % 2);
+        for (let flowerIndex = 0; flowerIndex < flowerCount; flowerIndex += 1) {
+          const t = 0.68 + flowerIndex * 0.14;
+          const point = curve.getPoint(Math.min(0.96, t));
+          const flower = new THREE.Group();
+          flower.position.copy(point);
+          flower.rotation.y = angle + flowerIndex * 0.72;
+          for (let petal = 0; petal < 5; petal += 1) {
+            const prism = new THREE.Mesh(new THREE.OctahedronGeometry(0.09, 0), flowerMaterial);
+            const petalAngle = petal * Math.PI * 0.4;
+            prism.position.set(Math.cos(petalAngle) * 0.09, Math.sin(petalAngle) * 0.09, 0);
+            prism.scale.set(1.1, 0.55, 0.45);
+            flower.add(prism);
+          }
+          plant.add(flower);
+        }
+      }
+      hitbox = makeHitbox(THREE, root, 0.72, 1.45, type);
+    } else if (type === "fern") {
+      const plant = new THREE.Group();
+      plant.name = "Fern";
+      root.add(plant);
+      const stemMaterial = material(THREE, { color: 0x315f43, roughness: 0.82 });
+      const leafMaterial = material(THREE, { color: variant % 2 ? 0x5f9f68 : 0x4b8f5b, emissive: 0x102b18, emissiveIntensity: 0.12, roughness: 0.8, side: THREE.DoubleSide });
+      const frondCount = 7 + (variant % 3);
+      for (let index = 0; index < frondCount; index += 1) {
+        const angle = (index / frondCount) * Math.PI * 2 + variant * 0.13;
+        const length = 1.0 + (index % 3) * 0.18;
+        const curve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(0, 0.05, 0),
+          new THREE.Vector3(Math.cos(angle) * 0.12, length * 0.38, Math.sin(angle) * 0.12),
+          new THREE.Vector3(Math.cos(angle) * 0.42, length * 0.72, Math.sin(angle) * 0.42),
+          new THREE.Vector3(Math.cos(angle) * 0.78, length * 0.55, Math.sin(angle) * 0.78)
+        ]);
+        plant.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 12, 0.022, 5, false), stemMaterial));
+        for (let leafletIndex = 1; leafletIndex <= 6; leafletIndex += 1) {
+          const t = leafletIndex / 7;
+          const point = curve.getPoint(t);
+          [-1, 1].forEach((side) => {
+            const leaflet = new THREE.Mesh(new THREE.SphereGeometry(0.075, 7, 4), leafMaterial);
+            leaflet.position.copy(point);
+            const sideAngle = angle + side * Math.PI / 2;
+            leaflet.position.x += Math.cos(sideAngle) * (0.08 + t * 0.08);
+            leaflet.position.z += Math.sin(sideAngle) * (0.08 + t * 0.08);
+            leaflet.scale.set(1.45 - t * 0.35, 0.2, 0.48);
+            leaflet.rotation.y = sideAngle;
+            leaflet.rotation.z = side * (0.28 + t * 0.18);
+            plant.add(leaflet);
+          });
+        }
+      }
+      hitbox = makeHitbox(THREE, root, 1.05, 1.45, type);
+    } else if (["azure_ferrite", "resonant_basalt", "stellar_iridium"].includes(type)) {
+      const rare = type === "stellar_iridium";
+      const basalt = type === "resonant_basalt";
+      const oreColor = rare ? 0xe8d17a : basalt ? 0x263447 : 0x4d9bd4;
+      const emissive = rare ? 0xffd86d : basalt ? 0x416a9b : 0x236b9e;
+      const base = new THREE.Mesh(new THREE.DodecahedronGeometry(0.68 + variant * 0.05, 1), material(THREE, { color: basalt ? 0x18222e : 0x48545d, roughness: 0.9 }));
+      base.position.y = 0.34;
+      base.scale.set(1.15, 0.68, 0.92);
+      root.add(base);
+      const shardCount = rare ? 6 : 4;
+      for (let index = 0; index < shardCount; index += 1) {
+        const shard = new THREE.Mesh(rare ? new THREE.OctahedronGeometry(0.16 + index * 0.012, 0) : new THREE.BoxGeometry(0.18, 0.32 + index * 0.04, 0.13), material(THREE, { color: oreColor, emissive, emissiveIntensity: rare ? 1.35 : 0.55, metalness: 0.52, roughness: 0.34 }));
+        const angle = (index / shardCount) * Math.PI * 2;
+        shard.position.set(Math.cos(angle) * 0.42, 0.48 + (index % 2) * 0.15, Math.sin(angle) * 0.34);
+        shard.rotation.set(angle * 0.13, angle, angle * 0.21);
+        root.add(shard);
+      }
+      hitbox = makeHitbox(THREE, root, 0.82, 1.25, type);
+      colliders = [{ offset: new THREE.Vector3(), radius: 0.58 }];
+    } else if (["pulse_core", "memory_capsule", "relay_block", "logic_prism"].includes(type)) {
+      const stateIndex = Math.max(0, Math.min(3, variant % 4));
+      const stateNames = ["destroyed", "degraded", "worn", "intact"];
+      const yields = [1, 2, 3, 5];
+      const shape = type === "pulse_core"
+        ? new THREE.SphereGeometry(0.33, 16, 11)
+        : type === "memory_capsule"
+          ? new THREE.SphereGeometry(0.34, 16, 11)
+          : type === "relay_block"
+            ? new THREE.BoxGeometry(0.72, 0.42, 0.5)
+            : new THREE.ConeGeometry(0.48, 0.78, 4);
+      const colors = { pulse_core: 0x61e6ff, memory_capsule: 0xbf8cff, relay_block: 0xffa85c, logic_prism: 0x8dff9e };
+      const shell = new THREE.Mesh(shape, material(THREE, { color: stateIndex === 0 ? 0x3a4148 : 0x697783, metalness: 0.65, roughness: 0.48 + (3 - stateIndex) * 0.1 }));
+      shell.position.y = type === "logic_prism" ? 0.39 : 0.28;
+      if (type === "memory_capsule") shell.scale.set(0.78, 1.25, 0.78);
+      root.add(shell);
+      const light = new THREE.Mesh(new THREE.SphereGeometry(0.11 + stateIndex * 0.012, 10, 7), new THREE.MeshBasicMaterial({ color: colors[type], transparent: true, opacity: 0.28 + stateIndex * 0.2 }));
+      light.position.set(type === "relay_block" ? 0.23 : 0, type === "logic_prism" ? 0.46 : 0.31, type === "relay_block" ? 0.26 : 0.22);
+      root.add(light);
+      root.userData.componentState = stateNames[stateIndex];
+      root.userData.resourceQuantity = yields[stateIndex];
+      hitbox = makeHitbox(THREE, root, 0.52, 0.9, type);
+      hitbox.userData.componentState = stateNames[stateIndex];
+      hitbox.userData.resourceQuantity = yields[stateIndex];
+    } else if (["eroded_monolith", "lantern_mushrooms", "survey_beacon", "fossil_root_arch", "abandoned_nest"].includes(type)) {
+      if (type === "eroded_monolith") {
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.9, 3.4, 7), material(THREE, { color: 0x59636b, roughness: 0.96 }));
+        body.position.y = 1.7; body.rotation.z = 0.08; root.add(body); colliders = [{ offset: new THREE.Vector3(), radius: 0.82 }];
+      } else if (type === "lantern_mushrooms") {
+        for (let i=0;i<7;i+=1){ const a=i*2.399; const h=0.38+(i%3)*0.16; const stem=new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.055,h,7),material(THREE,{color:0x718270,roughness:0.8})); stem.position.set(Math.cos(a)*0.38,h/2,Math.sin(a)*0.38); root.add(stem); const cap=new THREE.Mesh(new THREE.SphereGeometry(0.16+(i%2)*0.04,10,7),material(THREE,{color:0x89e8c9,emissive:0x33bda2,emissiveIntensity:1.2,roughness:0.35})); cap.scale.y=0.45; cap.position.set(stem.position.x,h,stem.position.z); root.add(cap); }
+      } else if (type === "survey_beacon") {
+        const mast=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.16,1.8,8),darkMetal); mast.position.y=0.9; root.add(mast); const head=new THREE.Mesh(new THREE.OctahedronGeometry(0.34,1),material(THREE,{color:0x6ddfff,emissive:0x147aa0,emissiveIntensity:1.25,metalness:0.4})); head.position.y=1.85; root.add(head); colliders=[{offset:new THREE.Vector3(),radius:0.24}];
+      } else if (type === "fossil_root_arch") {
+        [-1,1].forEach(side=>{const rootLeg=new THREE.Mesh(new THREE.CylinderGeometry(0.32,0.58,3.1,8),material(THREE,{color:0x73624d,roughness:0.98})); rootLeg.position.set(side*1.35,1.55,0); rootLeg.rotation.z=side*-0.18; root.add(rootLeg);}); const crown=new THREE.Mesh(new THREE.TorusGeometry(1.38,0.34,9,28,Math.PI),material(THREE,{color:0x73624d,roughness:0.98})); crown.position.y=3.05; root.add(crown); colliders=[{offset:new THREE.Vector3(-1.35,0,0),radius:0.55},{offset:new THREE.Vector3(1.35,0,0),radius:0.55}];
+      } else {
+        const bowl=new THREE.Mesh(new THREE.TorusGeometry(0.9,0.22,8,24),material(THREE,{color:0x76644f,roughness:0.95})); bowl.rotation.x=Math.PI/2; bowl.position.y=0.18; root.add(bowl); for(let i=0;i<9;i+=1){const twig=new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.045,1.3,6),material(THREE,{color:0x5e4a38,roughness:1})); const a=i*Math.PI*2/9; twig.position.set(Math.cos(a)*0.6,0.22,Math.sin(a)*0.6); twig.rotation.z=Math.cos(a)*1.25; twig.rotation.x=Math.sin(a)*1.25; root.add(twig);}
+      }
+      if (["eroded_monolith","survey_beacon","fossil_root_arch"].includes(type)) hitbox = makeHitbox(THREE, root, type === "fossil_root_arch" ? 2.25 : 0.9, type === "fossil_root_arch" ? 4 : 3.2, type);
     } else if (type === "scout_drone" || type === "harvest_drone") {
       const isScout = type === "scout_drone";
       const droneRoot = new THREE.Group();
@@ -1208,6 +1417,22 @@
     { id: "BIO-CARN-L-001", type: "carnivorous_plant", label: "Plante carnivore", category: "flora", subtype: "alien_carnivorous_plant", size: "L", rarity: "uncommon", biomes: ["forest", "jungle", "swamp", "fungal", "alien"], scenes: ["Nid végétal", "Sous-bois prédateur"], states: ["fermée", "en veille", "ouverte", "alerte", "inspectée", "analysée", "récoltée"], actions: ["observe", "inspect", "analyze", "collect", "avoid"], defaultAction: "inspect", acquisitionAction: "collect", requiresInspectionBeforeCollect: true, afterInspectionAction: "collect", collectable: true, inspectable: true, obstacle: true, respawn: 420, inventoryKey: "carnivorous_sample", exploitability: "hazardous-harvest", family: "flora", resourceFamily: "biology", research: ["botany", "toxicology", "adaptation"], tags: ["plant", "carnivorous", "hazard", "living", "resource"], spawnCost: 6, maxPerZone: 2, minDistance: 7, maxSlope: 24, radius: 1.35, volume: "large", curiosity: 0.9, harvest: 0.42, danger: 0.62, missions: ["flore dangereuse", "échantillon biologique"], decision: "validated" },
     { id: "EQP-DRON-M-001", type: "scout_drone", label: "Drone éclaireur", category: "equipment", subtype: "craftable_scout_drone", size: "M", rarity: "rare", biomes: ["base", "camp", "all"], scenes: ["Atelier robotique", "Plateforme de reconnaissance"], states: ["planifié", "assemblé", "inactif", "actif", "endommagé", "réparé"], actions: ["inspect", "activate", "repair", "dismantle"], defaultAction: "inspect", inspectable: true, traversable: true, family: "equipment", research: ["robotics", "navigation", "mapping"], tags: ["equipment", "drone", "scout", "craftable", "mobile"], spawnCost: 9, maxPerZone: 1, minDistance: 5, maxSlope: 12, radius: 1.7, volume: "medium", curiosity: 0.55, danger: 0, missions: ["cartographie automatisée", "exploration avancée"], note: "Assemblage disponible à la base finale ; repère périodiquement un objet inconnu de la carte active.", decision: "validated" },
     { id: "EQP-DRON-M-002", type: "harvest_drone", label: "Drone récolteur", category: "equipment", subtype: "craftable_harvest_drone", size: "M", rarity: "rare", biomes: ["base", "camp", "all"], scenes: ["Atelier robotique", "Plateforme logistique"], states: ["planifié", "assemblé", "inactif", "actif", "chargé", "endommagé", "réparé"], actions: ["inspect", "activate", "repair", "dismantle"], defaultAction: "inspect", inspectable: true, traversable: true, family: "equipment", research: ["robotics", "logistics", "harvesting"], tags: ["equipment", "drone", "harvest", "craftable", "mobile"], spawnCost: 9, maxPerZone: 1, minDistance: 5, maxSlope: 12, radius: 1.7, volume: "medium", curiosity: 0.48, danger: 0, missions: ["collecte automatisée", "logistique avancée"], note: "Assemblage disponible à la base finale ; récolte périodiquement une ressource commune et sûre de la carte active.", decision: "validated" }
+    ,{ id: "BIO-LUNE-S-001", type: "lunar_vine", label: "Liane lunaire", category: "resources", subtype: "luminous_climbing_plant", size: "S", rarity: "common", biomes: ["forest", "jungle", "swamp", "alien"], scenes: ["Lisière lunaire", "Sous-bois luminescent"], states: ["dormante", "lumineuse", "inspectée", "récoltée", "repousse"], actions: ["observe", "inspect", "collect", "analyze"], defaultAction: "collect", collectable: true, inspectable: true, respawn: 150, inventoryKey: "lunar_vine", exploitability: "harvestable", family: "flora", resourceFamily: "plant", research: ["botany", "bioluminescence"], tags: ["resource", "plant", "glowing", "vine"], spawnCost: 2, maxPerZone: 7, minDistance: 1.3, maxSlope: 30, radius: 0.56, volume: "small", curiosity: 0.5, harvest: 0.45, decision: "new" },
+    { id: "BIO-THER-S-001", type: "thermosap_moss", label: "Mousse thermosève", category: "resources", subtype: "thermal_moss", size: "S", rarity: "uncommon", biomes: ["volcanic", "cave", "mountain", "frozen"], scenes: ["Fumerolle végétale", "Paroi thermale"], states: ["froide", "tiède", "active", "récoltée", "repousse"], actions: ["observe", "inspect", "collect", "analyze"], defaultAction: "inspect", collectable: true, inspectable: true, respawn: 240, inventoryKey: "thermosap_moss", exploitability: "harvestable", family: "flora", resourceFamily: "plant", research: ["botany", "thermal-adaptation"], tags: ["resource", "plant", "thermal", "ground_cover"], spawnCost: 3, maxPerZone: 5, minDistance: 1.8, maxSlope: 38, radius: 0.56, volume: "small", curiosity: 0.65, harvest: 0.38, decision: "new" },
+    { id: "BIO-PRIS-S-001", type: "prismatic_orchid", label: "Orchidée prismatique", category: "resources", subtype: "rare_prismatic_flower", size: "S", rarity: "rare", biomes: ["crystalline", "forest", "aquatic", "alien"], scenes: ["Sanctuaire prismatique", "Clairière opalescente"], states: ["fermée", "épanouie", "résonante", "analysée", "récoltée"], actions: ["observe", "inspect", "analyze", "collect"], defaultAction: "inspect", collectable: true, inspectable: true, respawn: 1800, inventoryKey: "prismatic_orchid", exploitability: "rare-harvest", family: "flora", resourceFamily: "plant", research: ["botany", "optics", "energy"], tags: ["resource", "plant", "rare", "glowing", "prismatic"], spawnCost: 8, maxPerZone: 1, minDistance: 12, maxSlope: 18, radius: 0.62, volume: "small", curiosity: 1, harvest: 0.7, decision: "new" },
+    { id: "DEC-FERN-M-001", type: "fern", label: "Fougère", category: "decors_nature", subtype: "temperate_marsh_fern", size: "M", rarity: "common", biomes: ["forest", "jungle", "swamp"], scenes: ["Sous-bois de fougères", "Lisière humide", "Clairière marécageuse"], states: ["déployée", "humide", "observée", "analysée"], actions: ["observe", "analyze"], defaultAction: "observe", inspectable: true, traversable: true, family: "flora", research: ["botany", "ecology"], tags: ["decor", "plant", "fern", "ground_cover"], spawnCost: 2, maxPerZone: 12, minDistance: 1.4, maxSlope: 30, radius: 1.05, volume: "medium", curiosity: 0.42, decision: "new" },
+    { id: "RES-AZUR-M-001", type: "azure_ferrite", label: "Ferrite azurée", category: "resources", subtype: "blue_ferrous_ore", size: "M", rarity: "common", biomes: ["mountain", "desert", "ruins", "alien"], scenes: ["Affleurement azuré", "Veine ferrique"], states: ["brute", "inspectée", "analysée", "extraite"], actions: ["observe", "inspect", "extract", "analyze"], defaultAction: "extract", collectable: true, inspectable: true, obstacle: true, respawn: 360, inventoryKey: "azure_ferrite", exploitability: "extractable", family: "mineral", resourceFamily: "ore", research: ["geology", "metallurgy"], tags: ["resource", "mineral", "ore"], spawnCost: 4, maxPerZone: 5, minDistance: 2.7, maxSlope: 42, radius: 0.82, volume: "medium", curiosity: 0.5, harvest: 0.62, decision: "new" },
+    { id: "RES-SONO-M-001", type: "resonant_basalt", label: "Basalte résonant", category: "resources", subtype: "resonant_volcanic_ore", size: "M", rarity: "uncommon", biomes: ["volcanic", "cave", "mountain", "magnetic"], scenes: ["Cercle résonant", "Éboulis sonore"], states: ["silencieux", "résonant", "inspecté", "analysé", "extrait"], actions: ["observe", "inspect", "analyze", "extract"], defaultAction: "inspect", collectable: true, inspectable: true, obstacle: true, respawn: 600, inventoryKey: "resonant_basalt", exploitability: "extractable", family: "mineral", resourceFamily: "ore", research: ["geology", "acoustics", "materials"], tags: ["resource", "mineral", "volcanic", "resonant"], spawnCost: 5, maxPerZone: 3, minDistance: 4.2, maxSlope: 48, radius: 0.82, volume: "medium", curiosity: 0.76, harvest: 0.58, decision: "new" },
+    { id: "RES-STAR-M-001", type: "stellar_iridium", label: "Iridium stellaire", category: "resources", subtype: "rare_stellar_ore", size: "M", rarity: "rare", biomes: ["crystalline", "magnetic", "volcanic", "ruins"], scenes: ["Impact stellaire", "Veine iridescente"], states: ["inert", "rayonnant", "inspecté", "analysé", "extrait"], actions: ["observe", "inspect", "analyze", "extract"], defaultAction: "inspect", collectable: true, inspectable: true, obstacle: true, respawn: 2400, inventoryKey: "stellar_iridium", exploitability: "rare-extraction", family: "mineral", resourceFamily: "rare_ore", research: ["geology", "metallurgy", "astrophysics"], tags: ["resource", "mineral", "rare", "stellar", "glowing"], spawnCost: 9, maxPerZone: 1, minDistance: 14, maxSlope: 34, radius: 0.82, volume: "medium", curiosity: 1, harvest: 0.82, decision: "new" },
+    { id: "TEC-PULS-S-001", type: "pulse_core", label: "Noyau pulsé", category: "components", subtype: "spherical_luminous_component", size: "S", rarity: "uncommon", biomes: ["ruins", "magnetic", "electrical", "alien"], scenes: ["Relais effondré", "Épave technologique"], states: ["détruit", "dégradé", "usé", "intact"], actions: ["observe", "inspect", "collect", "analyze"], defaultAction: "collect", collectable: true, inspectable: true, respawn: 3600, inventoryKey: "pulse_core", exploitability: "salvageable", family: "technology", resourceFamily: "component", research: ["engineering", "energy"], tags: ["technology", "component", "salvage", "glowing"], spawnCost: 4, maxPerZone: 3, minDistance: 4, maxSlope: 24, radius: 0.52, volume: "small", curiosity: 0.72, harvest: 0.6, decision: "new" },
+    { id: "TEC-MEMO-S-001", type: "memory_capsule", label: "Capsule mémoire ovoïde", category: "components", subtype: "ovoid_luminous_component", size: "S", rarity: "uncommon", biomes: ["ruins", "city", "alien"], scenes: ["Archive brisée", "Console abandonnée"], states: ["détruit", "dégradé", "usé", "intact"], actions: ["observe", "inspect", "collect", "analyze"], defaultAction: "inspect", collectable: true, inspectable: true, respawn: 3600, inventoryKey: "memory_capsule", exploitability: "salvageable", family: "technology", resourceFamily: "component", research: ["computing", "ancient-technology"], tags: ["technology", "component", "memory", "glowing"], spawnCost: 5, maxPerZone: 2, minDistance: 5, maxSlope: 20, radius: 0.52, volume: "small", curiosity: 0.86, harvest: 0.58, decision: "new" },
+    { id: "TEC-RELA-S-001", type: "relay_block", label: "Bloc relais", category: "components", subtype: "rectangular_luminous_component", size: "S", rarity: "common", biomes: ["ruins", "desert", "city", "alien"], scenes: ["Câblage dispersé", "Relais oublié"], states: ["détruit", "dégradé", "usé", "intact"], actions: ["observe", "inspect", "collect"], defaultAction: "collect", collectable: true, inspectable: true, respawn: 2400, inventoryKey: "relay_block", exploitability: "salvageable", family: "technology", resourceFamily: "component", research: ["engineering", "electronics"], tags: ["technology", "component", "relay", "salvage"], spawnCost: 3, maxPerZone: 4, minDistance: 3, maxSlope: 28, radius: 0.52, volume: "small", curiosity: 0.55, harvest: 0.66, decision: "new" },
+    { id: "TEC-PRIS-S-001", type: "logic_prism", label: "Prisme logique pyramidal", category: "components", subtype: "pyramidal_luminous_component", size: "S", rarity: "rare", biomes: ["ruins", "crystalline", "magnetic", "alien"], scenes: ["Nœud logique", "Sanctuaire technologique"], states: ["détruit", "dégradé", "usé", "intact"], actions: ["observe", "inspect", "analyze", "collect"], defaultAction: "inspect", collectable: true, inspectable: true, respawn: 5400, inventoryKey: "logic_prism", exploitability: "rare-salvage", family: "technology", resourceFamily: "component", research: ["computing", "engineering", "logic"], tags: ["technology", "component", "rare", "glowing", "pyramidal"], spawnCost: 7, maxPerZone: 1, minDistance: 10, maxSlope: 20, radius: 0.52, volume: "small", curiosity: 1, harvest: 0.72, decision: "new" },
+    { id: "DEC-WIND-L-001", type: "eroded_monolith", label: "Monolithe érodé", category: "natural_decor", subtype: "wind_eroded_monolith", size: "L", rarity: "uncommon", biomes: ["desert", "mountain", "coast", "alien"], scenes: ["Couloir des vents", "Repère géologique"], states: ["présent", "observé", "cartographié"], actions: ["observe", "inspect"], defaultAction: "observe", inspectable: true, obstacle: true, family: "geology", research: ["geology", "erosion"], tags: ["decor", "rock", "landmark", "border-separator"], spawnCost: 5, maxPerZone: 3, minDistance: 7, maxSlope: 34, radius: 0.9, volume: "large", curiosity: 0.52, decision: "new" },
+    { id: "DEC-FUNG-S-001", type: "lantern_mushrooms", label: "Champignons-lanternes", category: "natural_decor", subtype: "luminous_fungal_cluster", size: "S", rarity: "common", biomes: ["forest", "jungle", "swamp", "cave"], scenes: ["Sentier-lanterne", "Sous-bois fongique"], states: ["éteints", "lumineux", "observés"], actions: ["observe", "inspect"], defaultAction: "observe", inspectable: true, family: "flora", research: ["mycology", "bioluminescence"], tags: ["decor", "fungal", "glowing", "ground_cover"], spawnCost: 1, maxPerZone: 10, minDistance: 1.1, maxSlope: 30, radius: 0.56, volume: "small", curiosity: 0.46, decision: "new" },
+    { id: "DEC-BEAC-M-001", type: "survey_beacon", label: "Balise d’arpentage abandonnée", category: "technology", subtype: "abandoned_survey_beacon", size: "M", rarity: "uncommon", biomes: ["ruins", "desert", "mountain", "alien"], scenes: ["Relais oublié", "Ancienne route"], states: ["inactive", "clignotante", "inspectée", "analysée"], actions: ["observe", "inspect", "analyze"], defaultAction: "inspect", inspectable: true, obstacle: true, family: "technology", research: ["navigation", "engineering"], tags: ["technology", "beacon", "landmark", "glowing"], spawnCost: 6, maxPerZone: 2, minDistance: 8, maxSlope: 22, radius: 0.9, volume: "medium", curiosity: 0.82, decision: "new" },
+    { id: "DEC-ROOT-XL-001", type: "fossil_root_arch", label: "Arche de racines fossilisées", category: "natural_decor", subtype: "fossilized_root_arch", size: "XL", rarity: "rare", biomes: ["forest", "swamp", "desert", "alien"], scenes: ["Forêt fossile", "Passage des racines"], states: ["présente", "observée", "cartographiée"], actions: ["observe", "inspect"], defaultAction: "observe", inspectable: true, obstacle: true, traversable: true, family: "geology", research: ["paleobotany", "geology"], tags: ["decor", "fossil", "arch", "landmark", "border-separator"], spawnCost: 10, maxPerZone: 1, minDistance: 14, maxSlope: 16, radius: 2.25, volume: "large", curiosity: 0.9, decision: "new" },
+    { id: "DEC-NEST-M-001", type: "abandoned_nest", label: "Nid migratoire abandonné", category: "natural_decor", subtype: "abandoned_migratory_nest", size: "M", rarity: "uncommon", biomes: ["forest", "coast", "mountain", "alien"], scenes: ["Halte migratoire", "Corniche habitée"], states: ["vide", "récent", "ancien", "observé"], actions: ["observe", "inspect"], defaultAction: "observe", inspectable: true, family: "fauna", research: ["zoology", "behavior"], tags: ["decor", "nest", "fauna-trace", "story"], spawnCost: 3, maxPerZone: 3, minDistance: 5, maxSlope: 30, radius: 0.9, volume: "medium", curiosity: 0.7, decision: "new" }
   ]);
 
   const PRODUCTION_OBJECT_LIBRARY = Object.freeze(Object.fromEntries(PRODUCTION_SPECS.map((spec) => [
@@ -1922,6 +2147,35 @@
     }, {})
   );
 
+  // Hooks de création partagés avec les runtimes P2.x.
+  // Conservés dans la fermeture afin de rester disponibles même lorsque
+  // object-library-p2-1.js remplace la façade BF.ObjectLibrary.
+  const CREATE_HOOKS = new Set();
+
+  const registerCreateHook = (hook) => {
+    if (typeof hook !== "function") {
+      console.warn("[BlueFox ObjectLibrary] Hook de création ignoré : fonction attendue.");
+      return false;
+    }
+    CREATE_HOOKS.add(hook);
+    return true;
+  };
+
+  const unregisterCreateHook = (hook) => CREATE_HOOKS.delete(hook);
+  const getCreateHookCount = () => CREATE_HOOKS.size;
+
+  const applyCreateHooks = (instance, context = {}) => {
+    CREATE_HOOKS.forEach((hook) => {
+      try {
+        hook(instance, context);
+      } catch (error) {
+        // Un runtime optionnel ne doit jamais empêcher le rendu du jeu.
+        console.error("[BlueFox ObjectLibrary] Erreur dans un hook de création :", error);
+      }
+    });
+    return instance;
+  };
+
   BF.ObjectLibrary = Object.freeze({
     schemaVersion: 4,
     functionalFields: FUNCTIONAL_FIELDS,
@@ -1962,6 +2216,11 @@
     listByTag(tag) {
       return Object.values(OBJECT_LIBRARY).filter((definition) => definition.spawn.tags.includes(tag));
     },
+
+    registerCreateHook,
+    unregisterCreateHook,
+    getCreateHookCount,
+    applyCreateHooks,
 
     validate() {
       const ids = new Set();
@@ -2024,7 +2283,13 @@
         instance.root.userData.progression = definition.progression;
       }
 
-      return instance;
+      return applyCreateHooks(instance, {
+        THREE,
+        type,
+        palette,
+        variant,
+        definition
+      });
     }
   });
 })(window);

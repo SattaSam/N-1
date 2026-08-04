@@ -7,6 +7,19 @@
   const clamp01 = (value) => Math.max(0, Math.min(1, Number(value) || 0));
   const clone = (value) => JSON.parse(JSON.stringify(value));
 
+  const FATIGUE_LEVELS = Object.freeze({
+    normal: Object.freeze({ minEnergy: 50, movement: 1, actionDuration: 1 }),
+    light: Object.freeze({ minEnergy: 35, movement: 0.92, actionDuration: 1.1 }),
+    heavy: Object.freeze({ minEnergy: 25, movement: 0.8, actionDuration: 1.25 }),
+    critical: Object.freeze({ minEnergy: 0, movement: 0.65, actionDuration: 1.5 })
+  });
+  const RATION_RECIPE = Object.freeze({
+    output: "ration",
+    totalPlants: 4,
+    minimumDistinctPlantTypes: 2,
+    implemented: false
+  });
+
   const legacyEnergy = () => {
     try {
       const save = JSON.parse(global.localStorage.getItem("bluefox_odyssey_save_v1") || "null");
@@ -19,7 +32,7 @@
   const defaultState = () => {
     const initial = legacyEnergy();
     return {
-      version: 1,
+      version: 2,
       rest: initial,
       food: initial,
       safety: initial,
@@ -34,10 +47,11 @@
     const base = defaultState();
     try {
       const saved = JSON.parse(global.localStorage.getItem(STORAGE_KEY) || "null");
-      if (!saved || saved.version !== 1) return base;
+      if (!saved || ![1, 2].includes(saved.version)) return base;
       return {
         ...base,
         ...saved,
+        version: 2,
         rest: clamp(saved.rest),
         food: clamp(saved.food),
         safety: clamp(saved.safety),
@@ -78,6 +92,20 @@
     thermalStress: 0
   };
 
+  const fatigueProfile = () => {
+    const energy = recalculate();
+    if (energy >= FATIGUE_LEVELS.normal.minEnergy) {
+      return { level: "normal", ...FATIGUE_LEVELS.normal };
+    }
+    if (energy >= FATIGUE_LEVELS.light.minEnergy) {
+      return { level: "light", ...FATIGUE_LEVELS.light };
+    }
+    if (energy >= FATIGUE_LEVELS.heavy.minEnergy) {
+      return { level: "heavy", ...FATIGUE_LEVELS.heavy };
+    }
+    return { level: "critical", ...FATIGUE_LEVELS.critical };
+  };
+
   const recordAction = (action, source = "autonomy") => {
     const baseCost = interactionCost[action] || 1;
     const now = Date.now();
@@ -86,7 +114,7 @@
         ? Math.min(6, state.manualPressure + 1)
         : 1;
       state.lastManualAt = now;
-    } else {
+    } else if (source === "autonomy") {
       state.manualPressure = Math.max(0, state.manualPressure - 0.5);
     }
     const manualMultiplier = source === "manual"
@@ -100,10 +128,39 @@
     return state.energy;
   };
 
-  const completeRoutine = (routine) => {
+  const recoverRest = (amount, reason = "rest", pressureReduction = 0) => {
+    const gain = Math.max(0, Number(amount) || 0);
+    if (!gain && !pressureReduction) return state.energy;
+    state.rest = clamp(state.rest + gain);
+    state.manualPressure = Math.max(
+      0,
+      state.manualPressure - Math.max(0, Number(pressureReduction) || 0)
+    );
+    publish(reason);
+    return state.energy;
+  };
+
+  const completeRoutine = (routine, detail = {}) => {
     if (routine === "rest") {
-      state.rest = clamp(state.rest + 24);
-      state.manualPressure = Math.max(0, state.manualPressure - 2);
+      const restGain = Number.isFinite(Number(detail.restGain))
+        ? Number(detail.restGain)
+        : 24;
+      state.rest = clamp(state.rest + restGain);
+      state.manualPressure = Math.max(
+        0,
+        state.manualPressure - Math.max(0, Number(detail.pressureReduction) || 2)
+      );
+    } else if (routine === "micro-rest") {
+      state.rest = clamp(state.rest + Math.max(1.5, Number(detail.restGain) || 3.2));
+      state.manualPressure = Math.max(0, state.manualPressure - 0.75);
+    } else if (routine === "critical-rest") {
+      const targetEnergy = Math.max(30, Number(detail.targetEnergy) || 33);
+      let guard = 0;
+      while (recalculate() < targetEnergy && state.rest < 100 && guard < 100) {
+        state.rest = clamp(state.rest + 1);
+        guard += 1;
+      }
+      state.manualPressure = Math.max(0, state.manualPressure - 3);
     } else if (routine === "food") {
       state.food = clamp(state.food + 28);
       state.rest = clamp(state.rest + 4);
@@ -136,14 +193,19 @@
     return true;
   };
 
-  const snapshot = () => ({
-    ...clone(state),
-    weather: { ...weather() },
-    needs: {
-      rest: state.rest < 35 || state.energy < 30,
-      food: state.food < 35 || state.energy < 25
-    }
-  });
+  const snapshot = () => {
+    const profile = fatigueProfile();
+    return {
+      ...clone(state),
+      fatigue: profile,
+      weather: { ...weather() },
+      needs: {
+        rest: state.rest < 35 || state.energy < 30,
+        food: state.food < 35 || state.energy < 25,
+        criticalRest: state.rest < 25 || state.energy < 25
+      }
+    };
+  };
 
   let lastExposureAt = Date.now();
   const applyEnvironmentalExposure = () => {
@@ -187,11 +249,14 @@
   BF.survival = Object.freeze({
     state,
     snapshot,
+    fatigueProfile,
     recordAction,
+    recoverRest,
     completeRoutine,
     applyHazard,
     updateSafety,
     applyEnvironmentalExposure,
+    rationRecipe: RATION_RECIPE,
     save: () => publish("manual-save")
   });
   BF.getSurvivalState = snapshot;

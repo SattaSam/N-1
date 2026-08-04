@@ -321,12 +321,14 @@
     else updateRocky(state, elapsed, distance);
   };
 
-  const originalCreate = BF.ObjectLibrary.create.bind(BF.ObjectLibrary);
-  BF.ObjectLibrary.create = function createWithNpcRuntime(THREE, type, palette, variant) {
-    const instance = originalCreate(THREE, type, palette, variant);
-    if (instance?.root && NPC_TYPES.has(type)) register(instance.root, type);
-    return instance;
-  };
+  BF.ObjectLibrary.registerCreateHook((instance, context = {}) => {
+    const root = instance?.root;
+    const type = context.type || instance?.definition?.type || root?.userData?.libraryType;
+    if (!root || !NPC_TYPES.has(type)) return;
+    const attach = () => register(root, type);
+    if (root.parent) attach();
+    else global.requestAnimationFrame?.(attach) || attach();
+  });
 
   let running = true;
   const startedAt = nowSeconds();

@@ -227,13 +227,16 @@
     updateSpores(state, elapsed, wind);
   };
 
-  const originalCreate = BF.ObjectLibrary.create.bind(BF.ObjectLibrary);
-  BF.ObjectLibrary.create = function createWithFloraRuntime(THREE, type, palette, variant) {
-    const instance = originalCreate(THREE, type, palette, variant);
-    const definition = instance?.definition || BF.ObjectLibrary.get?.(type);
-    if (instance?.root && isFlora(definition, type)) register(instance.root, type, definition);
-    return instance;
-  };
+  BF.ObjectLibrary.registerCreateHook((instance, context = {}) => {
+    const root = instance?.root;
+    const definition = instance?.definition || context.definition ||
+      BF.ObjectLibrary.get?.(context.type || root?.userData?.libraryType);
+    const type = context.type || definition?.type || root?.userData?.libraryType;
+    if (!root || !isFlora(definition, type)) return;
+    const attach = () => register(root, type, definition);
+    if (root.parent) attach();
+    else global.requestAnimationFrame?.(attach) || attach();
+  });
 
   let running = true;
   const startedAt = nowSeconds();

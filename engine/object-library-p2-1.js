@@ -397,6 +397,10 @@
     getSpawnProfile: (type) => data[type]?.spawn || null,
     getMapPlacement: (type) => original.getMapPlacement(type),
     listByTag: (tag) => Object.values(data).filter((definition) => definition.spawn?.tags?.includes(tag)),
+    registerCreateHook: (hook) => original.registerCreateHook(hook),
+    unregisterCreateHook: (hook) => original.unregisterCreateHook(hook),
+    getCreateHookCount: () => original.getCreateHookCount(),
+    applyCreateHooks: (instance, context) => original.applyCreateHooks(instance, context),
     validate() {
       const base = original.validate();
       const errors = [...(base.errors || [])];
@@ -409,7 +413,17 @@
       const definition = data[type];
       if (!definition) throw new Error(`Type d'objet 3D inconnu : ${type}`);
       if (!replacements[type]) return original.create(THREE, type, palette, variant);
-      return attachMetadata(definition.build(THREE, palette, variant), definition);
+      const instance = attachMetadata(
+        definition.build(THREE, palette, variant),
+        definition
+      );
+      return original.applyCreateHooks(instance, {
+        THREE,
+        type,
+        palette,
+        variant,
+        definition
+      });
     }
   });
 

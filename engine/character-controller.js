@@ -25,6 +25,7 @@
       this.speed = 0;
       this.radius = 0.64;
       this.maxSpeed = 3.55;
+      this.fatigueSpeedMultiplier = 1;
       this.playerSprintUntil = 0;
       this.movementMode = "auto";
       this.autonomousRunThreshold = 13.5;
@@ -464,9 +465,10 @@
         const playerSprint =
           this.movementMode === "run-fast" ||
           performance.now() < this.playerSprintUntil;
-        const movementSpeed = this.movementMode === "walk"
+        const fatigueMultiplier = Math.max(0.55, Math.min(1, Number(this.fatigueSpeedMultiplier) || 1));
+        const movementSpeed = (this.movementMode === "walk"
           ? Math.min(this.maxSpeed, 2.05)
-          : this.maxSpeed;
+          : this.maxSpeed) * fatigueMultiplier;
         const desiredSpeed =
           movementSpeed * (playerSprint ? 1.3 : 1) * arrival;
         const lambda = desiredSpeed > this.speed ? this.acceleration : this.deceleration;

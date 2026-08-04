@@ -4,6 +4,24 @@
   const BF = global.BlueFox3D = global.BlueFox3D || {};
 
   const BUILTIN_TEMPLATES = Object.freeze({
+    ecological_lunar_edge: Object.freeze({ id: "MSC-ECO-LUNAR-001", biomes: Object.freeze(["forest", "jungle", "swamp", "alien"]), rarity: "common", radius: 7, objects: Object.freeze([Object.freeze({ type: "lunar_vine", offset: [0,0,0], variant: 1 }), Object.freeze({ type: "lunar_vine", offset: [1.8,0,1.1], variant: 0 }), Object.freeze({ type: "fern", offset: [-1.1,0,-0.9], variant: 1 }), Object.freeze({ type: "lantern_mushrooms", offset: [-1.5,0,0.8], variant: 1 }), Object.freeze({ type: "strong_rock", offset: [2.6,0,-1.5], variant: 2 }), Object.freeze({ type: "large_rock", offset: [-3.1,0,-1.4], variant: 1 })]) }),
+    thermal_vein: Object.freeze({ id: "MSC-ECO-THERM-001", biomes: Object.freeze(["volcanic", "cave", "mountain", "frozen"]), rarity: "uncommon", radius: 8, objects: Object.freeze([Object.freeze({ type: "resonant_basalt", offset: [0,0,0], variant: 1 }), Object.freeze({ type: "thermosap_moss", offset: [1.4,0,0.7], variant: 2 }), Object.freeze({ type: "thermosap_moss", offset: [-1.2,0,1.2], variant: 0 }), Object.freeze({ type: "strong_rock", offset: [2.8,0,-1.4], variant: 3 }), Object.freeze({ type: "large_rock", offset: [-3.2,0,-1.7], variant: 2 })]) }),
+    stellar_impact: Object.freeze({ id: "MSC-ECO-STAR-001", biomes: Object.freeze(["crystalline", "magnetic", "volcanic", "ruins"]), rarity: "rare", radius: 10, objects: Object.freeze([Object.freeze({ type: "stellar_iridium", offset: [0,0,0], variant: 2 }), Object.freeze({ type: "strong_rock", offset: [2.2,0,1.7], variant: 4 }), Object.freeze({ type: "large_rock", offset: [-2.9,0,1.3], variant: 3 }), Object.freeze({ type: "crystal", offset: [1.3,0,-2.1], variant: 1 }), Object.freeze({ type: "eroded_monolith", offset: [-3.5,0,-2.4], variant: 0 })]) }),
+    broken_relay: Object.freeze({ id: "MSC-TECH-RELAY-001", biomes: Object.freeze(["ruins", "desert", "alien"]), rarity: "uncommon", radius: 8, objects: Object.freeze([Object.freeze({ type: "survey_beacon", offset: [0,0,0], variant: 1 }), Object.freeze({ type: "relay_block", offset: [1.4,0,0.8], variant: 0 }), Object.freeze({ type: "pulse_core", offset: [-1.2,0,1], variant: 1 }), Object.freeze({ type: "memory_capsule", offset: [0.7,0,-1.4], variant: 2 }), Object.freeze({ type: "debris", offset: [-2.3,0,-1.6], variant: 1 }), Object.freeze({ type: "strong_rock", offset: [3,0,-1.3], variant: 2 })]) }),
+    fossil_passage: Object.freeze({ id: "MSC-ECO-FOSSIL-001", biomes: Object.freeze(["forest", "swamp", "desert", "alien"]), rarity: "rare", radius: 10, objects: Object.freeze([Object.freeze({ type: "fossil_root_arch", offset: [0,0,0], variant: 0 }), Object.freeze({ type: "abandoned_nest", offset: [2.4,0,1.8], variant: 1 }), Object.freeze({ type: "lantern_mushrooms", offset: [-2.2,0,1.2], variant: 0 }), Object.freeze({ type: "strong_rock", offset: [3.5,0,-2.2], variant: 4 }), Object.freeze({ type: "large_rock", offset: [-3.8,0,-2.1], variant: 2 })]) }),
+    fern_clearing: Object.freeze({
+      id: "MSC-FERN-CLEARING-001", biomes: Object.freeze(["forest", "jungle", "swamp"]), rarity: "common", radius: 7,
+      objects: Object.freeze([
+        Object.freeze({ type: "fern", offset: [0, 0, 0], variant: 2 }),
+        Object.freeze({ type: "fern", offset: [1.6, 0, 0.9], variant: 0 }),
+        Object.freeze({ type: "fern", offset: [-1.5, 0, 1.1], variant: 1 }),
+        Object.freeze({ type: "fern", offset: [0.9, 0, -1.6], variant: 2 }),
+        Object.freeze({ type: "fern", offset: [-1.8, 0, -1.3], variant: 0 }),
+        Object.freeze({ type: "lunar_vine", offset: [2.8, 0, -0.5], variant: 1 }),
+        Object.freeze({ type: "lantern_mushrooms", offset: [-2.7, 0, 0.2], variant: 0 }),
+        Object.freeze({ type: "strong_rock", offset: [0.2, 0, 2.7], variant: 1 })
+      ])
+    }),
     crystal_grove: Object.freeze({
       id: "MSC-CRYSTAL-GROVE-001", biomes: Object.freeze(["all"]), rarity: "uncommon", radius: 5,
       objects: Object.freeze([
@@ -29,7 +47,8 @@
         Object.freeze({ type: "pool", offset: [0, 0, 0], variant: 0 }),
         Object.freeze({ type: "spore", offset: [2.2, 0, 1.1], variant: 1 }),
         Object.freeze({ type: "spore", offset: [-2.1, 0, 0.8], variant: 0 }),
-        Object.freeze({ type: "frond", offset: [1.5, 0, -2], variant: 1 }),
+        Object.freeze({ type: "fern", offset: [1.5, 0, -2], variant: 1 }),
+        Object.freeze({ type: "fern", offset: [-1.6, 0, -1.7], variant: 2 }),
         Object.freeze({ type: "fiber", offset: [-1.4, 0, -2.2], variant: 0 })
       ])
     }),
@@ -48,7 +67,8 @@
       objects: Object.freeze([
         Object.freeze({ type: "nature_tree", offset: [0, 0, 0], variant: 1 }),
         Object.freeze({ type: "nature_tree", offset: [-2.4, 0, 1.7], variant: 0 }),
-        Object.freeze({ type: "frond", offset: [1.7, 0, 1.3], variant: 2 }),
+        Object.freeze({ type: "fern", offset: [1.7, 0, 1.3], variant: 2 }),
+        Object.freeze({ type: "fern", offset: [-0.8, 0, -1.6], variant: 0 }),
         Object.freeze({ type: "rock", offset: [2.6, 0, -1.5], variant: 0 })
       ])
     }),
@@ -73,7 +93,7 @@
     translucent_encounter: Object.freeze({
       id: "MSC-NPC-TRANSLUCENT-001", biomes: Object.freeze(["crystalline", "aquatic", "alien"]), rarity: "story", radius: 8,
       objects: Object.freeze([
-        Object.freeze({ type: "npc_translucent", offset: [0, 0, 0], variant: 0 }),
+        Object.freeze({ type: "npc_translucent", offset: [0, 0.75, 0], variant: 0 }),
         Object.freeze({ type: "crystal", offset: [-1.8, 0, 1.4], variant: 1 }),
         Object.freeze({ type: "spore", offset: [1.7, 0, -1.2], variant: 0 })
       ])
@@ -109,7 +129,8 @@
       objects: Object.freeze([
         Object.freeze({ type: "nocturnal_animal", offset: [0, 0, 0], variant: 0 }),
         Object.freeze({ type: "spore", offset: [-1.7, 0, 1.2], variant: 1 }),
-        Object.freeze({ type: "frond", offset: [1.8, 0, 1.1], variant: 2 }),
+        Object.freeze({ type: "fern", offset: [1.8, 0, 1.1], variant: 2 }),
+        Object.freeze({ type: "fern", offset: [-1.4, 0, -1.2], variant: 1 }),
         Object.freeze({ type: "rock", offset: [0.7, 0, -2.1], variant: 1 })
       ])
     }),

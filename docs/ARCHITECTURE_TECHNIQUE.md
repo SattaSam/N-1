@@ -1,6 +1,6 @@
 # BlueFox Odyssey — Architecture technique
 
-Référence : **V0.16.20 + correctifs cumulatifs, générateur V1 et spécification CUM du 3 août 2026**
+Référence : **V0.16.20 + correctifs cumulatifs et générateur V1 du 2 août 2026**
 
 ## Démarrage
 
@@ -211,57 +211,6 @@ placement libre sur le second. Les objets sont instanciés exclusivement par
 les fonctions publiques de `ObjectLibrary` afin que le modèle validé soit le
 même que celui du moteur principal. La spécification complète se trouve dans
 `docs/CUO_BANC_VALIDATION_3D.md`.
-
-## Catalogue Universel des Missions — frontière documentaire et moteur
-
-Le **CUM** est actuellement un référentiel documentaire. Il décrit les missions,
-leurs objectifs, leur narration, leurs dépendances et leur compatibilité avec le
-moteur. Il ne remplace pas les six modules M0 et n’est pas encore lu au
-démarrage du jeu.
-
-Sources d’autorité actuelles :
-
-| Besoin | Source autoritaire actuelle |
-| --- | --- |
-| Exécution et état des missions intégrées | modules M0 + `MissionManager` |
-| Progression historique et multi-mission | registre central |
-| Persistance des missions intégrées | `bluefox_mission_memory_m0_v1` |
-| Catalogue narratif futur | CUM documentaire |
-| Texte source des 35 missions | document Word du catalogue |
-| Ordre de chargement | `index.html` |
-
-Structure documentaire simplifiée :
-
-```text
-MISSIONS
-   ├── OBJECTIFS
-   ├── NARRATION
-   ├── DÉPENDANCES
-   └── MAPPING MOTEUR
-            ↓
-       TABLEAU DE BORD
-```
-
-Règles d’intégration futures :
-
-1. conserver les identifiants stables ;
-2. ne jamais créer un second compteur lorsque le registre central possède déjà
-   l’information ;
-3. séparer compteurs historiques, inventaire actuel, dépôts et consommations ;
-4. instancier les missions locales avec une clé de Map ;
-5. conserver les missions dormantes dans la mémoire sans les exposer à l’UI ;
-6. émettre les pensées et entrées de journal parallèlement aux événements
-   techniques ;
-7. traiter les missions historiques comme définitions existantes à alimenter ;
-8. ajouter les axes de personnalité et les obsessions dans des modules isolés ;
-9. versionner toute évolution du schéma de sauvegarde ;
-10. valider le CUM avant de générer des fichiers JSON ou de modifier M0.
-
-Les prototypes de compilateurs, générateurs et graphes produits pendant la
-session du 3 août restent des **outils exploratoires**. Ils ne constituent pas
-encore une dépendance du jeu ni une spécification exécutable validée.
-
-
 # Extension M0 — Fondation IA
 
 La couche de missions M0 est composée de six modules indépendants chargés avant

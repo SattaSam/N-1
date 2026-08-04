@@ -14,9 +14,9 @@
 
     defaultState() {
       return {
-        version: 2,
-        activeMissionId: "camp",
-        primaryMissionId: "camp",
+        version: 3,
+        activeMissionId: "",
+        primaryMissionId: "",
         activeMissionIds: [],
         missionLifecycle: {},
         pendingActivations: {},
@@ -32,33 +32,28 @@
     load() {
       try {
         const saved = JSON.parse(this.storage.getItem(STORAGE_KEY) || "null");
-        if (!saved || saved.version !== 2) return this.state;
+        if (!saved || saved.version !== 3) {
+          this.storage.removeItem(STORAGE_KEY);
+          return this.state;
+        }
         const { inventory: _obsoleteInventory, ...savedWithoutInventory } = saved;
         this.state = {
           ...this.defaultState(),
           ...savedWithoutInventory,
+          activeMissionId: "",
+          primaryMissionId: "",
+          activeMissionIds: [],
+          missionLifecycle: {},
+          pendingActivations: {},
+          missions: {},
           facts: { ...(saved.facts || {}) },
-          missions: { ...(saved.missions || {}) },
-          missionLifecycle: { ...(saved.missionLifecycle || {}) },
-          pendingActivations: { ...(saved.pendingActivations || {}) },
           rewardedMissions: { ...(saved.rewardedMissions || {}) },
           siteProgression: { ...(saved.siteProgression || {}) },
           history: Array.isArray(saved.history) ? saved.history.slice(-150) : []
         };
-        const legacyPrimary = saved.primaryMissionId ||
-          saved.activeMissionId || "camp";
-        const activeIds = Array.isArray(saved.activeMissionIds)
-          ? saved.activeMissionIds
-          : [legacyPrimary];
-        this.state.primaryMissionId = legacyPrimary;
-        this.state.activeMissionId = legacyPrimary;
-        this.state.activeMissionIds = [...new Set(
-          [legacyPrimary, ...activeIds].filter((id) =>
-            Missions.getDefinition?.(id) || Missions.definitions?.[id]
-          )
-        )];
       } catch (error) {
-        console.warn("Mémoire de mission illisible, réinitialisation M0.", error);
+        console.warn("Mémoire de mission illisible, réinitialisation sur une base vide.", error);
+        this.storage.removeItem(STORAGE_KEY);
       }
       return this.state;
     }
@@ -75,8 +70,9 @@
     }
 
     saveTree(tree) {
+      if (!tree?.id) return false;
       this.state.missions[tree.id] = tree.toJSON();
-      this.save();
+      return this.save();
     }
 
     restoreTree(id) {

@@ -258,12 +258,14 @@
     animateParts(state, elapsed, distance);
   };
 
-  const previousCreate = BF.ObjectLibrary.create.bind(BF.ObjectLibrary);
-  BF.ObjectLibrary.create = function createWithFaunaRuntime(THREE, type, palette, variant) {
-    const instance = previousCreate(THREE, type, palette, variant);
-    if (instance?.root && FAUNA_TYPES.has(type)) register(instance.root, type);
-    return instance;
-  };
+  BF.ObjectLibrary.registerCreateHook((instance, context = {}) => {
+    const root = instance?.root;
+    const type = context.type || instance?.definition?.type || root?.userData?.libraryType;
+    if (!root || !FAUNA_TYPES.has(type)) return;
+    const attach = () => register(root, type);
+    if (root.parent) attach();
+    else global.requestAnimationFrame?.(attach) || attach();
+  });
 
   let running = true;
   const startedAt = seconds();
