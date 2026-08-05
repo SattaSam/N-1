@@ -26,6 +26,20 @@
           <label>Profil de biome
             <select id="biome-profile"></select>
           </label>
+          <div class="budget-grid">
+            <label>Objets ciblés
+              <input id="object-count-budget" type="number" min="1" step="1">
+            </label>
+            <label>Ressources ciblées
+              <input id="resource-count-budget" type="number" min="0" step="1">
+            </label>
+          </div>
+          <p id="engine-budget-range" class="budget-hint"></p>
+          <div class="budget-meter" aria-live="polite">
+            <span>Objets générés <output id="generated-object-count">0</output></span>
+            <span>Ressources générées <output id="generated-resource-count">0</output></span>
+            <span>Budget CUO consommé <output id="consumed-spawn-budget">0</output></span>
+          </div>
           <button id="new-map" class="primary">Générer une nouvelle map</button>
         </section>
         <section>

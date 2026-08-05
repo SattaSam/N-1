@@ -50,13 +50,46 @@ const STARTING_GROUND_URL = "../Images/01_0Crash_Crystal.png";
 const CAPSULE_URL = "../assets/models/BlueFox_Capsule_Depart.glb";
 const PALETTES = Object.freeze({
   volcanic:{ground:0x4c2928,accent:0xff7247}, frozen:{ground:0x718b9d,accent:0xbcefff},
-  forest:{ground:0x47644f,accent:0x79f0b2}, ruins:{ground:0x4c5e58,accent:0x72e5bd},
-  aquatic:{ground:0x386476,accent:0x63dcff}, desert:{ground:0x806451,accent:0xffbd75},
-  crystalline:{ground:0x586b82,accent:0x75e8ff}, alien:{ground:0x5b526f,accent:0xc795ff}
+  forest:{ground:0x47644f,accent:0x79f0b2}, plain:{ground:0x60764c,accent:0xa7e879},
+  swamp:{ground:0x344f43,accent:0x72d6a0}, ruins:{ground:0x4c5e58,accent:0x72e5bd},
+  aquatic:{ground:0x386476,accent:0x63dcff}, coastal:{ground:0x52777d,accent:0x8ce8ef},
+  archipelago:{ground:0x356b74,accent:0x77ebdf}, desert:{ground:0x806451,accent:0xffbd75},
+  magnetic:{ground:0x4c4964,accent:0xb79cff}, crystalline:{ground:0x586b82,accent:0x75e8ff},
+  archaeological:{ground:0x5a5345,accent:0xe1be79}, atypical:{ground:0x514667,accent:0xd39cff},
+  alien:{ground:0x5b526f,accent:0xc795ff}
+});
+const PROFILE_LABELS = Object.freeze({
+  volcanic:"Volcanique", frozen:"Glace", forest:"Forêt", plain:"Plaine", swamp:"Marais",
+  ruins:"Ruines", aquatic:"Océanique", coastal:"Côte", archipelago:"Archipel",
+  desert:"Désert", magnetic:"Magnétique", crystalline:"Cristallin",
+  archaeological:"Site archéologique", atypical:"Atypique", alien:"Alien"
 });
 const profileSelect = document.querySelector("#biome-profile");
-Object.keys(PALETTES).forEach(profile => profileSelect.add(new Option(profile, profile)));
-profileSelect.value = "forest";
+const availableProfiles = Object.keys(BF.BiomeRules?.mapProfiles || PALETTES);
+availableProfiles.forEach(profile => profileSelect.add(new Option(PROFILE_LABELS[profile] || profile, profile)));
+profileSelect.value = availableProfiles.includes("forest") ? "forest" : availableProfiles[0];
+
+const objectBudgetInput = document.querySelector("#object-count-budget");
+const resourceBudgetInput = document.querySelector("#resource-count-budget");
+const engineBudgetRange = document.querySelector("#engine-budget-range");
+const generatedObjectCount = document.querySelector("#generated-object-count");
+const generatedResourceCount = document.querySelector("#generated-resource-count");
+const consumedSpawnBudget = document.querySelector("#consumed-spawn-budget");
+const budgetForPlateaus = (count) => BF.ObjectSpawner.mapObjectBudgets?.[count] || {
+  min: Math.max(20, count * 20), max: Math.max(30, count * 25),
+  resourcesMin: Math.max(4, count * 6), resourcesMax: Math.max(8, count * 9)
+};
+function syncBudgetControls(force = false) {
+  const count = Number(document.querySelector("#plateau-count").value) || 1;
+  const budget = budgetForPlateaus(count);
+  objectBudgetInput.min = budget.min;
+  objectBudgetInput.max = budget.max;
+  resourceBudgetInput.min = budget.resourcesMin;
+  resourceBudgetInput.max = budget.resourcesMax;
+  if (force || !objectBudgetInput.value) objectBudgetInput.value = Math.round((budget.min + budget.max) / 2);
+  if (force || !resourceBudgetInput.value) resourceBudgetInput.value = Math.round((budget.resourcesMin + budget.resourcesMax) / 2);
+  engineBudgetRange.textContent = `Plage moteur ${count} plateau${count > 1 ? "x" : ""} : ${budget.min}–${budget.max} objets, dont ${budget.resourcesMin}–${budget.resourcesMax} ressources.`;
+}
 
 const microSceneCatalog = document.querySelector("#micro-scene-catalog");
 const templates = BF.MicroScenes.list().sort((a,b) => (a.name || a.id).localeCompare(b.name || b.id, "fr"));
@@ -144,20 +177,54 @@ function clearMap() {
 }
 function createPlateaus(count, profile, options = {}) {
   clearMap();
+  syncBudgetControls();
   const palette = PALETTES[profile] || PALETTES.alien;
-  LAYOUTS[count].forEach(([x,z],index) => {
+  const layout = LAYOUTS[count];
+  layout.forEach(([x,z],index) => {
     const material = new THREE.MeshStandardMaterial({map:plateauTexture(index, options.groundUrl),color:options.neutralGround ? 0xffffff : palette.ground,roughness:.9});
     const slab = new THREE.Mesh(new THREE.BoxGeometry(54,.65,54),material);
-    slab.position.set(x,0,z); slab.receiveShadow=true; slab.userData.plateauIndex=index; mapRoot.add(slab); plateaus.push(slab);
+    slab.position.set(x,-.325,z); slab.receiveShadow=true; slab.userData.plateauIndex=index; mapRoot.add(slab); plateaus.push(slab);
   });
   spawner = new BF.ObjectSpawner({THREE,scene:mapRoot,palette,random:Math.random});
+  let populationResult = null;
   if (options.populate !== false) {
-    LAYOUTS[count].forEach(([x,z]) => spawner.populateBiome(profile,{bounds:{minX:x-24,maxX:x+24,minZ:z-24,maxZ:z+24,y:.35},budget:10,scene:mapRoot,palette}));
+    const halfWidth = count <= 2 ? 27 : count <= 4 ? 54 : 81;
+    const halfDepth = count === 1 ? 27 : 54;
+    const targetObjects = Number(objectBudgetInput.value);
+    const resources = Math.min(Number(resourceBudgetInput.value), Math.max(0, targetObjects - 1));
+    const definition = {
+      id: `map-test-${profile}-${count}`,
+      name: `MAP TEST · ${PROFILE_LABELS[profile] || profile}`,
+      profile,
+      palette,
+      entry: { x: layout[0][0], z: layout[0][1] + 10 },
+      generated: true,
+      generator: { biomeId: profile, microSceneIds: [] },
+      traits: profile === "magnetic" ? [{ id: "magnetic", label: "activité magnétique" }]
+        : profile === "swamp" ? [{ id: "wetland", label: "milieu humide" }]
+          : profile === "archipelago" || profile === "coastal" || profile === "aquatic"
+            ? [{ id: "wetland", label: "milieu humide" }] : [],
+      populationBudget: { targetObjects, resources }
+    };
+    populationResult = spawner.populateMap({
+      definition,
+      group: mapRoot,
+      zoneRegions: layout.map(([x,z], index) => ({ index, center: { x, z } })),
+      bounds: { minX: -halfWidth, maxX: halfWidth, minZ: -halfDepth, maxZ: halfDepth },
+      resolvedExits: {}, internalZonePaths: [], landmarks: [],
+      colliders: [], interactables: [], animatedObjects: [], random: Math.random
+    });
   }
-  fox.position.set(LAYOUTS[count][0][0],.35,LAYOUTS[count][0][1]+10);
+  const generatedRecords = spawner.instances.filter(record => record.root?.parent);
+  const resourceRecords = generatedRecords.filter(record => record.definition?.gameplay?.collectable);
+  const consumedBudget = generatedRecords.reduce((sum, record) => sum + Math.max(0, Number(record.definition?.spawn?.spawnCost) || 0), 0);
+  generatedObjectCount.value = String(generatedRecords.length);
+  generatedResourceCount.value = String(resourceRecords.length);
+  consumedSpawnBudget.value = consumedBudget.toFixed(consumedBudget % 1 ? 1 : 0);
+  fox.position.set(layout[0][0],.35,layout[0][1]+10);
   controls.target.copy(fox.position);
-  generatedConfig={count,profile,palette,terrainUrls:catalogTerrains().slice(0,count)};
-  setState(`Map ${count} plateau${count>1?"x":""} générée · autonomie active.`);
+  generatedConfig={count,profile,palette,terrainUrls:catalogTerrains().slice(0,count),populationResult,consumedSpawnBudget:consumedBudget};
+  setState(`Map ${count} plateau${count>1?"x":""} générée avec le moteur réel · budget CUO ${consumedSpawnBudget.value}.`);
 }
 
 function createStageLabel(text, x, z) {
@@ -278,6 +345,7 @@ function distributeMicroScenes() {
   updateTransform();
   toast(`${sceneInstances.length} micro-scène(s) intégrée(s).`);
 }
+document.querySelector("#plateau-count").addEventListener("change", () => syncBudgetControls(true));
 document.querySelector("#new-map").addEventListener("click", () => createPlateaus(Number(document.querySelector("#plateau-count").value),profileSelect.value));
 document.querySelector("#validate-map").addEventListener("click", distributeMicroScenes);
 
@@ -331,4 +399,4 @@ document.querySelector("#save-map").addEventListener("click",async()=>{const nam
 
 function resize(){const width=canvas.clientWidth,height=canvas.clientHeight;if(canvas.width!==Math.floor(width*renderer.getPixelRatio())||canvas.height!==Math.floor(height*renderer.getPixelRatio())){renderer.setSize(width,height,false);camera.aspect=width/Math.max(1,height);camera.updateProjectionMatrix();}}
 function loop(){requestAnimationFrame(loop);const dt=Math.min(.05,clock.getDelta()),now=performance.now();resize();controls.update();updateFox(dt,now);BF.SpecialObjectRuntime?.update(scene,clock.elapsedTime);renderer.render(scene,camera);}
-createEvolutionValidationMap();refreshIndex();renderQueue();loop();
+syncBudgetControls(true);createEvolutionValidationMap();refreshIndex();renderQueue();loop();
