@@ -1,11 +1,31 @@
 .settings-content .trait-row {
-  grid-template-columns: minmax(105px, auto) minmax(150px, 1fr) minmax(105px, auto);
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(105px, auto) minmax(170px, 1fr) minmax(105px, auto);
   align-items: center;
+  column-gap: 8px;
+}
+
+.settings-content .trait-row > .trait-pole-left {
+  grid-column: 1;
+  justify-self: end;
+  text-align: right;
+}
+
+.settings-content .trait-row > input[type="range"] {
+  grid-column: 2;
+  width: 100%;
+  margin: 0;
+}
+
+.settings-content .trait-row > .trait-balance-value {
+  grid-column: 3;
+  justify-self: start;
+  text-align: left;
 }
 
 .settings-content .trait-bipolar-row input[type="range"] {
   direction: rtl;
-  width: 100%;
   height: 5px;
   border-radius: 999px;
   background: linear-gradient(90deg, #7458e8 0%, #8067df 45%, #2b9ee8 100%);
@@ -29,33 +49,73 @@
   background: linear-gradient(90deg, #7458e8 0%, #8067df 45%, #2b9ee8 100%);
 }
 
-.settings-content .trait-pole {
+.settings-content .trait-pole,
+.settings-content .trait-balance-value {
   color: #cdeeff;
   font-size: 10px;
   font-weight: 650;
+  line-height: 1.2;
   white-space: nowrap;
 }
 
-.settings-content .trait-pole-left {
-  text-align: right;
-}
-
-.settings-content .trait-balance-value {
+.settings-content .bac-priority-budget {
+  margin: 4px 0 9px;
+  padding: 7px 10px;
+  border: 1px solid rgba(100, 230, 255, .28);
+  border-radius: 8px;
+  background: rgba(5, 23, 43, .72);
   color: #cdeeff;
-  font-size: 9px;
-  font-weight: 600;
-  line-height: 1.35;
-  text-align: right;
-  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 650;
+  text-align: center;
+}
+
+.settings-content .bac-priority-budget.is-valid {
+  border-color: rgba(103, 233, 174, .45);
+  color: #bfffe0;
+}
+
+.settings-content .bac-priority-budget.is-invalid {
+  border-color: rgba(255, 190, 91, .55);
+  color: #ffe2a8;
+}
+
+.settings-content .bac-trait-tooltip-row::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  z-index: 1000;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  width: min(390px, 82vw);
+  padding: 8px 10px;
+  border: 1px solid rgba(100, 230, 255, .38);
+  border-radius: 8px;
+  background: rgba(3, 15, 30, .97);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .38);
+  color: #eaf8ff;
+  font: 500 10px/1.45 Arial, sans-serif;
+  text-align: left;
+  white-space: pre-line;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 4px);
+  transition: opacity .14s ease, transform .14s ease;
+}
+
+.settings-content .bac-trait-tooltip-row:hover::after,
+.settings-content .bac-trait-tooltip-row:focus-within::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 @media (max-width: 650px) {
   .settings-content .trait-row {
-    grid-template-columns: 1fr;
-    gap: 6px;
+    grid-template-columns: minmax(72px, auto) minmax(110px, 1fr) minmax(72px, auto);
+    column-gap: 5px;
   }
 
+  .settings-content .trait-pole,
   .settings-content .trait-balance-value {
-    text-align: left;
+    font-size: 9px;
   }
 }
