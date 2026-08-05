@@ -6,9 +6,7 @@
     <meta name="theme-color" content="#07131e">
     <title>BlueFox CUO Lab</title>
     <link rel="stylesheet" href="./cuo-lab.css">
-    <script type="importmap">
-      {"imports":{"three":"./vendor/three.module.min.js"}}
-    </script>
+    <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
   </head>
   <body>
     <main id="lab">
@@ -16,97 +14,40 @@
       <header class="topbar">
         <div><strong>BLUEFOX · CUO LAB</strong><small id="catalog-status">Chargement du catalogue…</small></div>
         <div class="top-actions">
-          <button id="focus-showroom">Plateau catalogue</button>
-          <button id="focus-sandbox">Plateau test</button>
-          <button id="focus-selected" disabled>Centrer sur l’objet</button>
-          <button id="focus-fox">Centrer sur BlueFox</button>
-          <button id="move-mode" aria-pressed="false">Déplacer les objets</button>
-          <button id="save-micro-scene">Sauvegarder la micro-scène</button>
+          <button id="focus-showroom">Plateau catalogue</button><button id="focus-sandbox">Plateau test</button>
+          <button id="focus-selected" disabled>Centrer sur l’objet</button><button id="focus-fox">Centrer sur BlueFox</button>
+          <button id="move-mode" aria-pressed="false">Déplacer les objets</button><button id="save-micro-scene">Sauvegarder la micro-scène</button>
           <button id="reload-cuo" title="Relit le fichier CUO depuis le disque">Actualiser le CUO</button>
         </div>
       </header>
-
       <section id="catalog-window" class="tool-window" aria-label="Inventaire CUO">
-        <div id="window-handle" class="window-title">
-          <span>Inventaire CUO</span>
-          <span class="window-actions">
-            <button id="minimize-window" title="Réduire">—</button>
-            <button id="maximize-window" title="Agrandir">□</button>
-          </span>
-        </div>
-        <div class="window-content">
-          <div class="filters">
-            <input id="name-filter" type="search" placeholder="Filtrer par nom ou identifiant…">
-            <select id="category-filter"><option value="">Toutes catégories</option></select>
-            <select id="size-filter">
-              <option value="">Toutes tailles</option><option>XL</option><option>L</option><option>M</option><option>S</option>
-            </select>
-          </div>
-          <p class="hint">Glisser un objet sur le plateau test. Un clic dans la scène sélectionne un objet ou déplace BlueFox.</p>
-          <div id="catalog-list" class="catalog-list"></div>
-        </div>
+        <div id="window-handle" class="window-title"><span>Inventaire CUO</span><span class="window-actions"><button id="minimize-window" title="Réduire">—</button><button id="maximize-window" title="Agrandir">□</button></span></div>
+        <div class="window-content"><div class="filters"><input id="name-filter" type="search" placeholder="Filtrer par nom ou identifiant…"><select id="category-filter"><option value="">Toutes catégories</option></select><select id="size-filter"><option value="">Toutes tailles</option><option>XL</option><option>L</option><option>M</option><option>S</option></select></div><p class="hint">Glisser un objet sur le plateau test. Un clic dans la scène sélectionne un objet ou déplace BlueFox.</p><div id="catalog-list" class="catalog-list"></div></div>
       </section>
-
-      <aside id="inspector" class="inspector">
-        <strong>Inspection</strong>
-        <div id="selection-details">Sélectionnez un objet.</div>
-        <label><input id="show-hitboxes" type="checkbox" checked> Afficher hitbox et collision</label>
-        <div class="inspector-actions">
-          <button id="rotate-left">↶ 15°</button>
-          <button id="rotate-right">↷ 15°</button>
-          <button id="delete-object">Supprimer</button>
-        </div>
-      </aside>
-
+      <aside id="inspector" class="inspector"><strong>Inspection</strong><div id="selection-details">Sélectionnez un objet.</div><label><input id="show-hitboxes" type="checkbox" checked> Afficher hitbox et collision</label><div class="inspector-actions"><button id="rotate-left">↶ 15°</button><button id="rotate-right">↷ 15°</button><button id="delete-object">Supprimer</button></div></aside>
       <aside id="transform-window" class="transform-window" hidden>
-        <strong>Transformation de l’objet</strong>
-        <small id="transform-object-name">Aucun objet sélectionné</small>
-
-        <div class="position-control">
-          <b>Hauteur</b>
-          <button id="position-down" type="button">− 0,25</button>
-          <input id="position-y" type="number" step="0.25" value="0.30" aria-label="Hauteur de l’objet">
-          <button id="position-up" type="button">+ 0,25</button>
-        </div>
+        <strong>Transformation de l’objet</strong><small id="transform-object-name">Aucun objet sélectionné</small>
+        <div class="position-control"><b>Hauteur</b><button id="position-down" type="button">− 0,25</button><input id="position-y" type="number" step="0.25" value="0.30" aria-label="Hauteur de l’objet"><button id="position-up" type="button">+ 0,25</button></div>
         <small class="axis-note">La hauteur peut être positive ou négative.</small>
-
-        <div class="axis-control" data-axis="x">
-          <b>X</b><button data-step="-15">−15°</button><output>0°</output><button data-step="15">+15°</button>
-        </div>
-        <div class="axis-control" data-axis="y">
-          <b>Y</b><button data-step="-15">−15°</button><output>0°</output><button data-step="15">+15°</button>
-        </div>
-        <div class="axis-control" data-axis="z">
-          <b>Z</b><button data-step="-15">−15°</button><output>0°</output><button data-step="15">+15°</button>
-        </div>
-
-        <button id="place-on-ground" type="button">Reposer sur le plateau</button>
-        <button id="reset-transform" type="button">Réinitialiser position et rotation</button>
+        <div class="axis-control" data-axis="x"><b>X</b><button data-step="-15">−15°</button><output>0°</output><button data-step="15">+15°</button></div>
+        <div class="axis-control" data-axis="y"><b>Y</b><button data-step="-15">−15°</button><output>0°</output><button data-step="15">+15°</button></div>
+        <div class="axis-control" data-axis="z"><b>Z</b><button data-step="-15">−15°</button><output>0°</output><button data-step="15">+15°</button></div>
+        <button id="place-on-ground" type="button">Reposer sur le plateau</button><button id="reset-transform" type="button">Réinitialiser position et rotation</button>
       </aside>
-
-      <dialog id="micro-scene-dialog">
-        <form id="micro-scene-form" method="dialog">
-          <h2>Sauvegarder une micro-scène</h2>
-          <label>Nom de la scène<input id="micro-scene-name" required maxlength="48" placeholder="ex. Clairière violette"></label>
-          <p>Code généré : <code id="micro-scene-code">MSC-CUSTOM-CLAIRIERE-VIOLETTE</code></p>
-          <p id="micro-scene-summary"></p>
-          <div class="dialog-actions">
-            <button value="cancel">Annuler</button>
-            <button id="confirm-micro-scene" value="default">Enregistrer</button>
-          </div>
-        </form>
-      </dialog>
-
-      <div class="help">Caméra : clic droit + glisser/rotation · Maj/Ctrl + clic droit/déplacement · molette/zoom · mode objets : clic gauche + glisser sur le plateau test</div>
-      <div id="toast" role="status"></div>
+      <dialog id="micro-scene-dialog"><form id="micro-scene-form" method="dialog"><h2>Sauvegarder une micro-scène</h2><label>Nom de la scène<input id="micro-scene-name" required maxlength="48" placeholder="ex. Clairière violette"></label><p>Code généré : <code id="micro-scene-code">MSC-CUSTOM-CLAIRIERE-VIOLETTE</code></p><p id="micro-scene-summary"></p><div class="dialog-actions"><button value="cancel">Annuler</button><button id="confirm-micro-scene" value="default">Enregistrer</button></div></form></dialog>
+      <div class="help">Caméra : clic droit + glisser/rotation · Maj/Ctrl + clic droit/déplacement · molette/zoom · mode objets : clic gauche + glisser sur le plateau test</div><div id="toast" role="status"></div>
     </main>
     <script src="../engine/bluefox3d-core.js"></script>
-    <script src="../engine/object-library.js?v=cuo-production-complete1"></script>
-    <script src="../engine/object-library-p2-1.js?v=p2-1-r3"></script>
+    <script src="../engine/object-library.js?v=object-hooks-pass1-r5"></script>
+    <script src="../engine/object-library-p2-1.js?v=object-hooks-pass1-r5"></script>
+    <script src="../engine/object-library-flora-patch.js?v=flora-skin-r1"></script>
     <script src="../engine/runtime-budget.js?v=p2-6-r1"></script>
     <script src="../engine/passive-object-runtime.js?v=p2-6-r1"></script>
     <script src="../engine/npc-runtime.js?v=p2-6-r1"></script>
-    <script src="./engine/fauna-runtime.js?v=p2-6-r1"></script>
-    <script type="module" src="./cuo-lab.js?v=cuo-save-registry-fix1"></script>
+    <script src="../engine/fauna-runtime.js?v=p2-6-r1"></script>
+    <script src="../engine/flora-runtime.js?v=p2-6-r1"></script>
+    <script src="../engine/flora-wind-runtime.js?v=flora-wind-r2"></script>
+    <script src="../engine/phenomenon-runtime.js?v=p2-6-r1"></script>
+    <script type="module" src="./cuo-lab.js?v=flora-wind-r2"></script>
   </body>
 </html>
