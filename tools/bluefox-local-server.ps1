@@ -292,10 +292,11 @@ try {
                     if ($method -eq "GET") {
                         $saveText = Read-SaveText -Slot $slot
                         if ($null -eq $saveText) {
-                            $status = "404 Not Found"
-                            $body = [System.Text.Encoding]::UTF8.GetBytes(
-                                '{"error":"Sauvegarde absente."}'
-                            )
+                            # Un emplacement vide est un état normal. Le bridge
+                            # interprète 204 comme une sauvegarde absente sans
+                            # produire d'erreur réseau dans la console.
+                            $status = "204 No Content"
+                            $body = [byte[]]@()
                         } else {
                             [void]($saveText | ConvertFrom-Json)
                             $body = [System.Text.Encoding]::UTF8.GetBytes($saveText)
