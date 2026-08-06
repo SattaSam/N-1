@@ -1317,7 +1317,163 @@
         const body = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.9, 3.4, 7), material(THREE, { color: 0x59636b, roughness: 0.96 }));
         body.position.y = 1.7; body.rotation.z = 0.08; root.add(body); colliders = [{ offset: new THREE.Vector3(), radius: 0.82 }];
       } else if (type === "lantern_mushrooms") {
-        for (let i=0;i<7;i+=1){ const a=i*2.399; const h=0.38+(i%3)*0.16; const stem=new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.055,h,7),material(THREE,{color:0x718270,roughness:0.8})); stem.position.set(Math.cos(a)*0.38,h/2,Math.sin(a)*0.38); root.add(stem); const cap=new THREE.Mesh(new THREE.SphereGeometry(0.16+(i%2)*0.04,10,7),material(THREE,{color:0x89e8c9,emissive:0x33bda2,emissiveIntensity:1.2,roughness:0.35})); cap.scale.y=0.45; cap.position.set(stem.position.x,h,stem.position.z); root.add(cap); }
+        root.name = "LanternMushrooms";
+        const stemMaterial = material(THREE, {
+          color: 0x66786f,
+          emissive: 0x17251f,
+          emissiveIntensity: 0.18,
+          roughness: 0.88
+        });
+        const latticeMaterial = new THREE.MeshStandardMaterial({
+          color: 0x8f7ab8,
+          emissive: 0x43246f,
+          emissiveIntensity: 0.78,
+          roughness: 0.46,
+          metalness: 0.02,
+          transparent: true,
+          opacity: 0.82,
+          side: THREE.DoubleSide,
+          depthWrite: false
+        });
+        const glowMaterial = new THREE.MeshBasicMaterial({
+          color: 0xc56cff,
+          transparent: true,
+          opacity: 0.92,
+          depthWrite: false
+        });
+        const sporeMaterial = new THREE.MeshBasicMaterial({
+          color: 0xdba6ff,
+          transparent: true,
+          opacity: 0.58,
+          depthWrite: false
+        });
+        const mushrooms = [
+          { x: -0.34, z: 0.12, height: 0.82, scale: 1.0, leanX: -0.08, leanZ: 0.11, phase: 0.25 },
+          { x: 0.28, z: -0.16, height: 1.04, scale: 1.24, leanX: 0.07, leanZ: -0.09, phase: 1.15 },
+          { x: 0.08, z: 0.36, height: 0.66, scale: 0.82, leanX: -0.05, leanZ: -0.07, phase: 2.05 }
+        ];
+
+        mushrooms.forEach((spec, mushroomIndex) => {
+          const mushroom = new THREE.Group();
+          mushroom.position.set(spec.x, 0, spec.z);
+          mushroom.rotation.y = spec.phase + variant * 0.17;
+          mushroom.scale.setScalar(spec.scale);
+          root.add(mushroom);
+
+          const stemHeight = spec.height;
+          const stem = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.035, 0.075, stemHeight, 9),
+            stemMaterial
+          );
+          stem.position.y = stemHeight / 2;
+          stem.rotation.x = spec.leanX;
+          stem.rotation.z = spec.leanZ;
+          mushroom.add(stem);
+
+          const cap = new THREE.Group();
+          cap.position.set(
+            Math.sin(spec.leanZ) * stemHeight * 0.34,
+            stemHeight,
+            -Math.sin(spec.leanX) * stemHeight * 0.34
+          );
+          cap.scale.set(1, 0.78, 1);
+          mushroom.add(cap);
+
+          const capRadius = 0.29;
+          const capHeight = 0.34;
+          const ringLevels = [0, 0.34, 0.68, 1];
+          ringLevels.forEach((level, ringIndex) => {
+            const radius = capRadius * (0.35 + Math.sin(level * Math.PI * 0.82) * 0.72);
+            const ring = new THREE.Mesh(
+              new THREE.TorusGeometry(radius, 0.018 + ringIndex * 0.002, 5, 24),
+              latticeMaterial
+            );
+            ring.rotation.x = Math.PI / 2;
+            ring.position.y = level * capHeight - capHeight * 0.18;
+            cap.add(ring);
+          });
+
+          const ribCount = 10;
+          for (let ribIndex = 0; ribIndex < ribCount; ribIndex += 1) {
+            const angle = ribIndex * Math.PI * 2 / ribCount;
+            const points = [];
+            for (let step = 0; step <= 8; step += 1) {
+              const t = step / 8;
+              const radius = capRadius * (0.35 + Math.sin(t * Math.PI * 0.82) * 0.72);
+              points.push(new THREE.Vector3(
+                Math.cos(angle + t * 0.12) * radius,
+                t * capHeight - capHeight * 0.18,
+                Math.sin(angle + t * 0.12) * radius
+              ));
+            }
+            const rib = new THREE.Mesh(
+              new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), 18, 0.014, 5, false),
+              latticeMaterial
+            );
+            cap.add(rib);
+          }
+
+          const crossRibCount = 3;
+          for (let crossIndex = 0; crossIndex < crossRibCount; crossIndex += 1) {
+            const level = 0.2 + crossIndex * 0.24;
+            const radius = capRadius * (0.35 + Math.sin(level * Math.PI * 0.82) * 0.72);
+            const crossRing = new THREE.Mesh(
+              new THREE.TorusGeometry(radius, 0.011, 5, 24),
+              latticeMaterial
+            );
+            crossRing.rotation.x = Math.PI / 2;
+            crossRing.rotation.z = (crossIndex % 2 ? 1 : -1) * 0.08;
+            crossRing.position.y = level * capHeight - capHeight * 0.18;
+            cap.add(crossRing);
+          }
+
+          const lanternCore = new THREE.Mesh(
+            new THREE.SphereGeometry(0.105, 14, 10),
+            glowMaterial
+          );
+          lanternCore.scale.y = 1.18;
+          lanternCore.position.y = 0.02;
+          cap.add(lanternCore);
+
+          const innerHalo = new THREE.Mesh(
+            new THREE.SphereGeometry(0.17, 12, 9),
+            new THREE.MeshBasicMaterial({
+              color: 0x9d45ff,
+              transparent: true,
+              opacity: 0.18,
+              depthWrite: false,
+              side: THREE.BackSide
+            })
+          );
+          innerHalo.position.copy(lanternCore.position);
+          cap.add(innerHalo);
+
+          const lanternLight = new THREE.PointLight(
+            mushroomIndex === 1 ? 0xc36cff : 0xa94dff,
+            mushroomIndex === 1 ? 1.45 : 1.05,
+            mushroomIndex === 1 ? 3.4 : 2.7,
+            2
+          );
+          lanternLight.position.copy(lanternCore.position);
+          cap.add(lanternLight);
+        });
+
+        const sporePositions = [
+          [-0.46, 0.76, -0.18], [0.5, 0.62, 0.08], [-0.08, 1.18, 0.02],
+          [0.22, 0.46, 0.48], [-0.28, 0.38, 0.42], [0.54, 1.04, -0.26]
+        ];
+        sporePositions.forEach(([x, y, z], index) => {
+          const spore = new THREE.Mesh(
+            new THREE.SphereGeometry(0.018 + (index % 3) * 0.006, 7, 5),
+            sporeMaterial
+          );
+          spore.position.set(x, y, z);
+          spore.userData.lanternSpore = true;
+          root.add(spore);
+        });
+
+        root.userData.lanternMushroomCluster = true;
+        root.userData.lanternCount = 3;
       } else if (type === "survey_beacon") {
         const mast=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.16,1.8,8),darkMetal); mast.position.y=0.9; root.add(mast); const head=new THREE.Mesh(new THREE.OctahedronGeometry(0.34,1),material(THREE,{color:0x6ddfff,emissive:0x147aa0,emissiveIntensity:1.25,metalness:0.4})); head.position.y=1.85; root.add(head); colliders=[{offset:new THREE.Vector3(),radius:0.24}];
       } else if (type === "fossil_root_arch") {
