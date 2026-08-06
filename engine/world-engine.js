@@ -1277,6 +1277,76 @@
       this.callbacks.onStatus("BlueFox suit progressivement la destination suggérée.");
     }
 
+
+    addRuntimeGate(direction, exit, definition = BF.maps[this.currentMapId]) {
+      if (!direction || !exit || !this.currentMap?.group || !definition) return null;
+      const existing = this.currentMap.gates?.find(
+        (gate) => gate.userData?.exit?.targetMap === exit.targetMap
+      );
+      if (existing) return existing;
+
+      const bounds = this.currentMap.bounds || 27;
+      const resolved = { ...exit };
+      if (direction === "north") {
+        resolved.z = -bounds + 1.2;
+        resolved.x = BF.clamp(Number(exit.x) || 0, -bounds + 4, bounds - 4);
+      } else if (direction === "south") {
+        resolved.z = bounds - 1.2;
+        resolved.x = BF.clamp(Number(exit.x) || 0, -bounds + 4, bounds - 4);
+      } else if (direction === "east") {
+        resolved.x = bounds - 1.2;
+        resolved.z = BF.clamp(Number(exit.z) || 0, -bounds + 4, bounds - 4);
+      } else if (direction === "west") {
+        resolved.x = -bounds + 1.2;
+        resolved.z = BF.clamp(Number(exit.z) || 0, -bounds + 4, bounds - 4);
+      } else {
+        return null;
+      }
+
+      definition.runtimeExits = definition.runtimeExits || {};
+      definition.runtimeExits[direction] = resolved;
+
+      const gate = new this.THREE.Group();
+      gate.position.set(resolved.x, 0, resolved.z);
+      gate.rotation.y =
+        direction === "east" || direction === "west" ? Math.PI / 2 : 0;
+      gate.userData.exit = { ...resolved, direction };
+      gate.userData.triggerRadius = 2.35;
+      gate.userData.runtimeGenerated = true;
+
+      const arch = new this.THREE.Mesh(
+        new this.THREE.TorusGeometry(2.15, 0.17, 18, 64, Math.PI),
+        new this.THREE.MeshStandardMaterial({
+          color: definition.palette.accent,
+          emissive: definition.palette.accent,
+          emissiveIntensity: 2,
+          metalness: 0.35,
+          roughness: 0.3
+        })
+      );
+      arch.position.y = 0.2;
+      gate.add(arch);
+
+      const ring = new this.THREE.Mesh(
+        new this.THREE.RingGeometry(0.9, 1.35, 48),
+        new this.THREE.MeshBasicMaterial({
+          color: definition.palette.accent,
+          transparent: true,
+          opacity: 0.7,
+          side: this.THREE.DoubleSide,
+          depthWrite: false
+        })
+      );
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.y = 0.05;
+      gate.add(ring);
+
+      this.currentMap.group.add(gate);
+      this.currentMap.gates = this.currentMap.gates || [];
+      this.currentMap.gates.push(gate);
+      return gate;
+    }
+
     async generateUnknownPassage(direction) {
       const opposites = {
         north: "south", south: "north", east: "west", west: "east"
@@ -1318,13 +1388,10 @@
         JSON.stringify(this.generatedTopology)
       );
 
-      const position = this.character.root.position.clone();
-      await this.loadMap(this.currentMapId, null, false);
-      this.character.root.position.copy(position);
-      this.character.setTarget(position);
-      const gate = this.currentMap.gates.find(
-        (candidate) => candidate.userData.exit.targetMap === destination.id
-      );
+      // Ajoute seulement le nouveau portail. La map courante n'est jamais
+      // détruite ni reconstruite lors d'une suggestion d'exploration.
+      const exit = currentDefinition.exits[direction];
+      const gate = this.addRuntimeGate(direction, exit, currentDefinition);
       if (!gate) return;
       this.pendingGate = gate;
       this.character.setTarget(gate.position, "run");

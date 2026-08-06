@@ -11,13 +11,16 @@
     for (const entry of entries) { cursor -= Math.max(0, entry.weight); if (cursor <= 0) return entry; }
     return entries[entries.length - 1] || null;
   };
+  // Budget statique : aucune consommation supplémentaire du RNG et aucun
+  // rappel de populateMap. La densité augmente réellement avec la surface.
+  // Budget statique : densité progressive sans rappel de populateMap.
   const MAP_OBJECT_BUDGETS = Object.freeze({
     1: Object.freeze({ min: 60, max: 75, resourcesMin: 14, resourcesMax: 20, landmarksMin: 1, landmarksMax: 1 }),
-    2: Object.freeze({ min: 75, max: 92, resourcesMin: 22, resourcesMax: 30, landmarksMin: 1, landmarksMax: 1 }),
-    3: Object.freeze({ min: 88, max: 108, resourcesMin: 30, resourcesMax: 39, landmarksMin: 1, landmarksMax: 2 }),
-    4: Object.freeze({ min: 102, max: 124, resourcesMin: 38, resourcesMax: 48, landmarksMin: 1, landmarksMax: 2 }),
-    5: Object.freeze({ min: 116, max: 138, resourcesMin: 44, resourcesMax: 56, landmarksMin: 1, landmarksMax: 2 }),
-    6: Object.freeze({ min: 132, max: 150, resourcesMin: 50, resourcesMax: 62, landmarksMin: 1, landmarksMax: 3 })
+    2: Object.freeze({ min: 94, max: 116, resourcesMin: 24, resourcesMax: 32, landmarksMin: 1, landmarksMax: 1 }),
+    3: Object.freeze({ min: 126, max: 152, resourcesMin: 32, resourcesMax: 42, landmarksMin: 1, landmarksMax: 2 }),
+    4: Object.freeze({ min: 158, max: 190, resourcesMin: 40, resourcesMax: 52, landmarksMin: 1, landmarksMax: 2 }),
+    5: Object.freeze({ min: 190, max: 226, resourcesMin: 48, resourcesMax: 62, landmarksMin: 1, landmarksMax: 2 }),
+    6: Object.freeze({ min: 222, max: 264, resourcesMin: 56, resourcesMax: 72, landmarksMin: 1, landmarksMax: 3 })
   });
   const segmentDistanceSquared = (start, end, x, z) => {
     const dx = end.x - start.x;
@@ -314,9 +317,12 @@
         targetObjectBudget - resourceCount - landmarkObjectBudget
       );
       const mineralDensity = BF.clamp(population.rockCount / 18, 0.35, 1);
+      // Les rochers restent structurants sans absorber la majorité du budget
+      // décoratif sur les grandes cartes.
+      // Plafond rocheux volontairement bas.
       const obstacleBudget = Math.max(
-        plateauCount * 2,
-        Math.round(remainingAfterResources * (0.27 + mineralDensity * 0.12))
+        plateauCount,
+        Math.round(remainingAfterResources * (0.09 + mineralDensity * 0.05))
       );
       const decorationBudget = Math.max(
         0,

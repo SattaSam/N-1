@@ -8,7 +8,7 @@
     forest: Object.freeze({ id: "forest", budget: 46, density: 1.15, weights: Object.freeze({ tree: 2.6, nature_tree: 1.1, cactus: 0.25, frond: 1.75, fern: 2.6, fiber: 1.2, lunar_vine: 0.78, prismatic_orchid: 0.055, adaptive_plant: 0.9, lantern_mushrooms: 0.7, spore: 1.1, rock: 0.38, strong_rock: 0.72, large_rock: 0.28, crystal: 0.08, pool: 0.25, debris: 0.2, brouteur: 0.3, sauteur: 0.24, fun_creature: 0.3, small_creature: 0.32, patte_creature: 0.22 }), requiredTags: Object.freeze([]), forbiddenTags: Object.freeze([]) }),
     jungle: Object.freeze({ id: "jungle", budget: 54, density: 1.3, weights: Object.freeze({ tree: 2.8, nature_tree: 0.85, cactus: 0.42, frond: 1.9, fern: 3.2, fiber: 1.35, lunar_vine: 0.95, adaptive_plant: 1.25, lantern_mushrooms: 0.9, spore: 1.6, pool: 0.35, rock: 0.25, strong_rock: 0.58, large_rock: 0.22, crystal: 0.06, brouteur: 0.34, sauteur: 0.3, fun_creature: 0.35, small_creature: 0.38, patte_creature: 0.28 }), requiredTags: Object.freeze(["plant"]), forbiddenTags: Object.freeze([]) }),
     swamp: Object.freeze({ id: "swamp", budget: 42, density: 1.05, weights: Object.freeze({ pool: 1.8, spore: 1.8, frond: 1.25, fern: 2.75, fiber: 0.85, lunar_vine: 0.5, lantern_mushrooms: 0.85, tree: 0.65, nature_tree: 0.18, small_creature: 0.16, patte_creature: 0.12, rock: 0.18, strong_rock: 0.42, large_rock: 0.18 }), requiredTags: Object.freeze([]), forbiddenTags: Object.freeze([]) }),
-    ruins: Object.freeze({ id: "ruins", budget: 48, density: 1, weights: Object.freeze({ debris: 2.8, stele: 0.75, tech_relic: 0.28, relay_block: 0.62, pulse_core: 0.32, memory_capsule: 0.25, logic_prism: 0.08, survey_beacon: 0.22, arch: 0.28, rock: 0.38, strong_rock: 0.82, large_rock: 0.42, needle: 0.7, crystal: 0.08, magnetic_ore: 0.25, azure_ferrite: 0.48, stellar_iridium: 0.05, frond: 0.35 }), requiredTags: Object.freeze([]), forbiddenTags: Object.freeze([]) }),
+    ruins: Object.freeze({ id: "ruins", budget: 48, density: 1, weights: Object.freeze({ debris: 2.8, stele: 0.75, tech_relic: 0.28, relay_block: 0.62, pulse_core: 0.32, memory_capsule: 0.25, logic_prism: 0.08, arch: 0.28, rock: 0.38, strong_rock: 0.82, large_rock: 0.42, needle: 0.7, crystal: 0.08, magnetic_ore: 0.25, azure_ferrite: 0.48, stellar_iridium: 0.05, frond: 0.35 }), requiredTags: Object.freeze([]), forbiddenTags: Object.freeze([]) }),
     desert: Object.freeze({ id: "desert", budget: 32, density: 0.75, weights: Object.freeze({ rock: 0.75, strong_rock: 1.55, large_rock: 0.72, needle: 1.7, debris: 0.75, stele: 0.22, tech_relic: 0.12, arch: 0.08, crystal: 0.05, magnetic_ore: 0.2, azure_ferrite: 0.38, eroded_monolith: 0.24, relay_block: 0.08, cactus: 0.5, brouteur: 0.14, sauteur: 0.18 }), requiredTags: Object.freeze([]), forbiddenTags: Object.freeze(["plant"]) }),
     mountain: Object.freeze({ id: "mountain", budget: 38, density: 0.85, weights: Object.freeze({ rock: 0.85, strong_rock: 1.9, large_rock: 0.95, eroded_monolith: 0.18, needle: 1.2, crystal: 0.12, magnetic_ore: 0.42, azure_ferrite: 0.72, resonant_basalt: 0.42, stellar_iridium: 0.05, debris: 0.4, stele: 0.18, tech_relic: 0.1, arch: 0.06, nature_tree: 0.28 }), requiredTags: Object.freeze([]), forbiddenTags: Object.freeze([]) }),
     cave: Object.freeze({ id: "cave", budget: 36, density: 0.9, weights: Object.freeze({ needle: 2.2, crystal: 0.35, magnetic_ore: 0.48, resonant_basalt: 0.72, thermosap_moss: 0.38, tech_relic: 0.08, spore: 1.15, pool: 0.35, rock: 0.52, strong_rock: 1.15, large_rock: 0.48 }), requiredTags: Object.freeze([]), forbiddenTags: Object.freeze(["tree"]) }),
@@ -35,11 +35,12 @@
   const MAP_PROFILES = Object.freeze({
     volcanic: profile(18, [["resonant_basalt", 38], ["magnetic_ore", 24], ["thermosap_moss", 20], ["stellar_iridium", 5], ["crystal", 5]], [["strong_rock", 8], ["large_rock", 4], ["needle", 6], ["debris", 8], ["spore", 2]], { particles: 0.28, familyMin: 2, familyMax: 4, specialization: "dominant" }),
     frozen: profile(11, [["thermosap_moss", 32], ["fiber", 27], ["azure_ferrite", 23], ["magnetic_ore", 13], ["crystal", 5]], [["strong_rock", 7], ["large_rock", 3], ["needle", 8], ["frond", 3], ["spore", 4]], { particles: 0.3, familyMin: 2, familyMax: 4 }),
-    forest: profile(7, [["lunar_vine", 31], ["fiber", 29], ["adaptive_plant", 26], ["prismatic_orchid", 8], ["crystal", 3]], [["fern", 12], ["frond", 7], ["lantern_mushrooms", 5], ["spore", 7], ["strong_rock", 4], ["nature_tree", 4], ["fun_creature", 2], ["small_creature", 2], ["patte_creature", 1], ["brouteur", 1], ["sauteur", 1], ["needle", 2]], { particles: 0.55, familyMin: 3, familyMax: 4, specialization: "dominant" }),
-    plain: profile(6, [["fiber", 32], ["adaptive_plant", 25], ["azure_ferrite", 23], ["magnetic_ore", 16], ["prismatic_orchid", 4]], [["frond", 12], ["fern", 6], ["nature_tree", 3], ["small_creature", 2], ["brouteur", 2], ["sauteur", 2], ["rock", 4]], { particles: 0.4, familyMin: 2, familyMax: 4 }),
-    swamp: profile(6, [["fiber", 38], ["lunar_vine", 31], ["adaptive_plant", 23], ["thermosap_moss", 8]], [["fern", 15], ["spore", 12], ["frond", 9], ["lantern_mushrooms", 7], ["pool", 6], ["small_creature", 2], ["patte_creature", 2]], { particles: 0.82, familyMin: 2, familyMax: 4, specialization: "dominant" }),
-    ruins: profile(9, [["azure_ferrite", 32], ["magnetic_ore", 25], ["relay_block", 18], ["pulse_core", 13], ["memory_capsule", 12]], [["debris", 10], ["strong_rock", 6], ["large_rock", 3], ["survey_beacon", 2], ["frond", 5], ["spore", 3]], { particles: 0.48, familyMin: 2, familyMax: 4, componentMax: 2, specialization: "archaeological" }),
-    archaeological: profile(8, [["relay_block", 29], ["pulse_core", 23], ["memory_capsule", 18], ["azure_ferrite", 17], ["magnetic_ore", 13]], [["debris", 14], ["stele", 4], ["survey_beacon", 3], ["arch", 3], ["strong_rock", 4], ["frond", 3]], { particles: 0.55, familyMin: 3, familyMax: 5, componentMax: 3, specialization: "archaeological" }),
+    forest: profile(7, [["lunar_vine", 31], ["fiber", 29], ["adaptive_plant", 26], ["prismatic_orchid", 8], ["crystal", 3]], [["tree", 34], ["nature_tree", 22], ["fern", 18], ["frond", 12], ["lantern_mushrooms", 8], ["spore", 6], ["strong_rock", 2], ["fun_creature", 2], ["small_creature", 2], ["patte_creature", 1], ["brouteur", 1], ["sauteur", 1], ["needle", 1]], { particles: 0.55, familyMin: 3, familyMax: 4, specialization: "dominant" }),
+    plain: profile(6, [["fiber", 32], ["adaptive_plant", 25], ["azure_ferrite", 23], ["magnetic_ore", 16], ["prismatic_orchid", 4]], [["frond", 18], ["fern", 10], ["tree", 14], ["nature_tree", 14], ["small_creature", 2], ["brouteur", 2], ["sauteur", 2], ["rock", 2]], { particles: 0.4, familyMin: 2, familyMax: 4 }),
+    swamp: profile(6, [["fiber", 38], ["lunar_vine", 31], ["adaptive_plant", 23], ["thermosap_moss", 8]], [["fern", 20], ["spore", 12], ["frond", 11], ["lantern_mushrooms", 14], ["tree", 14], ["nature_tree", 10], ["pool", 6], ["small_creature", 2], ["patte_creature", 2]], { particles: 0.82, familyMin: 2, familyMax: 4, specialization: "dominant" }),
+    fungal: profile(5, [["thermosap_moss", 34], ["lunar_vine", 26], ["adaptive_plant", 22], ["fiber", 18]], [["lantern_mushrooms", 28], ["spore", 20], ["fern", 14], ["frond", 9], ["nature_tree", 6], ["tree", 4], ["pool", 4], ["small_creature", 2], ["patte_creature", 2]], { particles: 0.92, familyMin: 2, familyMax: 4, specialization: "fungal" }),
+    ruins: profile(9, [["azure_ferrite", 32], ["magnetic_ore", 25], ["relay_block", 18], ["pulse_core", 13], ["memory_capsule", 12]], [["debris", 10], ["strong_rock", 6], ["large_rock", 3], ["frond", 5], ["spore", 3]], { particles: 0.48, familyMin: 2, familyMax: 4, componentMax: 2, specialization: "archaeological" }),
+    archaeological: profile(8, [["relay_block", 29], ["pulse_core", 23], ["memory_capsule", 18], ["azure_ferrite", 17], ["magnetic_ore", 13]], [["debris", 14], ["stele", 4], ["arch", 3], ["strong_rock", 4], ["frond", 3]], { particles: 0.55, familyMin: 3, familyMax: 5, componentMax: 3, specialization: "archaeological" }),
     aquatic: profile(8, [["lunar_vine", 32], ["adaptive_plant", 29], ["fiber", 26], ["prismatic_orchid", 8], ["azure_ferrite", 5]], [["spore", 12], ["fern", 11], ["frond", 8], ["pool", 5], ["small_creature", 2], ["patte_creature", 2], ["needle", 3]], { particles: 0.86, familyMin: 2, familyMax: 4 }),
     coastal: profile(9, [["fiber", 31], ["lunar_vine", 25], ["azure_ferrite", 24], ["magnetic_ore", 15], ["adaptive_plant", 5]], [["frond", 10], ["pool", 7], ["strong_rock", 6], ["large_rock", 3], ["nature_tree", 2], ["small_creature", 2], ["debris", 3]], { particles: 0.65, familyMin: 2, familyMax: 4 }),
     archipelago: profile(7, [["lunar_vine", 31], ["fiber", 28], ["adaptive_plant", 20], ["azure_ferrite", 17], ["prismatic_orchid", 4]], [["pool", 10], ["frond", 10], ["fern", 8], ["nature_tree", 3], ["small_creature", 3], ["patte_creature", 2], ["strong_rock", 4]], { particles: 0.76, familyMin: 2, familyMax: 4, specialization: "dominant" }),
@@ -54,7 +55,7 @@
   const COMPONENT_FAMILIES = new Set(["relay_block", "pulse_core", "memory_capsule", "logic_prism", "tech_relic"]);
   const clampRichness = (value) => Math.max(1.2, Math.min(2.8, Number(value) || 1.2));
   const RESOURCE_RICHNESS = Object.freeze({
-    volcanic: Object.freeze({ family: "resonant_basalt", multiplier: 1.65 }), frozen: Object.freeze({ family: "thermosap_moss", multiplier: 1.35 }), forest: Object.freeze({ family: "fiber", multiplier: 1.55 }), plain: Object.freeze({ family: "fiber", multiplier: 1.35 }), swamp: Object.freeze({ family: "fiber", multiplier: 1.65 }), ruins: Object.freeze({ family: "azure_ferrite", multiplier: 1.35 }), archaeological: Object.freeze({ family: "relay_block", multiplier: 1.8 }), aquatic: Object.freeze({ family: "lunar_vine", multiplier: 1.45 }), coastal: Object.freeze({ family: "fiber", multiplier: 1.35 }), archipelago: Object.freeze({ family: "lunar_vine", multiplier: 1.55 }), desert: Object.freeze({ family: "azure_ferrite", multiplier: 1.5 }), magnetic: Object.freeze({ family: "magnetic_ore", multiplier: 1.85 }), crystalline: Object.freeze({ family: "crystal", multiplier: 1.75 }), atypical: Object.freeze({ family: "adaptive_plant", multiplier: 1.5 }), alien: Object.freeze({ family: "adaptive_plant", multiplier: 1.2 })
+    volcanic: Object.freeze({ family: "resonant_basalt", multiplier: 1.65 }), frozen: Object.freeze({ family: "thermosap_moss", multiplier: 1.35 }), forest: Object.freeze({ family: "fiber", multiplier: 1.55 }), plain: Object.freeze({ family: "fiber", multiplier: 1.35 }), swamp: Object.freeze({ family: "fiber", multiplier: 1.65 }), fungal: Object.freeze({ family: "thermosap_moss", multiplier: 1.75 }), ruins: Object.freeze({ family: "azure_ferrite", multiplier: 1.35 }), archaeological: Object.freeze({ family: "relay_block", multiplier: 1.8 }), aquatic: Object.freeze({ family: "lunar_vine", multiplier: 1.45 }), coastal: Object.freeze({ family: "fiber", multiplier: 1.35 }), archipelago: Object.freeze({ family: "lunar_vine", multiplier: 1.55 }), desert: Object.freeze({ family: "azure_ferrite", multiplier: 1.5 }), magnetic: Object.freeze({ family: "magnetic_ore", multiplier: 1.85 }), crystalline: Object.freeze({ family: "crystal", multiplier: 1.75 }), atypical: Object.freeze({ family: "adaptive_plant", multiplier: 1.5 }), alien: Object.freeze({ family: "adaptive_plant", multiplier: 1.2 })
   });
 
   const normalize = (value = "") => String(value).toLocaleLowerCase("fr").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -63,6 +64,7 @@
     const traits = new Set((definition?.traits || []).map((trait) => trait.id));
     if (traits.has("magnetic") || /magnet|aimant|levitation/.test(name)) return "magnetic";
     if (/archipel|ilot/.test(name)) return "archipelago";
+    if (traits.has("fungal") || /champignon|fong|mycel|spore/.test(name)) return "fungal";
     if (/marais|mangrove|tourbiere|marecage/.test(name)) return "swamp";
     if (/plaine|prairie|steppe|savane|lande/.test(name)) return "plain";
     if (/cote|littoral|plage|falaise marine/.test(name)) return "coastal";
@@ -130,7 +132,7 @@
       const normalLimit = Math.max(1, familyLimit - componentResources.length);
       const resourceEntries = [...normalResources.slice(0, normalLimit), ...componentResources].slice(0, familyLimit);
       const traitDecorations = [
-        ...(traitIds.has("bioluminescent") ? [["spore", 3]] : []), ...(traitIds.has("fungal") ? [["spore", 4]] : []), ...(traitIds.has("urban") ? [["debris", 5]] : []), ...(traitIds.has("wetland") ? [["fern", 5], ["frond", 2]] : []), ...(traitIds.has("glass") ? [["needle", 3]] : [])
+        ...(traitIds.has("bioluminescent") ? [["spore", 3]] : []), ...(traitIds.has("fungal") ? [["lantern_mushrooms", 8], ["spore", 6], ["fern", 4]] : []), ...(traitIds.has("urban") ? [["debris", 5]] : []), ...(traitIds.has("wetland") ? [["fern", 5], ["frond", 2]] : []), ...(traitIds.has("glass") ? [["needle", 3]] : [])
       ];
       const decorations = definition.id === "crystal" ? [["needle", 9], ["frond", 7], ["debris", 3]] : definition.id === "jungle" ? [["fern", 14], ["spore", 8], ["frond", 6], ["debris", 5], ["needle", 2]] : [...mapProfile.decorations.map((entry) => [...entry]), ...traitDecorations];
       const resourceFamilies = resourceEntries.map((entry) => entry.family);
@@ -154,6 +156,7 @@
     forest: "Forêt",
     plain: "Plaine",
     swamp: "Marais",
+    fungal: "Champignons / fongique",
     ruins: "Ruines",
     archaeological: "Site archéologique",
     aquatic: "Océanique",
@@ -181,6 +184,7 @@
     forest: { ground: 0x47644f, accent: 0x79f0b2 },
     plain: { ground: 0x657753, accent: 0xb8e27f },
     swamp: { ground: 0x3e5b4b, accent: 0x82dfb0 },
+    fungal: { ground: 0x3f5148, accent: 0x8ff0bd },
     ruins: { ground: 0x4c5e58, accent: 0x72e5bd },
     archaeological: { ground: 0x61594f, accent: 0xe2bf7a },
     aquatic: { ground: 0x386476, accent: 0x63dcff },
@@ -246,7 +250,8 @@
       seed: Math.floor((this.random || Math.random)() * 2147483647) + 1,
       traits: profileId === "magnetic" ? [{ id: "magnetic" }]
         : profileId === "swamp" ? [{ id: "wetland" }]
-          : profileId === "atypical" ? [{ id: "mystery" }] : []
+          : profileId === "fungal" ? [{ id: "fungal" }]
+            : profileId === "atypical" ? [{ id: "mystery" }] : []
     };
     const population = BF.BiomeRules.getMapPopulation(previewDefinition);
     const random = this.random || Math.random;
