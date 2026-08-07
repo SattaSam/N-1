@@ -292,6 +292,7 @@
     await createRecoverySnapshot();
     applySnapshot(snapshot, slot);
     writeLocalCache(slot, snapshot);
+    BF.newGameResetInProgress = false;
     global.location.reload();
     return true;
   };
@@ -484,6 +485,7 @@
 
     // Bloque immédiatement toute sauvegarde automatique pendant la purge.
     newGameResetInProgress = true;
+    BF.newGameResetInProgress = true;
     startupReady = false;
 
     try {

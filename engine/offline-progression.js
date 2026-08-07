@@ -7,7 +7,7 @@
   const readJson=(k,f={})=>{try{return JSON.parse(global.localStorage.getItem(k)||"null")??f;}catch{return f;}};
   const mapId=()=>readJson("bluefox_world_position_v2",{}).map||"crystal";
   const resources=()=>{const p=BF.progression?.snapshot?.()||readJson("bluefox_progression_registry_v1",{});return [...new Set([...Object.keys(p.inventory||{}),...Object.keys(p.campStorage||{}),"crystal","fiber","parts"])];};
-  const logSummary=text=>{const s=readJson("bluefox_odyssey_save_v1",{});s.actions=Array.isArray(s.actions)?s.actions:[];s.actions.unshift({text,at:"REPRISE"});s.actions=s.actions.slice(0,50);global.localStorage.setItem("bluefox_odyssey_save_v1",JSON.stringify(s));};
+  const logSummary=text=>BF.addJournalEntry?.({id:`offline-summary-${Date.now()}`,at:Date.now(),type:"offline_progress",title:"Reprise de l’expédition",text,important:true,mapId:mapId()});
   const observe=(i,m)=>BF.progression?.consume?.({id:`offline-observe-${Date.now()}-${i}`,type:BF.ObjectEvents?.types?.OBJECT_SEEN||"object_seen",quantity:1,mapId:m,objectId:`offline-observation-${i%12}`,instanceId:`offline-${m}-observation-${i}`,progression:{mapExpertise:1},detail:{offline:true},at:Date.now()});
   const collect=(i,m,list)=>{const key=list[i%list.length]||"crystal";BF.progression?.consume?.({id:`offline-collect-${Date.now()}-${i}`,type:BF.ObjectEvents?.types?.RESOURCE_COLLECTED||"resource_collected",quantity:1,family:key,inventoryKey:key,mapId:m,objectId:`offline-resource-${key}`,instanceId:`offline-${m}-${key}-${i}`,detail:{offline:true,inventoryKey:key,kind:key},at:Date.now()});return key;};
   const run=()=>{

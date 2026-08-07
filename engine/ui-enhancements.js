@@ -12,7 +12,7 @@
     crystal: {
       name: "Plaine des Cristaux",
       resources: "Cristaux énergétiques, fibres stellaires et composants de l’épave.",
-      synthesis: "BlueFox y sécurise son premier refuge et étudie les ressources proches.",
+      synthesis: "BlueFox y étudie le site d’arrivée et les ressources proches.",
       directions: {
         north: { mapId: null, title: "Territoire non cartographié" },
         west: { mapId: null, title: "Territoire non cartographié" },
@@ -279,15 +279,15 @@
   }
 
   function readJournalState() {
-    let save = {};
+    const behaviorState =
+      global.BlueFox3D?.getBehaviorArbitrationState?.() ||
+      global.BlueFox3D?.getBACState?.() ||
+      global.BlueFox3D?.behaviorArbitration?.snapshot?.() ||
+      {};
+    const save = {
+      traits: behaviorState.traits || behaviorState.personality || {}
+    };
     let clock = {};
-    try {
-      save = JSON.parse(
-        localStorage.getItem("bluefox_odyssey_save_v1") || "{}"
-      );
-    } catch {
-      save = {};
-    }
     try {
       clock = JSON.parse(
         localStorage.getItem("bluefox_planet_clock_v1") || "{}"

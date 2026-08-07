@@ -323,6 +323,9 @@
       this.state = defaultState();
       this.processedIds.clear();
       this.save();
+      global.dispatchEvent(new CustomEvent("bluefox:journal-reset", {
+        detail: BF.getJournalState?.() || { entries: [] }
+      }));
       return this.snapshot();
     }
   }
@@ -331,6 +334,24 @@
   BF.ProgressionMultiSystem = ProgressionMultiSystem;
   BF.multiProgression = system;
   BF.getMultiProgressionState = () => system.snapshot();
+  BF.getJournalState = () => {
+    const snapshot = system.snapshot();
+    const entries = (snapshot.journal || [])
+      .slice(-MAX_JOURNAL_ENTRIES)
+      .reverse()
+      .map((entry) => ({
+        ...entry,
+        displayTime: new Date(Number(entry.at) || Date.now()).toLocaleTimeString("fr-FR", {
+          hour: "2-digit",
+          minute: "2-digit"
+        })
+      }));
+    return {
+      entries,
+      count: entries.length,
+      limit: MAX_JOURNAL_ENTRIES
+    };
+  };
   BF.getMapProgressionIndicators = (mapId) => system.getMapIndicators(mapId);
   BF.addJournalEntry = (entry) => system.addJournalEntry(entry);
   BF.unlockResearchSkill = (skill) => system.unlockResearchSkill(skill);
