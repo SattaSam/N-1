@@ -1,4 +1,4 @@
-﻿(function (global) {
+(function (global) {
   "use strict";
 
   const BF = global.BlueFox3D = global.BlueFox3D || {};
@@ -168,14 +168,9 @@
   };
 
   const fanOut = (manager, event, excludedNodeId = null) => {
-    if (!manager) return 0;
+    if (!manager?.tree) return 0;
     let changed = 0;
-    const trees = manager.trees?.size
-      ? manager.trees
-      : manager.tree
-        ? new Map([[manager.tree.id, manager.tree]])
-        : new Map();
-    if (!trees.size) return 0;
+    const trees = manager.trees || new Map([[manager.tree.id, manager.tree]]);
     trees.forEach((tree, missionId) => {
       if (
         manager.ensureLifecycle &&
@@ -233,14 +228,7 @@
         current &&
         (current.type === mappedType || legacyObservation || compatibleAcquisition)
       ) {
-        const currentTree =
-          this.trees?.get?.(current.missionId) ||
-          (this.tree?.find?.(current.nodeId) ? this.tree : null) ||
-          [...(this.trees?.values?.() || [])].find((tree) =>
-            tree.find?.(current.nodeId)
-          ) ||
-          null;
-        const node = currentTree?.find?.(current.nodeId) || null;
+        const node = this.tree.find(current.nodeId);
         if (node && eventMatchesNode(event, node)) {
           currentConsumed = this.notifyActionCompleted(current.type, detail, {
             passive: false

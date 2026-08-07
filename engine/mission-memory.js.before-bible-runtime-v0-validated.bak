@@ -1,4 +1,4 @@
-﻿(function (global) {
+(function (global) {
   "use strict";
 
   const BF = global.BlueFox3D = global.BlueFox3D || {};
@@ -40,14 +40,12 @@
         this.state = {
           ...this.defaultState(),
           ...savedWithoutInventory,
-          activeMissionId: saved.activeMissionId || "",
-          primaryMissionId: saved.primaryMissionId || "",
-          activeMissionIds: Array.isArray(saved.activeMissionIds)
-            ? [...saved.activeMissionIds]
-            : [],
-          missionLifecycle: { ...(saved.missionLifecycle || {}) },
-          pendingActivations: { ...(saved.pendingActivations || {}) },
-          missions: { ...(saved.missions || {}) },
+          activeMissionId: "",
+          primaryMissionId: "",
+          activeMissionIds: [],
+          missionLifecycle: {},
+          pendingActivations: {},
+          missions: {},
           facts: { ...(saved.facts || {}) },
           rewardedMissions: { ...(saved.rewardedMissions || {}) },
           siteProgression: { ...(saved.siteProgression || {}) },

@@ -1,4 +1,4 @@
-﻿(function (global) {
+(function (global) {
   "use strict";
 
   const BF = global.BlueFox3D = global.BlueFox3D || {};
@@ -97,13 +97,8 @@
     }
 
     resolveInitialMission(fallback) {
-      const candidates = [
-        fallback,
-        this.memory.state.primaryMissionId,
-        this.memory.state.activeMissionId
-      ]
+      const candidates = [fallback]
         .filter(Boolean)
-        .filter((id, index, values) => values.indexOf(id) === index)
         .filter((id) => !this.isLegacyUnscopedSiteMission(id));
       return candidates.find((id) => this.definition(id)) || "";
     }
@@ -582,31 +577,7 @@
     }
 
     getState() {
-      const missionIds = [...(this.activeMissionIds || [])]
-        .filter((id) => this.trees?.has(id));
-      const missionStates = missionIds
-        .sort((left, right) =>
-          Number(right === this.primaryMissionId) -
-          Number(left === this.primaryMissionId)
-        )
-        .map((id) => {
-          const tree = this.trees.get(id);
-          return {
-            missionId: id,
-            title: tree.title,
-            description: tree.description,
-            status: tree.root.status,
-            lifecycleStatus: this.ensureLifecycle(id).status,
-            progress: this.treeProgress(tree),
-            journalIntro: this.definition(id)?.journalIntro ||
-              `J’ai ouvert cette mission parce que ${this.ensureLifecycle(id).discoveryReason || "mes observations indiquent qu’elle est désormais réalisable"}.`,
-            discoveryReason: this.ensureLifecycle(id).discoveryReason,
-            isPrimary: id === this.primaryMissionId,
-            tree: tree.toJSON()
-          };
-        });
-
-      if (!this.tree && !missionStates.length) {
+      if (!this.tree) {
         return {
           version: "M2",
           primaryMissionId: "",
@@ -626,8 +597,6 @@
           inventory: { ...(BF.getProgressionState?.().inventory || {}) }
         };
       }
-
-      const displayTree = this.tree || this.trees.get(missionIds[0]) || null;
       return {
         version: "M2",
         primaryMissionId: this.primaryMissionId,
@@ -637,24 +606,42 @@
         pendingPrimaryMissionTitle: this.pendingPrimaryMissionId
           ? this.trees.get(this.pendingPrimaryMissionId)?.title || ""
           : "",
-        missionId: displayTree?.id || "",
-        title: displayTree?.title || "",
-        description: displayTree?.description || "",
-        status: displayTree?.root?.status || "idle",
+        missionId: this.tree.id,
+        title: this.tree.title,
+        description: this.tree.description,
+        status: this.tree.root.status,
         currentAction: this.currentAction
           ? { ...this.currentAction, params: { ...this.currentAction.params } }
           : null,
-        available: displayTree
-          ? displayTree.availableLeaves().map((node) => ({
-              id: node.id,
-              title: node.title,
-              type: node.type,
-              progress: node.progress,
-              target: node.target
-            }))
-          : [],
-        tree: displayTree ? displayTree.toJSON() : null,
-        missions: missionStates,
+        available: this.tree.availableLeaves().map((node) => ({
+          id: node.id,
+          title: node.title,
+          type: node.type,
+          progress: node.progress,
+          target: node.target
+        })),
+        tree: this.tree.toJSON(),
+        missions: [...this.trees.keys()]
+          .sort((left, right) =>
+            Number(right === this.primaryMissionId) -
+            Number(left === this.primaryMissionId)
+          )
+          .map((id) => {
+          const tree = this.trees.get(id);
+          return {
+            missionId: id,
+            title: tree.title,
+            description: tree.description,
+            status: tree.root.status,
+            lifecycleStatus: this.ensureLifecycle(id).status,
+            progress: this.treeProgress(tree),
+            journalIntro: this.definition(id)?.journalIntro ||
+              `J’ai ouvert cette mission parce que ${this.ensureLifecycle(id).discoveryReason || "mes observations indiquent qu’elle est désormais réalisable"} Mon ambition est de la faire progresser sans négliger mes besoins ni les autres projets actifs.`,
+            discoveryReason: this.ensureLifecycle(id).discoveryReason,
+            isPrimary: id === this.primaryMissionId,
+            tree: tree.toJSON()
+          };
+          }),
         catalog: Object.keys(Missions.definitions)
           .filter((id) => id !== "foundation")
           .filter((id) => Missions.definitions[id].instanceScope !== "map")
