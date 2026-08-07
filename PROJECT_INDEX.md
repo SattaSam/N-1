@@ -1,43 +1,35 @@
-# Index du projet — V4_1_BFO version de travail - Copie
+# Index du projet — N-1
 
-_Généré automatiquement le 07/08/2026 à 01:51:51._
+_Généré automatiquement le 07/08/2026 à 23:27:28._
 
 ## Résumé
 
-- Fichiers : **286**
-- Taille totale : **383.49 Mo**
-- Lignes de texte/code : **46512**
+- Fichiers : **244**
+- Taille totale : **371.43 Mo**
+- Lignes de texte/code : **41623**
 
 ### Répartition par catégorie
 
 | Catégorie | Nombre |
 |---|---:|
-| Asset | 121 |
+| Asset | 118 |
 | Autre | 11 |
-| Sans extension | 1 |
-| Texte / Code | 153 |
+| Texte / Code | 115 |
 
 ## Arborescence
 
 ```text
-V4_1_BFO version de travail - Copie
-├── .project_index_cache.json
-├── Cahier_des_Charges_BlueFox_Odyssey.docx
+N-1
 ├── game.css
 ├── game.js
 ├── generate_project_index.py
 ├── index.html
-├── INSTALLATION.txt
 ├── journal.css
 ├── LANCER_BLUEFOX.bat
 ├── LANCER_CUO_LAB.bat
 ├── LANCER_MAP_TEST.bat
 ├── map-assets.js
-├── map-test.zip
 ├── README_LANCEMENT.txt
-├── Savegarde BFO
-├── VERIFIER_ET_REPARER_IMAGES.bat
-├── vide.txt
 ├── assets
 │   ├── Capsule.png
 │   ├── maps
@@ -65,35 +57,23 @@ V4_1_BFO version de travail - Copie
 │   └── custom-micro-scenes.json
 ├── docs
 │   ├── ARCHITECTURE_TECHNIQUE.md
+│   ├── BlueFox_Architecture_de_Reference_du_Projet_ARP_v1.docx
+│   ├── BlueFox_BAC_CUM_v2_Architecture_Fonctionnelle_v0.1.docx
+│   ├── BlueFox_BIBLE_RECONSTRUITE.docx
+│   ├── BlueFox_CUM_V2_Refonte_Passe_16C_menus_deroulants_restaures.xlsx
 │   ├── BlueFox_CUO_v2_Production_complet.xlsx
 │   ├── BlueFox_Decisions_2026-07-31.docx
-│   ├── BlueFox_Documents_de_reference_Fin_de_session.txt
 │   ├── BlueFox_Game.glb
 │   ├── BlueFox_Odyssey_Catalogue_Missions.docx
 │   ├── BlueFox_Reference_Methodologie.docx
-│   ├── CHANGELOG_2026-08-03.txt
-│   ├── CHANGELOG_DOCUMENTATION_2026-08-03.md
 │   ├── CONVENTIONS_MAPS_IMAGES.md
 │   ├── CUM_COMPLET_audit_psychologique.xlsx
 │   ├── CUO_BANC_VALIDATION_3D.md
 │   ├── DEV_HISTORIQUE.md
-│   ├── ETAT_REPRISE.md
 │   ├── GENERER_CATALOGUE_IMAGES.bat
 │   ├── MASTER.md
-│   ├── MASTER_BLUEFOX_ODYSSEY.md
-│   ├── PLAN_TESTS_V0.16.20.md
-│   ├── README.md
 │   ├── Reference_BlueFox_2026-08-03.md
 │   ├── ROADMAP_TODO.md
-│   ├── SAVE_UI_LOCK.md
-│   ├── SPRINT_M0_FONDATION_IA.md
-│   ├── SPRINT_O1_3_O2_1.md
-│   ├── SPRINT_O2_2_O2_3.md
-│   ├── SPRINT_O3_PROFILS_RESSOURCES_PONDERES.md
-│   ├── SPRINT_O4_REGISTRE_CENTRAL_PROGRESSION.md
-│   ├── SPRINT_O5_1_ROUTEUR_INTERACTIONS_MANUELLES.md
-│   ├── SPRINT_O5_PROGRESSION_MULTI_SYSTEMES.md
-│   ├── SPRINT_O6_EXPLORATION_EXPERTISE_MAP.md
 │   └── TODO.md
 ├── engine
 │   ├── action-bridge.js
@@ -154,6 +134,7 @@ V4_1_BFO version de travail - Copie
 │   ├── tutorial-test-bridge.js
 │   ├── ui-enhancements.css
 │   ├── ui-enhancements.js
+│   ├── vegetation-performance.js
 │   └── world-engine.js
 ├── Images
 │   ├── .2Jungle envahissant les ruines d’une civilisation.png.HQIbXc
@@ -187,7 +168,6 @@ V4_1_BFO version de travail - Copie
 │   ├── 019_1.png
 │   ├── 019_2.png
 │   ├── 019_3.png
-│   ├── 01_0Crash_Crystal.png
 │   ├── 01_1.png
 │   ├── 01_2.png
 │   ├── 01_3.png
@@ -210,10 +190,10 @@ V4_1_BFO version de travail - Copie
 │   ├── 025_1.png
 │   ├── 025_2.png
 │   ├── 025_3.png
+│   ├── 026_1.png
 │   ├── 026_2.png
 │   ├── 026_3.png
 │   ├── 026_4.png
-│   ├── 026_5.png
 │   ├── 027-2.png
 │   ├── 027_1.png
 │   ├── 027_3.png
@@ -260,9 +240,9 @@ V4_1_BFO version de travail - Copie
 │   ├── 23Monde sous-marin bioluminescent.png
 │   ├── 24Mégalopole extraterrestre abandonnée et reconquise par la nature.png
 │   ├── 25Îles flottantes et cascades aériennes.png
-│   ├── 26BisZone de Magetisme.png
 │   ├── 26Zone de magnetisme.png
 │   ├── 27Zone de curiosity.png
+│   ├── 28Zone de Magetisme.png
 │   ├── 2Jungle envahissant les ruines d’une civilisation.png
 │   ├── 3Forêt fongique aux champignons géants.png
 │   ├── 4Savane.png
@@ -274,31 +254,7 @@ V4_1_BFO version de travail - Copie
 │   ├── Capsule.png
 │   ├── images-catalog.js
 │   ├── images.txt
-│   ├── LISEZ_MOI.txt
-│   └── docs
-│       ├── ARCHITECTURE_TECHNIQUE.md
-│       ├── BlueFox_CUO_Audit_Consolidation.xlsx
-│       ├── BlueFox_Decisions_2026-07-31.docx
-│       ├── BlueFox_Game.glb
-│       ├── BlueFox_Reference_Methodologie.docx
-│       ├── CONVENTIONS_MAPS_IMAGES.md
-│       ├── DEV_HISTORIQUE.md
-│       ├── ETAT_REPRISE.md
-│       ├── GENERER_CATALOGUE_IMAGES.bat
-│       ├── MASTER.md
-│       ├── MASTER_BLUEFOX_ODYSSEY.md
-│       ├── PLAN_TESTS_V0.16.20.md
-│       ├── README.md
-│       ├── ROADMAP_TODO.md
-│       ├── SPRINT_M0_FONDATION_IA.md
-│       ├── SPRINT_O1_3_O2_1.md
-│       ├── SPRINT_O2_2_O2_3.md
-│       ├── SPRINT_O3_PROFILS_RESSOURCES_PONDERES.md
-│       ├── SPRINT_O4_REGISTRE_CENTRAL_PROGRESSION.md
-│       ├── SPRINT_O5_1_ROUTEUR_INTERACTIONS_MANUELLES.md
-│       ├── SPRINT_O5_PROGRESSION_MULTI_SYSTEMES.md
-│       ├── SPRINT_O6_EXPLORATION_EXPERTISE_MAP.md
-│       └── TODO.md
+│   └── LISEZ_MOI.txt
 ├── map-test
 │   ├── index.html
 │   ├── map-test.css
@@ -329,11 +285,9 @@ V4_1_BFO version de travail - Copie
 
 | Chemin | Catégorie | Taille | Lignes |
 |---|---|---:|---:|
-| `.project_index_cache.json` | Texte / Code | 86.15 Ko | 2951 |
 | `assets/Capsule.png` | Asset | 4.04 Mo |  |
 | `assets/maps/CONVENTION_IMAGES.txt` | Texte / Code | 1.43 Ko | 36 |
 | `assets/models/BlueFox_Capsule_Depart.glb` | Asset | 1.97 Mo |  |
-| `Cahier_des_Charges_BlueFox_Odyssey.docx` | Autre | 39.34 Ko |  |
 | `css/style.css` | Texte / Code | 1.74 Ko | 23 |
 | `cuo-lab/cuo-lab.css` | Texte / Code | 3.92 Ko | 1 |
 | `cuo-lab/cuo-lab.js` | Texte / Code | 14.21 Ko | 50 |
@@ -350,38 +304,26 @@ V4_1_BFO version de travail - Copie
 | `data/custom-micro-scenes.js` | Texte / Code | 20.70 Ko | 1 |
 | `data/custom-micro-scenes.json` | Texte / Code | 39.38 Ko | 1958 |
 | `docs/ARCHITECTURE_TECHNIQUE.md` | Texte / Code | 9.06 Ko | 232 |
+| `docs/BlueFox_Architecture_de_Reference_du_Projet_ARP_v1.docx` | Autre | 37.00 Ko |  |
+| `docs/BlueFox_BAC_CUM_v2_Architecture_Fonctionnelle_v0.1.docx` | Autre | 36.71 Ko |  |
+| `docs/BlueFox_BIBLE_RECONSTRUITE.docx` | Autre | 54.65 Ko |  |
+| `docs/BlueFox_CUM_V2_Refonte_Passe_16C_menus_deroulants_restaures.xlsx` | Autre | 551.56 Ko |  |
 | `docs/BlueFox_CUO_v2_Production_complet.xlsx` | Autre | 47.87 Ko |  |
 | `docs/BlueFox_Decisions_2026-07-31.docx` | Autre | 37.20 Ko |  |
-| `docs/BlueFox_Documents_de_reference_Fin_de_session.txt` | Texte / Code | 1.88 Ko | 88 |
 | `docs/BlueFox_Game.glb` | Asset | 9.10 Mo |  |
-| `docs/BlueFox_Odyssey_Catalogue_Missions.docx` | Autre | 47.74 Ko |  |
+| `docs/BlueFox_Odyssey_Catalogue_Missions.docx` | Autre | 51.71 Ko |  |
 | `docs/BlueFox_Reference_Methodologie.docx` | Autre | 36.09 Ko |  |
-| `docs/CHANGELOG_2026-08-03.txt` | Texte / Code | 1.60 Ko | 63 |
-| `docs/CHANGELOG_DOCUMENTATION_2026-08-03.md` | Texte / Code | 658 o | 18 |
 | `docs/CONVENTIONS_MAPS_IMAGES.md` | Texte / Code | 2.83 Ko | 84 |
 | `docs/CUM_COMPLET_audit_psychologique.xlsx` | Autre | 229.72 Ko |  |
 | `docs/CUO_BANC_VALIDATION_3D.md` | Texte / Code | 5.28 Ko | 137 |
 | `docs/DEV_HISTORIQUE.md` | Texte / Code | 3.43 Ko | 62 |
-| `docs/ETAT_REPRISE.md` | Texte / Code | 2.03 Ko | 45 |
 | `docs/GENERER_CATALOGUE_IMAGES.bat` | Texte / Code | 348 o | 14 |
 | `docs/MASTER.md` | Texte / Code | 3.93 Ko | 83 |
-| `docs/MASTER_BLUEFOX_ODYSSEY.md` | Texte / Code | 8.60 Ko | 179 |
-| `docs/PLAN_TESTS_V0.16.20.md` | Texte / Code | 4.66 Ko | 109 |
-| `docs/README.md` | Texte / Code | 2.17 Ko | 46 |
 | `docs/Reference_BlueFox_2026-08-03.md` | Texte / Code | 1.59 Ko | 52 |
 | `docs/ROADMAP_TODO.md` | Texte / Code | 6.42 Ko | 126 |
-| `docs/SAVE_UI_LOCK.md` | Texte / Code | 1.17 Ko | 30 |
-| `docs/SPRINT_M0_FONDATION_IA.md` | Texte / Code | 4.69 Ko | 130 |
-| `docs/SPRINT_O1_3_O2_1.md` | Texte / Code | 2.09 Ko | 47 |
-| `docs/SPRINT_O2_2_O2_3.md` | Texte / Code | 1.38 Ko | 24 |
-| `docs/SPRINT_O3_PROFILS_RESSOURCES_PONDERES.md` | Texte / Code | 1.40 Ko | 46 |
-| `docs/SPRINT_O4_REGISTRE_CENTRAL_PROGRESSION.md` | Texte / Code | 2.59 Ko | 78 |
-| `docs/SPRINT_O5_1_ROUTEUR_INTERACTIONS_MANUELLES.md` | Texte / Code | 1.24 Ko | 39 |
-| `docs/SPRINT_O5_PROGRESSION_MULTI_SYSTEMES.md` | Texte / Code | 1.92 Ko | 71 |
-| `docs/SPRINT_O6_EXPLORATION_EXPERTISE_MAP.md` | Texte / Code | 2.60 Ko | 70 |
 | `docs/TODO.md` | Texte / Code | 1.81 Ko | 35 |
 | `engine/action-bridge.js` | Texte / Code | 6.70 Ko | 175 |
-| `engine/behavior-arbitration-core.js` | Texte / Code | 31.21 Ko | 966 |
+| `engine/behavior-arbitration-core.js` | Texte / Code | 30.92 Ko | 957 |
 | `engine/behavior-arbitration-integration.js` | Texte / Code | 13.27 Ko | 301 |
 | `engine/biome-rules.js` | Texte / Code | 28.13 Ko | 382 |
 | `engine/bluefox3d-core.js` | Texte / Code | 1.77 Ko | 54 |
@@ -437,7 +379,8 @@ V4_1_BFO version de travail - Copie
 | `engine/survival-ai-bridge.js` | Texte / Code | 9.46 Ko | 283 |
 | `engine/tutorial-test-bridge.js` | Texte / Code | 9.86 Ko | 241 |
 | `engine/ui-enhancements.css` | Texte / Code | 21.34 Ko | 1012 |
-| `engine/ui-enhancements.js` | Texte / Code | 44.18 Ko | 1179 |
+| `engine/ui-enhancements.js` | Texte / Code | 49.30 Ko | 1341 |
+| `engine/vegetation-performance.js` | Texte / Code | 11.94 Ko | 403 |
 | `engine/world-engine.js` | Texte / Code | 106.90 Ko | 2823 |
 | `game.css` | Texte / Code | 10.65 Mo | 1 |
 | `game.js` | Texte / Code | 27.59 Mo | 3905 |
@@ -473,7 +416,6 @@ V4_1_BFO version de travail - Copie
 | `Images/019_1.png` | Asset | 3.28 Mo |  |
 | `Images/019_2.png` | Asset | 3.38 Mo |  |
 | `Images/019_3.png` | Asset | 3.52 Mo |  |
-| `Images/01_0Crash_Crystal.png` | Asset | 3.31 Mo |  |
 | `Images/01_1.png` | Asset | 3.19 Mo |  |
 | `Images/01_2.png` | Asset | 2.45 Mo |  |
 | `Images/01_3.png` | Asset | 2.25 Mo |  |
@@ -496,10 +438,10 @@ V4_1_BFO version de travail - Copie
 | `Images/025_1.png` | Asset | 1.94 Mo |  |
 | `Images/025_2.png` | Asset | 1.82 Mo |  |
 | `Images/025_3.png` | Asset | 3.27 Mo |  |
+| `Images/026_1.png` | Asset | 1.96 Mo |  |
 | `Images/026_2.png` | Asset | 1.45 Mo |  |
-| `Images/026_3.png` | Asset | 1.96 Mo |  |
+| `Images/026_3.png` | Asset | 3.13 Mo |  |
 | `Images/026_4.png` | Asset | 3.53 Mo |  |
-| `Images/026_5.png` | Asset | 3.13 Mo |  |
 | `Images/027-2.png` | Asset | 1.94 Mo |  |
 | `Images/027_1.png` | Asset | 1.30 Mo |  |
 | `Images/027_3.png` | Asset | 2.13 Mo |  |
@@ -546,9 +488,9 @@ V4_1_BFO version de travail - Copie
 | `Images/23Monde sous-marin bioluminescent.png` | Asset | 2.68 Mo |  |
 | `Images/24Mégalopole extraterrestre abandonnée et reconquise par la nature.png` | Asset | 3.03 Mo |  |
 | `Images/25Îles flottantes et cascades aériennes.png` | Asset | 2.78 Mo |  |
-| `Images/26BisZone de Magetisme.png` | Asset | 2.89 Mo |  |
 | `Images/26Zone de magnetisme.png` | Asset | 3.02 Mo |  |
 | `Images/27Zone de curiosity.png` | Asset | 2.54 Mo |  |
+| `Images/28Zone de Magetisme.png` | Asset | 2.89 Mo |  |
 | `Images/2Jungle envahissant les ruines d’une civilisation.png` | Asset | 2.84 Mo |  |
 | `Images/3Forêt fongique aux champignons géants.png` | Asset | 2.65 Mo |  |
 | `Images/4Savane.png` | Asset | 2.68 Mo |  |
@@ -558,52 +500,26 @@ V4_1_BFO version de travail - Copie
 | `Images/8Marais flottant extraterrestre.png` | Asset | 2.97 Mo |  |
 | `Images/9Steppe de verre et failles turquoise.png` | Asset | 2.92 Mo |  |
 | `Images/Capsule.png` | Asset | 3.60 Mo |  |
-| `Images/docs/ARCHITECTURE_TECHNIQUE.md` | Texte / Code | 7.13 Ko | 190 |
-| `Images/docs/BlueFox_CUO_Audit_Consolidation.xlsx` | Autre | 38.37 Ko |  |
-| `Images/docs/BlueFox_Decisions_2026-07-31.docx` | Autre | 37.20 Ko |  |
-| `Images/docs/BlueFox_Game.glb` | Asset | 9.10 Mo |  |
-| `Images/docs/BlueFox_Reference_Methodologie.docx` | Autre | 36.09 Ko |  |
-| `Images/docs/CONVENTIONS_MAPS_IMAGES.md` | Texte / Code | 2.83 Ko | 84 |
-| `Images/docs/DEV_HISTORIQUE.md` | Texte / Code | 2.21 Ko | 42 |
-| `Images/docs/ETAT_REPRISE.md` | Texte / Code | 1.33 Ko | 34 |
-| `Images/docs/GENERER_CATALOGUE_IMAGES.bat` | Texte / Code | 348 o | 14 |
-| `Images/docs/MASTER.md` | Texte / Code | 3.93 Ko | 83 |
-| `Images/docs/MASTER_BLUEFOX_ODYSSEY.md` | Texte / Code | 6.20 Ko | 132 |
-| `Images/docs/PLAN_TESTS_V0.16.20.md` | Texte / Code | 4.66 Ko | 109 |
-| `Images/docs/README.md` | Texte / Code | 2.00 Ko | 45 |
-| `Images/docs/ROADMAP_TODO.md` | Texte / Code | 5.08 Ko | 104 |
-| `Images/docs/SPRINT_M0_FONDATION_IA.md` | Texte / Code | 4.69 Ko | 130 |
-| `Images/docs/SPRINT_O1_3_O2_1.md` | Texte / Code | 2.09 Ko | 47 |
-| `Images/docs/SPRINT_O2_2_O2_3.md` | Texte / Code | 1.38 Ko | 24 |
-| `Images/docs/SPRINT_O3_PROFILS_RESSOURCES_PONDERES.md` | Texte / Code | 1.40 Ko | 46 |
-| `Images/docs/SPRINT_O4_REGISTRE_CENTRAL_PROGRESSION.md` | Texte / Code | 2.59 Ko | 78 |
-| `Images/docs/SPRINT_O5_1_ROUTEUR_INTERACTIONS_MANUELLES.md` | Texte / Code | 1.24 Ko | 39 |
-| `Images/docs/SPRINT_O5_PROGRESSION_MULTI_SYSTEMES.md` | Texte / Code | 1.92 Ko | 71 |
-| `Images/docs/SPRINT_O6_EXPLORATION_EXPERTISE_MAP.md` | Texte / Code | 2.00 Ko | 60 |
-| `Images/docs/TODO.md` | Texte / Code | 1.81 Ko | 35 |
 | `Images/images-catalog.js` | Texte / Code | 7.17 Ko | 1 |
 | `Images/images.txt` | Texte / Code | 184 o | 5 |
 | `Images/LISEZ_MOI.txt` | Texte / Code | 744 o | 19 |
-| `index.html` | Texte / Code | 5.17 Ko | 79 |
-| `INSTALLATION.txt` | Texte / Code | 551 o | 17 |
+| `index.html` | Texte / Code | 5.26 Ko | 80 |
 | `journal.css` | Texte / Code | 3.10 Ko | 189 |
 | `LANCER_BLUEFOX.bat` | Texte / Code | 346 o | 14 |
 | `LANCER_CUO_LAB.bat` | Texte / Code | 414 o | 14 |
 | `LANCER_MAP_TEST.bat` | Texte / Code | 210 o | 5 |
 | `map-assets.js` | Texte / Code | 5.06 Ko | 175 |
-| `map-test.zip` | Asset | 11.81 Ko |  |
 | `map-test/index.html` | Texte / Code | 5.41 Ko | 98 |
 | `map-test/map-test.css` | Texte / Code | 3.03 Ko | 3 |
 | `map-test/map-test.js` | Texte / Code | 25.84 Ko | 402 |
 | `map-test/README.md` | Texte / Code | 1.72 Ko | 29 |
 | `README_LANCEMENT.txt` | Texte / Code | 31.08 Ko | 566 |
 | `reference/image_annotee.png` | Asset | 1.19 Mo |  |
-| `Savegarde BFO` | Sans extension | 31 o |  |
 | `saves/autosave-1.json` | Texte / Code | 18.52 Ko | 1 |
 | `saves/autosave-2.json` | Texte / Code | 18.52 Ko | 1 |
-| `saves/autosave-3.json` | Texte / Code | 16.79 Ko | 1 |
-| `saves/autosave-4.json` | Texte / Code | 16.78 Ko | 1 |
-| `saves/autosave-5.json` | Texte / Code | 14.10 Ko | 1 |
+| `saves/autosave-3.json` | Texte / Code | 18.52 Ko | 1 |
+| `saves/autosave-4.json` | Texte / Code | 18.52 Ko | 1 |
+| `saves/autosave-5.json` | Texte / Code | 18.52 Ko | 1 |
 | `saves/autosave.json` | Texte / Code | 18.52 Ko | 1 |
 | `saves/recovery.json` | Texte / Code | 7.80 Ko | 1 |
 | `saves/slot-1.json` | Texte / Code | 133.42 Ko | 1 |
@@ -613,5 +529,3 @@ V4_1_BFO version de travail - Copie
 | `tools/bluefox-local-server.ps1` | Texte / Code | 23.88 Ko | 572 |
 | `tools/generer-catalogue-images.mjs` | Autre | 980 o |  |
 | `tools/generer-catalogue-images.ps1` | Texte / Code | 931 o | 27 |
-| `VERIFIER_ET_REPARER_IMAGES.bat` | Texte / Code | 618 o | 26 |
-| `vide.txt` | Texte / Code | 6 o | 2 |
