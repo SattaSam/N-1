@@ -347,6 +347,175 @@
     };
   }
 
+
+  const TRUST_NARRATIVES = Object.freeze({
+    hasard: Object.freeze({
+      title: "Hasard",
+      text: "Il m'arrive parfois de changer d'idée... sans vraiment savoir pourquoi."
+    }),
+    presence: Object.freeze({
+      title: "Présence",
+      text: "Comme si une présence discrète m'accompagnait."
+    }),
+    reserve: Object.freeze({
+      title: "Réserve",
+      text: "Je peine encore à comprendre les intentions de cette présence."
+    }),
+    mefiance: Object.freeze({
+      title: "Méfiance",
+      text: "Je préfère désormais remettre certaines de ses suggestions en question."
+    }),
+    refus: Object.freeze({
+      title: "Refus",
+      text: "Je ne peux plus suivre cette présence aveuglément."
+    }),
+    guide: Object.freeze({
+      title: "Guide",
+      text: "Cette présence cherche peut-être à m'aider."
+    }),
+    compagnon: Object.freeze({
+      title: "Compagnon",
+      text: "Nos décisions semblent converger."
+    }),
+    allie: Object.freeze({
+      title: "Allié",
+      text: "Nos décisions ne forment plus qu'une seule volonté."
+    })
+  });
+
+  function bacTrustSummary(bac) {
+    const awareness = Math.max(0, Math.min(100, Number(bac?.relation?.awareness) || 0));
+    const trust = Math.max(-100, Math.min(100, Number(bac?.relation?.trustGeneral) || 0));
+    let key;
+
+    // Les deux premiers niveaux décrivent la prise de conscience de l'influence.
+    // La confiance ne fait diverger le récit qu'une fois la présence reconnue.
+    if (awareness < 40) key = "hasard";
+    else if (awareness < 60) key = "presence";
+    else if (trust <= -55) key = "refus";
+    else if (trust <= -18) key = "mefiance";
+    else if (trust < 0) key = "reserve";
+    else if (trust < 18) key = "guide";
+    else if (trust < 55) key = "compagnon";
+    else key = "allie";
+
+    const narrative = TRUST_NARRATIVES[key];
+    return {
+      ...narrative,
+      key,
+      trust,
+      needleAngle: -90 + ((trust + 100) / 200) * 180
+    };
+  }
+
+  function ensureTrustIndicatorStyles() {
+    if (document.getElementById("bluefox-journal-trust-styles")) return;
+    const style = document.createElement("style");
+    style.id = "bluefox-journal-trust-styles";
+    style.textContent = `
+      .journal-temporal-meta .journal-feeling-block {
+        grid-column: 1 / -1;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .journal-temporal-meta .journal-feeling-block > b {
+        display: block;
+      }
+      .journal-temporal-meta .journal-trust-row {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        gap: 8px;
+        min-width: 0;
+        margin-top: 5px;
+      }
+      .journal-trust-gauge {
+        position: relative;
+        flex: 0 0 28px;
+        width: 28px;
+        height: 16px;
+      }
+      .journal-trust-gauge__arc {
+        position: absolute;
+        left: 2px;
+        top: 1px;
+        width: 24px;
+        height: 12px;
+        overflow: hidden;
+        border-radius: 24px 24px 0 0;
+        background: conic-gradient(from 270deg at 50% 100%,
+          #bd3845 0deg 72deg,
+          #8b6268 72deg 88deg,
+          #68716e 88deg 92deg,
+          #66866c 92deg 108deg,
+          #42a568 108deg 180deg,
+          transparent 180deg 360deg);
+        box-shadow: inset 0 0 0 1px rgba(225,240,242,.18);
+      }
+      .journal-trust-gauge__arc::after {
+        content: "";
+        position: absolute;
+        left: 4px;
+        top: 4px;
+        width: 16px;
+        height: 8px;
+        border-radius: 16px 16px 0 0;
+        background: rgba(10,28,34,.94);
+      }
+      .journal-trust-gauge__needle {
+        position: absolute;
+        left: 14px;
+        top: 11px;
+        width: 10px;
+        height: 1px;
+        border-radius: 1px;
+        background: #e8f3f2;
+        box-shadow: 0 0 2px rgba(232,243,242,.75);
+        transform-origin: 0 50%;
+        transform: rotate(var(--trust-angle));
+        transition: transform .35s ease;
+        z-index: 2;
+      }
+      .journal-trust-gauge__hub {
+        position: absolute;
+        left: 12px;
+        top: 9px;
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: #d7e7e5;
+        border: 1px solid rgba(7,20,24,.9);
+        z-index: 3;
+      }
+      .journal-trust-gauge__minus,
+      .journal-trust-gauge__plus {
+        position: absolute;
+        bottom: 0;
+        font-size: 7px;
+        line-height: 1;
+        font-weight: 800;
+      }
+      .journal-trust-gauge__minus { left: 0; color: #e45d67; }
+      .journal-trust-gauge__plus { right: 0; color: #61c982; }
+      .journal-trust-copy {
+        min-width: 0;
+        flex: 1 1 auto;
+        overflow: visible;
+      }
+      .journal-trust-copy em {
+        display: block;
+        color: rgba(220,235,234,.78);
+        font-size: 10px;
+        line-height: 1;
+        font-style: italic;
+        white-space: nowrap;
+        overflow: visible;
+        text-overflow: clip;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   function enhanceJournal(panel) {
     const report = panel.querySelector(".journal-report");
     const heading = report?.querySelector(".journal-heading");
@@ -365,18 +534,32 @@
     }
     const { bac, totalMinutes } = readJournalState();
     const emotion = bacEmotionSummary(bac);
+    const trust = bacTrustSummary(bac);
+    ensureTrustIndicatorStyles();
     const mapName =
       global.BlueFox3D?.maps?.[mapId]?.name ||
       mapData[mapId]?.name ||
       "Zone inconnue";
-    const signature = `${Math.floor(totalMinutes)}:${emotion.label}:${mapId}:${mapName}`;
+    const signature = `${Math.floor(totalMinutes)}:${emotion.label}:${trust.key}:${Math.round(trust.trust)}:${mapId}:${mapName}`;
     if (meta.dataset.signature === signature) return;
     meta.dataset.signature = signature;
     meta.innerHTML = `
       <div><span>ZONE ACTUELLE</span><b>${mapName}</b></div>
       <div><span>DATE PLANÉTAIRE</span><b>${fictionalDate(totalMinutes)}</b></div>
       <div><span>DEPUIS L’ARRIVÉE</span><b>${elapsedPlanetTime(totalMinutes)}</b></div>
-      <div><span>RESSENTI DE BLUEFOX</span><b>${emotion.label}</b></div>`;
+      <div class="journal-feeling-block">
+        <span>RESSENTI DE BLUEFOX</span><b>${emotion.label}</b>
+        <div class="journal-trust-row">
+          <div class="journal-trust-gauge" role="img" aria-label="Influence perçue : ${trust.title}">
+            <span class="journal-trust-gauge__arc"></span>
+            <span class="journal-trust-gauge__needle" style="--trust-angle:${trust.needleAngle.toFixed(1)}deg"></span>
+            <span class="journal-trust-gauge__hub"></span>
+            <span class="journal-trust-gauge__minus" aria-hidden="true">−</span>
+            <span class="journal-trust-gauge__plus" aria-hidden="true">+</span>
+          </div>
+          <div class="journal-trust-copy"><em>${trust.text}</em></div>
+        </div>
+      </div>`;
     const badge = heading.querySelector(".emotion");
     if (badge) badge.textContent = emotion.badge;
   }
