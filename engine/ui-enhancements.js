@@ -279,14 +279,10 @@
   }
 
   function readJournalState() {
-    const behaviorState =
-      global.BlueFox3D?.getBehaviorArbitrationState?.() ||
-      global.BlueFox3D?.getBACState?.() ||
-      global.BlueFox3D?.behaviorArbitration?.snapshot?.() ||
-      {};
-    const save = {
-      traits: behaviorState.traits || behaviorState.personality || {}
-    };
+    const bac =
+      global.BlueFox3D?.getBACDiagnostics?.() ||
+      global.BlueFox3D?.BAC?.getDiagnostics?.() ||
+      null;
     let clock = {};
     try {
       clock = JSON.parse(
@@ -302,7 +298,7 @@
       ? Math.max(0, (Date.now() - clock.realTime) / 1000)
       : 0;
     return {
-      save,
+      bac,
       totalMinutes: Math.max(0, baseMinutes + elapsedSinceClock)
     };
   }
@@ -332,40 +328,23 @@
     return `${sols} sol${sols > 1 ? "s" : ""} · ${String(hours).padStart(2, "0")} h ${String(minutes).padStart(2, "0")}`;
   }
 
-  function emotionalSummary(traits = {}) {
-    const dimensions = [
-      {
-        value: Number(traits["Curieux — Prudent"] ?? 50),
-        high: "curiosité vive",
-        low: "prudence attentive"
-      },
-      {
-        value: Number(traits["Courageux — Craintif"] ?? 50),
-        high: "confiance mesurée",
-        low: "vigilance"
-      },
-      {
-        value: Number(traits["Empathique — Indifférent"] ?? 50),
-        high: "empathie",
-        low: "recul analytique"
-      },
-      {
-        value: Number(traits["Respectueux — Destructeur"] ?? 50),
-        high: "respect profond",
-        low: "détermination pragmatique"
-      }
-    ];
-    const strongest = dimensions
-      .map((dimension) => ({
-        label: dimension.value >= 50 ? dimension.high : dimension.low,
-        strength: Math.abs(dimension.value - 50)
-      }))
-      .sort((a, b) => b.strength - a.strength)
-      .slice(0, 2)
-      .map((dimension) => dimension.label);
-    return strongest.length
-      ? strongest.join(" · ")
-      : "curiosité calme";
+  function bacEmotionSummary(bac) {
+    const labels = {
+      curiosity: "curiosité",
+      serenity: "sérénité",
+      concern: "inquiétude",
+      determination: "détermination",
+      frustration: "frustration"
+    };
+    const key = bac?.relation?.dominantEmotion;
+    if (!key) return { label: "indisponible", badge: "ÉMOTION · INDISPONIBLE" };
+    const rawValue = Number(bac?.relation?.emotions?.[key]);
+    const value = Number.isFinite(rawValue) ? Math.round(rawValue) : null;
+    const label = labels[key] || String(key);
+    return {
+      label: value == null ? label : `${label} · ${value}%`,
+      badge: `ÉMOTION · ${label.toLocaleUpperCase("fr")}`
+    };
   }
 
   function enhanceJournal(panel) {
@@ -384,22 +363,22 @@
       meta.className = "journal-temporal-meta";
       heading.insertAdjacentElement("afterend", meta);
     }
-    const { save, totalMinutes } = readJournalState();
-    const emotion = emotionalSummary(save.traits);
+    const { bac, totalMinutes } = readJournalState();
+    const emotion = bacEmotionSummary(bac);
     const mapName =
       global.BlueFox3D?.maps?.[mapId]?.name ||
       mapData[mapId]?.name ||
       "Zone inconnue";
-    const signature = `${Math.floor(totalMinutes)}:${emotion}:${mapId}:${mapName}`;
+    const signature = `${Math.floor(totalMinutes)}:${emotion.label}:${mapId}:${mapName}`;
     if (meta.dataset.signature === signature) return;
     meta.dataset.signature = signature;
     meta.innerHTML = `
       <div><span>ZONE ACTUELLE</span><b>${mapName}</b></div>
       <div><span>DATE PLANÉTAIRE</span><b>${fictionalDate(totalMinutes)}</b></div>
       <div><span>DEPUIS L’ARRIVÉE</span><b>${elapsedPlanetTime(totalMinutes)}</b></div>
-      <div><span>RESSENTI DE BLUEFOX</span><b>${emotion}</b></div>`;
+      <div><span>RESSENTI DE BLUEFOX</span><b>${emotion.label}</b></div>`;
     const badge = heading.querySelector(".emotion");
-    if (badge) badge.textContent = `ÉMOTION · ${emotion}`;
+    if (badge) badge.textContent = emotion.badge;
   }
 
   function setPlanetDetail(panel, direction) {

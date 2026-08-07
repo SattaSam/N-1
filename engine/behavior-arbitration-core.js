@@ -94,20 +94,11 @@
     }, {});
   };
 
-  const readTraits = () => {
-    const saved = loadLegacySave();
-    const source = saved.personality || saved.traits || saved.personnalite || {};
-    return source && typeof source === "object" && !Array.isArray(source)
-      ? clone(source)
-      : {};
-  };
-
   const readProfile = () => {
     const priorities = readPriorities();
     const allocated = AXES.reduce((total, axis) => total + priorities[axis], 0);
     return {
       priorities,
-      traits: readTraits(),
       budget: {
         target: PRIORITY_BUDGET,
         allocated,
