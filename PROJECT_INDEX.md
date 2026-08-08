@@ -1,20 +1,20 @@
 # Index du projet — N-1
 
-_Généré automatiquement le 07/08/2026 à 23:27:28._
+_Généré automatiquement le 08/08/2026 à 04:03:49._
 
 ## Résumé
 
-- Fichiers : **244**
-- Taille totale : **371.43 Mo**
-- Lignes de texte/code : **41623**
+- Fichiers : **274**
+- Taille totale : **379.74 Mo**
+- Lignes de texte/code : **44990**
 
 ### Répartition par catégorie
 
 | Catégorie | Nombre |
 |---|---:|
-| Asset | 118 |
-| Autre | 11 |
-| Texte / Code | 115 |
+| Asset | 122 |
+| Autre | 26 |
+| Texte / Code | 126 |
 
 ## Arborescence
 
@@ -24,6 +24,10 @@ N-1
 ├── game.js
 ├── generate_project_index.py
 ├── index.html
+├── index.html.before-bible-runtime-v0-validated.bak
+├── index.html.before-missions-cumulative-v1.bak
+├── INSTALLER_MISSIONS_CUMULATIVE_V1.bat
+├── INSTALLER_MISSIONS_CUMULATIVE_V1.ps1
 ├── journal.css
 ├── LANCER_BLUEFOX.bat
 ├── LANCER_CUO_LAB.bat
@@ -34,8 +38,12 @@ N-1
 │   ├── Capsule.png
 │   ├── maps
 │   │   └── CONVENTION_IMAGES.txt
-│   └── models
-│       └── BlueFox_Capsule_Depart.glb
+│   ├── models
+│   │   └── BlueFox_Capsule_Depart.glb
+│   └── planet
+│       ├── planet_texture_01.png
+│       ├── planet_texture_02.png
+│       └── planet_texture_main.png
 ├── css
 │   └── style.css
 ├── cuo-lab
@@ -50,6 +58,8 @@ N-1
 │       ├── three.core.min.js
 │       └── three.module.min.js
 ├── data
+│   ├── bible-catalog.js
+│   ├── bible-patterns.js
 │   ├── config.json
 │   ├── custom-maps.js
 │   ├── custom-maps.json
@@ -58,27 +68,39 @@ N-1
 ├── docs
 │   ├── ARCHITECTURE_TECHNIQUE.md
 │   ├── BlueFox_Architecture_de_Reference_du_Projet_ARP_v1.docx
+│   ├── BlueFox_ARP_MAJ_2026-08-08.docx
 │   ├── BlueFox_BAC_CUM_v2_Architecture_Fonctionnelle_v0.1.docx
+│   ├── BlueFox_Bible_Documentaire_Etat_Actuel_MAJ_2026-08-08.docx
 │   ├── BlueFox_BIBLE_RECONSTRUITE.docx
+│   ├── BlueFox_Cahier_des_Charges_ADDENDUM_2026-08-08.docx
 │   ├── BlueFox_CUM_V2_Refonte_Passe_16C_menus_deroulants_restaures.xlsx
 │   ├── BlueFox_CUO_v2_Production_complet.xlsx
 │   ├── BlueFox_Decisions_2026-07-31.docx
 │   ├── BlueFox_Game.glb
+│   ├── BlueFox_Methode_Bible_Patrons_Fiches_V1.docx
+│   ├── BlueFox_Note_Synchronisation_CUM_CUO_2026-08-08.docx
 │   ├── BlueFox_Odyssey_Catalogue_Missions.docx
 │   ├── BlueFox_Reference_Methodologie.docx
+│   ├── BlueFox_TODO_MAJ_2026-08-08.docx
 │   ├── CONVENTIONS_MAPS_IMAGES.md
 │   ├── CUM_COMPLET_audit_psychologique.xlsx
 │   ├── CUO_BANC_VALIDATION_3D.md
 │   ├── DEV_HISTORIQUE.md
 │   ├── GENERER_CATALOGUE_IMAGES.bat
 │   ├── MASTER.md
+│   ├── README.txt
 │   ├── Reference_BlueFox_2026-08-03.md
 │   ├── ROADMAP_TODO.md
-│   └── TODO.md
+│   ├── TODO.md
+│   └── correctifs_valides
+│       ├── BlueFox_Missions_Cumulative_Validated_V1_GitHubBase.zip
+│       └── README_CORRECTIFS.txt
 ├── engine
 │   ├── action-bridge.js
+│   ├── action-bridge.js.before-missions-cumulative-v1.bak
 │   ├── behavior-arbitration-core.js
 │   ├── behavior-arbitration-integration.js
+│   ├── bible-runtime.js
 │   ├── biome-rules.js
 │   ├── bluefox3d-core.js
 │   ├── camera-controller.js
@@ -100,8 +122,12 @@ N-1
 │   ├── mission-aware-analysis.js
 │   ├── mission-catalog.js
 │   ├── mission-empty-core.js
+│   ├── mission-empty-core.js.before-bible-runtime-v0-validated.bak
 │   ├── mission-manager.js
+│   ├── mission-manager.js.before-bible-runtime-v0-validated.bak
+│   ├── mission-manager.js.before-missions-cumulative-v1.bak
 │   ├── mission-memory.js
+│   ├── mission-memory.js.before-bible-runtime-v0-validated.bak
 │   ├── mission-planner.js
 │   ├── mission-tree.js
 │   ├── mission-types.js
@@ -113,12 +139,17 @@ N-1
 │   ├── object-library-p2-1.js
 │   ├── object-library.js
 │   ├── object-m0-bridge.js
+│   ├── object-m0-bridge.js.before-bible-runtime-v0-validated.bak
+│   ├── object-m0-bridge.js.before-missions-cumulative-v1.bak
 │   ├── object-spawner.js
 │   ├── offline-progression.js
 │   ├── passive-object-runtime.js
 │   ├── path-planner.js
 │   ├── persistence-write-buffer.js
 │   ├── phenomenon-runtime.js
+│   ├── planet-globe-ui.css
+│   ├── planet-globe-ui.js
+│   ├── planet-topology-ui.js
 │   ├── position-save-throttle.js
 │   ├── procedural-variants.js
 │   ├── progression-multisystem.js
@@ -135,7 +166,8 @@ N-1
 │   ├── ui-enhancements.css
 │   ├── ui-enhancements.js
 │   ├── vegetation-performance.js
-│   └── world-engine.js
+│   ├── world-engine.js
+│   └── world-topology-v3.js
 ├── Images
 │   ├── .2Jungle envahissant les ruines d’une civilisation.png.HQIbXc
 │   ├── 010_1.png
@@ -288,6 +320,9 @@ N-1
 | `assets/Capsule.png` | Asset | 4.04 Mo |  |
 | `assets/maps/CONVENTION_IMAGES.txt` | Texte / Code | 1.43 Ko | 36 |
 | `assets/models/BlueFox_Capsule_Depart.glb` | Asset | 1.97 Mo |  |
+| `assets/planet/planet_texture_01.png` | Asset | 2.83 Mo |  |
+| `assets/planet/planet_texture_02.png` | Asset | 1.85 Mo |  |
+| `assets/planet/planet_texture_main.png` | Asset | 3.02 Mo |  |
 | `css/style.css` | Texte / Code | 1.74 Ko | 23 |
 | `cuo-lab/cuo-lab.css` | Texte / Code | 3.92 Ko | 1 |
 | `cuo-lab/cuo-lab.js` | Texte / Code | 14.21 Ko | 50 |
@@ -298,33 +333,46 @@ N-1
 | `cuo-lab/vendor/OrbitControls.js` | Texte / Code | 37.80 Ko | 1860 |
 | `cuo-lab/vendor/three.core.min.js` | Texte / Code | 371.46 Ko | 6 |
 | `cuo-lab/vendor/three.module.min.js` | Texte / Code | 330.89 Ko | 6 |
+| `data/bible-catalog.js` | Texte / Code | 3.80 Ko | 118 |
+| `data/bible-patterns.js` | Texte / Code | 1.38 Ko | 31 |
 | `data/config.json` | Texte / Code | 238 o | 16 |
 | `data/custom-maps.js` | Texte / Code | 1.48 Ko | 77 |
 | `data/custom-maps.json` | Texte / Code | 1.46 Ko | 77 |
 | `data/custom-micro-scenes.js` | Texte / Code | 20.70 Ko | 1 |
 | `data/custom-micro-scenes.json` | Texte / Code | 39.38 Ko | 1958 |
-| `docs/ARCHITECTURE_TECHNIQUE.md` | Texte / Code | 9.06 Ko | 232 |
+| `docs/ARCHITECTURE_TECHNIQUE.md` | Texte / Code | 13.29 Ko | 381 |
 | `docs/BlueFox_Architecture_de_Reference_du_Projet_ARP_v1.docx` | Autre | 37.00 Ko |  |
+| `docs/BlueFox_ARP_MAJ_2026-08-08.docx` | Autre | 36.95 Ko |  |
 | `docs/BlueFox_BAC_CUM_v2_Architecture_Fonctionnelle_v0.1.docx` | Autre | 36.71 Ko |  |
+| `docs/BlueFox_Bible_Documentaire_Etat_Actuel_MAJ_2026-08-08.docx` | Autre | 56.56 Ko |  |
 | `docs/BlueFox_BIBLE_RECONSTRUITE.docx` | Autre | 54.65 Ko |  |
+| `docs/BlueFox_Cahier_des_Charges_ADDENDUM_2026-08-08.docx` | Autre | 36.77 Ko |  |
 | `docs/BlueFox_CUM_V2_Refonte_Passe_16C_menus_deroulants_restaures.xlsx` | Autre | 551.56 Ko |  |
 | `docs/BlueFox_CUO_v2_Production_complet.xlsx` | Autre | 47.87 Ko |  |
 | `docs/BlueFox_Decisions_2026-07-31.docx` | Autre | 37.20 Ko |  |
 | `docs/BlueFox_Game.glb` | Asset | 9.10 Mo |  |
+| `docs/BlueFox_Methode_Bible_Patrons_Fiches_V1.docx` | Autre | 36.57 Ko |  |
+| `docs/BlueFox_Note_Synchronisation_CUM_CUO_2026-08-08.docx` | Autre | 36.30 Ko |  |
 | `docs/BlueFox_Odyssey_Catalogue_Missions.docx` | Autre | 51.71 Ko |  |
 | `docs/BlueFox_Reference_Methodologie.docx` | Autre | 36.09 Ko |  |
+| `docs/BlueFox_TODO_MAJ_2026-08-08.docx` | Autre | 37.24 Ko |  |
 | `docs/CONVENTIONS_MAPS_IMAGES.md` | Texte / Code | 2.83 Ko | 84 |
+| `docs/correctifs_valides/BlueFox_Missions_Cumulative_Validated_V1_GitHubBase.zip` | Asset | 6.11 Ko |  |
+| `docs/correctifs_valides/README_CORRECTIFS.txt` | Texte / Code | 682 o | 7 |
 | `docs/CUM_COMPLET_audit_psychologique.xlsx` | Autre | 229.72 Ko |  |
 | `docs/CUO_BANC_VALIDATION_3D.md` | Texte / Code | 5.28 Ko | 137 |
-| `docs/DEV_HISTORIQUE.md` | Texte / Code | 3.43 Ko | 62 |
+| `docs/DEV_HISTORIQUE.md` | Texte / Code | 7.39 Ko | 172 |
 | `docs/GENERER_CATALOGUE_IMAGES.bat` | Texte / Code | 348 o | 14 |
-| `docs/MASTER.md` | Texte / Code | 3.93 Ko | 83 |
+| `docs/MASTER.md` | Texte / Code | 8.12 Ko | 218 |
+| `docs/README.txt` | Texte / Code | 356 o | 9 |
 | `docs/Reference_BlueFox_2026-08-03.md` | Texte / Code | 1.59 Ko | 52 |
 | `docs/ROADMAP_TODO.md` | Texte / Code | 6.42 Ko | 126 |
-| `docs/TODO.md` | Texte / Code | 1.81 Ko | 35 |
-| `engine/action-bridge.js` | Texte / Code | 6.70 Ko | 175 |
+| `docs/TODO.md` | Texte / Code | 5.22 Ko | 131 |
+| `engine/action-bridge.js` | Texte / Code | 7.12 Ko | 184 |
+| `engine/action-bridge.js.before-missions-cumulative-v1.bak` | Autre | 6.70 Ko |  |
 | `engine/behavior-arbitration-core.js` | Texte / Code | 30.92 Ko | 957 |
 | `engine/behavior-arbitration-integration.js` | Texte / Code | 13.27 Ko | 301 |
+| `engine/bible-runtime.js` | Texte / Code | 15.32 Ko | 508 |
 | `engine/biome-rules.js` | Texte / Code | 28.13 Ko | 382 |
 | `engine/bluefox3d-core.js` | Texte / Code | 1.77 Ko | 54 |
 | `engine/camera-controller.js` | Texte / Code | 12.56 Ko | 359 |
@@ -345,9 +393,13 @@ N-1
 | `engine/micro-scenes.js` | Texte / Code | 16.83 Ko | 253 |
 | `engine/mission-aware-analysis.js` | Texte / Code | 2.40 Ko | 78 |
 | `engine/mission-catalog.js` | Texte / Code | 1.10 Ko | 42 |
-| `engine/mission-empty-core.js` | Texte / Code | 6.01 Ko | 222 |
-| `engine/mission-manager.js` | Texte / Code | 25.43 Ko | 688 |
-| `engine/mission-memory.js` | Texte / Code | 3.12 Ko | 114 |
+| `engine/mission-empty-core.js` | Texte / Code | 6.07 Ko | 222 |
+| `engine/mission-empty-core.js.before-bible-runtime-v0-validated.bak` | Autre | 6.01 Ko |  |
+| `engine/mission-manager.js` | Texte / Code | 30.64 Ko | 843 |
+| `engine/mission-manager.js.before-bible-runtime-v0-validated.bak` | Autre | 25.43 Ko |  |
+| `engine/mission-manager.js.before-missions-cumulative-v1.bak` | Autre | 25.86 Ko |  |
+| `engine/mission-memory.js` | Texte / Code | 3.36 Ko | 116 |
+| `engine/mission-memory.js.before-bible-runtime-v0-validated.bak` | Autre | 3.12 Ko |  |
 | `engine/mission-planner.js` | Texte / Code | 2.96 Ko | 94 |
 | `engine/mission-tree.js` | Texte / Code | 5.62 Ko | 191 |
 | `engine/mission-types.js` | Texte / Code | 3.56 Ko | 129 |
@@ -358,13 +410,18 @@ N-1
 | `engine/object-library-flora-patch.js` | Texte / Code | 6.81 Ko | 206 |
 | `engine/object-library-p2-1.js` | Texte / Code | 15.58 Ko | 437 |
 | `engine/object-library.js` | Texte / Code | 148.66 Ko | 2451 |
-| `engine/object-m0-bridge.js` | Texte / Code | 23.35 Ko | 547 |
+| `engine/object-m0-bridge.js` | Texte / Code | 24.50 Ko | 577 |
+| `engine/object-m0-bridge.js.before-bible-runtime-v0-validated.bak` | Autre | 23.35 Ko |  |
+| `engine/object-m0-bridge.js.before-missions-cumulative-v1.bak` | Autre | 23.74 Ko |  |
 | `engine/object-spawner.js` | Texte / Code | 23.38 Ko | 503 |
 | `engine/offline-progression.js` | Texte / Code | 3.28 Ko | 27 |
 | `engine/passive-object-runtime.js` | Texte / Code | 12.16 Ko | 304 |
 | `engine/path-planner.js` | Texte / Code | 6.67 Ko | 200 |
 | `engine/persistence-write-buffer.js` | Texte / Code | 3.78 Ko | 163 |
 | `engine/phenomenon-runtime.js` | Texte / Code | 11.32 Ko | 317 |
+| `engine/planet-globe-ui.css` | Texte / Code | 9.59 Ko | 324 |
+| `engine/planet-globe-ui.js` | Texte / Code | 9.75 Ko | 325 |
+| `engine/planet-topology-ui.js` | Texte / Code | 9.70 Ko | 301 |
 | `engine/position-save-throttle.js` | Texte / Code | 2.95 Ko | 113 |
 | `engine/procedural-variants.js` | Texte / Code | 6.40 Ko | 203 |
 | `engine/progression-multisystem.js` | Texte / Code | 12.15 Ko | 360 |
@@ -382,6 +439,7 @@ N-1
 | `engine/ui-enhancements.js` | Texte / Code | 49.30 Ko | 1341 |
 | `engine/vegetation-performance.js` | Texte / Code | 11.94 Ko | 403 |
 | `engine/world-engine.js` | Texte / Code | 106.90 Ko | 2823 |
+| `engine/world-topology-v3.js` | Texte / Code | 18.83 Ko | 579 |
 | `game.css` | Texte / Code | 10.65 Mo | 1 |
 | `game.js` | Texte / Code | 27.59 Mo | 3905 |
 | `generate_project_index.py` | Texte / Code | 11.13 Ko | 285 |
@@ -500,10 +558,14 @@ N-1
 | `Images/8Marais flottant extraterrestre.png` | Asset | 2.97 Mo |  |
 | `Images/9Steppe de verre et failles turquoise.png` | Asset | 2.92 Mo |  |
 | `Images/Capsule.png` | Asset | 3.60 Mo |  |
-| `Images/images-catalog.js` | Texte / Code | 7.17 Ko | 1 |
+| `Images/images-catalog.js` | Texte / Code | 7.16 Ko | 1 |
 | `Images/images.txt` | Texte / Code | 184 o | 5 |
 | `Images/LISEZ_MOI.txt` | Texte / Code | 744 o | 19 |
-| `index.html` | Texte / Code | 5.26 Ko | 80 |
+| `index.html` | Texte / Code | 5.86 Ko | 87 |
+| `index.html.before-bible-runtime-v0-validated.bak` | Autre | 5.26 Ko |  |
+| `index.html.before-missions-cumulative-v1.bak` | Autre | 5.70 Ko |  |
+| `INSTALLER_MISSIONS_CUMULATIVE_V1.bat` | Texte / Code | 132 o | 5 |
+| `INSTALLER_MISSIONS_CUMULATIVE_V1.ps1` | Texte / Code | 16.57 Ko | 467 |
 | `journal.css` | Texte / Code | 3.10 Ko | 189 |
 | `LANCER_BLUEFOX.bat` | Texte / Code | 346 o | 14 |
 | `LANCER_CUO_LAB.bat` | Texte / Code | 414 o | 14 |
@@ -515,12 +577,12 @@ N-1
 | `map-test/README.md` | Texte / Code | 1.72 Ko | 29 |
 | `README_LANCEMENT.txt` | Texte / Code | 31.08 Ko | 566 |
 | `reference/image_annotee.png` | Asset | 1.19 Mo |  |
-| `saves/autosave-1.json` | Texte / Code | 18.52 Ko | 1 |
-| `saves/autosave-2.json` | Texte / Code | 18.52 Ko | 1 |
+| `saves/autosave-1.json` | Texte / Code | 67.05 Ko | 1 |
+| `saves/autosave-2.json` | Texte / Code | 63.55 Ko | 1 |
 | `saves/autosave-3.json` | Texte / Code | 18.52 Ko | 1 |
 | `saves/autosave-4.json` | Texte / Code | 18.52 Ko | 1 |
 | `saves/autosave-5.json` | Texte / Code | 18.52 Ko | 1 |
-| `saves/autosave.json` | Texte / Code | 18.52 Ko | 1 |
+| `saves/autosave.json` | Texte / Code | 67.56 Ko | 1 |
 | `saves/recovery.json` | Texte / Code | 7.80 Ko | 1 |
 | `saves/slot-1.json` | Texte / Code | 133.42 Ko | 1 |
 | `tests/exploration-mission-routing.test.js` | Texte / Code | 1.86 Ko | 61 |

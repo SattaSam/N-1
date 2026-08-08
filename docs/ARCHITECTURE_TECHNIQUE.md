@@ -1,6 +1,6 @@
 # BlueFox Odyssey — Architecture technique
 
-Référence : **V0.16.20 + correctifs cumulatifs et générateur V1 du 2 août 2026**
+Référence : **V0.16.20 + correctifs cumulatifs, générateur V1, BibleRuntime V0 et missions multi-actives — 8 août 2026**
 
 ## Démarrage
 
@@ -230,3 +230,152 @@ plus considérée comme source d’autorité visuelle.
 Une Zone n’est pas validée à l’arrivée. `EXPLORE_ZONE` représente la
 reconnaissance géographique ; l’objectif parent doit encore réunir trois relevés
 différents et une cartographie avant de devenir `completed`.
+
+
+# Extension BibleRuntime — Patrons, fiches et arbitrage BAC
+
+## Responsabilités
+
+| Besoin | Fichier / couche autoritaire |
+| --- | --- |
+| Patrons de mission | `data/bible-patterns.js` |
+| Fiches / catalogue Bible injectables | `data/bible-catalog.js` |
+| Traduction Patron + Fiche vers définition moteur | `engine/bible-runtime.js` |
+| Arbre et cycle de vie des missions | `engine/mission-manager.js` |
+| Planification d'une action réalisable | `engine/mission-planner.js` |
+| Exécution d'une action moteur | `engine/action-bridge.js` |
+| Événements objets réels et progression passive | `engine/object-m0-bridge.js` + `ObjectEvents` |
+| Arbitrage entre comportements / axes | BAC |
+| Persistance des missions | `engine/mission-memory.js` |
+
+## Pipeline officiel
+
+```text
+Bible documentaire
+      ↓
+classification par patron
+      ↓
+fiche légère
+      ↓
+BibleRuntime
+      ↓
+définition MissionTree
+      ↓
+MissionManager / Planner
+      ↓
+ActionBridge / ObjectEvents
+      ↓
+BAC + WorldEngine
+```
+
+BibleRuntime n'est pas une seconde IA ni un moteur parallèle. Il sert d'adaptateur
+entre la documentation narrative et le moteur de missions existant.
+
+## Patrons V1
+
+### DÉCOUVRIR / COMPRENDRE
+Cas type : observation → inspection éventuelle → analyse → connaissance.
+
+### ACCUMULER / ATTEINDRE UN SEUIL
+Cas type : N collectes, N observations, N rencontres, N zones, N analyses.
+Les événements sont comptés indépendamment de la mission qui a motivé l'action.
+
+### PRÉPARER → PRODUIRE / DÉBLOQUER
+Cas type : prérequis + ressources / connaissances → résolution automatique.
+
+Sorties normalisées :
+
+- `WORLD` : objet / micro-scène dans le monde ;
+- `INVENTORY` : objet ajouté à l'inventaire ;
+- `KNOWLEDGE` : blueprint / recherche débloqué.
+
+Une sortie de mission ne doit pas imposer artificiellement une action `BUILD`
+si le résultat attendu peut être appliqué directement.
+
+## Multi-missions et BAC
+
+Le moteur distingue :
+
+```text
+Mission principale
+    → influence forte sur les décisions autonomes
+
+Missions secondaires
+    → influence faible mais réelle
+    → progression passive permanente
+```
+
+Le budget d'influence des missions secondaires est global : multiplier le nombre
+de missions secondaires ne doit jamais multiplier mécaniquement leur poids total.
+
+Valeur de test validée : principale `100`, budget global secondaires `20`.
+
+Le BAC reçoit les axes :
+
+- survival ;
+- exploration ;
+- collection / logistics ;
+- research / knowledge ;
+- construction / technology.
+
+## Contrat d'exécution d'une action mission
+
+`ActionBridge.execute()` ne peut renvoyer `true` que si une action réelle a
+effectivement été acceptée par le moteur.
+
+Une interaction refusée doit :
+
+1. renvoyer `false` ;
+2. nettoyer les marqueurs de l'objet ;
+3. ne pas créer de `currentAction` fantôme ;
+4. remettre à zéro toute cible de déplacement devenue résiduelle.
+
+## Watchdog des actions orphelines
+
+Une `currentAction` peut être annulée et replannifiée si :
+
+- elle existe depuis plusieurs secondes ;
+- aucune interaction réelle n'est en cours ;
+- aucune routine, transition, exploration de zone ou portail n'est actif ;
+- BlueFox n'est plus réellement en déplacement.
+
+Ce watchdog est une sécurité ; il ne doit pas interrompre une action moteur encore
+active.
+
+## Persistance F5
+
+`MissionMemory` restaure :
+
+- mission principale ;
+- missions actives ;
+- lifecycle ;
+- arbres ;
+- compteurs ;
+- activations en attente.
+
+Un simple chargement ou un catalogue vide ne doit jamais être interprété comme une
+commande de purge.
+
+Seule une action explicite de type **Nouvelle partie** peut remettre la progression
+de mission à zéro.
+
+# Extension topologie Planète — 8 août 2026
+
+La topologie spatiale est portée par des coordonnées canoniques. Une coordonnée ne
+peut représenter qu'une seule Map.
+
+Règle :
+
+```text
+déplacement vers coordonnée libre
+→ génération d'une nouvelle Map
+
+déplacement vers coordonnée déjà occupée
+→ reconnexion vers la Map existante
+```
+
+Le menu Planète est une projection de cette topologie, jamais une seconde source
+de vérité.
+
+Le rendu organique et la texture planétaire neutre font partie du jalon actuel.
+Le dernier réglage visuel du design de menu reste en validation.

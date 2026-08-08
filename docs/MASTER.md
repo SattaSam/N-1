@@ -1,7 +1,7 @@
 # BLUEFOX ODYSSEY — MASTER
 
 ## État de référence
-Dernière mise à jour : 2026-07-31
+Dernière mise à jour : 2026-08-08
 
 ### Version de travail
 - Base PC connue : V16.20.
@@ -81,3 +81,138 @@ Avant tout correctif :
 
 ### Direction actuelle
 Priorité à la stabilité, au rendu lisible et aux petits livrables réellement testables.
+
+
+## Jalon narratif / missions — 2026-08-08
+
+### Principe officiel Bible → moteur
+
+La **Bible documentaire reste une source narrative humaine**. Elle n'est pas réécrite
+sous forme de données moteur ligne par ligne.
+
+Chaîne officielle :
+
+```text
+BIBLE
+  ↓
+PATRON DE MISSION
+  ↓
+FICHE DE MISSION
+  ↓
+BibleRuntime
+  ↓
+MissionManager + ObjectEvents + BAC
+  ↓
+Moteur du jeu
+```
+
+Le **patron** contient la mécanique commune à une famille de missions.
+La **fiche** ne contient que les paramètres propres à une mission.
+
+Règle de production : traiter la Bible **patron par patron**, convertir toutes les
+missions compatibles en lot, auditer la passe, valider, puis seulement passer au
+patron suivant.
+
+### Patrons V1 validés
+
+1. **DÉCOUVRIR / COMPRENDRE**
+   - déclencheur ;
+   - observer / inspecter ;
+   - éventuellement analyser ;
+   - seuil ou condition de compréhension ;
+   - narration ;
+   - conséquence / récompense.
+
+2. **ACCUMULER / ATTEINDRE UN SEUIL**
+   - compter des événements réels du jeu ;
+   - une action peut créditer plusieurs missions simultanément ;
+   - seuil atteint ;
+   - narration ;
+   - conséquence / récompense.
+
+3. **PRÉPARER → PRODUIRE / DÉBLOQUER**
+   - prérequis / ressources / connaissances ;
+   - conditions remplies ;
+   - résolution automatique ;
+   - narration ;
+   - résultat.
+
+### Fiche de mission V1
+
+Une fiche doit rester légère et humaine :
+
+- Mission ;
+- Patron ;
+- Axe BAC principal / secondaire éventuel ;
+- Déclenchement ;
+- Objectif ;
+- Résolution ;
+- Résultat ;
+- Narration ;
+- Suite.
+
+Ne pas recopier dans chaque fiche les règles déjà définies par le patron.
+
+### Axes BAC V1
+
+Axes comportementaux retenus :
+
+- Survie ;
+- Exploration ;
+- Collecte / Logistique ;
+- Recherche / Connaissance ;
+- Construction / Technologie.
+
+La mission prioritaire influence fortement BlueFox.
+Les missions secondaires restent actives, progressent passivement à partir des
+événements réels et peuvent occasionnellement proposer une action autonome sans
+devenir prioritaires.
+
+### Résolution des objectifs BUILD / fabrication
+
+Un objectif de fabrication ou de construction n'exige pas nécessairement une
+action physique supplémentaire de BlueFox.
+
+Quand les conditions sont satisfaites, la mission peut produire directement une
+sortie standard :
+
+- **MONDE** : apparition d'un objet ou d'une micro-scène
+  (camp, drone, balise, etc.) ;
+- **INVENTAIRE** : ajout d'un outil ou objet fabriqué dans le sac ;
+- **CONNAISSANCE** : ajout d'un blueprint / recherche connue.
+
+Ce principe devient la piste prioritaire pour `BIBLE-V0-CAMP` et les futures
+missions de construction.
+
+### État technique mission validé
+
+- BibleRuntime V0 chargé avant le moteur monde ;
+- trois patrons / trois missions techniques de test ;
+- missions multiples actives ;
+- mission principale distincte des secondaires ;
+- progression passive multi-missions via les événements réels ;
+- une mission secondaire peut progresser sans devenir prioritaire ;
+- persistance F5 des missions, compteurs et priorité validée ;
+- ancienne purge Mission V0 rendue non destructive au démarrage ;
+- arbitrage autonome principale / secondaires raccordé au BAC ;
+- poids de référence : principale `100`, budget global secondaires `20` ;
+- une action secondaire conserve son `missionId` et se termine sur son propre arbre ;
+- refus d'interaction propagé proprement au MissionManager ;
+- reset de cible résiduelle après interaction refusée ;
+- watchdog des `currentAction` orphelines.
+
+Limite connue : blocage ponctuel autour d'un arbre-cactus lors d'une observation,
+probablement lié à la hitbox / approche ; correction reportée.
+
+## Carte Planète — état 2026-08-08
+
+La topologie coordonnée du monde est désormais la référence : une carte possède
+une position spatiale et une exploration vers une coordonnée déjà occupée doit
+reconnecter la carte existante au lieu d'en générer une nouvelle.
+
+Le menu Planète représente cette topologie de manière organique avec les zones
+explorées, une texture planétaire neutre et des liaisons cohérentes.
+
+Le **dernier design visuel du menu Planète est en cours de validation** :
+ne pas le considérer définitivement figé tant que la validation dédiée n'est pas
+clôturée.
