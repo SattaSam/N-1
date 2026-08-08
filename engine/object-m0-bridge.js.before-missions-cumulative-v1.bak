@@ -298,16 +298,7 @@
           target.userData.requestedInteraction = action.type;
           target.userData.requestedInteractionSource = "mission";
           target.userData.missionSubject = action.params?.subject || null;
-
-          const accepted = this.engine.targetInteraction(target);
-          if (accepted === false) {
-            target.userData.requestedInteraction = null;
-            target.userData.requestedInteractionSource = null;
-            target.userData.missionSubject = null;
-            target.userData.lastInteractionAt = performance.now();
-            this.engine.callbacks?.onAction?.("mission-interaction-refused");
-            return false;
-          }
+          this.engine.targetInteraction(target);
           return true;
         }
       }
@@ -331,15 +322,6 @@
         this.callbacks.onStatus("BlueFox ne sait pas encore comment interagir avec cet objet.");
         object.userData.requestedInteraction = null;
         object.userData.requestedInteractionSource = null;
-
-        // stale-target-reset-v1
-        this.pendingInteraction = null;
-        this.interactionStartedAt = 0;
-        this.interactionApproachStartedAt = 0;
-        this.interactionApproachAttempts = 0;
-        this.character.stop?.();
-        this.character.setTarget?.(this.character.root.position);
-        this.postActionRecoveryUntil = performance.now() + 350;
         return false;
       }
       object.userData.requestedInteraction = mode;

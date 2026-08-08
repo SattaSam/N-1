@@ -467,105 +467,6 @@
       return changed;
     }
 
-    missionActionAxis(missionId, action) {
-      const definition = this.definition(missionId) || {};
-      if (definition.passivePriorityAxis) return definition.passivePriorityAxis;
-      if (definition.priorityAxis) return definition.priorityAxis;
-      const type = action?.type;
-      if ([Missions.ActionType.COLLECT, Missions.ActionType.EXTRACT].includes(type)) return "collection";
-      if ([
-        Missions.ActionType.INSPECT,
-        Missions.ActionType.ANALYZE,
-        Missions.ActionType.OBSERVE,
-        Missions.ActionType.RESEARCH,
-        Missions.ActionType.CRAFT,
-        Missions.ActionType.BUILD
-      ].includes(type)) return "research";
-      if ([Missions.ActionType.EXPLORE_ZONE, Missions.ActionType.TRAVEL].includes(type)) return "exploration";
-      if ([Missions.ActionType.REST, Missions.ActionType.EAT].includes(type)) return "survival";
-      return "exploration";
-    }
-
-    chooseRunnableMissionAction(context) {
-      const assessments = this.activeMissionIds
-        .filter((id) => this.ensureLifecycle(id).status === "active" && this.trees.has(id))
-        .map((id) => this.assessMission(id, context))
-        .filter((candidate) => candidate?.action);
-
-      const primary = assessments.find(
-        (candidate) => candidate.missionId === this.primaryMissionId
-      ) || null;
-
-      const secondaries = assessments
-        .filter((candidate) => candidate.missionId !== this.primaryMissionId)
-        .sort((left, right) => right.score - left.score)
-        .slice(0, 3);
-
-      if (!primary && !secondaries.length) return null;
-
-      const primaryVital = primary && (
-        (primary.action.type === Missions.ActionType.REST && context.needs?.rest) ||
-        (primary.action.type === Missions.ActionType.EAT && context.needs?.food)
-      );
-      if (primaryVital) {
-        return {
-          missionId: primary.missionId,
-          action: primary.action,
-          primary: true
-        };
-      }
-
-      const BAC = BF.BAC;
-      if (!BAC?.weightedPick) {
-        const fallback = primary || secondaries[0];
-        return fallback
-          ? {
-              missionId: fallback.missionId,
-              action: fallback.action,
-              primary: fallback.missionId === this.primaryMissionId
-            }
-          : null;
-      }
-
-      const options = [];
-      if (primary) {
-        options.push({
-          id: `mission-primary:${primary.missionId}`,
-          axis: this.missionActionAxis(primary.missionId, primary.action),
-          baseWeight: 100,
-          candidate: primary
-        });
-      }
-
-      if (secondaries.length) {
-        const secondaryBudget = primary ? 20 : 100;
-        const totalScore = secondaries.reduce(
-          (sum, candidate) => sum + Math.max(1, Number(candidate.score) || 1),
-          0
-        );
-        secondaries.forEach((candidate) => {
-          options.push({
-            id: `mission-secondary:${candidate.missionId}`,
-            axis: this.missionActionAxis(candidate.missionId, candidate.action),
-            baseWeight:
-              secondaryBudget *
-              (Math.max(1, Number(candidate.score) || 1) / totalScore),
-            candidate
-          });
-        });
-      }
-
-      const selected = BAC.weightedPick(options);
-      const candidate = selected?.candidate || primary || secondaries[0];
-      return candidate
-        ? {
-            missionId: candidate.missionId,
-            action: candidate.action,
-            primary: candidate.missionId === this.primaryMissionId
-          }
-        : null;
-    }
-
     update(now) {
       if (!this.enabled) return false;
       this.applyPendingTransitions();
@@ -573,74 +474,34 @@
         this.lastPriorityReviewAt = now;
         this.selectBestPrimary(now);
       }
-
-      // mission-action-watchdog-v1
-      if (this.currentAction) {
-        const actionAge =
-          Date.now() - Number(this.currentAction.issuedAt || Date.now());
-        const engineIdle =
-          !this.bridge.isEngineBusy() &&
-          !this.engine.pendingInteraction &&
-          !this.engine.currentRoutine &&
-          !this.engine.pendingGate &&
-          !this.engine.pendingZoneExploration &&
-          this.engine.character.root.position.distanceTo(
-            this.engine.character.target
-          ) < 0.25;
-
-        if (engineIdle && actionAge > 5000) {
-          const orphan = this.currentAction;
-          this.memory.remember("action-orphaned", {
-            ...orphan,
-            reason: "engine-idle-with-current-action",
-            ageMs: actionAge
-          });
-          this.currentAction = null;
-          this.retryAfter = now + 650;
-          this.engine.callbacks?.onAction?.(
-            `Mission : action interrompue, nouvelle tentative pour « ${orphan.title} ».`
-          );
-          this.publish();
-        } else {
-          return true;
-        }
-      }
-
+      if (
+        !this.tree ||
+        this.tree.root.isComplete ||
+        this.ensureLifecycle(this.primaryMissionId).status !== "active"
+      ) return false;
+      if (this.currentAction) return true;
       if (now < this.retryAfter || now - this.lastPlanAt < 1200) return false;
       if (this.bridge.isEngineBusy()) return false;
 
       this.lastPlanAt = now;
-      const selected = this.chooseRunnableMissionAction(this.bridge.context());
-      if (!selected?.action) {
+      const action = this.planner.nextAction(this.tree, this.bridge.context());
+      if (!action) {
         this.retryAfter = now + 5000;
         return false;
       }
-
-      const action = {
-        ...selected.action,
-        missionId: selected.missionId,
-        isSecondary: !selected.primary
-      };
-      const tree = this.trees.get(selected.missionId);
-      if (!tree || !this.bridge.execute(action, now)) {
+      if (!this.bridge.execute(action, now)) {
         this.retryAfter = now + 4000;
         return false;
       }
-
       this.currentAction = action;
-      const node = tree.find(action.nodeId);
+      const node = this.tree.find(action.nodeId);
       if (node && node.status === Missions.MissionStatus.AVAILABLE) {
         node.status = Missions.MissionStatus.ACTIVE;
         if (!node.startedAt) node.startedAt = Date.now();
       }
-
-      this.engine.callbacks.onAction(
-        selected.primary
-          ? `Mission : ${action.title}.`
-          : `Mission secondaire : ${action.title}.`
-      );
+      this.engine.callbacks.onAction(`Mission : ${action.title}.`);
       this.memory.remember("action-started", action);
-      this.memory.saveTree(tree);
+      this.memory.saveTree(this.tree);
       this.publish();
       return true;
     }
@@ -658,33 +519,30 @@
         return changed > 0;
       }
       const completedAction = this.currentAction;
-      const missionId = completedAction.missionId || this.primaryMissionId;
-      const actionTree = this.trees.get(missionId) || this.tree;
-      if (!actionTree) return false;
-      if (!this.planner.applyCompletion(actionTree, completedAction, detail)) {
+      if (!this.planner.applyCompletion(this.tree, completedAction, detail)) {
         return false;
       }
       this.memory.remember(type, detail);
       this.memory.remember("action-completed", completedAction);
       this.currentAction = null;
       this.retryAfter = performance.now() + 650;
-      this.memory.saveTree(actionTree);
+      this.memory.saveTree(this.tree);
       if (passive) {
         this.progressPassiveMissions(type, detail, {
-          missionId,
+          missionId: this.primaryMissionId,
           nodeId: completedAction.nodeId
         });
       }
       this.syncLifecycleFromTrees();
       this.catalogController?.schedule();
       this.publish();
-      if (actionTree.root.isComplete) {
+      if (this.tree.root.isComplete) {
         this.reevaluatePendingActivations();
         this.engine.callbacks.onAction(
-          `Mission accomplie : ${actionTree.title}.`
+          `Mission accomplie : ${this.tree.title}.`
         );
         this.engine.callbacks.onStatus(
-          `« ${actionTree.title} » terminée. BlueFox réévalue uniquement les projets déjà actifs.`
+          `« ${this.tree.title} » terminée. BlueFox réévalue uniquement les projets déjà actifs.`
         );
       }
       return true;
