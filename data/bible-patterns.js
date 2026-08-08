@@ -1,31 +1,79 @@
 (function (global) {
   "use strict";
+
   const BF = global.BlueFox3D = global.BlueFox3D || {};
+
+  /*
+   * Bible Patterns V0.1
+   * Règle : les patrons ne contiennent que des ACTIONS réellement exécutables
+   * par le moteur de missions. BUILD/CRAFT n'est plus une action de patron :
+   * la création d'un objet est désormais portée par mission.effects.
+   */
   BF.BiblePatterns = Object.freeze({
-    COLLECT_THEN_BUILD: Object.freeze({
-      id: "COLLECT_THEN_BUILD", version: 1, autonomyAxis: "survival",
+    COLLECT_THEN_REWARD: Object.freeze({
+      id: "COLLECT_THEN_REWARD",
+      version: 1,
+      autonomyAxis: "survival",
       steps: Object.freeze([
-        Object.freeze({ slot: "collect", action: "collect" }),
-        Object.freeze({ slot: "build", action: "build", requires: ["collect"] })
+        Object.freeze({
+          slot: "collect",
+          action: "collect"
+        })
       ]),
-      narrativeMoments: Object.freeze(["revealed", "progress", "completed"])
+      narrativeMoments: Object.freeze([
+        "revealed",
+        "progress",
+        "completed"
+      ])
     }),
+
     DISCOVER_THEN_ANALYZE: Object.freeze({
-      id: "DISCOVER_THEN_ANALYZE", version: 1, autonomyAxis: "research",
+      id: "DISCOVER_THEN_ANALYZE",
+      version: 1,
+      autonomyAxis: "research",
       steps: Object.freeze([
-        Object.freeze({ slot: "observe", action: "observe" }),
-        Object.freeze({ slot: "analyze", action: "analyze", requires: ["observe"] })
+        Object.freeze({
+          slot: "observe",
+          action: "observe"
+        }),
+        Object.freeze({
+          slot: "analyze",
+          action: "analyze",
+          requires: ["observe"]
+        })
       ]),
-      narrativeMoments: Object.freeze(["revealed", "progress", "completed"])
+      narrativeMoments: Object.freeze([
+        "revealed",
+        "progress",
+        "completed"
+      ])
     }),
+
     ARCHAEOLOGY_INVESTIGATION: Object.freeze({
-      id: "ARCHAEOLOGY_INVESTIGATION", version: 1, autonomyAxis: "research",
+      id: "ARCHAEOLOGY_INVESTIGATION",
+      version: 1,
+      autonomyAxis: "research",
       steps: Object.freeze([
-        Object.freeze({ slot: "observe", action: "observe" }),
-        Object.freeze({ slot: "inspect", action: "inspect", requires: ["observe"] }),
-        Object.freeze({ slot: "analyze", action: "analyze", requires: ["inspect"] })
+        Object.freeze({
+          slot: "observe",
+          action: "observe"
+        }),
+        Object.freeze({
+          slot: "inspect",
+          action: "inspect",
+          requires: ["observe"]
+        }),
+        Object.freeze({
+          slot: "analyze",
+          action: "analyze",
+          requires: ["inspect"]
+        })
       ]),
-      narrativeMoments: Object.freeze(["revealed", "progress", "hesitation", "completed"])
+      narrativeMoments: Object.freeze([
+        "revealed",
+        "progress",
+        "completed"
+      ])
     })
   });
 })(window);

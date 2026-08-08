@@ -7,7 +7,7 @@
     return;
   }
 
-  const VERSION = "portals-bounds-panorama-ui-v3c";
+  const VERSION = "portals-bounds-panorama-ui-v3c-map-contour-v2";
   const GATE_INSET = 3.15;
   const GATE_SIDE_MARGIN = 4.6;
   const PANORAMA_LOWERING = -3.15;
@@ -198,14 +198,95 @@
     (engine?.currentMap?.gates || []).forEach((gate) => refreshGate(engine, gate));
   };
 
+  const buildMapContourRegions = (character, sourceRegions = []) => {
+    const regions = (sourceRegions || [])
+      .map((region) => ({
+        minX: Number(region.minX),
+        maxX: Number(region.maxX),
+        minZ: Number(region.minZ),
+        maxZ: Number(region.maxZ)
+      }))
+      .filter((region) => Object.values(region).every(Number.isFinite));
+
+    if (!regions.length) return [];
+
+    /*
+     * CharacterController.constrainToWalkable() applique automatiquement
+     * une marge (radius + 0.08) sur LES QUATRE CÔTÉS de chaque région.
+     *
+     * Cela est correct sur le contour extérieur de la map, mais incorrect
+     * entre deux plateaux jointifs : les deux marges internes créent un mur.
+     *
+     * On agrandit donc uniquement les côtés qui touchent réellement un
+     * plateau voisin. Après application de la marge interne du controller,
+     * ces raccords redeviennent traversables. Les côtés sans voisin gardent
+     * exactement la marge de sécurité et restent infranchissables.
+     */
+    const margin = Math.max(0.1, Number(character?.radius) || 0.64) + 0.08;
+    const seamOverlap = margin + 0.16;
+    const epsilon = 0.35;
+
+    const overlapLength = (aMin, aMax, bMin, bMax) =>
+      Math.min(aMax, bMax) - Math.max(aMin, bMin);
+
+    return regions.map((region, index) => {
+      let openWest = false;
+      let openEast = false;
+      let openNorth = false;
+      let openSouth = false;
+
+      regions.forEach((other, otherIndex) => {
+        if (otherIndex === index) return;
+
+        const zOverlap = overlapLength(
+          region.minZ, region.maxZ,
+          other.minZ, other.maxZ
+        );
+        const xOverlap = overlapLength(
+          region.minX, region.maxX,
+          other.minX, other.maxX
+        );
+
+        if (zOverlap > margin * 1.25) {
+          if (Math.abs(other.maxX - region.minX) <= epsilon) openWest = true;
+          if (Math.abs(other.minX - region.maxX) <= epsilon) openEast = true;
+        }
+
+        if (xOverlap > margin * 1.25) {
+          if (Math.abs(other.maxZ - region.minZ) <= epsilon) openNorth = true;
+          if (Math.abs(other.minZ - region.maxZ) <= epsilon) openSouth = true;
+        }
+      });
+
+      return {
+        minX: region.minX - (openWest ? seamOverlap : 0),
+        maxX: region.maxX + (openEast ? seamOverlap : 0),
+        minZ: region.minZ - (openNorth ? seamOverlap : 0),
+        maxZ: region.maxZ + (openSouth ? seamOverlap : 0),
+        __bluefoxContour: {
+          openWest,
+          openEast,
+          openNorth,
+          openSouth
+        }
+      };
+    });
+  };
+
   const restoreInvisibleWall = (engine) => {
     const character = engine?.character;
-    const regions = engine?.currentMap?.walkableRegions || [];
-    if (!character || !regions.length) return;
-    character.setWalkableRegions(regions);
+    const sourceRegions = engine?.currentMap?.walkableRegions || [];
+    if (!character || !sourceRegions.length) return;
 
-    // Sécurité supplémentaire : les mouvements spéciaux/autonomes ne peuvent
-    // jamais laisser le root physique hors de l'union des plateaux.
+    const contourRegions = buildMapContourRegions(character, sourceRegions);
+
+    // Le controller continue donc à utiliser son système de limites éprouvé,
+    // mais les coutures internes entre plateaux sont ouvertes.
+    character.setWalkableRegions(contourRegions);
+
+    engine.currentMap.__bluefoxSourceWalkableRegions = sourceRegions;
+    engine.currentMap.__bluefoxContourWalkableRegions = contourRegions;
+
     character.constrainToWalkable(character.root.position);
     character.constrainToWalkable(character.target);
     character.constrainToWalkable(character.finalTarget);
