@@ -567,9 +567,6 @@
       };
       this.character.fatigueSpeedMultiplier = fatigue.movement || 1;
 
-      // Les missions actives et réalisables gardent la priorité absolue.
-      if (this.missionManager?.hasRunnablePrimaryMission?.()) return;
-
       this.lastAutonomyAt = now;
 
       // Les besoins critiques ne sont jamais soumis au BAC.
@@ -591,11 +588,12 @@
       if (this.autonomyActionStreak >= this.autonomyBreakTarget) {
         if (
           this.speechVisible &&
-          Math.random() < 0.45 &&
+          Math.random() < 0.8 &&
           now - this.lastFatigueSpeechAt > 12000
         ) {
           const phrases = [
             "Je prends un instant pour respirer.",
+            "Je souffle un peu, puis je reprends.",
             "Une petite pause, puis je reprends.",
             "Je vais ralentir un peu.",
             "Je reprends mon souffle."
@@ -613,6 +611,10 @@
         this.autonomyBreakTarget = 2 + Math.floor(Math.random() * 2);
         return;
       }
+
+      // Une mission reste prioritaire, mais elle ne peut plus empêcher les
+      // pauses physiologiques et la récupération de BlueFox.
+      if (this.missionManager?.hasRunnablePrimaryMission?.()) return;
 
       const interactables = this.currentMap.interactables
         .filter((object) => this.canInteractWith(object, now));
@@ -646,6 +648,15 @@
               pressureReduction: 2
             }
           )
+        },
+        {
+          id: "survival-food",
+          axis: "survival",
+          baseWeight: survival.needs?.food ? 30 : 2,
+          available: Boolean(
+            survival.needs?.food && BF.survival?.canConsumeRation?.()
+          ),
+          execute: () => this.startRoutine("food", now, 5200)
         },
         {
           id: "research-routine",

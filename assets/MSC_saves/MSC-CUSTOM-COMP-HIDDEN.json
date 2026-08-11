@@ -1,0 +1,305 @@
+{
+  "id": "MSC-CUSTOM-COMP-HIDDEN",
+  "name": "Comp_hidden",
+  "biomes": [
+    "all"
+  ],
+  "rarity": "custom",
+  "radius": 6.749057623414265,
+  "objects": [
+    {
+      "type": "eroded_monolith",
+      "offset": [
+        -0.2374,
+        0.0628,
+        -0.1691
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        -1.570796
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        -0.8543,
+        0.0731,
+        1.8575
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        2.5231,
+        0.0731,
+        -1.7976
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        1.047198,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        -2.2801,
+        -0.1769,
+        -3.0845
+      ],
+      "variant": 0,
+      "rotation": [
+        -0.261799,
+        -0.261799,
+        -0.261799
+      ]
+    },
+    {
+      "type": "logic_prism",
+      "offset": [
+        -0.6617,
+        -0.0018,
+        -1.423
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "pulse_core",
+      "offset": [
+        1.3669,
+        0.0482,
+        -1.2646
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "tree",
+      "offset": [
+        -2.0821,
+        -0.0018,
+        -0.8019
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "bush",
+      "offset": [
+        1.6493,
+        -0.0018,
+        -3.0421
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "bush",
+      "offset": [
+        -4.006,
+        -0.0018,
+        -5.4315
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "azure_ferrite",
+      "offset": [
+        -2.9314,
+        0.1206,
+        1.8308
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "adaptive_plant",
+      "offset": [
+        -3.4502,
+        0.0046,
+        2.9194
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "adaptive_plant",
+      "offset": [
+        4.6623,
+        0.0046,
+        -1.109
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "fiber",
+      "offset": [
+        5.0568,
+        0.0091,
+        0.0632
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "fiber",
+      "offset": [
+        4.3167,
+        0.0091,
+        -2.9557
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "crystal",
+      "offset": [
+        1.8392,
+        -0.2204,
+        5.2561
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "fiber",
+      "offset": [
+        2.4137,
+        0.0091,
+        2.729
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "fiber",
+      "offset": [
+        -1.0609,
+        0.0091,
+        0.3836
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "adaptive_plant",
+      "offset": [
+        -3.6337,
+        0.0046,
+        -2.023
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "frond",
+      "offset": [
+        -5.2104,
+        -0.0078,
+        -2.8502
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "frond",
+      "offset": [
+        -0.3361,
+        -0.0078,
+        5.0059
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "frond",
+      "offset": [
+        2.9163,
+        -0.0078,
+        5.9067
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0.523599,
+        0
+      ]
+    }
+  ]
+}

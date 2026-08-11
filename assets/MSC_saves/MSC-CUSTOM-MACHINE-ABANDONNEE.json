@@ -1,0 +1,249 @@
+{
+  "id": "MSC-CUSTOM-MACHINE-ABANDONNEE",
+  "name": "Machine_abandonnee",
+  "biomes": [
+    "all"
+  ],
+  "rarity": "custom",
+  "radius": 7.546216031297663,
+  "objects": [
+    {
+      "type": "survey_beacon",
+      "offset": [
+        0.4314,
+        0.0803,
+        -3.2121
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "ancient_machine_wreck",
+      "offset": [
+        2.3438,
+        0.2373,
+        0.6945
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "survey_beacon",
+      "offset": [
+        0.2065,
+        0.0803,
+        2.6152
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "survey_beacon",
+      "offset": [
+        6.9187,
+        0.0803,
+        0.5645
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "survey_beacon",
+      "offset": [
+        -1.0338,
+        0.0803,
+        1.015
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        -0.261799,
+        1.308997
+      ]
+    },
+    {
+      "type": "tech_relic",
+      "offset": [
+        -2.8593,
+        0.0803,
+        -2.3775
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "needle",
+      "offset": [
+        -3.5714,
+        0.0884,
+        2.3467
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "needle",
+      "offset": [
+        7.4742,
+        -0.1618,
+        1.04
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "needle",
+      "offset": [
+        1.0329,
+        0.0884,
+        -3.7509
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "arch",
+      "offset": [
+        2.6069,
+        -0.0697,
+        0.0776
+      ],
+      "variant": 0,
+      "rotation": [
+        1.570796,
+        0,
+        0.523599
+      ]
+    },
+    {
+      "type": "strong_rock",
+      "offset": [
+        -4.892,
+        -0.766,
+        1.3354
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0.785398,
+        -1.308997
+      ]
+    },
+    {
+      "type": "arch",
+      "offset": [
+        1.7183,
+        -0.0697,
+        1.5372
+      ],
+      "variant": 0,
+      "rotation": [
+        1.570796,
+        0,
+        -2.617994
+      ]
+    },
+    {
+      "type": "survey_beacon",
+      "offset": [
+        -4.8938,
+        -1.4197,
+        -0.5095
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "relay_block",
+      "offset": [
+        5.6996,
+        0.0803,
+        2.1989
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "pulse_core",
+      "offset": [
+        -4.1165,
+        0.1303,
+        -0.2718
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "pulse_core",
+      "offset": [
+        -4.2068,
+        0.1303,
+        -1.062
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "logic_prism",
+      "offset": [
+        -2.8587,
+        1.3303,
+        -2.2412
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    }
+  ]
+}

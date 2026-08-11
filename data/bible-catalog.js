@@ -15,7 +15,7 @@
    */
   BF.BibleCatalog = Object.freeze([
     Object.freeze({
-      id: "BIBLE-V0-CAMP",
+      id: "BIBLE-V01-CAMP",
       version: 1,
 
       pattern: "COLLECT_THEN_REWARD",
@@ -74,10 +74,19 @@
       // appliquera directement cet effet.
       effects: Object.freeze([
         Object.freeze({
-          type: "world.spawn",
-          objectId: "camp",
+          type: "inventory.consume",
+          inventoryKey: "wood",
+          quantity: 10
+        }),
+        Object.freeze({
+          type: "site.establish",
+          kind: "camp",
+          stage: 1,
+          microSceneId: "MSC-CUSTOM-CAMP",
           placement: Object.freeze({
-            mode: "near-bluefox"
+            mode: "near-bluefox",
+            anchor: "crash-capsule",
+            distance: 7
           })
         })
       ]),
@@ -87,7 +96,7 @@
     }),
 
     Object.freeze({
-      id: "BIBLE-V0-DISCOVERY",
+      id: "BIBLE-V01-DISCOVERY",
       version: 1,
 
       pattern: "DISCOVER_THEN_ANALYZE",
@@ -100,8 +109,13 @@
       passivePriorityAxis: "research",
 
       trigger: Object.freeze({
-        type: "interaction.observe",
+        // Déclencheur narratif indépendant de la connaissance CUO :
+        // une flore déjà connue/analysée/collectée reste capable de révéler
+        // cette mission. La première découverte CUO n'est PAS un prérequis.
+        type: "interaction.any",
+        studyOnly: true,
         subject: "flora",
+        uniqueOnly: true,
         count: 1
       }),
 
@@ -144,7 +158,7 @@
     }),
 
     Object.freeze({
-      id: "BIBLE-V0-ARCHAEOLOGY",
+      id: "BIBLE-V01-ARCHAEOLOGY",
       version: 1,
 
       pattern: "ARCHAEOLOGY_INVESTIGATION",
@@ -155,10 +169,10 @@
 
       priority: 60,
       passivePriorityAxis: "research",
+      targetBinding: "instance",
 
       trigger: Object.freeze({
         type: "interaction.observe",
-        subject: "components",
         tagsAny: Object.freeze([
           "technology",
           "ruin"

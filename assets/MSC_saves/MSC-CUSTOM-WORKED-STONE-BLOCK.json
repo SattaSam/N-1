@@ -1,0 +1,179 @@
+{
+  "id": "MSC-CUSTOM-WORKED-STONE-BLOCK",
+  "name": "worked_stone_block",
+  "biomes": [
+    "all"
+  ],
+  "rarity": "custom",
+  "radius": 2.926883312922087,
+  "objects": [
+    {
+      "type": "debris",
+      "offset": [
+        1.8147,
+        0.0804,
+        -0.3004
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        -0.8894,
+        0.0804,
+        -0.3979
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        1.047198,
+        0.785398
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        -0.579,
+        0.0804,
+        0.202
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        2.3163,
+        0.0804,
+        -1.1323
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        -0.4764,
+        0.0804,
+        1.1162
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        -2.5175,
+        0.0804,
+        1.493
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        -0.261799,
+        3.141593
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        -2.4997,
+        0.0804,
+        -0.6256
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        1.308997,
+        0
+      ]
+    },
+    {
+      "type": "needle",
+      "offset": [
+        -1.7797,
+        0.0134,
+        1.2026
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        -3.141593,
+        0
+      ]
+    },
+    {
+      "type": "needle",
+      "offset": [
+        2.0851,
+        0.0134,
+        0.6197
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "needle",
+      "offset": [
+        1.9538,
+        -0.2348,
+        -1.425
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "strong_rock",
+      "offset": [
+        -2.0364,
+        0.5749,
+        -0.1242
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        -0.261799,
+        -2.879793
+      ]
+    },
+    {
+      "type": "eroded_monolith",
+      "offset": [
+        2.608,
+        -0.9298,
+        -0.6282
+      ],
+      "variant": 0,
+      "rotation": [
+        -1.047198,
+        -2.617994,
+        -1.570796
+      ]
+    }
+  ]
+}

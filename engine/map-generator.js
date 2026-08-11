@@ -5,6 +5,9 @@
   const STORAGE_KEY = "bluefox_generated_maps_v1";
   const PLANET_SEED_KEY = "bluefox_planet_seed_v1";
   const GENERATOR_VERSION = 1;
+  const fallbackTerrainUrls = () => [
+    ...(global.BLUEFOX_MAP_ASSETS?.fallbackTerrainUrls || [])
+  ].filter(Boolean);
 
   const PALETTES = Object.freeze({
     volcanic: Object.freeze({ ground: 0x4c2928, accent: 0xff7247 }),
@@ -195,7 +198,10 @@
           role = "associated-repeat";
         }
       }
-      const url = pick(pool) || preferred[0] || template.sceneUrl;
+      const fallback = fallbackTerrainUrls();
+      const url = pick(pool) || preferred[0] ||
+        (fallback.length ? fallback[selected.length % fallback.length] : null) ||
+        template.sceneUrl;
       selected.push(url);
       sources.push({ url, role });
     }

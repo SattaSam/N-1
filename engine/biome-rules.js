@@ -52,6 +52,15 @@
   });
 
   const MAX_RESOURCE_FAMILIES = 5;
+  const WOOD_POPULATION = Object.freeze({
+    default: Object.freeze({ bush: 0.18, tree_fallen: 0.14 }),
+    forest: Object.freeze({ bush: 1.15, tree_fallen: 0.9 }),
+    jungle: Object.freeze({ bush: 0.85, tree_fallen: 0.72 }),
+    plain: Object.freeze({ bush: 0.95, tree_fallen: 0.7 }),
+    swamp: Object.freeze({ bush: 0.65, tree_fallen: 0.55 }),
+    coastal: Object.freeze({ bush: 0.45, tree_fallen: 0.35 }),
+    alien: Object.freeze({ bush: 0.45, tree_fallen: 0.38 })
+  });
   const COMPONENT_FAMILIES = new Set(["relay_block", "pulse_core", "memory_capsule", "logic_prism", "tech_relic"]);
   const clampRichness = (value) => Math.max(1.2, Math.min(2.8, Number(value) || 1.2));
   const RESOURCE_RICHNESS = Object.freeze({
@@ -96,7 +105,10 @@
     candidates(biome) {
       if (!BF.ObjectLibrary) throw new Error("BiomeRules nécessite ObjectLibrary.");
       const rule = this.get(biome);
-      return BF.ObjectLibrary.list({ status: "active" }).filter((definition) => this.allows(rule.id, definition)).map((definition) => Object.freeze({ definition, weight: (rule.weights[definition.type] || 0) * definition.spawn.rarityWeight }));
+      return BF.ObjectLibrary.list({ status: "active" }).filter((definition) => this.allows(rule.id, definition)).map((definition) => Object.freeze({
+        definition,
+        weight: (rule.weights[definition.type] || WOOD_POPULATION[rule.id]?.[definition.type] || 0) * definition.spawn.rarityWeight
+      }));
     },
     getMapProfile(profileId) { return MAP_PROFILES[profileId] || MAP_PROFILES.alien; },
     validateMapProfiles() {
@@ -134,7 +146,9 @@
       const traitDecorations = [
         ...(traitIds.has("bioluminescent") ? [["spore", 3]] : []), ...(traitIds.has("fungal") ? [["lantern_mushrooms", 8], ["spore", 6], ["fern", 4]] : []), ...(traitIds.has("urban") ? [["debris", 5]] : []), ...(traitIds.has("wetland") ? [["fern", 5], ["frond", 2]] : []), ...(traitIds.has("glass") ? [["needle", 3]] : [])
       ];
-      const decorations = definition.id === "crystal" ? [["needle", 9], ["frond", 7], ["debris", 3]] : definition.id === "jungle" ? [["fern", 14], ["spore", 8], ["frond", 6], ["debris", 5], ["needle", 2]] : [...mapProfile.decorations.map((entry) => [...entry]), ...traitDecorations];
+      const woodDecorations = Object.entries(WOOD_POPULATION[profileId] || {})
+        .map(([type, weight]) => [type, Math.max(1, Math.round(weight * 4))]);
+      const decorations = definition.id === "crystal" ? [["needle", 9], ["frond", 7], ["debris", 3]] : definition.id === "jungle" ? [["fern", 14], ["spore", 8], ["frond", 6], ["debris", 5], ["needle", 2], ...woodDecorations] : [...mapProfile.decorations.map((entry) => [...entry]), ...traitDecorations, ...woodDecorations];
       const resourceFamilies = resourceEntries.map((entry) => entry.family);
       const richnessProfile = RESOURCE_RICHNESS[profileId] || RESOURCE_RICHNESS.alien;
       const richness = Object.freeze({ family: resourceFamilies.includes(richnessProfile.family) ? richnessProfile.family : resourceFamilies[0] || null, multiplier: clampRichness(richnessProfile.multiplier) });

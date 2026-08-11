@@ -1,0 +1,207 @@
+{
+  "id": "MSC-CUSTOM-BASE-DRONE-FONCTIONEL",
+  "name": "Base_Drone_fonctionel",
+  "biomes": [
+    "all"
+  ],
+  "rarity": "custom",
+  "radius": 5.881455883288098,
+  "objects": [
+    {
+      "type": "survey_beacon",
+      "offset": [
+        5.2904,
+        0.3008,
+        0.1699
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "survey_beacon",
+      "offset": [
+        -2.662,
+        0.3008,
+        0.6204
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        -0.261799,
+        1.308997
+      ]
+    },
+    {
+      "type": "tech_relic",
+      "offset": [
+        -1.1327,
+        0.3008,
+        -0.6005
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        -2.356194,
+        0
+      ]
+    },
+    {
+      "type": "needle",
+      "offset": [
+        -5.1997,
+        0.3088,
+        1.9522
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "needle",
+      "offset": [
+        5.8459,
+        0.0586,
+        0.6455
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "needle",
+      "offset": [
+        -0.5954,
+        0.3088,
+        -4.1454
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "relay_block",
+      "offset": [
+        -2.5955,
+        0.3008,
+        -2.9032
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "pulse_core",
+      "offset": [
+        -5.7448,
+        0.3508,
+        -0.6663
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "arch",
+      "offset": [
+        0.0901,
+        0.1508,
+        1.1426
+      ],
+      "variant": 0,
+      "rotation": [
+        1.570796,
+        0,
+        -2.617994
+      ]
+    },
+    {
+      "type": "harvest_drone",
+      "offset": [
+        -0.0495,
+        0.3008,
+        0.6342
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        -2.094395,
+        0
+      ]
+    },
+    {
+      "type": "arch",
+      "offset": [
+        0.9786,
+        0.1508,
+        -0.3169
+      ],
+      "variant": 0,
+      "rotation": [
+        1.570796,
+        0,
+        0.523599
+      ]
+    },
+    {
+      "type": "stele",
+      "offset": [
+        1.9258,
+        -0.9442,
+        1.163
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0.785398,
+        0
+      ]
+    },
+    {
+      "type": "stele",
+      "offset": [
+        1.3133,
+        -0.9442,
+        2.3368
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0.785398,
+        0
+      ]
+    },
+    {
+      "type": "stele",
+      "offset": [
+        2.5356,
+        -0.9442,
+        -0.0322
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0.785398,
+        0
+      ]
+    }
+  ]
+}

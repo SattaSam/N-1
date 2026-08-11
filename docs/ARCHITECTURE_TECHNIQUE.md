@@ -1,6 +1,6 @@
 # BlueFox Odyssey — Architecture technique
 
-Référence : **V0.16.20 + correctifs cumulatifs, générateur V1, BibleRuntime V0 et missions multi-actives — 8 août 2026**
+Référence : **V0.16.20 + cumulatif Missions V17 validé en jeu — 9 août 2026**
 
 ## Démarrage
 
@@ -247,6 +247,8 @@ différents et une cartographie avant de devenir `completed`.
 | Événements objets réels et progression passive | `engine/object-m0-bridge.js` + `ObjectEvents` |
 | Arbitrage entre comportements / axes | BAC |
 | Persistance des missions | `engine/mission-memory.js` |
+| Quantités d'inventaire et transactions | `engine/progression-registry.js` |
+| Effets déclaratifs et sites établis | `engine/bible-runtime-v0-1-unified.js` |
 
 ## Pipeline officiel
 
@@ -358,6 +360,44 @@ commande de purge.
 
 Seule une action explicite de type **Nouvelle partie** peut remettre la progression
 de mission à zéro.
+
+## Contrat validé Camp / ressources
+
+La collecte suit une seule chaîne autoritaire :
+
+```text
+interaction réelle
+→ métadonnées CUO (`inventoryKey`, quantité)
+→ `RESOURCE_COLLECTED`
+→ registre central + fan-out missions
+```
+
+Une mission ne modifie jamais artificiellement son compteur pour compenser un
+événement manquant. Le même événement ne peut être appliqué deux fois, mais une
+nouvelle collecte après réapparition de l'objet constitue un nouvel événement.
+
+Pour `BIBLE-V01-CAMP`, la résolution est transactionnelle : le registre central
+consomme `10` bois une seule fois, puis `MissionMemory.state.siteProgression`
+enregistre le site `camp` de la Map. Le rendu `MSC-CUSTOM-CAMP` est dérivé de ce
+site. Une recharge ou un nouveau chargement de Map restaure le rendu à la fin de
+`WorldEngine.loadMap()` ; les temporisations UI et les événements de Map ne sont
+pas des mécanismes de restauration autoritaires.
+
+## Contrat validé des missions liées à une cible
+
+Une fiche peut demander une liaison à la définition d'objet ou à son instance.
+Pour `BIBLE-V01-ARCHAEOLOGY`, la liaison `instance` impose que Observer,
+Inspecter et Analyser concernent exactement la même instance. La validation
+finale dépend d'un site réellement établi à proximité, lu depuis
+`siteProgression`; aucun fallback propre à une Map n'est autorisé.
+
+## Hydratation des missions terminées
+
+`MissionManager` restaure aussi les arbres terminés enregistrés, tout en les
+excluant des missions actives. L'UI du catalogue calcule alors sa progression à
+partir de l'arbre restauré. Pour les anciennes sauvegardes marquées `completed`
+sans arbre sauvegardé, la projection publique utilise une progression complète
+de compatibilité ; elle ne recrée pas une mission active.
 
 # Extension topologie Planète — 8 août 2026
 

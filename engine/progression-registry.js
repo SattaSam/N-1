@@ -46,7 +46,8 @@
       legacyInventoryImported: false,
       legacyOfflineReconciled: false
     },
-    history: []
+    history: [],
+    transactions: {}
   });
 
   const mergeState = (saved) => {
@@ -76,7 +77,8 @@
         ...base.migrations,
         ...(saved.migrations || {})
       },
-      history: Array.isArray(saved.history) ? saved.history.slice(-MAX_HISTORY) : []
+      history: Array.isArray(saved.history) ? saved.history.slice(-MAX_HISTORY) : [],
+      transactions: { ...(saved.transactions || {}) }
     };
   };
 
@@ -284,6 +286,24 @@
       return requested;
     }
 
+    consumeInventoryPoolOnce(transactionId, keys, amount = 1) {
+      const safeId = cleanKey(transactionId);
+      if (!safeId) return 0;
+      if (this.state.transactions[safeId]) {
+        return Number(this.state.transactions[safeId].quantity) || 0;
+      }
+      const removed = this.consumeInventoryPool(keys, amount);
+      if (removed !== Math.max(0, Number(amount) || 0)) return 0;
+      this.state.transactions[safeId] = {
+        id: safeId,
+        quantity: removed,
+        keys: [...(Array.isArray(keys) ? keys : [keys])],
+        at: Date.now()
+      };
+      this.save();
+      return removed;
+    }
+
     depositInventory(key, amount = 1) {
       const safeKey = cleanKey(key);
       const requested = Math.max(0, Number(amount) || 0);
@@ -422,6 +442,8 @@
   BF.availableInventory = (keys) => registry.availableInventory(keys);
   BF.consumeInventoryPool = (keys, amount) =>
     registry.consumeInventoryPool(keys, amount);
+  BF.consumeInventoryPoolOnce = (transactionId, keys, amount) =>
+    registry.consumeInventoryPoolOnce(transactionId, keys, amount);
   BF.depositInventory = (key, amount) => registry.depositInventory(key, amount);
   BF.withdrawInventory = (key, amount) => registry.withdrawInventory(key, amount);
   BF.depositAllInventory = () => registry.depositAllInventory();

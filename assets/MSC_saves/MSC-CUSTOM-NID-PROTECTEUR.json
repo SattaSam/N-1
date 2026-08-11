@@ -1,0 +1,109 @@
+{
+  "id": "MSC-CUSTOM-NID-PROTECTEUR",
+  "name": "Nid_protecteur",
+  "biomes": [
+    "all"
+  ],
+  "rarity": "custom",
+  "radius": 5.55917996549878,
+  "objects": [
+    {
+      "type": "bush",
+      "offset": [
+        -1.0074,
+        -0.0906,
+        -1.4478
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "bush",
+      "offset": [
+        1.9568,
+        0.6594,
+        1.7275
+      ],
+      "variant": 1,
+      "rotation": [
+        -2.094395,
+        0.261799,
+        0.785398
+      ]
+    },
+    {
+      "type": "tree_fallen",
+      "offset": [
+        -2.1945,
+        -0.0769,
+        -0.4478
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        -2.094395,
+        0
+      ]
+    },
+    {
+      "type": "abandoned_nest",
+      "offset": [
+        -1.1542,
+        0.0036,
+        0.2082
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "strong_rock",
+      "offset": [
+        -0.8968,
+        -0.1869,
+        2.2528
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "nocturnal_animal",
+      "offset": [
+        4.9819,
+        -0.0656,
+        -2.4667
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "amphibian_species",
+      "offset": [
+        -1.6858,
+        -0.2429,
+        0.1737
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    }
+  ]
+}

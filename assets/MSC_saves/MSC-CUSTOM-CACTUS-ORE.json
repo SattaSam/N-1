@@ -1,0 +1,277 @@
+{
+  "id": "MSC-CUSTOM-CACTUS-ORE",
+  "name": "Cactus_Ore",
+  "biomes": [
+    "all"
+  ],
+  "rarity": "custom",
+  "radius": 7.91511223549053,
+  "objects": [
+    {
+      "type": "cactus",
+      "offset": [
+        4.0096,
+        0.1777,
+        1.0663
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        -2.094395,
+        0
+      ]
+    },
+    {
+      "type": "cactus",
+      "offset": [
+        0.422,
+        -0.8223,
+        -5.3245
+      ],
+      "variant": 1,
+      "rotation": [
+        -0.523599,
+        -1.047198,
+        -0.261799
+      ]
+    },
+    {
+      "type": "strong_rock",
+      "offset": [
+        -0.6084,
+        -0.0181,
+        -4.7289
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "strong_rock",
+      "offset": [
+        4.204,
+        0.2058,
+        3.8363
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        -1.308997
+      ]
+    },
+    {
+      "type": "crystal",
+      "offset": [
+        4.9842,
+        -0.1032,
+        4.9633
+      ],
+      "variant": 0,
+      "rotation": [
+        0.523599,
+        0.261799,
+        0
+      ]
+    },
+    {
+      "type": "tree_fallen",
+      "offset": [
+        -5.1223,
+        0.1501,
+        -5.5476
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "tree_fallen",
+      "offset": [
+        7.0455,
+        0.1501,
+        0.2104
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "energy_crystal",
+      "offset": [
+        -1.4428,
+        -0.2619,
+        -3.9117
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "magnetic_ore",
+      "offset": [
+        0.2509,
+        0.3134,
+        5.2873
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "stellar_iridium",
+      "offset": [
+        0.2293,
+        -0.1732,
+        2.6908
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "stellar_iridium",
+      "offset": [
+        7.5393,
+        0.0428,
+        -0.5677
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "azure_ferrite",
+      "offset": [
+        2.1833,
+        0.0768,
+        -6.9958
+      ],
+      "variant": 2,
+      "rotation": [
+        -0.261799,
+        2.356194,
+        0.261799
+      ]
+    },
+    {
+      "type": "resonant_basalt",
+      "offset": [
+        1.5494,
+        0.0428,
+        0.5077
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0.523599,
+        0
+      ]
+    },
+    {
+      "type": "rock",
+      "offset": [
+        -3.7324,
+        0.0907,
+        3.859
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "rock",
+      "offset": [
+        -4.785,
+        0.3905,
+        2.3882
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "large_rock",
+      "offset": [
+        -7.9035,
+        -0.0592,
+        0.4282
+      ],
+      "variant": 2,
+      "rotation": [
+        -1.047198,
+        3.665191,
+        -1.308997
+      ]
+    },
+    {
+      "type": "resonant_basalt",
+      "offset": [
+        -7.0165,
+        -0.4232,
+        -0.5396
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "resonant_basalt",
+      "offset": [
+        -3.1444,
+        0.0428,
+        -1.1994
+      ],
+      "variant": 1,
+      "rotation": [
+        1.570796,
+        -0.785398,
+        1.047198
+      ]
+    },
+    {
+      "type": "cactus",
+      "offset": [
+        1.3376,
+        0.1777,
+        3.5778
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    }
+  ]
+}

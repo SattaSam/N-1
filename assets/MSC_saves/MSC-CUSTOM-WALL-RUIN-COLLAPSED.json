@@ -1,0 +1,179 @@
+{
+  "id": "MSC-CUSTOM-WALL-RUIN-COLLAPSED",
+  "name": "wall_ruin_collapsed",
+  "biomes": [
+    "all"
+  ],
+  "rarity": "custom",
+  "radius": 2.8477818728522157,
+  "objects": [
+    {
+      "type": "debris",
+      "offset": [
+        2.0746,
+        0.065,
+        -0.382
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        -0.6295,
+        0.065,
+        -0.4794
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        1.047198,
+        0.785398
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        -0.3191,
+        0.065,
+        0.1204
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        2.5761,
+        0.065,
+        -1.2138
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "strong_rock",
+      "offset": [
+        -1.7765,
+        0.5595,
+        -0.2058
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        -0.261799,
+        -2.879793
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        -0.2166,
+        0.065,
+        1.0346
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        -2.2576,
+        0.065,
+        1.4114
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        -0.261799,
+        3.141593
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        -2.2398,
+        0.065,
+        -0.7071
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        1.308997,
+        0
+      ]
+    },
+    {
+      "type": "needle",
+      "offset": [
+        -1.5198,
+        -0.0021,
+        1.121
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        -3.141593,
+        0
+      ]
+    },
+    {
+      "type": "needle",
+      "offset": [
+        2.3449,
+        -0.0021,
+        0.5382
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "needle",
+      "offset": [
+        2.2137,
+        -0.2502,
+        -1.5066
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "wall",
+      "offset": [
+        -0.2505,
+        -0.7599,
+        0.269
+      ],
+      "variant": 1,
+      "rotation": [
+        -0.523599,
+        0,
+        -0.261799
+      ]
+    }
+  ]
+}

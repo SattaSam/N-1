@@ -14,7 +14,10 @@
   ]);
   const SPECIAL_OWNED = new Set(["nocturnal_animal"]);
   const registry = new Set();
+  const toolBalls = new Set();
   const states = new WeakMap();
+  const ballStates = new WeakMap();
+  let grazerSequence = 0;
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
   const seconds = () => (global.performance?.now?.() || Date.now()) / 1000;
 
@@ -92,7 +95,9 @@
       fleeUntil: 0,
       forageDirection: Math.random() * Math.PI * 2,
       enabled: true,
-      specialOwned: SPECIAL_OWNED.has(type)
+      specialOwned: SPECIAL_OWNED.has(type),
+      toolUseSlot: type === "brouteur" ? grazerSequence++ : -1,
+      toolUse: null
     };
   };
 
@@ -127,6 +132,147 @@
     restore(root);
     registry.delete(root);
     states.delete(root);
+    return true;
+  };
+
+  const registerToolBall = (root) => {
+    if (!root || ballStates.has(root)) return false;
+    ballStates.set(root, { origin: root.position.clone(), generated: root.userData.faunaGeneratedToolUse === true });
+    toolBalls.add(root);
+    return true;
+  };
+
+  const missionLifecycle = () => {
+    const life = BF.currentEngine?.missionManager?.memory?.state?.missionLifecycle || {};
+    return life["FAU-10"] || life.fauna_tool_use ||
+      Object.entries(life).find(([id]) =>
+        id.startsWith("FAU-10@") || id.startsWith("fauna_tool_use@")
+      )?.[1] || null;
+  };
+
+  const missionStatus = () => String(missionLifecycle()?.status || "");
+
+  const sameMissionScene = (grazer, ball) => {
+    const mission = String(grazer.userData?.bibleMissionId || "");
+    if (!new Set(["FAU-10", "fauna_tool_use"]).has(mission)) return false;
+    return mission === String(ball.userData?.bibleMissionId || "") &&
+      grazer.userData?.biblePersistentScene === ball.userData?.biblePersistentScene;
+  };
+
+  const nearestToolBall = (state, missionOnly) => {
+    let best = null;
+    let bestDistance = Infinity;
+    toolBalls.forEach((ball) => {
+      if (!ball?.parent || ball.parent !== state.root.parent) return;
+      if (missionOnly && !sameMissionScene(state.root, ball)) return;
+      if (!missionOnly && ball.userData?.faunaToolUseOwnerSlot !== state.toolUseSlot) return;
+      const distance = state.root.position.distanceTo(ball.position);
+      if (distance >= bestDistance || distance > 5) return;
+      best = ball;
+      bestDistance = distance;
+    });
+    return best;
+  };
+
+  const createGeneralizedBall = (state) => {
+    const THREE = BF.currentEngine?.THREE;
+    const parent = state.root.parent;
+    if (!THREE || !parent || !BF.ObjectLibrary?.exists?.("fauna_straw_ball")) return null;
+    const instance = BF.ObjectLibrary.create(THREE, "fauna_straw_ball", {}, state.toolUseSlot % 3);
+    const ball = instance.root;
+    const forward = new THREE.Vector3(1, 0, 0).applyAxisAngle(
+      new THREE.Vector3(0, 1, 0),
+      state.root.rotation.y
+    );
+    ball.position.copy(state.anchor.position).addScaledVector(forward, 1.7);
+    ball.userData.faunaGeneratedToolUse = true;
+    ball.userData.faunaToolUseGeneralized = true;
+    ball.userData.faunaToolUseOwnerSlot = state.toolUseSlot;
+    parent.add(ball);
+    registerToolBall(ball);
+    return ball;
+  };
+
+  const eligibleToolBall = (state) => {
+    if (state.type !== "brouteur") return null;
+    const status = missionStatus();
+    if (status === "active") return nearestToolBall(state, true);
+    if (status !== "completed" || state.toolUseSlot % 5 !== 0) return null;
+    return nearestToolBall(state, false) || createGeneralizedBall(state);
+  };
+
+  const beginToolUse = (state, ball, elapsed) => {
+    state.toolUse = {
+      ball,
+      phase: "approach",
+      phaseStarted: elapsed,
+      grazerStart: state.root.position.clone(),
+      ballStart: ball.position.clone(),
+      direction: ball.position.clone().sub(state.root.position).setY(0).normalize(),
+      rollDistance: 0
+    };
+    if (state.toolUse.direction.lengthSq() < 0.01) state.toolUse.direction.set(1, 0, 0);
+  };
+
+  const animateNosePush = (state, amount) => {
+    state.parts.heads.forEach((head) => {
+      const base = state.objects.find((item) => item.object === head);
+      if (!base) return;
+      head.position.y = base.position.y - amount * 0.1;
+      head.rotation.z = base.rotation.z - amount * 0.18;
+    });
+  };
+
+  const updateToolUse = (state, elapsed) => {
+    const ball = eligibleToolBall(state);
+    if (!ball) {
+      state.toolUse = null;
+      animateNosePush(state, 0);
+      return false;
+    }
+    if (!state.toolUse || state.toolUse.ball !== ball) beginToolUse(state, ball, elapsed);
+    const tool = state.toolUse;
+    const age = elapsed - tool.phaseStarted;
+    state.state = "tool_use";
+
+    if (tool.phase === "approach") {
+      const target = tool.ballStart.clone().addScaledVector(tool.direction, -1.02);
+      const duration = Math.max(0.8, tool.grazerStart.distanceTo(target) / 0.75);
+      const t = clamp(age / duration, 0, 1);
+      state.root.position.lerpVectors(tool.grazerStart, target, t);
+      state.root.rotation.y = Math.atan2(-tool.direction.z, tool.direction.x);
+      animateNosePush(state, t * 0.45);
+      if (t >= 1) {
+        tool.phase = "push";
+        tool.phaseStarted = elapsed;
+        tool.grazerStart.copy(state.root.position);
+        tool.ballStart.copy(ball.position);
+        tool.rollDistance = 0;
+      }
+      return true;
+    }
+
+    if (tool.phase === "push") {
+      const t = clamp(age / 1.45, 0, 1);
+      const eased = t * t * (3 - 2 * t);
+      const distance = eased * 1.35;
+      ball.position.copy(tool.ballStart).addScaledVector(tool.direction, distance);
+      state.root.position.copy(tool.grazerStart).addScaledVector(tool.direction, distance);
+      animateNosePush(state, Math.sin(t * Math.PI));
+      if (typeof ball.rotateOnWorldAxis === "function") {
+        const axis = tool.direction.clone().cross(new state.root.position.constructor(0, 1, 0)).normalize();
+        ball.rotateOnWorldAxis(axis, -(distance - tool.rollDistance) / 0.46);
+      }
+      tool.rollDistance = distance;
+      if (t >= 1) {
+        tool.phase = "recover";
+        tool.phaseStarted = elapsed;
+      }
+      return true;
+    }
+
+    animateNosePush(state, 0);
+    if (age >= 2.2) beginToolUse(state, ball, elapsed);
     return true;
   };
 
@@ -253,6 +399,10 @@
   const update = (state, elapsed) => {
     if (!state.enabled || !state.root.parent || state.root.visible === false) return;
     const distance = distanceToPlayer(state.root);
+    if (updateToolUse(state, elapsed)) {
+      animateParts(state, elapsed, distance);
+      return;
+    }
     chooseState(state, elapsed, distance);
     animateMovement(state, elapsed, distance);
     animateParts(state, elapsed, distance);
@@ -261,6 +411,12 @@
   BF.ObjectLibrary.registerCreateHook((instance, context = {}) => {
     const root = instance?.root;
     const type = context.type || instance?.definition?.type || root?.userData?.libraryType;
+    if (type === "fauna_straw_ball") {
+      const attachBall = () => registerToolBall(root);
+      if (root.parent) attachBall();
+      else global.requestAnimationFrame?.(attachBall) || attachBall();
+      return;
+    }
     if (!root || !FAUNA_TYPES.has(type)) return;
     const attach = () => register(root, type);
     if (root.parent) attach();
@@ -280,6 +436,11 @@
     if (elapsed - lastCleanupAt > 8) {
       lastCleanupAt = elapsed;
       registry.forEach((root) => { if (!root?.parent) unregister(root); });
+      toolBalls.forEach((ball) => {
+        if (ball?.parent) return;
+        toolBalls.delete(ball);
+        ballStates.delete(ball);
+      });
     }
     global.requestAnimationFrame?.(frame);
   };
@@ -295,7 +456,7 @@
     },
     setState(root, nextState) {
       const state = states.get(root);
-      const allowed = new Set(["rest", "observe", "forage", "flee", "play", "sleep"]);
+      const allowed = new Set(["rest", "observe", "forage", "flee", "play", "sleep", "tool_use"]);
       if (!state || !allowed.has(nextState)) return false;
       state.previousState = state.state;
       state.state = nextState;
@@ -317,7 +478,14 @@
       return true;
     },
     snapshot() {
-      return Object.freeze({ version: VERSION, registered: registry.size, running });
+      return Object.freeze({
+        version: VERSION,
+        registered: registry.size,
+        toolBalls: toolBalls.size,
+        toolUseMissionStatus: missionStatus(),
+        generalizedRate: "1/5",
+        running
+      });
     },
     stop() {
       running = false;

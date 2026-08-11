@@ -56,6 +56,54 @@
   line-height: 1.5;
 }
 
+.expedition-kit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: .55rem;
+  padding: 0 10px 10px;
+}
+
+.expedition-kit-slot {
+  appearance: none;
+  width: 100%;
+  min-height: 76px;
+  border: 1px solid rgba(145, 220, 255, .24);
+  border-radius: 12px;
+  background: rgba(7, 25, 42, .72);
+  color: inherit;
+  padding: .65rem .55rem;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: .55rem;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+}
+
+.expedition-kit-slot:hover,
+.expedition-kit-slot:focus-visible {
+  border-color: rgba(145, 220, 255, .62);
+  background: rgba(10, 38, 61, .9);
+  outline: none;
+}
+
+.expedition-kit-icon {
+  grid-row: 1 / span 2;
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.expedition-kit-label {
+  font-size: .78rem;
+  font-weight: 700;
+}
+
+.expedition-kit-count {
+  font-size: .72rem;
+  opacity: .82;
+}
+
 .tool-rail button:disabled {
   opacity: .38;
   cursor: not-allowed;

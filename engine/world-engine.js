@@ -76,6 +76,7 @@
       this.generatedTopology = [];
       this.mapNames = new Map();
       this.navigationRoute = [];
+      this.returningToBase = false;
       this.onMissingImage = (event) => {
         const source = String(event.detail?.source || "image inconnue");
         if (this.missingImageUrls.has(source)) return;
@@ -1162,6 +1163,7 @@
         this.pendingInteraction = null;
         this.pendingGate = null;
         this.pendingZoneExploration = null;
+        this.returningToBase = false;
         this.interactionStartedAt = 0;
         this.interactionApproachStartedAt = 0;
         this.interactionApproachAttempts = 0;
@@ -1203,40 +1205,38 @@
       document.addEventListener("visibilitychange", this.onVisibilityChange);
     }
 
-    async returnToBase() {
+    moveToBaseCamp() {
+      const camp = new this.THREE.Vector3(0, 0, 8);
+      this.pendingInteraction = null;
+      this.pendingGate = null;
+      this.character.setTarget(camp, "run");
+      this.showWorldMarker(camp);
+      this.callbacks.onStatus("BlueFox revient vers le refuge.");
+    }
+
+    returnToBase() {
       if (this.transitioning) return;
       if (this.currentMapId === "crystal") {
-        const camp = new this.THREE.Vector3(0, 0, 8);
-        this.pendingInteraction = null;
-        this.pendingGate = null;
-        this.character.setTarget(camp);
-        this.showWorldMarker(camp);
-        this.callbacks.onStatus("BlueFox revient vers le refuge.");
+        this.returningToBase = false;
+        this.moveToBaseCamp();
         return;
       }
-      this.transitioning = true;
-      this.character.enabled = false;
-      this.character.stop();
-      this.transitionElement.classList.add("active");
-      this.callbacks.onStatus("BlueFox utilise les passages mémorisés pour revenir à la base.");
-      try {
-        await new Promise((resolve) => setTimeout(resolve, 340));
-        await this.loadMap("crystal", null, true);
-        const camp = new this.THREE.Vector3(0, 0, 8);
-        this.character.root.position.copy(camp);
-        this.character.setTarget(camp);
-        this.character.lastSafePosition.copy(camp);
-        this.savePosition();
-        await new Promise((resolve) => setTimeout(resolve, 220));
-        this.cameraController.resetBehindCharacter(true);
-      } catch (error) {
-        console.error("Échec du retour à la base", error);
-        this.callbacks.onStatus("Le retour a échoué. BlueFox reste dans la zone actuelle.");
-      } finally {
-        this.transitionElement.classList.remove("active");
-        this.character.enabled = true;
-        this.transitioning = false;
+
+      const route = this.findKnownRoute(this.currentMapId, "crystal");
+      if (!route || route.length < 2) {
+        this.returningToBase = false;
+        this.callbacks.onStatus(
+          "Aucun itinéraire mémorisé ne permet encore de rejoindre le refuge."
+        );
+        return;
       }
+      this.pendingInteraction = null;
+      this.navigationRoute = route.slice(1);
+      this.returningToBase = true;
+      this.callbacks.onStatus(
+        "BlueFox utilise les passages mémorisés pour revenir à la base."
+      );
+      this.navigateNextRouteStep();
     }
 
     handlePointer(event, movementMode = "run") {
@@ -1762,6 +1762,7 @@
       // Évite que l’ancien plateau reste superposé au nouveau (z-fighting).
       previousMap?.group?.removeFromParent();
       previousMap?.dispose();
+      BF.bibleRuntime?.renderCurrentSite?.(this);
       if (announce) {
         if (mapId === "crystal" || mapId === "jungle") {
           this.callbacks.onMapChange(mapId);
@@ -2134,6 +2135,7 @@
         console.error("Échec du passage de map", error);
         this.pendingGate = null;
         this.navigationRoute = [];
+        this.returningToBase = false;
         this.callbacks.onStatus(
           "Le passage n’a pas pu être franchi. BlueFox reprend son exploration dans la zone actuelle."
         );
@@ -2147,6 +2149,9 @@
         }
         if (this.navigationRoute.length) {
           window.setTimeout(() => this.navigateNextRouteStep(), 2700);
+        } else if (this.returningToBase && this.currentMapId === "crystal") {
+          this.returningToBase = false;
+          window.setTimeout(() => this.moveToBaseCamp(), 450);
         }
       }
     }
@@ -2660,6 +2665,7 @@
       this.updateRoutine(now);
       this.updateInteraction(now);
       this.missionManager?.update(now);
+      BF.bibleRuntime?.updateCompletionGates?.(now);
       this.updateAutonomy(now);
       this.ensureActivity(now);
       this.updateInformationLayers(now);

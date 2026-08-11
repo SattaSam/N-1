@@ -1,0 +1,179 @@
+{
+  "id": "MSC-CUSTOM-FOYER-ANCIEN",
+  "name": "Foyer_ancien",
+  "biomes": [
+    "all"
+  ],
+  "rarity": "custom",
+  "radius": 12.579603169982843,
+  "objects": [
+    {
+      "type": "debris",
+      "offset": [
+        5.8967,
+        0.0895,
+        3.236
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        -5.5953,
+        0.0895,
+        4.4721
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        -7.556,
+        0.0895,
+        -2.0011
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        2.094395,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        -12.5795,
+        0.0895,
+        0.0398
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "strong_rock",
+      "offset": [
+        3.8848,
+        -0.3898,
+        3.3185
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "base_fire",
+      "offset": [
+        1.5142,
+        0.1346,
+        0.2372
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        -3.141593
+      ]
+    },
+    {
+      "type": "large_rock",
+      "offset": [
+        4.2592,
+        -0.851,
+        -3.6894
+      ],
+      "variant": 1,
+      "rotation": [
+        -0.261799,
+        1.832596,
+        0
+      ]
+    },
+    {
+      "type": "strong_rock",
+      "offset": [
+        -7.6957,
+        0.334,
+        1.3303
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        -1.832596
+      ]
+    },
+    {
+      "type": "tree_fallen",
+      "offset": [
+        5.2247,
+        0.0283,
+        -0.7423
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "tree_fallen",
+      "offset": [
+        5.2682,
+        0.0283,
+        -0.2516
+      ],
+      "variant": 1,
+      "rotation": [
+        1.570796,
+        -3.403392,
+        0
+      ]
+    },
+    {
+      "type": "tree_fallen",
+      "offset": [
+        5.7855,
+        0.2783,
+        -0.4479
+      ],
+      "variant": 1,
+      "rotation": [
+        -0.261799,
+        -0.523599,
+        -0.261799
+      ]
+    },
+    {
+      "type": "eroded_monolith",
+      "offset": [
+        1.5933,
+        0.0793,
+        -5.5016
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    }
+  ]
+}

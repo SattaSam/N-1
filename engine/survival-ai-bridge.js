@@ -17,7 +17,7 @@
     output: "ration",
     totalPlants: 4,
     minimumDistinctPlantTypes: 2,
-    implemented: false
+    implemented: true
   });
 
   const legacyEnergy = () => {
@@ -79,12 +79,30 @@
   };
 
   const interactionCost = Object.freeze({
-    collect: 3.2,
-    extract: 4.2,
-    analyze: 2.4,
-    inspect: 1.2,
-    observe: 0.8
+    collect: 2.2,
+    extract: 3,
+    analyze: 1.5,
+    inspect: 0.8,
+    observe: 0.5,
+    travel: 1.2
   });
+
+  const actionAxis = (action) =>
+    ["collect", "extract"].includes(action) ? "collection" :
+    ["observe", "inspect", "analyze"].includes(action) ? "research" :
+    action === "travel" ? "exploration" : "survival";
+
+  const manualAlignment = (axis) => {
+    const priorities = BF.BAC?.readProfile?.().priorities || null;
+    if (!priorities) return "neutral";
+    const values = Object.values(priorities).map(Number).filter(Number.isFinite);
+    const selected = Number(priorities[axis]);
+    if (!values.length || !Number.isFinite(selected)) return "neutral";
+    const highest = Math.max(...values);
+    if (selected >= highest - 8) return "aligned";
+    if (selected <= highest - 25) return "opposed";
+    return "neutral";
+  };
 
   const weather = () => BF.getWeatherState?.() || BF.currentWeatherState || {
     temperature: 17,
@@ -106,7 +124,7 @@
     return { level: "critical", ...FATIGUE_LEVELS.critical };
   };
 
-  const recordAction = (action, source = "autonomy") => {
+  const recordAction = (action, source = "autonomy", detail = {}) => {
     const baseCost = interactionCost[action] || 1;
     const now = Date.now();
     if (source === "manual") {
@@ -117,15 +135,56 @@
     } else if (source === "autonomy") {
       state.manualPressure = Math.max(0, state.manualPressure - 0.5);
     }
-    const manualMultiplier = source === "manual"
-      ? 1.35 + state.manualPressure * 0.12
-      : 1;
+    const alignment = source === "manual"
+      ? manualAlignment(detail.axis || actionAxis(action))
+      : "autonomy";
+    const manualMultiplier = source !== "manual"
+      ? 1
+      : alignment === "aligned"
+        ? 0.55 + state.manualPressure * 0.025
+        : alignment === "opposed"
+          ? 1.9 + state.manualPressure * 0.14
+          : 0.95 + state.manualPressure * 0.055;
     const thermalMultiplier = 1 + clamp01(weather().thermalStress) * 0.55;
     const cost = baseCost * manualMultiplier * thermalMultiplier;
     state.rest = clamp(state.rest - cost);
     state.food = clamp(state.food - cost * 0.42);
-    publish(`action:${action}:${source}`);
+    publish(`action:${action}:${source}:${alignment}`);
     return state.energy;
+  };
+
+  const rationKeys = () => BF.ObjectLibrary?.list?.()
+    ?.filter((definition) =>
+      definition.resource?.inventoryKey &&
+      (definition.knowledge?.family === "flora" ||
+        /plant|flora|fiber|biomass/i.test(
+          `${definition.type || ""} ${definition.subtype || ""} ${definition.resource?.family || ""}`
+        ))
+    )
+    .map((definition) => definition.resource.inventoryKey)
+    .filter((key, index, keys) => keys.indexOf(key) === index) || [];
+
+  const availableForKey = (key) => {
+    const progression = BF.getProgressionState?.() || {};
+    return (Number(progression.inventory?.[key]) || 0) +
+      (Number(progression.campStorage?.[key]) || 0);
+  };
+
+  const canConsumeRation = () => {
+    const availableKeys = rationKeys().filter((key) => availableForKey(key) > 0);
+    const total = availableKeys.reduce((sum, key) => sum + availableForKey(key), 0);
+    return availableKeys.length >= RATION_RECIPE.minimumDistinctPlantTypes &&
+      total >= RATION_RECIPE.totalPlants;
+  };
+
+  const consumeRation = () => {
+    if (!canConsumeRation()) return false;
+    const availableKeys = rationKeys().filter((key) => availableForKey(key) > 0);
+    const distinct = availableKeys.slice(0, RATION_RECIPE.minimumDistinctPlantTypes);
+    distinct.forEach((key) => BF.consumeInventoryPool?.([key], 1));
+    const remaining = RATION_RECIPE.totalPlants - distinct.length;
+    if (remaining > 0) BF.consumeInventoryPool?.(availableKeys, remaining);
+    return true;
   };
 
   const recoverRest = (amount, reason = "rest", pressureReduction = 0) => {
@@ -162,6 +221,10 @@
       }
       state.manualPressure = Math.max(0, state.manualPressure - 3);
     } else if (routine === "food") {
+      if (!consumeRation()) {
+        publish("routine:food-unavailable");
+        return state.energy;
+      }
       state.food = clamp(state.food + 28);
       state.rest = clamp(state.rest + 4);
     } else if (routine === "research") {
@@ -257,6 +320,8 @@
     updateSafety,
     applyEnvironmentalExposure,
     rationRecipe: RATION_RECIPE,
+    canConsumeRation,
+    consumeRation,
     save: () => publish("manual-save")
   });
   BF.getSurvivalState = snapshot;
@@ -264,8 +329,13 @@
   BF.ObjectEvents?.subscribe?.((event) => {
     const mode = event.detail?.interactionMode;
     if (!mode || !interactionCost[mode]) return;
-    recordAction(mode, event.detail?.interactionSource || "autonomy");
+    recordAction(mode, event.detail?.interactionSource || "autonomy", {
+      axis: actionAxis(mode)
+    });
   });
+  global.addEventListener("bluefox:navigate", () =>
+    recordAction("travel", "manual", { axis: "exploration" })
+  );
   global.addEventListener("bluefox:survival-changed", renderEnergy);
   global.addEventListener("bluefox:mission-state", renderEnergy);
   global.addEventListener("bluefox:weather-changed", renderEnergy);

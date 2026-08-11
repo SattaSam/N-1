@@ -132,8 +132,14 @@
   };
 
   const registeredEntries = new Map();
+  const fallbackTerrainUrls = Object.freeze([
+    "./Images/028_1.png",
+    "./Images/028_2.png",
+    "./Images/028_3.png"
+  ]);
   const api = {
     version: 2,
+    fallbackTerrainUrls,
     filenameRules: {
       scene: scenePattern,
       terrain: terrainPattern,

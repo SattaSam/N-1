@@ -1,0 +1,277 @@
+{
+  "id": "MSC-CUSTOM-HAUTEL-STELL-RELIC-COMP",
+  "name": "HAUTEL_Stell_relic_comp",
+  "biomes": [
+    "all"
+  ],
+  "rarity": "custom",
+  "radius": 9.402016507159908,
+  "objects": [
+    {
+      "type": "debris",
+      "offset": [
+        -1.9545,
+        -0.1893,
+        -3.5778
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        3.7868,
+        -0.1893,
+        -1.3659
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        -0.785398,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        -9.4019,
+        -0.1893,
+        0.0445
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        2.094395,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        -2.3271,
+        -0.1893,
+        7.1492
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "strong_rock",
+      "offset": [
+        -7.2274,
+        0.0552,
+        1.2981
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        -1.832596
+      ]
+    },
+    {
+      "type": "eroded_monolith",
+      "offset": [
+        0.6094,
+        -0.6995,
+        -2.0178
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "eroded_monolith",
+      "offset": [
+        2.2425,
+        -0.6995,
+        -0.1858
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "large_rock",
+      "offset": [
+        3.2515,
+        2.6201,
+        -2.4624
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        4.712389,
+        4.18879
+      ]
+    },
+    {
+      "type": "large_rock",
+      "offset": [
+        1.9752,
+        4.3309,
+        -1.5759
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        2.617994,
+        3.665191
+      ]
+    },
+    {
+      "type": "stele",
+      "offset": [
+        0.9706,
+        -2.0092,
+        -0.7723
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        -1.047198,
+        0
+      ]
+    },
+    {
+      "type": "arch",
+      "offset": [
+        1.3159,
+        -1.9704,
+        -1.0019
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        -0.785398,
+        0
+      ]
+    },
+    {
+      "type": "stele",
+      "offset": [
+        0.631,
+        -2.0092,
+        -0.3928
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        -1.047198,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        2.6638,
+        -0.2642,
+        1.9097
+      ],
+      "variant": 0,
+      "rotation": [
+        -0.261799,
+        -4.45059,
+        0.261799
+      ]
+    },
+    {
+      "type": "large_rock",
+      "offset": [
+        1.1567,
+        -1.8799,
+        -1.763
+      ],
+      "variant": 1,
+      "rotation": [
+        -0.261799,
+        2.094395,
+        6.283185
+      ]
+    },
+    {
+      "type": "rock",
+      "offset": [
+        -2.0032,
+        -0.7601,
+        7.9947
+      ],
+      "variant": 2,
+      "rotation": [
+        1.047198,
+        -0.261799,
+        1.047198
+      ]
+    },
+    {
+      "type": "tech_relic",
+      "offset": [
+        1.3012,
+        -0.2642,
+        -1.0849
+      ],
+      "variant": 1,
+      "rotation": [
+        1.832596,
+        2.879793,
+        -0.785398
+      ]
+    },
+    {
+      "type": "logic_prism",
+      "offset": [
+        0.8083,
+        0.7358,
+        -0.6981
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        -1.308997,
+        0
+      ]
+    },
+    {
+      "type": "pulse_core",
+      "offset": [
+        0.3214,
+        1.7858,
+        -1.6623
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        -0.785398,
+        0
+      ]
+    },
+    {
+      "type": "pulse_core",
+      "offset": [
+        1.88,
+        1.7858,
+        0.1646
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        -1.308997,
+        0
+      ]
+    }
+  ]
+}

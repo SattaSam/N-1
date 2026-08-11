@@ -1,0 +1,725 @@
+{
+  "id": "MSC-CUSTOM-FUNA-PARENTAL",
+  "name": "FUNA_Parental",
+  "biomes": [
+    "all"
+  ],
+  "rarity": "custom",
+  "radius": 10.576356252278863,
+  "objects": [
+    {
+      "type": "eroded_monolith",
+      "offset": [
+        -4.6412,
+        -0.8821,
+        0.9736
+      ],
+      "variant": 2,
+      "rotation": [
+        0.261799,
+        -0.261799,
+        0.261799
+      ]
+    },
+    {
+      "type": "eroded_monolith",
+      "offset": [
+        -0.0598,
+        0.1179,
+        3.7047
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        -1.832596
+      ]
+    },
+    {
+      "type": "large_rock",
+      "offset": [
+        -2.3365,
+        -0.3574,
+        2.2803
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        -0.523599,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        2.8428,
+        0.1281,
+        3.5206
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        -2.7283,
+        0.1281,
+        -6.3967
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        -5.241,
+        0.1281,
+        -0.0503
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        -4.2615,
+        0.1281,
+        -3.6829
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        1.308997,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        4.2418,
+        0.1281,
+        2.3588
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        1.308997,
+        0
+      ]
+    },
+    {
+      "type": "tree_fallen",
+      "offset": [
+        6.1334,
+        0.067,
+        0.7398
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "strong_rock",
+      "offset": [
+        -6.0659,
+        -0.5431,
+        -1.8895
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        4.45059,
+        0
+      ]
+    },
+    {
+      "type": "rock",
+      "offset": [
+        4.5839,
+        0.3073,
+        3.5068
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "rock",
+      "offset": [
+        9.6023,
+        0.2576,
+        -1.508
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "rock",
+      "offset": [
+        6.2404,
+        0.1177,
+        2.226
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        -1.570796
+      ]
+    },
+    {
+      "type": "abandoned_nest",
+      "offset": [
+        -1.4037,
+        0.1474,
+        0.1318
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "patte_creature",
+      "offset": [
+        6.9503,
+        0.1306,
+        -5.433
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "patte_creature",
+      "offset": [
+        1.5541,
+        0.1306,
+        -8.1773
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "patte_creature",
+      "offset": [
+        5.7305,
+        0.1306,
+        -7.6855
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "sauteur",
+      "offset": [
+        1.7407,
+        0.0885,
+        0.9733
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "sauteur",
+      "offset": [
+        -2.4362,
+        0.0885,
+        -1.6686
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "sauteur",
+      "offset": [
+        0.3478,
+        0.0885,
+        -1.122
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "fun_creature",
+      "offset": [
+        -1.3558,
+        0.1153,
+        0.1633
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "tree",
+      "offset": [
+        0.7454,
+        0.0532,
+        5.3063
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "luminescent_tree",
+      "offset": [
+        -3.9281,
+        0.0532,
+        -5.5337
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "fern",
+      "offset": [
+        10.4267,
+        0.0532,
+        -0.1006
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "lunar_vine",
+      "offset": [
+        7.1951,
+        0.0532,
+        1.0477
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "bush",
+      "offset": [
+        3.6229,
+        0.0532,
+        5.9187
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "fiber",
+      "offset": [
+        -6.8612,
+        0.0642,
+        0.053
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "fiber",
+      "offset": [
+        -5.5907,
+        0.0642,
+        -4.3308
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "fiber",
+      "offset": [
+        -5.6016,
+        0.0642,
+        3.64
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "rare_biological_resource",
+      "offset": [
+        -2.1045,
+        0.1479,
+        4.8453
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "prismatic_orchid",
+      "offset": [
+        -0.7583,
+        0.0532,
+        5.7137
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "adaptive_plant",
+      "offset": [
+        -7.1663,
+        0.0597,
+        -3.7779
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "adaptive_plant",
+      "offset": [
+        -6.5554,
+        0.0597,
+        1.9485
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "frond",
+      "offset": [
+        -4.7744,
+        0.0473,
+        -7.3042
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "frond",
+      "offset": [
+        -8.2468,
+        0.0473,
+        4.1583
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "frond",
+      "offset": [
+        8.7363,
+        0.0473,
+        -0.9197
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "frond",
+      "offset": [
+        10.2109,
+        0.0473,
+        -2.7561
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "frond",
+      "offset": [
+        -2.1257,
+        0.0473,
+        -6.939
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "fluorescent_vegetation",
+      "offset": [
+        8.6869,
+        0.0532,
+        0.0107
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "fluorescent_vegetation",
+      "offset": [
+        5.4777,
+        0.0532,
+        2.8998
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "fluorescent_vegetation",
+      "offset": [
+        -3.3396,
+        0.0532,
+        5.2774
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "frond",
+      "offset": [
+        -2.0294,
+        0.0473,
+        6.0329
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "frond",
+      "offset": [
+        0.4366,
+        0.0473,
+        8.9469
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        -0.785398,
+        0
+      ]
+    },
+    {
+      "type": "frond",
+      "offset": [
+        -8.5102,
+        -0.2027,
+        -1.3763
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "needle",
+      "offset": [
+        3.2897,
+        -0.1871,
+        2.0231
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "needle",
+      "offset": [
+        -4.8174,
+        -0.1871,
+        -1.2587
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "needle",
+      "offset": [
+        -3.0346,
+        -0.1871,
+        -5.0456
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "tree_fallen",
+      "offset": [
+        1.0903,
+        -0.433,
+        0.8393
+      ],
+      "variant": 2,
+      "rotation": [
+        -6.021386,
+        -1.570796,
+        0.261799
+      ]
+    },
+    {
+      "type": "tree_fallen",
+      "offset": [
+        -3.6203,
+        -0.433,
+        -1.0644
+      ],
+      "variant": 2,
+      "rotation": [
+        -6.021386,
+        -1.570796,
+        0.261799
+      ]
+    },
+    {
+      "type": "tree_fallen",
+      "offset": [
+        -1.8865,
+        -0.433,
+        -2.458
+      ],
+      "variant": 2,
+      "rotation": [
+        -6.021386,
+        -1.570796,
+        0.261799
+      ]
+    },
+    {
+      "type": "abandoned_nest",
+      "offset": [
+        1.5942,
+        0.1474,
+        1.2379
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        -3.141593
+      ]
+    }
+  ]
+}

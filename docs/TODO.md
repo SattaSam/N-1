@@ -1,10 +1,21 @@
 # BLUEFOX ODYSSEY — TODO
 
-Dernière mise à jour : 2026-08-08
+Dernière mise à jour : 2026-08-09
 
 ## P0 — Clôturer le jalon Missions / BibleRuntime
 
-- [ ] Revalider le correctif cumulatif Missions V1 sur une copie propre du dépôt.
+- [x] Valider en jeu le cumulatif V17 construit sur le commit GitHub `5e381d3`.
+- [x] Valider la collecte canonique de bois : buisson `+2`, bois tombé `+1`,
+  progression immédiate et récoltes répétées après réapparition.
+- [x] Valider `BIBLE-V01-CAMP` : seuil réel de `10`, consommation unique,
+  établissement persistant et rendu du camp près de la capsule.
+- [x] Valider `BIBLE-V01-ARCHAEOLOGY` : instance exacte, séquence
+  Observer → Inspecter → Analyser et retour près d'un camp réel.
+- [x] Valider après F5 l'hydratation des missions terminées et la restauration
+  visuelle du camp.
+- [x] Passer la suite automatisée du cumulatif V17 : `27/27` tests.
+
+- [x] Revalider le correctif cumulatif Missions V1 sur une copie propre du dépôt.
 - [ ] Vérifier sur une session longue :
   - mission principale dominante ;
   - missions secondaires actives ;
@@ -19,11 +30,11 @@ Dernière mise à jour : 2026-08-08
 
 ## P0 — Résolution des missions de production
 
-- [ ] Ajouter au modèle Patron / Fiche les sorties standard :
-  - `WORLD` ;
-  - `INVENTORY` ;
-  - `KNOWLEDGE`.
-- [ ] Faire de `BIBLE-V0-CAMP` le premier test :
+- [x] Ajouter au modèle Patron / Fiche les effets nécessaires au Camp :
+  consommation transactionnelle d'inventaire et établissement d'un site monde.
+- [ ] Valider séparément les sorties génériques encore non prouvées en jeu :
+  ajout d'objet fabriqué à l'inventaire et déblocage de connaissance.
+- [x] Faire de `BIBLE-V01-CAMP` le premier test :
   - conditions remplies ;
   - apparition automatique du camp dans la zone prévue ;
   - mission terminée sans action BUILD artificielle supplémentaire.
@@ -34,6 +45,12 @@ Dernière mise à jour : 2026-08-08
   - blueprints / recherches.
 
 ## P1 — Industrialiser l'intégration de la Bible
+
+- [ ] Créer une quatrième mission uniquement depuis une fiche déclarative.
+- [ ] Vérifier qu'elle traverse sans code spécifique la chaîne
+  Fiche → Catalogue → BibleRuntime → MissionManager → événements → UI.
+- [ ] Valider son cycle complet, sa sauvegarde/recharge et la non-régression des
+  trois missions déjà terminées.
 
 - [ ] Figer les 3 patrons V1 en tant que référence :
   1. Découvrir / Comprendre ;

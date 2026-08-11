@@ -1,0 +1,193 @@
+{
+  "id": "MSC-CUSTOM-WALL-RUIN-STRAIGHT",
+  "name": "wall_ruin_straight",
+  "biomes": [
+    "all"
+  ],
+  "rarity": "custom",
+  "radius": 5.050399883890004,
+  "objects": [
+    {
+      "type": "debris",
+      "offset": [
+        3.7335,
+        0.1042,
+        -0.0761
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        -3.3075,
+        0.1042,
+        0.1246
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        1.047198,
+        0.785398
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        -2.997,
+        0.1042,
+        0.7244
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        2.519,
+        0.1042,
+        -2.5068
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "wall",
+      "offset": [
+        0.3982,
+        -0.7207,
+        0.1709
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        -0.261799
+      ]
+    },
+    {
+      "type": "strong_rock",
+      "offset": [
+        -4.4544,
+        0.3487,
+        0.3982
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        -0.785398,
+        -2.879793
+      ]
+    },
+    {
+      "type": "strong_rock",
+      "offset": [
+        -2.1543,
+        -0.2207,
+        0.1444
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        -1.047198,
+        -2.094395
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        -2.8945,
+        0.1042,
+        1.6386
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        4.0614,
+        0.1042,
+        -0.8216
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        -0.261799,
+        3.141593
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        4.9505,
+        0.1042,
+        -0.7547
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        1.308997,
+        0
+      ]
+    },
+    {
+      "type": "needle",
+      "offset": [
+        -4.1977,
+        0.0371,
+        1.725
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        -3.141593,
+        0
+      ]
+    },
+    {
+      "type": "needle",
+      "offset": [
+        -0.333,
+        0.0371,
+        1.1421
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "needle",
+      "offset": [
+        4.6757,
+        -0.211,
+        -1.9091
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    }
+  ]
+}

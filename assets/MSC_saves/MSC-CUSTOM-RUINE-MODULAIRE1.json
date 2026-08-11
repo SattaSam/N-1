@@ -1,0 +1,123 @@
+{
+  "id": "MSC-CUSTOM-RUINE-MODULAIRE1",
+  "name": "Ruine_modulaire1",
+  "biomes": [
+    "all"
+  ],
+  "rarity": "custom",
+  "radius": 8.38743360542188,
+  "objects": [
+    {
+      "type": "debris",
+      "offset": [
+        -0.94,
+        0.2169,
+        -3.6045
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        4.8013,
+        0.2169,
+        -1.3926
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        -0.785398,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        -8.3874,
+        0.2169,
+        0.0178
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        2.094395,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        -1.3126,
+        0.2169,
+        7.1225
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "eroded_monolith",
+      "offset": [
+        1.6239,
+        -0.2933,
+        -2.0445
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        3.6783,
+        0.142,
+        1.883
+      ],
+      "variant": 0,
+      "rotation": [
+        -0.261799,
+        -4.45059,
+        0.261799
+      ]
+    },
+    {
+      "type": "wall",
+      "offset": [
+        1.6328,
+        -0.858,
+        0.0403
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        1.570796,
+        0.523599
+      ]
+    },
+    {
+      "type": "wall",
+      "offset": [
+        -1.0962,
+        0.142,
+        -2.0221
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-(function (global) {
+﻿(function (global) {
   "use strict";
 
   const BF = global.BlueFox3D = global.BlueFox3D || {};
@@ -7,6 +7,8 @@
 
   const TRIGGER_TYPES = Object.freeze([
     "manual",
+    "interaction.any",
+    "interaction.discovery",
     "interaction.collect",
     "interaction.extract",
     "interaction.observe",
@@ -29,6 +31,12 @@
   const TRIGGER_FILTERS = Object.freeze({
     manual: Object.freeze([]),
 
+    "interaction.any": Object.freeze([
+      "objectId", "kind", "family", "subject", "tagsAny", "tagsAll", "studyOnly"
+    ]),
+    "interaction.discovery": Object.freeze([
+      "objectId", "kind", "family", "subject", "tagsAny", "tagsAll"
+    ]),
     "interaction.collect": Object.freeze([
       "objectId", "kind", "family", "subject", "tagsAny", "tagsAll"
     ]),
@@ -75,7 +83,8 @@
 
   const EFFECT_TYPES = Object.freeze([
     "inventory.add",
-    "world.spawn"
+    "inventory.consume",
+    "site.establish"
   ]);
 
   const COMPLETION_GATE_TYPES = Object.freeze([
@@ -412,11 +421,10 @@
         return;
       }
 
-      if (!isNonEmptyString(effect.objectId)) {
-        add(errors, missionId, `${path}.objectId`, "objet requis.");
-      }
-
       if (effect.type === "inventory.add") {
+        if (!isNonEmptyString(effect.objectId)) {
+          add(errors, missionId, `${path}.objectId`, "objet requis.");
+        }
         if (
           effect.destination != null &&
           !["bluefox", "base"].includes(effect.destination)
@@ -436,7 +444,22 @@
         }
       }
 
-      if (effect.type === "world.spawn") {
+      if (effect.type === "inventory.consume") {
+        if (!isNonEmptyString(effect.inventoryKey)) {
+          add(errors, missionId, `${path}.inventoryKey`, "clé requise.");
+        }
+        if (!Number.isFinite(Number(effect.quantity)) || Number(effect.quantity) < 1) {
+          add(errors, missionId, `${path}.quantity`, "doit être >= 1.");
+        }
+      }
+
+      if (effect.type === "site.establish") {
+        if (!SHELTER_KINDS.includes(effect.kind)) {
+          add(errors, missionId, `${path}.kind`, "camp, refuge ou base requis.");
+        }
+        if (!isNonEmptyString(effect.microSceneId)) {
+          add(errors, missionId, `${path}.microSceneId`, "micro-scène requise.");
+        }
         const placement = effect.placement || {};
         if (!PLACEMENT_MODES.includes(placement.mode)) {
           add(
@@ -495,7 +518,7 @@
 
       if (["build", "craft"].includes(step.action)) {
         const message =
-          "BUILD/CRAFT doit migrer vers effects (inventory.add ou world.spawn) en V0.1.";
+          "BUILD/CRAFT doit migrer vers effects (inventory.add, inventory.consume ou site.establish) en V0.1.";
         if (compatibility === "legacy-v0") {
           add(warnings, missionId, `pattern.${mission.pattern}`, message);
         } else {
@@ -534,6 +557,17 @@
     }
     if (!isObject(mission.slots)) {
       add(errors, missionId, "slots", "objet requis.");
+    }
+    if (
+      mission.targetBinding != null &&
+      !["instance", "definition"].includes(mission.targetBinding)
+    ) {
+      add(
+        errors,
+        missionId,
+        "targetBinding",
+        "doit valoir instance ou definition."
+      );
     }
 
     validatePatternUse(

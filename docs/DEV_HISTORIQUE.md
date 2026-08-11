@@ -170,3 +170,58 @@ Prochaine priorité :
 - système de résolution / sorties `WORLD`, `INVENTORY`, `KNOWLEDGE` ;
 - validation de `BIBLE-V0-CAMP` ;
 - puis première vraie passe de conversion de la Bible par patron.
+
+# Session du 9 août 2026 — Cumulatif V15 à V17 validé en jeu
+
+## Base et méthode
+
+- Reprise depuis le dépôt GitHub au commit `5e381d3` (`V4.5 missionV12+ UI`).
+- Audit des chaînes collecte, progression, inventaire, résolution, persistance,
+  hydratation et rendu avant correction.
+- Conservation d'un paquet cumulatif propre limité aux fichiers du jeu modifiés.
+
+## V15 — Camp / Bois
+
+- Renommage joueur de `tree_fallen` en **Bois**.
+- Quantités CUO validées : buisson `2`, bois tombé `1`.
+- Remplacement des comptages parallèles par un seul événement canonique
+  `RESOURCE_COLLECTED`, distribué au registre et aux missions.
+- Idempotence fondée sur l'identité de l'événement, compatible avec une nouvelle
+  collecte de la même instance après sa réapparition.
+- Mission Camp terminée uniquement après `10` bois réellement collectés.
+- Consommation transactionnelle et unique des `10` bois.
+- Établissement persistant du site Camp et apparition de `MSC-CUSTOM-CAMP` près
+  de la capsule.
+- Patch validé et vérifié en jeu.
+
+## V16 — Étudier une trace ancienne
+
+- Activation sur observation d'une cible `technology` ou `ruin`.
+- Liaison à l'instance exacte et séquence Observer → Inspecter → Analyser.
+- Validation finale uniquement près d'un site Camp réellement établi.
+- Suppression du faux refuge implicite propre à Crystal.
+- Mission réalisée sans défaut en jeu.
+
+## V17 — restauration après chargement
+
+Diagnostic confirmé : le site Camp était correctement sauvegardé, mais sa
+projection 3D n'était pas restaurée au chargement ; les missions Camp et
+Découverte terminées n'avaient pas non plus leur arbre hydraté dans le gestionnaire,
+ce qui produisait un affichage à `0 %`.
+
+Correction retenue :
+
+- hydratation des arbres terminés dans `MissionManager`, hors liste active ;
+- compatibilité d'affichage pour les anciennes sauvegardes terminées sans arbre ;
+- restauration déterministe du site à la fin de `WorldEngine.loadMap()` via
+  `BibleRuntime.renderCurrentSite()` ;
+- suppression de la restauration dépendante d'une temporisation ou d'un événement UI.
+
+Résultat : cumulatif V17 validé et confirmé en jeu ; **27 tests automatisés sur
+27 réussis**.
+
+## Reprise suivante
+
+Construire une quatrième mission uniquement à partir d'une fiche déclarative,
+puis vérifier son cycle complet, la sauvegarde/recharge et la non-régression des
+trois missions existantes.

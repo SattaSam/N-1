@@ -1,0 +1,109 @@
+{
+  "id": "MSC-CUSTOM-CARRIEREDECRISTAUX",
+  "name": "Carrieredecristaux",
+  "biomes": [
+    "all"
+  ],
+  "rarity": "custom",
+  "radius": 8.697210524579965,
+  "objects": [
+    {
+      "type": "large_rock",
+      "offset": [
+        -2.5363,
+        0.8848,
+        -6.9217
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        -1.308997
+      ]
+    },
+    {
+      "type": "wall",
+      "offset": [
+        1.2536,
+        -0.6695,
+        -7.3745
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "wall",
+      "offset": [
+        0.7764,
+        -0.6695,
+        5.6135
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "rock",
+      "offset": [
+        -2.2957,
+        -0.4652,
+        6.2994
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "strong_rock",
+      "offset": [
+        -1.5592,
+        -0.1002,
+        6.0971
+      ],
+      "variant": 0,
+      "rotation": [
+        0.261799,
+        1.047198,
+        0
+      ]
+    },
+    {
+      "type": "large_rock",
+      "offset": [
+        2.9168,
+        -0.1152,
+        4.8626
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "large_rock",
+      "offset": [
+        1.4444,
+        1.1348,
+        -8.5764
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        -2.356194
+      ]
+    }
+  ]
+}

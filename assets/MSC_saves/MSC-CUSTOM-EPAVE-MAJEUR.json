@@ -1,0 +1,893 @@
+{
+  "id": "MSC-CUSTOM-EPAVE-MAJEUR",
+  "name": "EPAVE_Majeur",
+  "biomes": [
+    "all"
+  ],
+  "rarity": "custom",
+  "radius": 15.966684405695563,
+  "objects": [
+    {
+      "type": "strong_rock",
+      "offset": [
+        7.2642,
+        -0.1336,
+        -0.6741
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        5.1636,
+        -0.2124,
+        -0.924
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        3.901,
+        -0.2124,
+        -0.6894
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        -1.047198,
+        0
+      ]
+    },
+    {
+      "type": "needle",
+      "offset": [
+        4.6868,
+        -0.5276,
+        -0.3696
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "needle",
+      "offset": [
+        7.2573,
+        -0.5294,
+        -1.5427
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "needle",
+      "offset": [
+        8.9453,
+        -0.5294,
+        -0.2804
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "needle",
+      "offset": [
+        2.357,
+        1.4708,
+        -1.2463
+      ],
+      "variant": 1,
+      "rotation": [
+        -4.18879,
+        -2.356194,
+        4.18879
+      ]
+    },
+    {
+      "type": "needle",
+      "offset": [
+        1.4398,
+        1.4708,
+        -1.1118
+      ],
+      "variant": 1,
+      "rotation": [
+        -0.785398,
+        -0.785398,
+        4.712389
+      ]
+    },
+    {
+      "type": "ancient_machine_wreck",
+      "offset": [
+        -0.559,
+        2.1197,
+        -0.5504
+      ],
+      "variant": 2,
+      "rotation": [
+        1.308997,
+        -1.047198,
+        -0.261799
+      ]
+    },
+    {
+      "type": "ancient_machine_wreck",
+      "offset": [
+        -3.1132,
+        -0.1303,
+        0.5396
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        2.356194,
+        0
+      ]
+    },
+    {
+      "type": "ancient_machine_wreck",
+      "offset": [
+        -1.309,
+        2.1197,
+        0.4561
+      ],
+      "variant": 2,
+      "rotation": [
+        1.308997,
+        -1.047198,
+        -0.261799
+      ]
+    },
+    {
+      "type": "ancient_machine_wreck",
+      "offset": [
+        -0.621,
+        -1.8803,
+        -0.3162
+      ],
+      "variant": 2,
+      "rotation": [
+        1.308997,
+        -2.356194,
+        0.785398
+      ]
+    },
+    {
+      "type": "ancient_machine_wreck",
+      "offset": [
+        2.4518,
+        -1.7403,
+        -4.3106
+      ],
+      "variant": 2,
+      "rotation": [
+        1.308997,
+        -1.308997,
+        0.785398
+      ]
+    },
+    {
+      "type": "ancient_machine_wreck",
+      "offset": [
+        0.4066,
+        -1.8803,
+        -3.0081
+      ],
+      "variant": 2,
+      "rotation": [
+        1.308997,
+        -2.617994,
+        6.021386
+      ]
+    },
+    {
+      "type": "ancient_machine_wreck",
+      "offset": [
+        2.7441,
+        -1.1303,
+        -2.6974
+      ],
+      "variant": 2,
+      "rotation": [
+        1.308997,
+        -2.356194,
+        3.665191
+      ]
+    },
+    {
+      "type": "ancient_machine_wreck",
+      "offset": [
+        -2.3614,
+        1.3697,
+        0.1029
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        2.356194,
+        0
+      ]
+    },
+    {
+      "type": "ancient_machine_wreck",
+      "offset": [
+        -2.0551,
+        -1.6303,
+        -1.5762
+      ],
+      "variant": 2,
+      "rotation": [
+        1.308997,
+        -2.094395,
+        2.617994
+      ]
+    },
+    {
+      "type": "ancient_machine_wreck",
+      "offset": [
+        4.2003,
+        -1.6303,
+        -1.3931
+      ],
+      "variant": 2,
+      "rotation": [
+        1.308997,
+        -2.094395,
+        2.617994
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        5.5849,
+        -0.2124,
+        -3.1594
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        1.308997,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        0.0347,
+        0.0376,
+        -0.8292
+      ],
+      "variant": 0,
+      "rotation": [
+        0.261799,
+        2.879793,
+        -0.523599
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        0.5699,
+        3.0376,
+        -0.3327
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        1.308997,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        -0.4018,
+        3.0376,
+        1.1667
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        2.356194,
+        0
+      ]
+    },
+    {
+      "type": "needle",
+      "offset": [
+        -0.5384,
+        4.7224,
+        1.1043
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        3.403392
+      ]
+    },
+    {
+      "type": "large_rock",
+      "offset": [
+        0.9123,
+        1.2671,
+        0.5375
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        -1.570796
+      ]
+    },
+    {
+      "type": "large_rock",
+      "offset": [
+        1.2011,
+        4.7671,
+        -0.4999
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        -1.308997,
+        -1.570796
+      ]
+    },
+    {
+      "type": "needle",
+      "offset": [
+        -3.5366,
+        -0.5292,
+        -1.1906
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "needle",
+      "offset": [
+        -0.5366,
+        -0.5292,
+        1.8094
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "needle",
+      "offset": [
+        0.8464,
+        -0.5292,
+        2.2029
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "needle",
+      "offset": [
+        2.2757,
+        -0.5292,
+        -3.5788
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "needle",
+      "offset": [
+        2.4388,
+        -0.2776,
+        -6.2022
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "abandoned_drone",
+      "offset": [
+        0.0574,
+        -0.2799,
+        -3.7243
+      ],
+      "variant": 0,
+      "rotation": [
+        -0.261799,
+        -2.356194,
+        0
+      ]
+    },
+    {
+      "type": "relay_block",
+      "offset": [
+        -2.6408,
+        -0.2873,
+        -1.2467
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        -3.141593,
+        1.570796
+      ]
+    },
+    {
+      "type": "relay_block",
+      "offset": [
+        0.3592,
+        -0.2873,
+        1.7533
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        -3.141593,
+        1.570796
+      ]
+    },
+    {
+      "type": "memory_capsule",
+      "offset": [
+        2.7748,
+        -0.1423,
+        -2.5627
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        -0.261799,
+        1.570796
+      ]
+    },
+    {
+      "type": "memory_capsule",
+      "offset": [
+        5.7748,
+        -0.1423,
+        0.4373
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        -0.261799,
+        1.570796
+      ]
+    },
+    {
+      "type": "pulse_core",
+      "offset": [
+        -4.4253,
+        -0.2373,
+        2.5821
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "logic_prism",
+      "offset": [
+        6.0878,
+        -0.0373,
+        -1.3671
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        -1.832596
+      ]
+    },
+    {
+      "type": "logic_prism",
+      "offset": [
+        6.3149,
+        -0.0373,
+        0.6945
+      ],
+      "variant": 2,
+      "rotation": [
+        0.261799,
+        -0.523599,
+        -1.832596
+      ]
+    },
+    {
+      "type": "fluorescent_vegetation",
+      "offset": [
+        4.8169,
+        -0.2873,
+        1.2778
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "fluorescent_vegetation",
+      "offset": [
+        -4.1266,
+        -0.2873,
+        -2.4432
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "frond",
+      "offset": [
+        -5.0701,
+        -0.2932,
+        -1.6463
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "frond",
+      "offset": [
+        -5.3988,
+        -0.2932,
+        2.4863
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "frond",
+      "offset": [
+        -1.6577,
+        -0.2932,
+        -5.1137
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "frond",
+      "offset": [
+        11.2099,
+        -0.2932,
+        -1.0771
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0.523599,
+        0
+      ]
+    },
+    {
+      "type": "frond",
+      "offset": [
+        5.6071,
+        -0.2932,
+        2.1972
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        -0.785398,
+        0
+      ]
+    },
+    {
+      "type": "frond",
+      "offset": [
+        3.7949,
+        -0.2932,
+        0.7041
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "ancient_machine_wreck",
+      "offset": [
+        -3.3275,
+        -1.6303,
+        4.0493
+      ],
+      "variant": 2,
+      "rotation": [
+        1.308997,
+        -2.094395,
+        2.617994
+      ]
+    },
+    {
+      "type": "thermosap_moss",
+      "offset": [
+        0.3384,
+        -0.4373,
+        2.5648
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "ancient_machine_wreck",
+      "offset": [
+        0.4981,
+        -1.8803,
+        0.5234
+      ],
+      "variant": 2,
+      "rotation": [
+        1.308997,
+        -2.356194,
+        -0.261799
+      ]
+    },
+    {
+      "type": "thermosap_moss",
+      "offset": [
+        4.2465,
+        -0.4373,
+        -4.3296
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "thermosap_moss",
+      "offset": [
+        -4.9587,
+        -0.4373,
+        2.973
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "thermosap_moss",
+      "offset": [
+        -4.7099,
+        -0.4373,
+        0.0609
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "thermosap_moss",
+      "offset": [
+        -2.9432,
+        2.5627,
+        0.4728
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "thermosap_moss",
+      "offset": [
+        -3.8831,
+        2.3127,
+        -0.1219
+      ],
+      "variant": 2,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "fluorescent_vegetation",
+      "offset": [
+        -4.7346,
+        -0.2873,
+        4.2048
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        1.047198,
+        0
+      ]
+    },
+    {
+      "type": "pulse_core",
+      "offset": [
+        3.6855,
+        -0.2373,
+        -1.7852
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "metallic_dune",
+      "offset": [
+        -10.255,
+        -1.5373,
+        5.2123
+      ],
+      "variant": 1,
+      "rotation": [
+        0.261799,
+        -0.261799,
+        -0.261799
+      ]
+    },
+    {
+      "type": "metallic_dune",
+      "offset": [
+        -8.5348,
+        -2.7873,
+        3.5242
+      ],
+      "variant": 1,
+      "rotation": [
+        0.785398,
+        0.523599,
+        -0.261799
+      ]
+    },
+    {
+      "type": "logic_prism",
+      "offset": [
+        -9.9239,
+        0.1127,
+        4.3904
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        2.094395
+      ]
+    },
+    {
+      "type": "pulse_core",
+      "offset": [
+        -14.2178,
+        -0.2373,
+        7.2656
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "metallic_dune",
+      "offset": [
+        -3.5012,
+        -0.7873,
+        0.4094
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0.523599,
+        0
+      ]
+    },
+    {
+      "type": "abandoned_drone",
+      "offset": [
+        -0.722,
+        -0.2799,
+        3.2927
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        -1.047198,
+        0
+      ]
+    },
+    {
+      "type": "thermosap_moss",
+      "offset": [
+        -10.1846,
+        -0.4373,
+        2.9054
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    }
+  ]
+}

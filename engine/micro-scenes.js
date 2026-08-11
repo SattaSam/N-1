@@ -90,6 +90,19 @@
         Object.freeze({ type: "patte_creature", offset: [-2.5, 0, -1.8], variant: 1 })
       ])
     }),
+    fauna_tool_use: Object.freeze({
+      id: "MSC-FAUNA-TOOL-USE-001",
+      name: "FAU-10 · Utilisation d’outil",
+      biomes: Object.freeze(["all"]),
+      rarity: "story",
+      missionOnly: true,
+      missionId: "FAU-10",
+      radius: 5,
+      objects: Object.freeze([
+        Object.freeze({ type: "brouteur", offset: [-1.55, 0, 0], variant: 0 }),
+        Object.freeze({ type: "fauna_straw_ball", offset: [0, 0, 0], variant: 0 })
+      ])
+    }),
     translucent_encounter: Object.freeze({
       id: "MSC-NPC-TRANSLUCENT-001", biomes: Object.freeze(["crystalline", "aquatic", "alien"]), rarity: "story", radius: 8,
       objects: Object.freeze([

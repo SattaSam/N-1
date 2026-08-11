@@ -454,6 +454,8 @@
             missionLifecycle: {},
             pendingActivations: {},
             rewardedMissions: {},
+            processedObjectEvents: {},
+            effectReceipts: {},
             siteProgression: {},
             missions: {},
             facts: {},

@@ -21,6 +21,8 @@
         missionLifecycle: {},
         pendingActivations: {},
         rewardedMissions: {},
+        processedObjectEvents: {},
+        effectReceipts: {},
         siteProgression: {},
         missions: {},
         facts: {},
@@ -50,6 +52,8 @@
           missions: { ...(saved.missions || {}) },
           facts: { ...(saved.facts || {}) },
           rewardedMissions: { ...(saved.rewardedMissions || {}) },
+          processedObjectEvents: { ...(saved.processedObjectEvents || {}) },
+          effectReceipts: { ...(saved.effectReceipts || {}) },
           siteProgression: { ...(saved.siteProgression || {}) },
           history: Array.isArray(saved.history) ? saved.history.slice(-150) : []
         };
@@ -93,6 +97,36 @@
       this.state.history = this.state.history.slice(-150);
       this.save();
       return event;
+    }
+
+    hasProcessedObjectEvent(eventId) {
+      return Boolean(eventId && this.state.processedObjectEvents?.[eventId]);
+    }
+
+    markProcessedObjectEvent(eventId) {
+      if (!eventId) return false;
+      const entries = this.state.processedObjectEvents =
+        this.state.processedObjectEvents || {};
+      entries[eventId] = Date.now();
+      const overflow = Object.entries(entries)
+        .sort((left, right) => Number(left[1]) - Number(right[1]))
+        .slice(0, Math.max(0, Object.keys(entries).length - 250));
+      overflow.forEach(([id]) => delete entries[id]);
+      return true;
+    }
+
+    hasEffectReceipt(receiptId) {
+      return Boolean(receiptId && this.state.effectReceipts?.[receiptId]);
+    }
+
+    recordEffectReceipt(receiptId, detail = {}) {
+      if (!receiptId || this.hasEffectReceipt(receiptId)) return false;
+      this.state.effectReceipts[receiptId] = {
+        id: receiptId,
+        at: Date.now(),
+        ...JSON.parse(JSON.stringify(detail))
+      };
+      return this.save();
     }
 
     setFact(key, value) {

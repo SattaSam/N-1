@@ -1,7 +1,7 @@
 # BLUEFOX ODYSSEY — MASTER
 
 ## État de référence
-Dernière mise à jour : 2026-08-08
+Dernière mise à jour : 2026-08-09
 
 ### Version de travail
 - Base PC connue : V16.20.
@@ -61,11 +61,13 @@ Objectif d’architecture validé :
 - conserver les objets inspectables ou observables ;
 - émettre un événement de progression correspondant à l’action réelle.
 
-### État du patch `world-engine.js`
-- Le dernier patch livré pour les interactions est NON VALIDÉ et NON FONCTIONNEL.
-- Des références codées en dur à `Crystal` / `crystal` subsistent dans `world-engine.js`.
-- Ce patch ne doit pas servir de base de production.
-- La reprise devra partir de la version GitHub courante, avec audit complet du fichier et de ses dépendances avant toute correction.
+### État du chantier interactions / missions
+- La base de reprise reste le commit GitHub `5e381d3` (`V4.5 missionV12+ UI`).
+- Le cumulatif propre V17, construit sur cette base, est validé en jeu.
+- La collecte est pilotée par les métadonnées CUO et un événement canonique ;
+  aucun compteur direct propre à la mission Camp ne doit être réintroduit.
+- Les corrections V15 à V17 constituent désormais le point de référence local
+  jusqu'à leur intégration au dépôt.
 
 ### Méthode de développement obligatoire
 Avant tout correctif :
@@ -216,3 +218,47 @@ explorées, une texture planétaire neutre et des liaisons cohérentes.
 Le **dernier design visuel du menu Planète est en cours de validation** :
 ne pas le considérer définitivement figé tant que la validation dédiée n'est pas
 clôturée.
+
+## Jalon missions Camp / Archéologie — 2026-08-09
+
+### V15 — collecte de bois et établissement du camp
+
+- L'objet `tree_fallen` porte le libellé joueur **Bois**.
+- Un buisson produit `2` bois et un bois tombé produit `1` bois.
+- Chaque collecte réelle crédite immédiatement l'inventaire et toutes les missions
+  compatibles par un unique événement canonique `RESOURCE_COLLECTED`.
+- L'identité d'événement assure l'idempotence sans interdire de récolter une même
+  instance après sa réapparition.
+- `BIBLE-V01-CAMP` exige `10` bois réellement présents dans le registre central.
+- Les `10` bois sont consommés une seule fois par une transaction persistante.
+- La résolution établit un site logique `camp`, stage `1`, sur la Map courante et
+  fait apparaître `MSC-CUSTOM-CAMP` près de la capsule.
+
+### V16 — « Étudier une trace ancienne »
+
+- Déclenchement par observation d'un objet portant les tags `technology` ou `ruin`.
+- La cible est liée à l'instance exacte observée.
+- Séquence obligatoire : **Observer → Inspecter → Analyser**.
+- La mission ne peut se terminer qu'à proximité d'un camp réellement établi ;
+  aucune présence de secours propre à Crystal n'est admise.
+- Le verrou de retour est réévalué par la boucle monde à partir de l'état persistant
+  du site.
+
+### V17 — hydratation et restauration visuelle
+
+- Les arbres des missions terminées sont restaurés dans `MissionManager` après F5.
+- Le catalogue expose une progression terminée cohérente même pour une ancienne
+  sauvegarde ne possédant pas encore d'arbre sauvegardé.
+- Le rendu du site est restauré de façon déterministe à la fin de
+  `WorldEngine.loadMap()` par `BibleRuntime.renderCurrentSite()`.
+- L'état logique du camp reste autoritaire ; le rendu 3D est une projection de cet
+  état, pas une seconde source de vérité.
+
+Le cumulatif V17 a été validé et confirmé en jeu. Les contrôles automatisés
+associés passent : **27 tests sur 27**.
+
+### Prochaine reprise
+
+Créer une quatrième mission uniquement depuis une fiche déclarative afin de
+prouver l'extensibilité de la chaîne complète. Valider ensuite son cycle complet,
+la sauvegarde/recharge et la non-régression des trois missions existantes.

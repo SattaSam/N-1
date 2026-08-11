@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>BlueFox · Laboratoire de maps</title>
+    <title>BlueFox · MAP_Test</title>
     <link rel="stylesheet" href="./map-test.css">
     <script type="importmap">
       {"imports":{"three":"../cuo-lab/vendor/three.module.min.js"}}
@@ -12,42 +12,73 @@
   <body>
     <main>
       <canvas id="viewport"></canvas>
+
       <aside class="builder-panel">
-        <header><span>BLUEFOX ODYSSEY</span><h1>Laboratoire de maps</h1><small>Environnement mono-map · moteur CUO réel</small></header>
+        <header>
+          <span>BLUEFOX ODYSSEY</span>
+          <h1>MAP_Test</h1>
+          <small>Visualiseur / éditeur utilisant les maps du moteur</small>
+        </header>
+
         <section>
-          <h2>Validation des constructions</h2>
-          <p class="preset-copy">Trois zones de crash : camp, abri renforcé en bois et camp de base en pierre.</p>
-          <button id="evolution-preset" class="preset">Charger la map spéciale · 3 étapes</button>
+          <h2>Modèle visuel moteur</h2>
+          <label>Map / décor de référence
+            <select id="engine-template"></select>
+          </label>
+          <p id="template-info" class="budget-hint"></p>
+          <button id="load-template" class="primary">Afficher le modèle exact</button>
         </section>
+
         <section>
+          <h2>Créer une variante</h2>
           <label>Nombre de plateaux
-            <select id="plateau-count"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option selected>6</option></select>
+            <select id="plateau-count">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4" selected>4</option>
+              <option value="6">6</option>
+            </select>
           </label>
-          <label>Profil de biome
-            <select id="biome-profile"></select>
+
+          <label>Nombre cible d'objets
+            <input id="object-count-budget" type="number" min="1" step="1">
           </label>
-          <div class="budget-grid">
-            <label>Objets ciblés
-              <input id="object-count-budget" type="number" min="1" step="1">
-            </label>
-            <label>Ressources ciblées
-              <input id="resource-count-budget" type="number" min="0" step="1">
-            </label>
-          </div>
-          <p id="engine-budget-range" class="budget-hint"></p>
-          <div class="budget-meter" aria-live="polite">
-            <span>Objets générés <output id="generated-object-count">0</output></span>
-            <span>Ressources générées <output id="generated-resource-count">0</output></span>
-            <span>Budget CUO consommé <output id="consumed-spawn-budget">0</output></span>
-          </div>
-          <button id="new-map" class="primary">Générer une nouvelle map</button>
+
+          <label>Densité / poids global des objets
+            <input id="object-density" type="range" min="25" max="200" step="5" value="100">
+            <output id="object-density-value">100 %</output>
+          </label>
+
+          <label>Ressources ciblées
+            <input id="resource-count-budget" type="number" min="0" step="1">
+          </label>
+
+          <p id="effective-budget" class="budget-hint">
+            Budget effectif en attente.
+          </p>
+
+          <label class="form-check">
+            <input id="random-textures" class="form-check-input" type="checkbox">
+            <span class="form-check-label">Exception : autoriser des textures aléatoires hors du modèle</span>
+          </label>
+          <p class="budget-hint">
+            Désactivé : seules les textures associées au modèle sont utilisées et répétées si nécessaire.
+          </p>
+
+          <button id="generate-variant" class="primary">Générer la variante</button>
         </section>
+
         <section>
-          <h2>Micro-scènes à intégrer</h2>
-          <div class="scene-adder"><select id="micro-scene-catalog"></select><button id="add-scene">Ajouter</button></div>
+          <h2>Micro-scènes</h2>
+          <div class="scene-adder">
+            <select id="micro-scene-catalog"></select>
+            <button id="add-scene">Ajouter</button>
+          </div>
           <ol id="scene-queue"></ol>
-          <button id="validate-map" class="primary">Valider et générer la map</button>
+          <button id="validate-map" class="primary">Intégrer les micro-scènes</button>
         </section>
+
         <section class="edit-tools">
           <h2>Placement</h2>
           <button id="move-mode" aria-pressed="false">Déplacer les micro-scènes</button>
@@ -58,28 +89,34 @@
           <div class="axis height"><b>H</b><button data-height="-0.25">−0,25</button><output>0.00</output><button data-height="0.25">+0,25</button></div>
           <button id="reset-scene">Réinitialiser la transformation</button>
         </section>
+
         <section>
-          <h2>Sauvegarde moteur</h2>
-          <label>Nom de la map<input id="map-name" maxlength="64" placeholder="ex. Vallée des spores"></label>
+          <h2>Sauvegarde CUSTOM</h2>
+          <label>Nom de la map
+            <input id="map-name" maxlength="64" placeholder="ex. Vallée des spores">
+          </label>
           <p>Index proposé : <code id="map-index">calcul en cours…</code></p>
-          <button id="save-map" class="save">Sauvegarder dans le moteur</button>
+          <button id="save-map" class="save">Sauvegarder comme map exportable</button>
         </section>
       </aside>
+
       <section class="runtime-hud">
-        <strong id="fox-state">BlueFox attend la génération.</strong>
-        <span id="inventory">Inventaire : vide</span>
-        <button id="toggle-autonomy" aria-pressed="true">Autonomie active</button>
-        <button id="focus-fox">Centrer BlueFox</button>
+        <strong id="fox-state">MAP_Test prêt.</strong>
+        <span id="integrity-state">Aucune map chargée.</span>
+        <button id="focus-map">Centrer la map</button>
       </section>
+
       <div id="toast" role="status"></div>
-      <div class="help">Clic gauche : déplacement/interaction · clic droit : caméra · molette : zoom · mode placement : glisser une micro-scène</div>
+      <div class="help">Clic droit : caméra · molette : zoom · mode placement : glisser une micro-scène</div>
     </main>
+
     <script src="../map-assets.js"></script>
+    <script src="./map-test-asset-path-fix.js?v=map-test-assets-v20-2"></script>
     <script src="../Images/images-catalog.js"></script>
     <script src="../engine/bluefox3d-core.js"></script>
     <script src="../engine/object-library.js"></script>
     <script src="../engine/object-library-p2-1.js?v=p2-1-r3"></script>
-    <script src="../engine/object-library-flora-patch.js?v=flora-skin-r1"></script>
+    <script src="../engine/vegetation-performance.js?v=vegetation-performance-r1"></script>
     <script src="../engine/runtime-budget.js?v=p2-6-r1"></script>
     <script src="../engine/passive-object-runtime.js?v=p2-6-r1"></script>
     <script src="../engine/npc-runtime.js?v=p2-6-r1"></script>
@@ -90,9 +127,19 @@
     <script src="../engine/biome-rules.js"></script>
     <script src="../data/custom-micro-scenes.js"></script>
     <script src="../engine/micro-scenes.js"></script>
+    <script src="../engine/bible-exploration-micro-scenes-v19.js?v=map-pipeline-v20-6"></script>
     <script src="../engine/object-spawner.js"></script>
+    <script src="../engine/map-population-hierarchy.js"></script>
+    <script src="../data/custom-maps.js"></script>
+    <script src="../engine/map-registry.js"></script>
+    <script src="../engine/custom-map-registry.js"></script>
+    <script src="../engine/map-integrity-v20.js?v=map-pipeline-v20-6"></script>
+    <script src="../engine/persistent-micro-scenes-v20.js?v=map-pipeline-v20-6"></script>
     <script src="../engine/special-object-runtime.js?v=special-objects2"></script>
     <script src="../engine/map-generation-rules.js"></script>
-    <script type="module" src="./map-test.js"></script>
+    <script src="../engine/map-generation-no5-v20-1.js?v=map-pipeline-v20-6"></script>
+    <script src="../engine/map-generator.js"></script>
+    <script src="../engine/map-generator-bible-overrides-v19.js?v=map-pipeline-v20-6"></script>
+    <script type="module" src="./map-test.js?v=map-pipeline-v20-6"></script>
   </body>
 </html>

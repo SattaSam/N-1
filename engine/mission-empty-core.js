@@ -39,6 +39,8 @@
       state.missionLifecycle = {};
       state.pendingActivations = {};
       state.rewardedMissions = {};
+      state.processedObjectEvents = {};
+      state.effectReceipts = {};
       state.missions = {};
       state.siteProgression = {};
       state.facts = {

@@ -120,7 +120,9 @@
     const terrainUrlsFor = (catalogMap) => {
       const preferred = (catalogMap.terrains || []).slice(0, 6);
       if (preferred.length) return preferred.map((terrain) => terrain.url);
-      if (!allTerrains.length) return [];
+      if (!allTerrains.length) {
+        return [...(global.BLUEFOX_MAP_ASSETS?.fallbackTerrainUrls || [])];
+      }
       const fallback = allTerrains[
         (catalogMap.number * 7919 + 137) % allTerrains.length
       ];

@@ -1,0 +1,291 @@
+{
+  "id": "MSC-CUSTOM-RUINE-MODULAIRE2",
+  "name": "Ruine_modulaire2",
+  "biomes": [
+    "all"
+  ],
+  "rarity": "custom",
+  "radius": 9.510367225297587,
+  "objects": [
+    {
+      "type": "debris",
+      "offset": [
+        -0.515,
+        1.8969,
+        -4.7952
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        1.263,
+        -0.1031,
+        -2.954
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        -0.785398,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        -9.1263,
+        -0.1031,
+        -2.6754
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        2.094395,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        -1.0971,
+        -0.1031,
+        5.7511
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0.785398,
+        0
+      ]
+    },
+    {
+      "type": "eroded_monolith",
+      "offset": [
+        0.8769,
+        -0.6133,
+        -3.5898
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        1.832596,
+        -0.523599
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        0.8076,
+        -0.1779,
+        -2.1604
+      ],
+      "variant": 0,
+      "rotation": [
+        -0.261799,
+        -4.45059,
+        0.261799
+      ]
+    },
+    {
+      "type": "wall",
+      "offset": [
+        0.4883,
+        -0.1779,
+        -4.6003
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        1.570796
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        -0.4828,
+        2.3969,
+        -4.558
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        -3.403392,
+        3.141593
+      ]
+    },
+    {
+      "type": "strong_rock",
+      "offset": [
+        0.2389,
+        -0.5824,
+        5.2116
+      ],
+      "variant": 1,
+      "rotation": [
+        0,
+        0.785398,
+        0
+      ]
+    },
+    {
+      "type": "wall",
+      "offset": [
+        -2.8219,
+        -1.1779,
+        -4.6514
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0.261799
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        1.4637,
+        -0.1031,
+        -0.3114
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        -0.785398,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        1.0083,
+        -0.1779,
+        0.4822
+      ],
+      "variant": 0,
+      "rotation": [
+        -0.261799,
+        -4.45059,
+        0.261799
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        0.9858,
+        -0.1031,
+        -1.3097
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0.523599,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        0.5474,
+        -0.1031,
+        -0.7859
+      ],
+      "variant": 0,
+      "rotation": [
+        0.261799,
+        5.497787,
+        0.523599
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        1.5116,
+        -0.1031,
+        4.3529
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        -0.785398,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        0.5953,
+        -0.1031,
+        3.8784
+      ],
+      "variant": 0,
+      "rotation": [
+        0.261799,
+        5.497787,
+        0.523599
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        1.0337,
+        -0.1031,
+        3.3546
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0.523599,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        0.8555,
+        -0.1779,
+        2.5038
+      ],
+      "variant": 0,
+      "rotation": [
+        -0.261799,
+        -4.45059,
+        0.261799
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        1.3109,
+        -0.1031,
+        1.7102
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        -0.785398,
+        0
+      ]
+    },
+    {
+      "type": "debris",
+      "offset": [
+        1.0562,
+        -0.1779,
+        5.1465
+      ],
+      "variant": 0,
+      "rotation": [
+        -0.261799,
+        -4.45059,
+        0.261799
+      ]
+    }
+  ]
+}
