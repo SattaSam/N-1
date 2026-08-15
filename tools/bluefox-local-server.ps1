@@ -442,6 +442,9 @@ try {
                         sceneUrl = $draft.sceneUrl
                         seed = [int64]$draft.seed
                         palette = $draft.palette
+                        populationBudget = $draft.populationBudget
+                        traits = @($draft.traits)
+                        editor = $draft.editor
                         customMicroScenes = $microScenes
                         createdAt = [DateTime]::UtcNow.ToString("o")
                     }

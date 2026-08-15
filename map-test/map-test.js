@@ -338,18 +338,18 @@ function effectiveBudgetValues() {
   const baseObjects = Number($("#object-count-budget").value);
   const baseResources = Number($("#resource-count-budget").value);
 
-  // MAP_Test reste dans les plages natives du moteur afin que les valeurs
-  // transmises ne soient pas reclampées silencieusement par ObjectSpawner.
+  // MAP_Test doit pouvoir tester une densité inférieure ou supérieure à la
+  // plage native. ObjectSpawner reconnaît explicitement ce contrat CUSTOM.
   const targetObjects = THREE.MathUtils.clamp(
     Math.round(baseObjects * density),
-    budget.min,
-    budget.max
+    1,
+    budget.max * 2
   );
 
   const resources = THREE.MathUtils.clamp(
     Math.round(baseResources * density),
-    budget.resourcesMin,
-    Math.min(budget.resourcesMax, targetObjects)
+    0,
+    targetObjects
   );
 
   return {
@@ -368,7 +368,7 @@ function updateEffectiveBudget() {
 
   $("#effective-budget").textContent =
     `Effectif envoyé au moteur : ${values.targetObjects} objets, ` +
-    `${values.resources} ressources · plage native ` +
+    `${values.resources} ressources · référence native ` +
     `${values.range.min}–${values.range.max} / ` +
     `${values.range.resourcesMin}–${values.range.resourcesMax}.`;
 }
@@ -407,7 +407,8 @@ $("#generate-variant").addEventListener("click", async () => {
 
   definition.populationBudget = {
     targetObjects: requestedObjects,
-    resources: requestedResources
+    resources: requestedResources,
+    allowCustomRange: true
   };
 
   definition.generator ||= {};
@@ -471,9 +472,10 @@ function registerSpawnedRecord(record) {
   }
 
   (record.instance?.colliders || []).forEach((collider) => {
-    record.root.updateWorldMatrix(true, false);
+    const transformRoot = record.objectRoot || record.root;
+    transformRoot.updateWorldMatrix(true, false);
     currentBuilt.colliders.push({
-      position: record.root.localToWorld(collider.offset.clone()),
+      position: transformRoot.localToWorld(collider.offset.clone()),
       radius: collider.radius,
       owner: record.root
     });
@@ -679,6 +681,29 @@ async function refreshIndex() {
   }
 }
 
+function downloadMapPayload(payload) {
+  const exportPayload = {
+    format: "bluefox-custom-map",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    map: payload
+  };
+  const blob = new Blob(
+    [JSON.stringify(exportPayload, null, 2)],
+    { type: "application/json;charset=utf-8" }
+  );
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `MAP-CUSTOM-${payload.slug}.json`;
+  link.hidden = true;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return link.download;
+}
+
 $("#map-name").addEventListener("input", refreshIndex);
 
 $("#save-map").addEventListener("click", async () => {
@@ -701,7 +726,9 @@ $("#save-map").addEventListener("click", async () => {
     populationBudget: currentDefinition.populationBudget
       ? {
           targetObjects: Number(currentDefinition.populationBudget.targetObjects),
-          resources: Number(currentDefinition.populationBudget.resources)
+          resources: Number(currentDefinition.populationBudget.resources),
+          allowCustomRange:
+            currentDefinition.populationBudget.allowCustomRange === true
         }
       : null,
 
@@ -754,7 +781,8 @@ $("#save-map").addEventListener("click", async () => {
     toast(`${result.index} sauvegardée comme map CUSTOM.`);
     refreshIndex();
   } catch (error) {
-    toast(`Échec : ${error.message}`);
+    const filename = downloadMapPayload(payload);
+    toast(`Serveur indisponible : ${filename} téléchargé.`);
   }
 });
 

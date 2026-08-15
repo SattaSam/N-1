@@ -1,0 +1,115 @@
+.bluefox-music-button {
+  position: absolute;
+  z-index: 15;
+  left: 268px;
+  bottom: 104px;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(111, 214, 255, .5);
+  border-radius: 50%;
+  color: #c8f7ff;
+  background: #071a2de8;
+  box-shadow: 0 8px 22px #0008, 0 0 14px #42d7ff33;
+  font-size: 17px;
+  cursor: pointer;
+}
+
+.bluefox-music-button:hover,
+.bluefox-music-button.open {
+  border-color: rgba(154, 232, 255, .82);
+  box-shadow: 0 8px 22px #0008, 0 0 18px #42d7ff66;
+}
+
+.bluefox-music-button.disabled {
+  color: #718895;
+  border-color: rgba(113, 136, 149, .45);
+  opacity: .72;
+  filter: grayscale(1);
+}
+
+.bluefox-volume-panel {
+  position: absolute;
+  z-index: 16;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  min-width: 112px;
+  height: 170px;
+  padding: 10px 9px 9px;
+  border: 1px solid rgba(111, 214, 255, .45);
+  border-radius: 14px;
+  color: #c8f7ff;
+  background: rgba(7, 26, 45, .94);
+  box-shadow: 0 10px 26px #000a, 0 0 16px #42d7ff29;
+  backdrop-filter: blur(7px);
+}
+
+.bluefox-volume-panel[hidden] {
+  display: none !important;
+}
+
+.bluefox-volume-group {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  justify-items: center;
+  gap: 5px;
+  width: 42px;
+  height: 100%;
+  font: 600 10px/1.1 system-ui, sans-serif;
+  letter-spacing: .02em;
+  user-select: none;
+}
+
+.bluefox-volume-label {
+  color: #c8f7ff;
+  white-space: nowrap;
+}
+
+.bluefox-volume-value {
+  color: #8fc9d8;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.bluefox-volume-rail {
+  position: relative;
+  width: 30px;
+  height: 112px;
+}
+
+.bluefox-volume-slider {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 104px;
+  height: 24px;
+  margin: 0;
+  accent-color: #70dcff;
+  cursor: pointer;
+  transform: translate(-50%, -50%) rotate(-90deg);
+  transform-origin: center;
+}
+
+.bluefox-volume-slider:focus-visible {
+  outline: 2px solid #b9f3ff;
+  outline-offset: 2px;
+}
+
+body:has(.drawer, .full-screen-panel) .bluefox-music-button,
+body:has(.drawer, .full-screen-panel) .bluefox-volume-panel {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+@media (max-width: 900px) {
+  .bluefox-music-button {
+    left: 226px;
+    bottom: 104px;
+  }
+
+  .bluefox-volume-panel {
+    min-width: 106px;
+  }
+}

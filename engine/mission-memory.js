@@ -4,11 +4,15 @@
   const BF = global.BlueFox3D = global.BlueFox3D || {};
   const Missions = BF.Missions = BF.Missions || {};
   const STORAGE_KEY = "bluefox_mission_memory_m0_v1";
+  const SAVE_INTERVAL_MS = 3000;
 
   class MissionMemory {
     constructor(storage = global.localStorage) {
       this.storage = storage;
       this.state = this.defaultState();
+      this.dirty = false;
+      this.lastSavedAt = 0;
+      this.saveTimer = null;
       this.load();
     }
 
@@ -36,6 +40,7 @@
         const saved = JSON.parse(this.storage.getItem(STORAGE_KEY) || "null");
         if (!saved || saved.version !== 3) {
           this.storage.removeItem(STORAGE_KEY);
+          this.lastSavedAt = Date.now();
           return this.state;
         }
         const { inventory: _obsoleteInventory, ...savedWithoutInventory } = saved;
@@ -44,9 +49,7 @@
           ...savedWithoutInventory,
           activeMissionId: saved.activeMissionId || "",
           primaryMissionId: saved.primaryMissionId || "",
-          activeMissionIds: Array.isArray(saved.activeMissionIds)
-            ? [...saved.activeMissionIds]
-            : [],
+          activeMissionIds: Array.isArray(saved.activeMissionIds) ? [...saved.activeMissionIds] : [],
           missionLifecycle: { ...(saved.missionLifecycle || {}) },
           pendingActivations: { ...(saved.pendingActivations || {}) },
           missions: { ...(saved.missions || {}) },
@@ -57,17 +60,34 @@
           siteProgression: { ...(saved.siteProgression || {}) },
           history: Array.isArray(saved.history) ? saved.history.slice(-150) : []
         };
+        this.lastSavedAt = Date.now();
       } catch (error) {
         console.warn("Mémoire de mission illisible, réinitialisation sur une base vide.", error);
         this.storage.removeItem(STORAGE_KEY);
+        this.lastSavedAt = Date.now();
       }
       return this.state;
     }
 
-    save() {
+    markDirty() {
+      this.dirty = true;
+      if (this.saveTimer) return true;
+      const elapsed = Date.now() - this.lastSavedAt;
+      const delay = Math.max(0, SAVE_INTERVAL_MS - elapsed);
+      this.saveTimer = global.setTimeout?.(() => {
+        this.saveTimer = null;
+        this.flush();
+      }, delay);
+      return true;
+    }
+
+    flush(force = false) {
+      if (!force && !this.dirty) return true;
       this.state.updatedAt = Date.now();
       try {
         this.storage.setItem(STORAGE_KEY, JSON.stringify(this.state));
+        this.dirty = false;
+        this.lastSavedAt = Date.now();
         return true;
       } catch (error) {
         console.warn("Sauvegarde de mission indisponible.", error);
@@ -75,10 +95,12 @@
       }
     }
 
+    save() { return this.markDirty(); }
+
     saveTree(tree) {
       if (!tree?.id) return false;
       this.state.missions[tree.id] = tree.toJSON();
-      return this.save();
+      return this.markDirty();
     }
 
     restoreTree(id) {
@@ -95,7 +117,7 @@
       };
       this.state.history.push(event);
       this.state.history = this.state.history.slice(-150);
-      this.save();
+      this.markDirty();
       return event;
     }
 
@@ -105,14 +127,13 @@
 
     markProcessedObjectEvent(eventId) {
       if (!eventId) return false;
-      const entries = this.state.processedObjectEvents =
-        this.state.processedObjectEvents || {};
+      const entries = this.state.processedObjectEvents = this.state.processedObjectEvents || {};
       entries[eventId] = Date.now();
       const overflow = Object.entries(entries)
         .sort((left, right) => Number(left[1]) - Number(right[1]))
         .slice(0, Math.max(0, Object.keys(entries).length - 250));
       overflow.forEach(([id]) => delete entries[id]);
-      return true;
+      return this.markDirty();
     }
 
     hasEffectReceipt(receiptId) {
@@ -126,12 +147,12 @@
         at: Date.now(),
         ...JSON.parse(JSON.stringify(detail))
       };
-      return this.save();
+      return this.markDirty();
     }
 
     setFact(key, value) {
       this.state.facts[key] = value;
-      this.save();
+      return this.markDirty();
     }
 
     getFact(key, fallback = null) {
@@ -140,8 +161,14 @@
         : fallback;
     }
 
-    snapshot() {
-      return JSON.parse(JSON.stringify(this.state));
+    snapshot() { return JSON.parse(JSON.stringify(this.state)); }
+
+    dispose() {
+      if (this.saveTimer) {
+        global.clearTimeout?.(this.saveTimer);
+        this.saveTimer = null;
+      }
+      return this.flush(true);
     }
   }
 

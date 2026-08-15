@@ -46,6 +46,7 @@ sun.castShadow = true;
 scene.add(sun);
 
 const PLATFORM = Object.freeze({ width: 96, depth: 100, y: .3 });
+const GAME_PLATEAU = Object.freeze({ size: 54, half: 27 });
 const CENTERS = Object.freeze({ showroom: -48, sandbox: 48 });
 const platforms = [];
 const palette = { accent: 0x66e4ff, ground: 0x405664, sky: 0x071724, vegetation: 0x63c991, mineral: 0x8bcce7, ruin: 0x72808d };
@@ -74,6 +75,42 @@ function makePlatform(name, x, color) {
 
 const showroomPlatform = makePlatform("showroom", CENTERS.showroom, 0x243a42);
 const sandboxPlatform = makePlatform("sandbox", CENTERS.sandbox, 0x263c35);
+
+// Repère visuel uniquement : plateau moteur 54 × 54 et origine MSC réelle.
+{
+  const y = PLATFORM.y + .025;
+  const half = GAME_PLATEAU.half;
+  const points = [
+    new THREE.Vector3(CENTERS.sandbox - half, y, -half),
+    new THREE.Vector3(CENTERS.sandbox + half, y, -half),
+    new THREE.Vector3(CENTERS.sandbox + half, y, half),
+    new THREE.Vector3(CENTERS.sandbox - half, y, half)
+  ];
+  const frame = new THREE.LineLoop(
+    new THREE.BufferGeometry().setFromPoints(points),
+    new THREE.LineBasicMaterial({ color: 0x9eefff })
+  );
+  frame.userData.labDecoration = true;
+  scene.add(frame);
+
+  const axes = new THREE.LineSegments(
+    new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(CENTERS.sandbox - half, y, 0),
+      new THREE.Vector3(CENTERS.sandbox + half, y, 0),
+      new THREE.Vector3(CENTERS.sandbox, y, -half),
+      new THREE.Vector3(CENTERS.sandbox, y, half)
+    ]),
+    new THREE.LineBasicMaterial({ color: 0x4e9eae })
+  );
+  axes.userData.labDecoration = true;
+  scene.add(axes);
+
+  const label = BF.makeLabel(THREE, "ZONE JEU 54 × 54 · ORIGINE MSC AU CENTRE");
+  label.position.set(CENTERS.sandbox, 1.0, -half + 1.1);
+  label.scale.set(7.0, 1.25, 1);
+  label.userData.labDecoration = true;
+  scene.add(label);
+}
 
 const catalog = library.list({ status: "active" });
 const validation = library.validate();
@@ -147,6 +184,11 @@ function pushHistory(entry) {
 function create(type, position, origin = "sandbox", variant = 0, options = {}) {
   const instance = library.create(THREE, type, palette, variant);
   const objectRoot = instance.root;
+
+  // MAP Test applique la rotation MSC directement à cette racine et remplace
+  // donc sa rotation initiale de variante. Le pivot du Lab doit partir de la
+  // même racine neutre pour reproduire exactement ce rendu.
+  objectRoot.rotation.set(0, 0, 0);
 
   /*
    * IMPORTANT : la racine CUO appartient au moteur et peut être animée ou
@@ -762,9 +804,11 @@ const diskCustomScenes = Array.isArray(window.BlueFoxCustomMicroScenes)
 
 function availableMicroScenes() {
   const byId = new Map();
+  // Les brouillons locaux sont chargés d'abord. Une scène canonique portant
+  // le même identifiant doit toujours être remplacée par la version du dépôt.
+  loadSavedCustomScenes().forEach(template => byId.set(template.id, template));
   BF.MicroScenes?.list?.().forEach(template => byId.set(template.id, template));
   diskCustomScenes.forEach(template => byId.set(template.id, template));
-  loadSavedCustomScenes().forEach(template => byId.set(template.id, template));
   return [...byId.values()].sort((a, b) =>
     String(a.name || a.id).localeCompare(String(b.name || b.id), "fr")
   );
@@ -980,10 +1024,6 @@ $("#micro-scene-form").onsubmit = async event => {
     return;
   }
 
-  const center = list
-    .reduce((sum, root) => sum.add(root.position), new THREE.Vector3())
-    .multiplyScalar(1 / list.length);
-
   const template = {
     id: `MSC-CUSTOM-${slug(nameInput.value)}`,
     name: nameInput.value.trim(),
@@ -992,21 +1032,21 @@ $("#micro-scene-form").onsubmit = async event => {
     radius: Math.max(
       1,
       ...list.map(root =>
-        Math.hypot(root.position.x - center.x, root.position.z - center.z)
+        Math.hypot(root.position.x - CENTERS.sandbox, root.position.z)
       )
     ),
     objects: list.map(root => ({
       type: definitionOf(root).type,
       offset: [
-        Number((root.position.x - center.x).toFixed(4)),
-        Number((root.position.y - center.y).toFixed(4)),
-        Number((root.position.z - center.z).toFixed(4))
+        root.position.x - CENTERS.sandbox,
+        root.position.y - PLATFORM.y,
+        root.position.z
       ],
       variant: root.userData.labVariant || 0,
       rotation: [
-        Number(root.rotation.x.toFixed(6)),
-        Number(root.rotation.y.toFixed(6)),
-        Number(root.rotation.z.toFixed(6))
+        root.rotation.x,
+        root.rotation.y,
+        root.rotation.z
       ]
     }))
   };

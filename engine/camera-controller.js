@@ -110,6 +110,43 @@
       return Math.atan2(dx, dz);
     }
 
+    captureViewState() {
+      const position = this.character.root.position;
+      return {
+        mode: this.mode,
+        followBehind: this.followBehind,
+        cameraOffset: this.camera.position.clone().sub(position),
+        targetOffset: this.controls.target.clone().sub(position),
+        worldFixedOffset: this.worldFixedCameraPosition.clone().sub(position)
+      };
+    }
+
+    restoreViewState(state) {
+      if (!state?.cameraOffset || !state?.targetOffset) return false;
+      const position = this.character.root.position;
+      this.mode = state.mode === this.MODE_WORLD_FIXED
+        ? this.MODE_WORLD_FIXED
+        : this.MODE_ANCHORED;
+      this.followBehind = state.followBehind === true;
+      this.resettingToDefault = false;
+      this.userInteracting = false;
+      this.controls.maxDistance = this.mode === this.MODE_WORLD_FIXED
+        ? this.WORLD_FIXED_MAX_DISTANCE
+        : this.ANCHORED_MAX_DISTANCE;
+      this.camera.position.copy(position).add(state.cameraOffset);
+      this.controls.target.copy(position).add(state.targetOffset);
+      this.worldFixedCameraPosition.copy(position).add(
+        state.worldFixedOffset || state.cameraOffset
+      );
+      this.previousCharacterPosition.copy(position);
+      this.lastSafeCameraPosition.copy(this.camera.position);
+      this.lastSafeTarget.copy(this.controls.target);
+      this.lastUserInput = performance.now();
+      localStorage.setItem("bluefox_camera_mode_v1", this.mode);
+      this.emitMode();
+      return true;
+    }
+
     resetBehindCharacter(immediate = false) {
       const position = this.character.root.position;
       const heading = Number.isFinite(this.character.heading)

@@ -190,11 +190,14 @@
 .planet-panel-enhanced .planet-layout > div:last-child {
   position: relative;
   z-index: 6;
-  align-self: center !important;
+  /* La grille commence sous le titre. On remonte réellement le volet de cette
+     hauteur pour aligner son bord supérieur sur TERMINAL D'EXPÉDITION. */
+  align-self: start !important;
   min-width: 0;
-  max-height: calc(100vh - 92px) !important;
+  max-height: calc(100vh - 12px) !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
+  margin-top: -54px !important;
   margin-left: clamp(-150px, -8vw, -80px);
   padding:
     14px clamp(16px, 1.8vw, 28px) 18px clamp(126px, 8.5vw, 168px) !important;
@@ -230,7 +233,8 @@
   }
 
   .planet-panel-enhanced .planet-layout > div:last-child {
-    max-height: calc(100vh - 76px) !important;
+    max-height: calc(100vh - 12px) !important;
+    margin-top: -54px !important;
     margin-left: clamp(-72px, -5.5vw, -38px);
     padding: 10px 12px 14px clamp(60px, 6.5vw, 94px) !important;
     border-radius: 22px 0 0 22px;
@@ -275,6 +279,7 @@
   }
 
   .planet-panel-enhanced .planet-layout > div:last-child {
+    margin-top: -54px !important;
     margin-left: -36px;
     padding-left: 50px !important;
     font-size: .94em;
@@ -309,6 +314,7 @@
   .planet-panel-enhanced .planet-layout > div:last-child {
     max-height: none !important;
     overflow: visible !important;
+    margin-top: 0 !important;
     margin-left: 0;
     padding: 12px !important;
     border-radius: 18px;

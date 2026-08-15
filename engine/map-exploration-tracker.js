@@ -8,6 +8,7 @@
   const DEFAULT_REVEAL_RADIUS = 4;
   const EXPLORATION_THRESHOLDS = [10, 25, 50, 75, 100];
   const EXPERTISE_THRESHOLDS = [10, 25, 50, 100, 200];
+  const SAVE_INTERVAL_MS = 3000;
 
   const clone = (value) => value == null ? value : JSON.parse(JSON.stringify(value));
   const cleanKey = (value, fallback = "unknown") => {
@@ -35,16 +36,15 @@
     updatedAt: Date.now()
   });
 
-  const defaultState = () => ({
-    version: VERSION,
-    updatedAt: Date.now(),
-    maps: {}
-  });
+  const defaultState = () => ({ version: VERSION, updatedAt: Date.now(), maps: {} });
 
   class MapExplorationTracker {
     constructor(storage = global.localStorage) {
       this.storage = storage;
       this.state = defaultState();
+      this.dirty = false;
+      this.lastSavedAt = 0;
+      this.saveTimer = null;
       this.load();
       this.onMapState = (event) => {
         const detail = event?.detail || {};
@@ -52,9 +52,11 @@
       };
       this.onPlayerPosition = (event) => this.recordPosition(event?.detail || {});
       this.onProgression = (event) => this.syncExpertise(event?.detail);
+      this.onMapTransition = () => this.flush();
       global.addEventListener?.("bluefox:map-state", this.onMapState);
       global.addEventListener?.("bluefox:player-position", this.onPlayerPosition);
       global.addEventListener?.("bluefox:multi-progression", this.onProgression);
+      global.addEventListener?.("bluefox:map-transition-completed", this.onMapTransition);
       this.lastEngineSampleAt = 0;
       this.engineSampler = global.setInterval?.(() => this.sampleCurrentEngine(), 500);
     }
@@ -80,13 +82,30 @@
       } catch (error) {
         console.warn("Exploration de Map illisible, réinitialisation.", error);
       }
+      this.lastSavedAt = Date.now();
+      this.dirty = false;
       return this.state;
     }
 
-    save() {
+    markDirty() {
+      this.dirty = true;
+      if (this.saveTimer) return true;
+      const elapsed = Date.now() - this.lastSavedAt;
+      const delay = Math.max(0, SAVE_INTERVAL_MS - elapsed);
+      this.saveTimer = global.setTimeout?.(() => {
+        this.saveTimer = null;
+        this.flush();
+      }, delay);
+      return true;
+    }
+
+    flush(force = false) {
+      if (!force && !this.dirty) return true;
       this.state.updatedAt = Date.now();
       try {
         this.storage?.setItem?.(STORAGE_KEY, JSON.stringify(this.state));
+        this.dirty = false;
+        this.lastSavedAt = Date.now();
         return true;
       } catch (error) {
         console.warn("Sauvegarde de l’exploration de Map indisponible.", error);
@@ -94,14 +113,18 @@
       }
     }
 
+    save() { return this.markDirty(); }
+
     ensureMap(mapId, gridSize = DEFAULT_GRID) {
       const key = cleanKey(mapId, "unassigned");
       if (!this.state.maps[key]) {
         this.state.maps[key] = createMapState(key, Math.max(4, Number(gridSize) || DEFAULT_GRID));
+        this.markDirty();
       }
       const map = this.state.maps[key];
       map.revealRadius = Math.max(0, Number(map.revealRadius) || DEFAULT_REVEAL_RADIUS);
       map.visitedSectors = map.visitedSectors || {};
+      map.visitedZones = map.visitedZones || {};
       map.totalSectors = map.gridSize * map.gridSize;
       return map;
     }
@@ -125,7 +148,6 @@
       const minimumRow = clamp(Math.floor((z - safeRadius + bounds) / cellSize), 0, gridSize - 1);
       const maximumRow = clamp(Math.floor((z + safeRadius + bounds) / cellSize), 0, gridSize - 1);
       const sectors = [];
-
       for (let column = minimumColumn; column <= maximumColumn; column += 1) {
         const cellMinX = -bounds + column * cellSize;
         const cellMaxX = cellMinX + cellSize;
@@ -163,11 +185,10 @@
     }
 
     reach(type, map, threshold) {
-      const bucket = type === "exploration"
-        ? map.explorationMilestones
-        : map.expertiseMilestones;
+      const bucket = type === "exploration" ? map.explorationMilestones : map.expertiseMilestones;
       if (bucket[threshold]) return false;
       bucket[threshold] = Date.now();
+      this.markDirty();
       const id = `map:${map.mapId}:${type}:${threshold}`;
       BF.progressionRegistry?.reachMilestone?.(id, {
         mapId: map.mapId,
@@ -194,10 +215,13 @@
 
     recordPosition(detail) {
       const mapId = detail.mapId || detail.currentMapId;
-      if (!mapId || !Number.isFinite(Number(detail.x)) || !Number.isFinite(Number(detail.z))) {
-        return false;
-      }
+      if (!mapId || !Number.isFinite(Number(detail.x)) || !Number.isFinite(Number(detail.z))) return false;
       const map = this.ensureMap(mapId, detail.gridSize);
+      const previousZone = detail.zoneId != null ? map.visitedZones[cleanKey(detail.zoneId)] : null;
+      const previousPlanetId = map.planetId;
+      const previousBounds = map.bounds;
+      const previousRevealRadius = map.revealRadius;
+
       map.bounds = Math.max(1, Number(detail.bounds) || map.bounds || 27);
       map.planetId = detail.planetId ?? map.planetId;
       const x = Number(detail.x);
@@ -208,30 +232,41 @@
       const newlyVisited = this.sectorsWithinRadius(map, x, z, revealRadius)
         .filter((candidate) => !map.visitedSectors[candidate.key]);
 
+      let changed = false;
       if (map.lastPosition) {
         const dx = x - map.lastPosition.x;
         const dz = z - map.lastPosition.z;
         const distance = Math.hypot(dx, dz);
-        if (distance <= map.bounds * 0.5) map.distanceTravelled += distance;
+        if (distance <= map.bounds * 0.5 && distance > 0.01) {
+          map.distanceTravelled += distance;
+          changed = true;
+        }
       }
       map.lastPosition = { x, z, at: Date.now() };
 
-      if (detail.zoneId != null) {
-        map.visitedZones[cleanKey(detail.zoneId)] = map.visitedZones[cleanKey(detail.zoneId)] || Date.now();
+      if (detail.zoneId != null && !previousZone) {
+        map.visitedZones[cleanKey(detail.zoneId)] = Date.now();
+        changed = true;
       }
       if (newlyVisited.length) {
         newlyVisited.forEach((candidate) => {
-          map.visitedSectors[candidate.key] = {
-            at: Date.now(),
-            zoneId: detail.zoneId ?? null
-          };
+          map.visitedSectors[candidate.key] = { at: Date.now(), zoneId: detail.zoneId ?? null };
         });
         map.sectorCount = Object.keys(map.visitedSectors).length;
         map.surfacePercent = Math.min(100, Number(((map.sectorCount / map.totalSectors) * 100).toFixed(2)));
+        changed = true;
       }
-      map.updatedAt = Date.now();
-      this.evaluateMilestones(map);
-      this.save();
+      if (previousPlanetId !== map.planetId ||
+          previousBounds !== map.bounds ||
+          previousRevealRadius !== map.revealRadius) {
+        changed = true;
+      }
+
+      if (changed) {
+        map.updatedAt = Date.now();
+        this.evaluateMilestones(map);
+        this.markDirty();
+      }
 
       if (newlyVisited.length) {
         const eventDetail = {
@@ -265,20 +300,17 @@
       const map = this.ensureMap(event.mapId);
       const previous = map.expertise;
       map.expertise = Math.max(0, Number(indicators.expertise) || 0);
+      if (map.expertise === previous) return false;
       map.updatedAt = Date.now();
       this.evaluateMilestones(map);
-      this.save();
-      if (map.expertise !== previous) {
-        global.dispatchEvent?.(new CustomEvent("bluefox:map-expertise-changed", {
-          detail: { mapId: map.mapId, expertise: map.expertise, snapshot: clone(map) }
-        }));
-      }
-      return map.expertise !== previous;
+      this.markDirty();
+      global.dispatchEvent?.(new CustomEvent("bluefox:map-expertise-changed", {
+        detail: { mapId: map.mapId, expertise: map.expertise, snapshot: clone(map) }
+      }));
+      return true;
     }
 
-    getMap(mapId) {
-      return clone(this.ensureMap(mapId));
-    }
+    getMap(mapId) { return clone(this.ensureMap(mapId)); }
 
     getSummary() {
       const maps = Object.values(this.state.maps);
@@ -294,7 +326,8 @@
     reset(mapId = null) {
       if (mapId == null) this.state = defaultState();
       else delete this.state.maps[cleanKey(mapId)];
-      this.save();
+      this.markDirty();
+      this.flush(true);
       return this.getSummary();
     }
 
@@ -302,7 +335,11 @@
       global.removeEventListener?.("bluefox:map-state", this.onMapState);
       global.removeEventListener?.("bluefox:player-position", this.onPlayerPosition);
       global.removeEventListener?.("bluefox:multi-progression", this.onProgression);
+      global.removeEventListener?.("bluefox:map-transition-completed", this.onMapTransition);
       if (this.engineSampler) global.clearInterval?.(this.engineSampler);
+      if (this.saveTimer) global.clearTimeout?.(this.saveTimer);
+      this.saveTimer = null;
+      this.flush(true);
     }
   }
 
@@ -312,7 +349,6 @@
   BF.recordMapPosition = (detail) => tracker.recordPosition(detail);
   BF.getMapExplorationState = (mapId) => tracker.getMap(mapId);
   BF.getExplorationSummary = () => tracker.getSummary();
-  BF.getNextUnexploredMapTarget = (mapId, origin) =>
-    tracker.nextUnexploredTarget(mapId, origin);
+  BF.getNextUnexploredMapTarget = (mapId, origin) => tracker.nextUnexploredTarget(mapId, origin);
   BF.resetMapExploration = (mapId) => tracker.reset(mapId);
 })(window);

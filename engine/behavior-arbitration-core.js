@@ -7,6 +7,18 @@
   const PRIORITY_BUDGET = 225;
   const MAX_DECISION_INFLUENCE = 0.25;
   const RELATION_STORAGE_KEY = "bluefox_bac_relation_v1";
+  const TRUST_TUNING = Object.freeze({
+    alignedSuccess: 1.15,
+    opposedSuccess: 0.35,
+    alignedFailure: -1.25,
+    opposedFailure: -3.25,
+    opposedUseless: -2.5,
+    generalRatio: 0.22,
+    highTrustSoftCap: 55,
+    highTrustGainFactor: 0.35,
+    awarenessSuggestionGain: 0.35,
+    awarenessResolutionGain: 0.2
+  });
 
   const AXES = Object.freeze([
     "exploration",
@@ -201,7 +213,11 @@
 
   const recordPlayerSuggestion = (axis, detail = {}) => {
     const normalized = normalizeAxis(axis) || "exploration";
-    relation.awareness = clamp(relation.awareness + 1.5, 0, 100);
+    relation.awareness = clamp(
+      relation.awareness + TRUST_TUNING.awarenessSuggestionGain,
+      0,
+      100
+    );
     relation.lastPlayerSuggestion = {
       axis: normalized,
       detail: clone(detail),
@@ -223,19 +239,27 @@
     const aligned = axisPriority >= 50;
     let delta = 0;
 
-    if (successful && useful && aligned) delta = 5;
-    else if (successful && useful) delta = 2;
-    else if (!successful && !aligned) delta = -6;
-    else if (!useful && !aligned) delta = -4;
-    else delta = -1;
+    if (successful && useful && aligned) delta = TRUST_TUNING.alignedSuccess;
+    else if (successful && useful) delta = TRUST_TUNING.opposedSuccess;
+    else if (!successful && !aligned) delta = TRUST_TUNING.opposedFailure;
+    else if (!useful && !aligned) delta = TRUST_TUNING.opposedUseless;
+    else delta = TRUST_TUNING.alignedFailure;
 
+    const currentAxisTrust = clampTrust(relation.trustByAxis[suggestion.axis]);
+    if (delta > 0 && currentAxisTrust >= TRUST_TUNING.highTrustSoftCap) {
+      delta *= TRUST_TUNING.highTrustGainFactor;
+    }
     relation.trustByAxis[suggestion.axis] = clampTrust(
-      relation.trustByAxis[suggestion.axis] + delta
+      currentAxisTrust + delta
     );
     relation.trustGeneral = clampTrust(
-      relation.trustGeneral + delta * 0.35
+      relation.trustGeneral + delta * TRUST_TUNING.generalRatio
     );
-    relation.awareness = clamp(relation.awareness + 1, 0, 100);
+    relation.awareness = clamp(
+      relation.awareness + TRUST_TUNING.awarenessResolutionGain,
+      0,
+      100
+    );
     suggestion.resolved = true;
     suggestion.result = {
       ...clone(result),
@@ -906,6 +930,7 @@
     observe("map-transition-completed", event.detail || {})
   );
   BF.ObjectEvents?.subscribe?.((event) => {
+    if (event.detail?.offline) return;
     observe("object-event", {
       type: event.type,
       objectId: event.objectId,

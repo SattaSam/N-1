@@ -1,4 +1,4 @@
-﻿﻿(function (global) {
+﻿(function (global) {
   "use strict";
 
   const BF = global.BlueFox3D = global.BlueFox3D || {};
@@ -125,6 +125,34 @@
     return null;
   };
 
+  const acquisitionAction = (definition) => {
+    const caps = capabilities(definition);
+    if (!caps.collectable) return null;
+    const configured = String(
+      definition?.interaction?.acquisitionAction ||
+      definition?.interaction?.afterInspectionAction ||
+      ""
+    ).toLowerCase();
+    if (configured === "extract" && caps.extractable) return "extract";
+    if (configured === "collect") return "collect";
+    const actions = new Set(definition?.interaction?.actions || []);
+    if (caps.extractable && !actions.has("collect")) return "extract";
+    return "collect";
+  };
+
+  const clearAcquisitionIntent = (object) => {
+    if (!object?.userData) return;
+    object.userData.acquisitionIntent = null;
+    object.userData.acquisitionIntentSource = null;
+  };
+
+  const rememberAcquisitionIntent = (object, action, source) => {
+    if (!object?.userData || !["collect", "extract"].includes(action)) return;
+    object.userData.acquisitionIntent = action;
+    object.userData.acquisitionIntentSource =
+      source === "autonomy" ? "autonomy" : "manual";
+  };
+
   const validateAction = (resolved, requested, missionRequested = false) => {
     const caps = capabilities(resolved.definition);
     const state = interactionState(resolved);
@@ -245,7 +273,7 @@
       let treeChanged = false;
       tree.availableLeaves().forEach((node) => {
         if (node.isComplete || !eventMatchesNode(event, node)) return;
-        if (node.increment(Math.max(1, Number(event.quantity) || 1))) {
+        if (progressNodeFromEvent(node, event)) {
           changed += 1;
           treeChanged = true;
           if (current?.missionId === missionId && current?.nodeId === node.id) {
@@ -386,6 +414,30 @@
     cuoType: String(resolved.definition?.type || "").toLowerCase()
   });
 
+  const distinctValueFromEvent = (node, event) => {
+    const mode = String(node?.params?.distinctBy || "").trim();
+    if (!mode || mode === "none") return null;
+    if (mode === "instanceId") return String(event?.instanceId || "");
+    if (mode === "objectId") return String(event?.objectId || "").toLowerCase();
+    return null;
+  };
+
+  const distinctValueFromResolved = (node, resolved) => {
+    const mode = String(node?.params?.distinctBy || "").trim();
+    if (!mode || mode === "none") return null;
+    const identity = identityOf(resolved);
+    if (mode === "instanceId") return identity.instanceId;
+    if (mode === "objectId") return identity.objectId;
+    return null;
+  };
+
+  const progressNodeFromEvent = (node, event) => {
+    const amount = Math.max(1, Number(event?.quantity) || 1);
+    const distinctValue = distinctValueFromEvent(node, event);
+    if (distinctValue == null) return node.increment(amount);
+    return node.incrementDistinct?.(distinctValue, 1) || false;
+  };
+
   const matchesBoundTarget = (engine, missionId, resolved) => {
     const bound = engine?.missionManager?.memory?.getFact?.(`bibleTarget:${missionId}`);
     if (!bound || (!bound.instanceId && !bound.objectId && !bound.cuoType)) return true;
@@ -403,11 +455,15 @@
     (engine.currentMap?.interactables || [])
       .filter((object) => {
         if (!object.userData.active) return false;
-        const definition = resolveObject(object).definition;
+        const resolved = resolveObject(object);
+        const definition = resolved.definition;
+        const node = engine?.missionManager?.trees?.get?.(action.missionId)?.find?.(action.nodeId);
+        const distinctValue = node ? distinctValueFromResolved(node, resolved) : null;
+        if (distinctValue != null && node?.hasDistinctValue?.(distinctValue)) return false;
         return definition &&
           canStudy(definition) &&
           matchesStudySubject(definition, action.params?.subject) &&
-          matchesBoundTarget(engine, action.missionId, resolveObject(object));
+          matchesBoundTarget(engine, action.missionId, resolved);
       })
       .sort((left, right) => {
         const distance = (object) => engine.character.root.position.distanceTo(
@@ -435,6 +491,8 @@
         if (!isStudyAction(node.type)) continue;
         if (!matchesStudySubject(definition, node.params?.subject)) continue;
         if (!matchesBoundTarget(engine, missionId, resolved)) continue;
+        const distinctValue = distinctValueFromResolved(node, resolved);
+        if (distinctValue != null && node.hasDistinctValue?.(distinctValue)) continue;
         return {
           missionId,
           nodeId: node.id,
@@ -681,11 +739,29 @@
 
     engine.targetInteraction = function targetObjectInteraction(object, retry = false) {
       const resolved = resolveObject(object);
-      const source = object.userData.requestedInteractionSource;
+      const source = object.userData.requestedInteractionSource || "manual";
+      const incomingRequested = String(
+        object.userData.requestedInteraction || ""
+      ).toLowerCase();
       const directive =
         source === "mission" ? null : activeStudyDirective(this, resolved);
 
+      // Une mission reste souveraine : elle n'ouvre jamais une chaîne implicite.
+      // Hors mission, une intention d'acquisition est conservée jusqu'à
+      // l'acquisition réelle de CETTE instance.
+      if (source === "mission") {
+        clearAcquisitionIntent(object);
+      } else if (!retry && capabilities(resolved.definition).collectable) {
+        const wanted = ["collect", "extract"].includes(incomingRequested)
+          ? incomingRequested
+          : source === "manual"
+            ? acquisitionAction(resolved.definition)
+            : null;
+        if (wanted) rememberAcquisitionIntent(object, wanted, source);
+      }
+
       if (directive) {
+        clearAcquisitionIntent(object);
         object.userData.requestedInteraction = "observe";
         object.userData.requestedInteractionSource = "mission";
         object.userData.missionSubject = directive.subject;
@@ -694,14 +770,20 @@
         object.userData.missionId = directive.missionId;
       }
 
-      const requested =
-        object.userData.requestedInteractionSource === "mission"
-          ? object.userData.requestedInteraction
-          : null;
+      const missionRequested =
+        object.userData.requestedInteractionSource === "mission";
+      const intendedAcquisition = missionRequested
+        ? null
+        : object.userData.acquisitionIntent;
+
+      const requestedStep = intendedAcquisition
+        ? resolveManualAction(resolved)
+        : (incomingRequested || resolveManualAction(resolved));
+
       const mode = validateAction(
         resolved,
-        requested || resolveManualAction(resolved),
-        object.userData.requestedInteractionSource === "mission"
+        requestedStep,
+        missionRequested
       );
       if (!resolved.definition || !mode) {
         console.warn("[BlueFox O5.1] Interaction refusée : objet absent ou incomplet dans le CUO.", object);
@@ -850,7 +932,7 @@
       const autonomousInteraction = detail.interactionSource === "autonomy";
 
       const acquisition = mode === "collect" || mode === "extract";
-      let queueAdaptiveCollection = false;
+      let continueAcquisition = false;
       if (acquisition) {
         state.collected = true;
         state.collectionCount += 1;
@@ -873,6 +955,7 @@
           label: definition.label,
           inventoryKey
         });
+        clearAcquisitionIntent(object);
         if (removeFromWorld) {
           const respawnSeconds = Number(definition.interaction?.respawnSeconds);
           if (!Number.isFinite(respawnSeconds) || respawnSeconds <= 0) {
@@ -917,12 +1000,12 @@
           label: definition.label,
           interactionState: { ...state }
         });
-        // Une plante adaptative étudiée reste une ressource. Si aucune mission
-        // ne réclame immédiatement une nouvelle étude, sa collecte devient la
-        // prochaine action autonome prioritaire au lieu d'être perdue dans le
-        // tirage général des comportements.
-        queueAdaptiveCollection =
-          definition.type === "adaptive_plant" &&
+        // Une étude préalable n'achève pas une intention de collecte.
+        // On conserve la même instance jusqu'à l'acquisition finale, sans
+        // repasser par le BAC. Les missions restent exclues de cette chaîne.
+        continueAcquisition =
+          detail.interactionSource !== "mission" &&
+          ["collect", "extract"].includes(object.userData.acquisitionIntent) &&
           capabilities(definition).collectable &&
           !activeStudyDirective(this, resolved);
         object.userData.lastInspectedAt = Date.now();
@@ -961,23 +1044,19 @@
       object.userData.missionNarrativeVerb = null;
       object.userData.missionNodeId = null;
       object.userData.missionId = null;
-      if (queueAdaptiveCollection) {
-        global.setTimeout(() => {
-          if (
-            this.disposed ||
-            !object.userData.active ||
-            this.pendingInteraction ||
-            this.pendingGate ||
-            this.pendingZoneExploration ||
-            this.currentRoutine ||
-            this.missionManager?.currentAction ||
-            activeStudyDirective(this, resolveObject(object))
-          ) return;
-          object.userData.requestedInteraction =
-            definition.interaction?.acquisitionAction || "collect";
-          object.userData.requestedInteractionSource = "autonomy";
-          this.targetInteraction(object);
-        }, 720);
+      if (continueAcquisition && object.userData.active && !this.disposed) {
+        const intended = object.userData.acquisitionIntent;
+        const intendedSource =
+          object.userData.acquisitionIntentSource ||
+          detail.interactionSource ||
+          "autonomy";
+
+        // La chaîne continue AVANT toute nouvelle décision autonome.
+        // Aucune recherche de cible : on garde exactement le même objet.
+        object.userData.requestedInteraction = intended;
+        object.userData.requestedInteractionSource = intendedSource;
+        this.postActionRecoveryUntil = now;
+        this.targetInteraction(object, true);
       }
     };
 
@@ -1020,4 +1099,5 @@
   BF.installObjectM0Bridge = install;
   BF.getObjectM0BridgeState = () => ({ ...installed });
   install();
+
 })(window);

@@ -36,8 +36,9 @@
       records.forEach((record) => {
         if (record.instance.hitbox) built.interactables.push(record.instance.hitbox);
         record.instance.colliders.forEach((collider) => {
-          record.root.updateWorldMatrix(true, false);
-          const position = record.root.localToWorld(collider.offset.clone());
+          const transformRoot = record.objectRoot || record.root;
+          transformRoot.updateWorldMatrix(true, false);
+          const position = transformRoot.localToWorld(collider.offset.clone());
           built.colliders.push({ position, radius: collider.radius, owner: record.root });
         });
       });

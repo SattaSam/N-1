@@ -68,6 +68,29 @@
     resources: 18
   });
 
+  /*
+   * Ancrages de production des trois evolutions du camp.
+   *
+   * Ces transformations portent uniquement l'instance globale de la MSC.
+   * Les offsets et rotations des objets sauvegardes par CUO Lab restent donc
+   * strictement inchanges. Le camp renforce est une MSC autonome : aucune
+   * seconde instance de MSC-CUSTOM-CAMP-BASE ne doit lui etre superposee.
+   */
+  const campSitePlacements = Object.freeze({
+    "MSC-CUSTOM-CAMP": Object.freeze({
+      position: Object.freeze({ x: 6.174798, y: 0.25, z: 3.249376 }),
+      rotation: Object.freeze([0, 2.356194, 0])
+    }),
+    "MSC-CUSTOM-CAMP-BASE": Object.freeze({
+      position: Object.freeze({ x: -0.4399, y: 1.25, z: 4.9833 }),
+      rotation: Object.freeze([0, 1.308997, 0])
+    }),
+    "MSC-CUSTOM-CAMP-BASE-REINFORCED": Object.freeze({
+      position: Object.freeze({ x: -2.7567, y: 1.5, z: 4.768 }),
+      rotation: Object.freeze([0, 1.308997, 0])
+    })
+  });
+
   Object.assign(BF.maps.crystal, {
     name: "Site du crash",
     zones: ["Zone du crash"],
@@ -87,6 +110,7 @@
       capsuleScale: 1,
       capsuleGroundOffset: 0.16,
       stages: Object.freeze(["crash", "refuge", "base"]),
+      campSitePlacements,
       exclusionZoneIds: Object.freeze(
         constructionExclusionZones.map((zone) => zone.id)
       )

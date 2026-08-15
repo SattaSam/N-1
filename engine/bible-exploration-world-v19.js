@@ -136,9 +136,9 @@
           map.interactables.push(hitbox);
         }
         (spawned.instance?.colliders || []).forEach((collider) => {
-          const position = collider.offset.clone()
-            .applyAxisAngle(new engine.THREE.Vector3(0,1,0), spawned.root.rotation.y)
-            .add(spawned.root.position);
+          const transformRoot = spawned.objectRoot || spawned.root;
+          transformRoot.updateWorldMatrix(true, false);
+          const position = transformRoot.localToWorld(collider.offset.clone());
           map.colliders.push({ position, radius:collider.radius, owner:spawned.root });
         });
       });

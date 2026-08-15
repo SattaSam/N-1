@@ -8,14 +8,15 @@
     <title>BlueFox Odyssey V0.16.20</title>
     <link rel="stylesheet" href="./game.css?v=0.16.20">
     <link rel="stylesheet" href="./journal.css?v=0.16.20">
-    <link rel="stylesheet" href="./engine/exploration-hud.css?v=0.16.20">
-    <link rel="stylesheet" href="./engine/ui-enhancements.css?v=missions-observation-ui-v12">
-    <link rel="stylesheet" href="./engine/planet-globe-ui.css?v=planet-globe-validated-r1">
+    <link rel="stylesheet" href="./engine/exploration-hud.css?v=music-controls-dock-v1">
+    <link rel="stylesheet" href="./engine/ui-enhancements.css?v=population-step5-r2">
+    <link rel="stylesheet" href="./engine/planet-globe-ui.css?v=planet-pane-top-r1">
     <link rel="stylesheet" href="./engine/mission-ui-bridge.css?v=review-fixes1">
     <link rel="stylesheet" href="./engine/inventory-ui-bridge.css?v=inventory-kit-clean-v0-2">
     <link rel="stylesheet" href="./engine/save-ui-bridge.css?v=save-ui-locked-v3">
     <link rel="stylesheet" href="./engine/settings-ui-bridge.css?v=bac-hover-tooltips1">
     <link rel="stylesheet" href="./engine/ui-hotfix-v3.css?v=ui-hotfix-v3">
+    <link rel="stylesheet" href="./engine/adaptive-music-ui-v1.css?v=music-ui-v1">
   </head>
   <body>
     <div id="file-protocol-warning" hidden>
@@ -26,30 +27,39 @@
     <script src="./map-assets.js?v=missions-maps-v11"></script>
     <script src="./Images/images-catalog.js?v=missions-maps-v11"></script>
     <script src="./engine/bluefox3d-core.js?v=0.16.20"></script>
-    <script src="./engine/object-library.js?v=fau10-tool-use-r1"></script>
+    <script src="./engine/object-library.js?v=traversable-arches-r1"></script>
     <script src="./engine/object-library-p2-1.js?v=p2-1-r3"></script>
+    <script src="./engine/object-library-height-r6.js?v=height-r6"></script>
+    <script src="./engine/object-library-flora-patch.js?v=flora-skin-r1"></script>
+    <script src="./engine/cuo-catalog-consistency-r3.js?v=cuo-catalog-r3"></script>
     <script src="./engine/vegetation-performance.js?v=vegetation-performance-r1"></script>
     <script src="./engine/runtime-budget.js?v=p2-6-r1"></script>
     <script src="./engine/passive-object-runtime.js?v=p2-6-r1"></script>
     <script src="./engine/npc-runtime.js?v=p2-6-r1"></script>
     <script src="./engine/fauna-runtime.js?v=fau10-tool-use-r1"></script>
+    <script src="./engine/fauna-tool-ball-return-r2.js?v=fau10-return-r2"></script>
+    <script src="./engine/fauna-no-spin-r6.js?v=no-spin-r6"></script>
     <script src="./engine/flora-runtime.js?v=p2-6-r1"></script>
     <script src="./engine/flora-wind-runtime.js?v=flora-wind-r2"></script>
+    <script src="./engine/spore-static-r3.js?v=spore-static-r3"></script>
     <script src="./engine/phenomenon-runtime.js?v=p2-6-r1"></script>
     <script src="./engine/procedural-variants.js?v=p2-5-r1"></script>
     <script src="./engine/object-event-registry.js?v=o7-interactions"></script>
-    <script src="./engine/biome-rules.js?v=camp-wood-v15"></script>
-    <script src="./data/custom-micro-scenes.js?v=custom-scenes-v1"></script>
+    <script src="./engine/biome-rules.js?v=canonical-population"></script>
+    <script src="./data/custom-micro-scenes.js?v=custom-scenes-r10-direct"></script>
     <script src="./engine/micro-scenes.js?v=fau10-tool-use-r1"></script>
-    <script src="./engine/bible-exploration-micro-scenes-v19.js?v=validated-pattern-v19-11"></script>
-    <script src="./engine/object-spawner.js?v=crystal-tutorial-budget1"></script>
-    <script src="./engine/map-population-hierarchy.js?v=map-population-hierarchy-r1"></script>
+    <script src="./engine/legacy-msc-adjust-r6.js?v=legacy-r6"></script>
+    <script src="./engine/custom-micro-scenes-runtime.js?v=msc-r10-direct"></script>
+    <script src="./engine/object-spawner.js?v=population-step5-r1"></script>
+    <script src="./engine/micro-scene-pivot-r6.js?v=pivot-r6"></script>
+    <script src="./engine/micro-scene-integrity-r6.js?v=integrity-r6"></script>
+    <script src="./engine/map-population-hierarchy.js?v=population-step5-r1"></script>
     <script src="./data/custom-maps.js?v=custom-maps-v1"></script>
-    <script src="./engine/map-registry.js?v=missions-maps-v11"></script>
+    <script src="./engine/map-registry.js?v=canonical-population"></script>
     <script src="./engine/custom-map-registry.js?v=custom-maps-v1"></script>
     <script src="./engine/map-integrity-v20.js?v=map-pipeline-v20-3"></script>
     <script src="./engine/persistent-micro-scenes-v20.js?v=map-pipeline-v20-1"></script>
-    <script src="./engine/start-map-crystal.js?v=crystal-tutorial-budget1"></script>
+    <script src="./engine/start-map-crystal.js?v=crystal-camp-placement1"></script>
     <script src="./engine/special-object-runtime.js?v=special-objects2"></script>
     <script src="./engine/map-generation-rules.js?v=map-generation1"></script>
     <script src="./engine/map-generation-no5-v20-1.js?v=map-pipeline-v20-1"></script>
@@ -57,8 +67,9 @@
     <script src="./engine/map-generator-bible-overrides-v19.js?v=map-pipeline-v20-1"></script>
     <script src="./engine/path-planner.js?v=0.16.20"></script>
     <script src="./engine/character-controller.js?v=hotfix-weather-bounds1"></script>
-    <script src="./engine/camera-controller.js?v=0.16.20"></script>
+    <script src="./engine/camera-controller.js?v=population-step5-r1"></script>
     <script src="./engine/camera-extended-look.js?v=anchored-low-angle-v1"></script>
+    <script src="./engine/plateau-underlay-r3.js?v=underlay-r3"></script>
     <script src="./engine/mission-types.js?v=start-zone-progression1"></script>
     <script src="./engine/mission-tree.js?v=0.16.20-m0"></script>
     <script src="./engine/mission-memory.js?v=v15-event-ledger"></script>
@@ -81,29 +92,32 @@
     <script src="./engine/bible-catalog-cleanfix-v19-3.js?v=validated-pattern-v19-11"></script>
     <script src="./data/bible-exploration-missions-v19.js?v=validated-pattern-v19-11"></script>
     <script src="./engine/bible-validation-v0-1.js?v=bible-validation-v0-1"></script>
-    <script src="./engine/bible-runtime-v0-1-unified.js?v=v17-site-hydration"></script>
+    <script src="./engine/bible-runtime-v0-1-unified.js?v=v18-camp-placement"></script>
     <script src="./engine/bible-runtime-trigger-fix-v19.js?v=validated-pattern-v19-11"></script>
     <script src="./engine/bible-exploration-runtime-v19.js?v=validated-pattern-v19-11"></script>
-    <script src="./engine/world-engine.js?v=return-base-route-r1"></script>
+    <script src="./engine/world-engine.js?v=population-step5-r1"></script>
     <script src="./engine/bible-map-prescription-v19.js?v=map-pipeline-v20-1"></script>
     <script src="./engine/world-topology-v3.js?v=world-topology-v3"></script>
     <script src="./engine/environment-geometry-fix.js?v=portals-bounds-panorama-ui-v3c-map-contour-v2"></script>
     <script src="./engine/behavior-arbitration-core.js?v=missions-survival-ux-v10"></script>
     <script src="./engine/behavior-arbitration-integration.js?v=bac-routing-diagnostic-fix3"></script>
+    <script src="./data/music-catalog.js?v=music-longform-cues-v1"></script>
+    <script src="./engine/adaptive-music-engine-v1.js?v=music-longform-cues-v1"></script>
+    <script src="./engine/adaptive-music-gameplay-bridge-v1.js?v=music-longform-cues-v1"></script>
+    <script src="./engine/adaptive-music-ui-v1.js?v=music-ui-v1"></script>
     <script src="./engine/survival-rations-ai-v0-3.js?v=survival-rations-ai-v0-3"></script>
     <script src="./engine/object-m0-bridge.js?v=v16-archaeology"></script>
     <script src="./engine/bible-exploration-world-v19.js?v=validated-pattern-v19-11"></script>
     <script src="./engine/mission-aware-analysis.js?v=mission-aware-analysis1"></script>
     <script src="./engine/mission-runtime-integration-v19-7.js?v=validated-pattern-v19-11"></script>
     <script src="./engine/mission-target-arbitration-v19-12.js?v=mission-target-arbitration-v19-12-1"></script>
-    <script src="./engine/reconnaissance-pattern-validation-v19-10.js?v=map-pipeline-v20-1"></script>
     <script src="./game.js?v=0.16.20"></script>
     <script src="./engine/ui-hotfix-v3.js?v=ui-hotfix-v3"></script>
     <script src="./engine/inventory-ui-clean-v0-2.js?v=inventory-kit-clean-v0-2"></script>
     <script src="./engine/save-ui-bridge.js?v=save-ui-locked-v3"></script>
     <script src="./engine/topology-persistence-bridge.js?v=topology-persistence-v3-1"></script>
     <script src="./engine/settings-ui-bridge.js?v=bac-hover-tooltips1"></script>
-    <script src="./engine/ui-enhancements.js?v=0.16.20-planet-center-wrapper"></script>
+    <script src="./engine/ui-enhancements.js?v=population-step5-r2"></script>
     <script src="./engine/planet-topology-ui.js?v=planet-topology-ui-r2-organic"></script>
     <script src="./engine/planet-globe-ui.js?v=planet-globe-validated-r1"></script>
     <script src="./engine/mission-ui-bridge.js?v=missions-survival-ux-v10"></script>

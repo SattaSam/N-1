@@ -109,7 +109,7 @@
   position: absolute;
   z-index: 15;
   left: 172px;
-  bottom: 132px;
+  bottom: 104px;
   width: 42px;
   height: 42px;
   border: 1px solid rgba(111, 214, 255, .5);
@@ -125,7 +125,7 @@
   position: absolute;
   z-index: 15;
   left: 220px;
-  bottom: 132px;
+  bottom: 104px;
   width: 42px;
   height: 42px;
   border: 1px solid rgba(111, 214, 255, .5);
@@ -183,12 +183,12 @@
 @media (max-width: 900px) {
   .bluefox-camera-button {
     left: 130px;
-    bottom: 142px;
+    bottom: 104px;
   }
 
   .bluefox-speech-button {
     left: 178px;
-    bottom: 142px;
+    bottom: 104px;
   }
 }
 

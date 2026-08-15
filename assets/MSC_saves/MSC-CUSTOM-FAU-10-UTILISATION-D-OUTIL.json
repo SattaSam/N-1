@@ -1,0 +1,39 @@
+{
+  "id": "MSC-CUSTOM-FAU-10-UTILISATION-D-OUTIL",
+  "name": "FAU-10 · Utilisation d’outil",
+  "biomes": [
+    "all"
+  ],
+  "rarity": "custom",
+  "radius": 1.5499999999999972,
+  "objects": [
+    {
+      "type": "brouteur",
+      "offset": [
+        -1.5499999999999972,
+        5.551115123125783e-17,
+        0
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "fauna_straw_ball",
+      "offset": [
+        0,
+        5.551115123125783e-17,
+        0
+      ],
+      "variant": 0,
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    }
+  ]
+}

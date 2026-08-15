@@ -17,6 +17,12 @@
       this.progress = Math.max(0, Number(definition.progress) || 0);
       this.status = definition.status || Missions.MissionStatus.LOCKED;
       this.params = { ...(definition.params || {}) };
+      this.distinctValues = Array.isArray(definition.distinctValues)
+        ? [...new Set(definition.distinctValues.map((value) => String(value)))]
+        : [];
+      this.historyValues = Array.isArray(definition.historyValues)
+        ? definition.historyValues.map((value) => String(value))
+        : [];
       this.requires = [...(definition.requires || [])];
       this.optional = Boolean(definition.optional);
       this.parent = parent;
@@ -108,6 +114,30 @@
       return true;
     }
 
+    incrementDistinct(value, amount = 1) {
+      if (!this.isLeaf || this.isComplete) return false;
+      const identity = String(value ?? "").trim();
+      if (!identity || this.distinctValues.includes(identity)) return false;
+      this.distinctValues.push(identity);
+      return this.increment(amount);
+    }
+
+    hasDistinctValue(value) {
+      const identity = String(value ?? "").trim();
+      return Boolean(identity) && this.distinctValues.includes(identity);
+    }
+
+    pushHistoryValue(value, maximum = 32) {
+      const item = String(value ?? "").trim();
+      if (!item) return false;
+      this.historyValues.push(item);
+      const limit = Math.max(2, Number(maximum) || 32);
+      if (this.historyValues.length > limit) {
+        this.historyValues = this.historyValues.slice(-limit);
+      }
+      return true;
+    }
+
     availableLeaves(root = this) {
       const leaves = [];
       this.walk((node) => {
@@ -134,6 +164,8 @@
         progress: this.progress,
         status: this.status,
         params: { ...this.params },
+        distinctValues: [...this.distinctValues],
+        historyValues: [...this.historyValues],
         requires: [...this.requires],
         optional: this.optional,
         createdAt: this.createdAt,

@@ -7,7 +7,7 @@
     root.traverse((child) => {
       if (!child.isMesh) return;
       if (child.userData.interactable) return;
-      child.castShadow = true;
+      child.castShadow = root.userData.disableCastShadow !== true;
       child.receiveShadow = true;
     });
     return root;
@@ -268,8 +268,8 @@
       root: setShadows(root),
       hitbox,
       colliders: [
-        { offset: new THREE.Vector3(-1.55, 0, 0), radius: 0.72 },
-        { offset: new THREE.Vector3(1.55, 0, 0), radius: 0.72 }
+        { offset: new THREE.Vector3(-1.55, 0, 0), radius: 0.48 },
+        { offset: new THREE.Vector3(1.55, 0, 0), radius: 0.48 }
       ],
       kind: "arch"
     };
@@ -622,15 +622,16 @@
       root.add(strap);
       hitbox = makeHitbox(THREE, root, 0.52, 1.1, type);
     } else if (type === "giant_mushroom") {
-      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.62, 3, 10), material(THREE, { color: 0xcad9bd, roughness: 0.88 }));
+      root.userData.disableCastShadow = true;
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.62, 3, 8), material(THREE, { color: 0xcad9bd, roughness: 0.88 }));
       stem.position.y = 1.5;
       root.add(stem);
-      const cap = new THREE.Mesh(new THREE.SphereGeometry(1.55, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), violet);
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(1.55, 12, 7, 0, Math.PI * 2, 0, Math.PI / 2), violet);
       cap.scale.y = 0.65;
       cap.position.y = 3.05;
       root.add(cap);
-      for (let index = 0; index < 7; index += 1) {
-        const spot = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), luminousGreen);
+      for (let index = 0; index < 5; index += 1) {
+        const spot = new THREE.Mesh(new THREE.SphereGeometry(0.12, 6, 4), luminousGreen);
         const angle = index * 2.399;
         spot.position.set(Math.cos(angle) * (0.45 + index * 0.09), 3.65 - index * 0.045, Math.sin(angle) * (0.45 + index * 0.09));
         root.add(spot);
@@ -1498,7 +1499,7 @@
       } else if (type === "survey_beacon") {
         const mast=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.16,1.8,8),darkMetal); mast.position.y=0.9; root.add(mast); const head=new THREE.Mesh(new THREE.OctahedronGeometry(0.34,1),material(THREE,{color:0x6ddfff,emissive:0x147aa0,emissiveIntensity:1.25,metalness:0.4})); head.position.y=1.85; root.add(head); colliders=[{offset:new THREE.Vector3(),radius:0.24}];
       } else if (type === "fossil_root_arch") {
-        [-1,1].forEach(side=>{const rootLeg=new THREE.Mesh(new THREE.CylinderGeometry(0.32,0.58,3.1,8),material(THREE,{color:0x73624d,roughness:0.98})); rootLeg.position.set(side*1.35,1.55,0); rootLeg.rotation.z=side*-0.18; root.add(rootLeg);}); const crown=new THREE.Mesh(new THREE.TorusGeometry(1.38,0.34,9,28,Math.PI),material(THREE,{color:0x73624d,roughness:0.98})); crown.position.y=3.05; root.add(crown); colliders=[{offset:new THREE.Vector3(-1.35,0,0),radius:0.55},{offset:new THREE.Vector3(1.35,0,0),radius:0.55}];
+        [-1,1].forEach(side=>{const rootLeg=new THREE.Mesh(new THREE.CylinderGeometry(0.32,0.58,3.1,8),material(THREE,{color:0x73624d,roughness:0.98})); rootLeg.position.set(side*1.35,1.55,0); rootLeg.rotation.z=side*-0.18; root.add(rootLeg);}); const crown=new THREE.Mesh(new THREE.TorusGeometry(1.38,0.34,9,28,Math.PI),material(THREE,{color:0x73624d,roughness:0.98})); crown.position.y=3.05; root.add(crown); colliders=[{offset:new THREE.Vector3(-1.35,0,0),radius:0.4},{offset:new THREE.Vector3(1.35,0,0),radius:0.4}];
       } else {
         const bowl=new THREE.Mesh(new THREE.TorusGeometry(0.9,0.22,8,24),material(THREE,{color:0x76644f,roughness:0.95})); bowl.rotation.x=Math.PI/2; bowl.position.y=0.18; root.add(bowl); for(let i=0;i<9;i+=1){const twig=new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.045,1.3,6),material(THREE,{color:0x5e4a38,roughness:1})); const a=i*Math.PI*2/9; twig.position.set(Math.cos(a)*0.6,0.22,Math.sin(a)*0.6); twig.rotation.z=Math.cos(a)*1.25; twig.rotation.x=Math.sin(a)*1.25; root.add(twig);}
       }
@@ -1591,7 +1592,7 @@
     { id: "FAU-NOCT-M-001", type: "nocturnal_animal", label: "Animal nocturne", category: "fauna", subtype: "bioluminescent_nocturnal_animal", size: "M", rarity: "uncommon", biomes: ["forest", "jungle", "swamp", "desert", "alien"], scenes: ["Clairière nocturne", "Terrier luminescent"], states: ["caché", "en éveil", "curieux", "effrayé", "observé", "analysé"], actions: ["observe", "inspect", "track", "contact"], defaultAction: "observe", inspectable: true, traversable: true, discoverable: true, family: "fauna", research: ["zoology", "behavior", "bioluminescence"], tags: ["fauna", "living", "mobile", "nocturnal", "bioluminescent"], spawnCost: 8, maxPerZone: 3, minDistance: 5, maxSlope: 28, radius: 1.15, volume: "medium", curiosity: 0.78, danger: 0.06, missions: ["inventaire nocturne", "étude comportementale"], decision: "validated" },
     { id: "FAU-TOOL-S-001", type: "fauna_straw_ball", label: "Boule de paille de brouteur", category: "fauna_props", subtype: "grazer_manipulable_straw_ball", size: "S", rarity: "story", biomes: ["all"], scenes: ["Utilisation d’outil par un brouteur"], states: ["immobile", "poussée", "déplacée", "observée"], actions: ["observe", "inspect"], defaultAction: "observe", inspectable: true, traversable: true, family: "fauna", research: ["zoology", "behavior", "tool-use"], tags: ["fauna", "tool-use", "manipulable", "straw", "mission-only"], spawnCost: 1, maxPerZone: 1, minDistance: 0.8, maxSlope: 18, radius: 0.55, volume: "small", curiosity: 0.85, danger: 0, missions: ["FAU-10", "fauna_tool_use"], note: "Boule ronde couleur nid. Poussée du nez par le brouteur ; diffusion 1/5 après validation de FAU-10.", decision: "validated" },
     { id: "PHE-STOR-XL-001", type: "electrostatic_storm", label: "Tempête électrostatique", category: "phenomena", subtype: "blue_electrostatic_cyclone", size: "XL", rarity: "rare", biomes: ["magnetic", "electrical", "crystalline", "alien"], scenes: ["Cyclone chargé", "Couloir d’orage"], states: ["naissante", "active", "instable", "observée", "analysée", "dissipée"], actions: ["observe", "analyze", "avoid"], defaultAction: "observe", inspectable: false, traversable: true, discoverable: true, family: "phenomenon", research: ["meteorology", "electricity", "energy"], tags: ["weather", "storm", "cyclone", "electric", "phenomenon", "danger", "glowing"], spawnCost: 12, maxPerZone: 1, minDistance: 18, maxSlope: 10, radius: 3.25, volume: "large", curiosity: 0.95, danger: 0.88, missions: ["analyse atmosphérique", "phénomène énergétique"], decision: "validated" },
-    { id: "PHE-ISLE-XL-001", type: "mobile_islet", label: "Îlot mobile", category: "phenomena", subtype: "levitating_mobile_islet", size: "XL", rarity: "rare", biomes: ["floating_islands", "mountain", "magnetic", "alien"], scenes: ["Archipel errant", "Rocher de sustentation"], states: ["en lévitation", "en dérive", "stabilisé", "observé", "analysé", "cartographié"], actions: ["observe", "inspect", "analyze", "track"], defaultAction: "observe", inspectable: true, obstacle: true, discoverable: true, family: "phenomenon", research: ["geology", "magnetism", "levitation"], tags: ["terrain", "floating", "mobile", "landmark", "phenomenon", "rare"], spawnCost: 14, maxPerZone: 1, minDistance: 18, maxSlope: 8, radius: 3.25, volume: "large", curiosity: 1, danger: 0.22, missions: ["cartographie aérienne", "anomalie géologique"], decision: "validated" },
+    { id: "PHE-ISLE-XL-001", type: "mobile_islet", label: "Îlot mobile", category: "phenomena", subtype: "levitating_mobile_islet", size: "XL", rarity: "rare", biomes: ["floating_islands", "mountain", "magnetic", "alien"], scenes: ["Archipel errant", "Rocher de sustentation"], states: ["en lévitation", "en dérive", "stabilisé", "observé", "analysé", "cartographié"], actions: ["observe", "inspect", "analyze", "track"], defaultAction: "observe", inspectable: true, obstacle: false, traversable: true, discoverable: true, family: "phenomenon", research: ["geology", "magnetism", "levitation"], tags: ["terrain", "floating", "mobile", "landmark", "phenomenon", "rare"], spawnCost: 14, maxPerZone: 1, minDistance: 18, maxSlope: 8, radius: 3.25, volume: "large", curiosity: 1, danger: 0.22, missions: ["cartographie aérienne", "anomalie géologique"], decision: "validated" },
     { id: "BIO-CARN-L-001", type: "carnivorous_plant", label: "Plante carnivore", category: "flora", subtype: "alien_carnivorous_plant", size: "L", rarity: "uncommon", biomes: ["forest", "jungle", "swamp", "fungal", "alien"], scenes: ["Nid végétal", "Sous-bois prédateur"], states: ["fermée", "en veille", "ouverte", "alerte", "inspectée", "analysée", "récoltée"], actions: ["observe", "inspect", "analyze", "collect", "avoid"], defaultAction: "inspect", acquisitionAction: "collect", requiresInspectionBeforeCollect: true, afterInspectionAction: "collect", collectable: true, inspectable: true, obstacle: true, respawn: 420, inventoryKey: "carnivorous_sample", exploitability: "hazardous-harvest", family: "flora", resourceFamily: "biology", research: ["botany", "toxicology", "adaptation"], tags: ["plant", "carnivorous", "hazard", "living", "resource"], spawnCost: 6, maxPerZone: 2, minDistance: 7, maxSlope: 24, radius: 1.35, volume: "large", curiosity: 0.9, harvest: 0.42, danger: 0.62, missions: ["flore dangereuse", "échantillon biologique"], decision: "validated" },
     { id: "EQP-DRON-M-001", type: "scout_drone", label: "Drone éclaireur", category: "equipment", subtype: "craftable_scout_drone", size: "M", rarity: "rare", biomes: ["base", "camp", "all"], scenes: ["Atelier robotique", "Plateforme de reconnaissance"], states: ["planifié", "assemblé", "inactif", "actif", "endommagé", "réparé"], actions: ["inspect", "activate", "repair", "dismantle"], defaultAction: "inspect", inspectable: true, traversable: true, family: "equipment", research: ["robotics", "navigation", "mapping"], tags: ["equipment", "drone", "scout", "craftable", "mobile"], spawnCost: 9, maxPerZone: 1, minDistance: 5, maxSlope: 12, radius: 1.7, volume: "medium", curiosity: 0.55, danger: 0, missions: ["cartographie automatisée", "exploration avancée"], note: "Assemblage disponible à la base finale ; repère périodiquement un objet inconnu de la carte active.", decision: "validated" },
     { id: "EQP-DRON-M-002", type: "harvest_drone", label: "Drone récolteur", category: "equipment", subtype: "craftable_harvest_drone", size: "M", rarity: "rare", biomes: ["base", "camp", "all"], scenes: ["Atelier robotique", "Plateforme logistique"], states: ["planifié", "assemblé", "inactif", "actif", "chargé", "endommagé", "réparé"], actions: ["inspect", "activate", "repair", "dismantle"], defaultAction: "inspect", inspectable: true, traversable: true, family: "equipment", research: ["robotics", "logistics", "harvesting"], tags: ["equipment", "drone", "harvest", "craftable", "mobile"], spawnCost: 9, maxPerZone: 1, minDistance: 5, maxSlope: 12, radius: 1.7, volume: "medium", curiosity: 0.48, danger: 0, missions: ["collecte automatisée", "logistique avancée"], note: "Assemblage disponible à la base finale ; récolte périodiquement une ressource commune et sûre de la carte active.", decision: "validated" }

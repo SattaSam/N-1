@@ -161,8 +161,9 @@
       }
 
       (spawned.instance?.colliders || []).forEach((collider) => {
-        spawned.root.updateWorldMatrix(true, false);
-        const position = spawned.root.localToWorld(collider.offset.clone());
+        const transformRoot = spawned.objectRoot || spawned.root;
+        transformRoot.updateWorldMatrix(true, false);
+        const position = transformRoot.localToWorld(collider.offset.clone());
         built.colliders.push({
           position,
           radius: collider.radius,

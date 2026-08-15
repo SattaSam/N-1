@@ -329,6 +329,80 @@
       return texture;
     };
 
+    const attachTerrainColorSampler = (region, canvas) => {
+      const context = canvas?.getContext?.("2d", { willReadFrequently: true });
+      if (!region || !context || !canvas.width || !canvas.height) return false;
+      try {
+        const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
+        const integralWidth = canvas.width + 1;
+        const waterIntegral = new Uint32Array(integralWidth * (canvas.height + 1));
+        for (let y = 0; y < canvas.height; y += 1) {
+          let rowTotal = 0;
+          for (let x = 0; x < canvas.width; x += 1) {
+            const offset = (y * canvas.width + x) * 4;
+            const r = pixels.data[offset];
+            const g = pixels.data[offset + 1];
+            const b = pixels.data[offset + 2];
+            const a = pixels.data[offset + 3];
+            const water = a > 160 && b >= r * 1.08 && g >= r * 1.04 && b + g >= r * 2.35;
+            rowTotal += water ? 1 : 0;
+            waterIntegral[(y + 1) * integralWidth + x + 1] =
+              waterIntegral[y * integralWidth + x + 1] + rowTotal;
+          }
+        }
+        const pixelAt = (worldX, worldZ) => {
+          const u = BF.clamp(
+            (worldX - (region.center.x - region.halfSize)) / (region.halfSize * 2),
+            0,
+            1
+          );
+          const v = BF.clamp(
+            ((region.center.z + region.halfSize) - worldZ) / (region.halfSize * 2),
+            0,
+            1
+          );
+          const x = Math.min(canvas.width - 1, Math.max(0, Math.round(u * (canvas.width - 1))));
+          const y = Math.min(canvas.height - 1, Math.max(0, Math.round(v * (canvas.height - 1))));
+          const offset = (y * canvas.width + x) * 4;
+          return { x, y, color: {
+            r: pixels.data[offset],
+            g: pixels.data[offset + 1],
+            b: pixels.data[offset + 2],
+            a: pixels.data[offset + 3]
+          }};
+        };
+        region.terrainColorAt = (worldX, worldZ) => pixelAt(worldX, worldZ).color;
+        region.terrainWaterCoverageAt = (worldX, worldZ, worldRadius = 3.2) => {
+          const point = pixelAt(worldX, worldZ);
+          const pixelRadius = Math.max(
+            3,
+            Math.round(worldRadius * canvas.width / (region.halfSize * 2))
+          );
+          const x0 = Math.max(0, point.x - pixelRadius);
+          const y0 = Math.max(0, point.y - pixelRadius);
+          const x1 = Math.min(canvas.width - 1, point.x + pixelRadius);
+          const y1 = Math.min(canvas.height - 1, point.y + pixelRadius);
+          const waterPixels =
+            waterIntegral[(y1 + 1) * integralWidth + x1 + 1] -
+            waterIntegral[y0 * integralWidth + x1 + 1] -
+            waterIntegral[(y1 + 1) * integralWidth + x0] +
+            waterIntegral[y0 * integralWidth + x0];
+          return waterPixels / Math.max(1, (x1 - x0 + 1) * (y1 - y0 + 1));
+        };
+        return true;
+      } catch {
+        region.terrainColorAt = null;
+        return false;
+      }
+    };
+
+    const isWaterColor = (color) => Boolean(
+      color && color.a > 160 &&
+      color.b >= color.r * 1.08 &&
+      color.g >= color.r * 1.04 &&
+      color.b + color.g >= color.r * 2.35
+    );
+
     const seededNoise = (x, y, seed) => {
       let value = (
         Math.imul(x + 1, 374761393) ^
@@ -583,6 +657,7 @@
               loadedTexture.image,
               definition.seed + index * 7919
             );
+            attachTerrainColorSampler(zoneRegions[index], zoneTexture.image);
           }
         );
         const [x, z] = positions[index];
@@ -772,7 +847,69 @@
       gates.push(gate);
     });
 
+    const placePoolsOnWater = () => {
+      const aquaticContext = `${definition.profile || ""} ${definition.name || ""} ${
+        definition.description || ""
+      } ${(definition.traits || []).map((trait) => `${trait.id || ""} ${trait.label || ""}`).join(" ")}`
+        .toLocaleLowerCase("fr")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+      const aquaticProfile =
+        ["swamp", "aquatic", "coast", "coastal", "archipelago"].includes(
+          String(definition.profile || "")
+        ) || /marais|aquati|ocean|mer|cote|coast|archipel/.test(aquaticContext);
+      if (!aquaticProfile) return 0;
+      const waterRegions = zoneRegions.filter((region) => region.terrainColorAt);
+      if (!waterRegions.length) return 0;
+      const pools = [];
+      group.traverse((object) => {
+        if (
+          object.userData?.libraryType === "pool" &&
+          !object.userData?.worldAnchor
+        ) pools.push(object);
+      });
+      let relocated = 0;
+      pools.forEach((pool, poolIndex) => {
+        let placedOnWater = false;
+        for (let attempt = 0; attempt < 320; attempt += 1) {
+          const hash = Math.abs(Math.sin(
+            (Number(definition.seed) || 1) * 0.017 +
+            poolIndex * 17.23 + attempt * 43.71
+          ));
+          const hash2 = Math.abs(Math.sin(
+            (Number(definition.seed) || 1) * 0.031 +
+            poolIndex * 29.11 + attempt * 71.37
+          ));
+          const region = waterRegions[(poolIndex + attempt) % waterRegions.length];
+          const margin = 2.4;
+          const x = region.center.x - region.halfSize + margin +
+            hash * (region.halfSize * 2 - margin * 2);
+          const z = region.center.z - region.halfSize + margin +
+            hash2 * (region.halfSize * 2 - margin * 2);
+          if (
+            !isWaterColor(region.terrainColorAt(x, z)) ||
+            region.terrainWaterCoverageAt?.(x, z, 3.2) < 0.68
+          ) continue;
+          pool.position.x = x;
+          pool.position.z = z;
+          pool.userData.textureGuidedPlacement = "water-blue";
+          relocated += 1;
+          placedOnWater = true;
+          break;
+        }
+        if (!placedOnWater) {
+          pool.visible = false;
+          pool.userData.textureGuidedPlacement = "no-blue-zone";
+          pool.traverse((object) => {
+            if (object.userData?.interactable) object.userData.active = false;
+          });
+        }
+      });
+      return relocated;
+    };
+
     const ready = Promise.all(pendingTextureLoads).then(() => {
+      placePoolsOnWater();
       group.visible = true;
       return true;
     });

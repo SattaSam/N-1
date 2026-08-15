@@ -1,4 +1,4 @@
-﻿(function (global) {
+(function (global) {
   "use strict";
 
   const BF = global.BlueFox3D = global.BlueFox3D || {};
@@ -45,6 +45,8 @@
       this.lastActivationAttempt = null;
       this.boundMissionState = (event) =>
         this.onMissionState(event.detail || BF.getMissionState?.() || {});
+      this.boundMapTransition = (event) =>
+        this.onMapTransition(event.detail || {});
     }
 
     defaultState() {
@@ -374,6 +376,12 @@
       return Number(this.state.triggerCounts[key]) || 0;
     }
 
+    prerequisitesSatisfied(mission) {
+      return asArray(mission?.prerequisites).every((missionId) =>
+        this.missionLifecycle(missionId).completed
+      );
+    }
+
     emitNarrative(mission, moment, context = {}) {
       const lines = mission?.narrative?.[moment] || [];
       if (!lines.length) return false;
@@ -461,6 +469,7 @@
           manager.startMission(mission.id, {
             primary: false,
             autoPrimaryEligible: false,
+            prerequisites: asArray(mission.prerequisites),
             source: "bible-runtime-v0.1",
             reason: `Déclencheur Bible V0.1 : ${event.type || "event"}`
           }) === true;
@@ -520,7 +529,9 @@
       }
     }
 
-    consumeTriggerEvent(event) {
+    consumeTriggerEvent(event, options = {}) {
+      const candidates = [];
+
       for (const mission of this.catalog) {
         if (!this.eventMatchesTrigger(mission.trigger, event)) continue;
 
@@ -530,13 +541,34 @@
 
         if (lifecycleState.active) continue;
 
+        // Un événement géographique ne prépare pas silencieusement une mission
+        // dont l'arc précédent n'est pas terminé.
+        if (!this.prerequisitesSatisfied(mission)) continue;
+
         const count = this.incrementTrigger(mission, event);
         const required = Math.max(1, Number(mission.trigger?.count) || 1);
 
         if (count >= required) {
-          this.activateMission(mission, event);
+          candidates.push(mission);
         }
       }
+
+      candidates.sort((left, right) =>
+        (Number(right.priority) || 0) - (Number(left.priority) || 0) ||
+        this.catalog.indexOf(left) - this.catalog.indexOf(right)
+      );
+
+      const selected = options.allowActivation === false
+        ? null
+        : candidates[0] || null;
+      const activatedMissionId = selected && this.activateMission(selected, event)
+        ? selected.id
+        : null;
+
+      return {
+        matched: candidates.length,
+        activatedMissionId
+      };
     }
 
     onObjectEvent(rawEvent) {
@@ -549,25 +581,19 @@
       );
 
       // 1) Evénement concret : collect/analyze/observe/etc.
-      this.consumeTriggerEvent(normalized);
+      let result = this.consumeTriggerEvent(normalized);
+      let allowActivation = !result.activatedMissionId;
 
       // 2) Evénement narratif générique : toute interaction réelle avec
       // l'objet. Il est volontairement indépendant de l'état "connu" CUO.
       // Cela permet à une mission ajoutée plus tard de se révéler même si
       // BlueFox a déjà observé/analysé/collecté ce type d'objet auparavant.
-      this.consumeTriggerEvent({
+      result = this.consumeTriggerEvent({
         ...normalized,
         type: "interaction.any",
         amount: 1
-      });
-
-      const activatedNow = this.catalog.some((mission) =>
-        !activeBefore.has(mission.id) && this.missionLifecycle(mission.id).active
-      );
-      if (activatedNow && rawEvent.id) {
-        this.activationEventIds.add(rawEvent.id);
-        global.setTimeout?.(() => this.activationEventIds.delete(rawEvent.id), 0);
-      }
+      }, { allowActivation });
+      allowActivation = allowActivation && !result.activatedMissionId;
 
       // 3) Première interaction d'étude : conservée comme vocabulaire
       // distinct pour les missions qui exigent explicitement une découverte.
@@ -580,10 +606,41 @@
           ...normalized,
           type: "interaction.discovery",
           amount: 1
-        });
+        }, { allowActivation });
+      }
+
+      const activatedNow = this.catalog.some((mission) =>
+        !activeBefore.has(mission.id) && this.missionLifecycle(mission.id).active
+      );
+      if (activatedNow && rawEvent.id) {
+        this.activationEventIds.add(rawEvent.id);
+        global.setTimeout?.(() => this.activationEventIds.delete(rawEvent.id), 0);
       }
 
       this.bridgeMissionProgress(rawEvent);
+    }
+
+    onMapTransition(detail) {
+      const event = {
+        fromMapId: detail.fromMapId || null,
+        toMapId: detail.toMapId || detail.mapId || null,
+        mapId: detail.toMapId || detail.mapId || null,
+        direction: lower(detail.direction) || null,
+        biome: lower(detail.biome) || null,
+        amount: 1
+      };
+
+      const crossing = this.consumeTriggerEvent({
+        ...event,
+        type: "movement.portal_crossed"
+      });
+
+      if (detail.isNew === true) {
+        this.consumeTriggerEvent({
+          ...event,
+          type: "exploration.map_discovered"
+        }, { allowActivation: !crossing.activatedMissionId });
+      }
     }
 
     isActivationEvent(eventId) {
@@ -725,9 +782,32 @@
         gate.shelterKinds || ["camp", "refuge", "base"]
       );
       const radius = Math.max(0.5, Number(gate.radius) || 8);
+      const requiredMapId = gate.mapId != null
+        ? String(gate.mapId)
+        : null;
+      const requiredSiteId = gate.siteId != null
+        ? String(gate.siteId)
+        : null;
+
+      if (
+        requiredMapId != null &&
+        String(engine.currentMapId || "") !== requiredMapId
+      ) {
+        return false;
+      }
 
       const satisfied = this.shelterObjects().some((record) => {
         if (!allowed.has(record.kind)) return false;
+
+        const recordSiteId = String(
+          record.object?.userData?.establishedSite ||
+          record.object?.userData?.siteId ||
+          record.id ||
+          ""
+        );
+        if (requiredSiteId != null && recordSiteId !== requiredSiteId) {
+          return false;
+        }
 
         const q = record.object?.getWorldPosition
           ? record.object.getWorldPosition(
@@ -841,6 +921,45 @@
       };
     }
 
+    sitePlacementPreset(microSceneId, engine = BF.currentEngine) {
+      return engine?.currentMap?.definition?.crashSite?.campSitePlacements?.[
+        microSceneId
+      ] || BF.maps?.[engine?.currentMapId]?.crashSite?.campSitePlacements?.[
+        microSceneId
+      ] || null;
+    }
+
+    resolveSitePlacement(effect) {
+      const preset = this.sitePlacementPreset(effect?.microSceneId);
+      if (preset?.position) {
+        return {
+          anchor: clone(preset.position),
+          rotation: Array.isArray(preset.rotation)
+            ? preset.rotation.map((value) => Number(value) || 0)
+            : [0, Number(preset.rotation) || 0, 0]
+        };
+      }
+      const anchor = this.resolveSpawnOrigin(effect);
+      if (!anchor) return null;
+      const requestedRotation = effect?.placement?.rotation;
+      return {
+        anchor,
+        rotation: Array.isArray(requestedRotation)
+          ? requestedRotation.map((value) => Number(value) || 0)
+          : [0, Number(requestedRotation) || 0, 0]
+      };
+    }
+
+    applyCanonicalSitePlacement(site, engine = BF.currentEngine) {
+      const preset = this.sitePlacementPreset(site?.microSceneId, engine);
+      if (!preset?.position) return site;
+      site.anchor = clone(preset.position);
+      site.rotation = Array.isArray(preset.rotation)
+        ? preset.rotation.map((value) => Number(value) || 0)
+        : [0, Number(preset.rotation) || 0, 0];
+      return site;
+    }
+
     attachSiteRecords(records, site, engine = BF.currentEngine) {
       const map = engine?.currentMap;
       if (!map || !records?.length) return false;
@@ -857,9 +976,9 @@
         }
         if (record.instance?.hitbox) map.interactables.push(record.instance.hitbox);
         (record.instance?.colliders || []).forEach((collider) => {
-          const position = collider.offset.clone().applyAxisAngle(
-            new engine.THREE.Vector3(0, 1, 0), root.rotation.y
-          ).add(root.position);
+          const transformRoot = record.objectRoot || root;
+          transformRoot.updateWorldMatrix(true, false);
+          const position = transformRoot.localToWorld(collider.offset.clone());
           map.colliders.push({ position, radius: collider.radius, owner: root });
         });
       });
@@ -880,7 +999,13 @@
       });
       const records = spawner.spawnMicroScene(
         site.microSceneId,
-        { origin: site.anchor, scene: map.group, force: true, source: `site:${site.id}` }
+        {
+          origin: site.anchor,
+          rotation: site.rotation || [0, 0, 0],
+          scene: map.group,
+          force: true,
+          source: `site:${site.id}`
+        }
       );
       return this.attachSiteRecords(records, site, engine);
     }
@@ -898,8 +1023,8 @@
       const consume = effects.find((effect) => effect.type === "inventory.consume");
       const establish = effects.find((effect) => effect.type === "site.establish");
       if (!establish || !BF.MicroScenes?.get?.(establish.microSceneId)) return false;
-      const origin = this.resolveSpawnOrigin(establish);
-      if (!origin) return false;
+      const placement = this.resolveSitePlacement(establish);
+      if (!placement) return false;
       if (consume) {
         const quantity = Number(consume.quantity) || 0;
         if ((BF.progression?.availableInventory?.([consume.inventoryKey]) || 0) < quantity) {
@@ -918,7 +1043,8 @@
         mapId,
         missionId: mission.id,
         microSceneId: establish.microSceneId,
-        anchor: clone(origin),
+        anchor: clone(placement.anchor),
+        rotation: placement.rotation.slice(),
         interactionRadius: 8,
         establishedAt: Date.now()
       };
@@ -932,7 +1058,9 @@
     renderCurrentSite(engine = BF.currentEngine) {
       const mapId = engine?.currentMapId;
       const site = engine?.missionManager?.memory?.state?.siteProgression?.[mapId];
-      return site ? this.renderSite(site, engine) : false;
+      if (!site) return false;
+      this.applyCanonicalSitePlacement(site, engine);
+      return this.renderSite(site, engine);
     }
 
     onMissionState(state) {
@@ -980,6 +1108,14 @@
       global.addEventListener?.(
         "bluefox:mission-state",
         this.boundMissionState
+      );
+      global.removeEventListener?.(
+        "bluefox:map-transition-completed",
+        this.boundMapTransition
+      );
+      global.addEventListener?.(
+        "bluefox:map-transition-completed",
+        this.boundMapTransition
       );
       return Boolean(this.unsubscribeObjectEvents);
     }

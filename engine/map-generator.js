@@ -230,6 +230,47 @@
     return restored;
   };
 
+  const intervalFor = (planetSeed, family, afterOrdinal, range) => {
+    const minimum = Math.max(1, Number(range?.min) || 1);
+    const maximum = Math.max(minimum, Number(range?.max) || minimum);
+    return minimum + (hash(planetSeed, family, afterOrdinal) % (maximum - minimum + 1));
+  };
+
+  const discoveriesSince = (definitions, predicate) => {
+    const ordered = [...definitions]
+      .filter((definition) => definition?.generated)
+      .sort((left, right) =>
+        Number(left.generator?.ordinal || 0) - Number(right.generator?.ordinal || 0)
+      );
+    const lastIndex = ordered.map(predicate).lastIndexOf(true);
+    return lastIndex < 0 ? ordered.length : ordered.length - lastIndex - 1;
+  };
+
+  const chooseScene = (random, biomeId, kind) => {
+    const compatible = BF.MicroScenes?.list?.(biomeId)
+      ?.filter((scene) => !scene.missionOnly) || [];
+    const missionKeys = new Set([
+      "MSC-ABANDONED-DRONE-001", "MSC-TECH-RELAY-001",
+      "MSC-ANCIENT-GATEWAY-001", "MSC-RUINED-SHRINE-001",
+      "MSC-ECO-STAR-001"
+    ]);
+    const candidates = compatible.filter((scene) => {
+      if (kind === "mission") return missionKeys.has(scene.id);
+      if (kind === "remarkable") return scene.custom === true || ["rare", "story"].includes(scene.rarity);
+      return ["common", "uncommon"].includes(scene.rarity);
+    });
+    if (kind === "mission" && !candidates.length) return null;
+    const pool = candidates.length ? candidates : compatible;
+    return pool.length ? pool[random.integer(pool.length)] : null;
+  };
+
+  const isWetOrAerialBiome = (id) => ["aquatic", "floating_islands"].includes(id);
+
+  const wetAerialSince = (definitions) => discoveriesSince(
+    definitions,
+    (definition) => isWetOrAerialBiome(definition.generator?.biomeId)
+  );
+
   const generate = (options = {}) => {
     const rules = BF.MapGenerationRules;
     if (!rules) throw new Error("MapGenerator nécessite MapGenerationRules.");
@@ -239,10 +280,70 @@
     const discoveryIndex = Math.max(1, Number(options.discoveryIndex) || ordinal);
     const mapSeed = hash(planetSeed, ordinal, options.fromMapId, options.direction);
     const random = new Random(mapSeed);
-    const biomeDefinition = rules.pickBiome(() => random.next());
+    const cadenceRules = rules.discoveryCadence;
+    const eligible = discoveryIndex > cadenceRules.eligibleAfterDiscovery;
+    const rareIds = new Set(cadenceRules.rareBiomeIds);
+    const sinceRare = discoveriesSince(existing, (definition) =>
+      rareIds.has(definition.generator?.biomeId)
+    );
+    const sinceDecorative = discoveriesSince(existing, (definition) =>
+      definition.generator?.cadence?.decorativeGuaranteed === true
+    );
+    const sinceRemarkable = discoveriesSince(existing, (definition) =>
+      definition.generator?.cadence?.remarkableGuaranteed === true
+    );
+    const sinceWetAerial = wetAerialSince(existing);
+    const previousOrdinal = existing.reduce((maximum, definition) =>
+      Math.max(maximum, Number(definition?.generator?.ordinal) || 0), 0
+    );
+    const rareInterval = intervalFor(
+      planetSeed, "rare-biome", previousOrdinal - sinceRare,
+      cadenceRules.rareBiomeInterval
+    );
+    const decorativeInterval = intervalFor(
+      planetSeed, "decorative-scene", previousOrdinal - sinceDecorative,
+      cadenceRules.decorativeSceneInterval
+    );
+    const remarkableInterval = intervalFor(
+      planetSeed, "remarkable-scene", previousOrdinal - sinceRemarkable,
+      cadenceRules.remarkableSceneInterval
+    );
+    const forceRare = eligible && sinceRare + 1 >= rareInterval;
+    const forceWetAerial = eligible && sinceWetAerial + 1 >= 7;
+    const weights = Object.fromEntries(rules.biomes.map((biome) => {
+      let weight = forceWetAerial
+        ? (isWetOrAerialBiome(biome.id) ? Math.max(biome.weight, biome.id === "aquatic" ? 10 : 6) : 0)
+        : forceRare
+          ? (rareIds.has(biome.id) ? biome.weight : 0)
+          : biome.weight;
+      if (options.direction === "north" && biome.id === "frozen") {
+        weight *= cadenceRules.northernFrozenMultiplier;
+      }
+      return [biome.id, weight];
+    }));
+    const biomeDefinition = rules.pickBiome(() => random.next(), weights);
     const draft = rules.toLegacyBiomeDraft(biomeDefinition.id);
     const plateauCount = rules.getPlateauCount(discoveryIndex, () => random.next());
     const richness = rules.pickRichness(() => random.next());
+    const forceRemarkable = eligible && sinceRemarkable + 1 >= remarkableInterval;
+    const forceDecorative = eligible && sinceDecorative + 1 >= decorativeInterval;
+    const preferMissionOpportunity = eligible && options.lowMissionProgress === true;
+    const featuredScenes = [];
+    const appendScene = (kind) => {
+      const scene = chooseScene(random, biomeDefinition.id, kind);
+      if (scene && !featuredScenes.some((entry) => entry.scene.id === scene.id)) {
+        featuredScenes.push({ kind, scene });
+      }
+    };
+    if (forceDecorative) appendScene("decorative");
+    if (forceRemarkable) appendScene("remarkable");
+    if (["magnetic", "floating_islands"].includes(biomeDefinition.id)) {
+      const suspended = BF.MicroScenes?.get?.("MSC-SUSPENDED-ISLAND-001");
+      if (suspended && !featuredScenes.some((entry) => entry.scene.id === suspended.id)) {
+        featuredScenes.push({ kind: "biome-guaranteed", scene: suspended });
+      }
+    }
+    if (!featuredScenes.length && preferMissionOpportunity) appendScene("mission");
     const template = pickTemplate(random, biomeDefinition.id, draft.profile);
     if (!template) throw new Error("Aucun décor local compatible avec le générateur.");
     const terrainPlan = terrainSelection(
@@ -283,6 +384,24 @@
         richnessId: richness?.id || "standard",
         resourceFamilies: [...draft.resourceFamilies],
         microSceneIds: [...draft.microSceneIds],
+        featuredMicroSceneId: featuredScenes[0]?.scene.id || null,
+        featuredMicroSceneIds: featuredScenes.map((entry) => entry.scene.id),
+        cadence: {
+          rareBiomeForced: forceRare,
+          wetAerialForced: forceWetAerial,
+          discoveriesSinceWetAerialBeforeGeneration: sinceWetAerial,
+          rareBiomeInterval: rareInterval,
+          decorativeGuaranteed: featuredScenes.some((entry) => entry.kind === "decorative"),
+          decorativeInterval,
+          remarkableGuaranteed: featuredScenes.some((entry) => entry.kind === "remarkable"),
+          remarkableInterval,
+          missionOpportunityPreferred: featuredScenes.some((entry) => entry.kind === "mission"),
+          direction: options.direction || null,
+          northernFrozenAffinityApplied: options.direction === "north",
+          discoveriesSinceRareBeforeGeneration: sinceRare,
+          discoveriesSinceDecorativeBeforeGeneration: sinceDecorative,
+          discoveriesSinceRemarkableBeforeGeneration: sinceRemarkable
+        },
         templateId: template.id,
         templateNumber: template.number,
         terrainPolicy: "associated-85_same-biome-13_compatible-2",

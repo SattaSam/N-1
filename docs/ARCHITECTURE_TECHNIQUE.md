@@ -1,421 +1,165 @@
 # BlueFox Odyssey — Architecture technique
 
-Référence : **V0.16.20 + cumulatif Missions V17 validé en jeu — 9 août 2026**
+Référence : **commit `d59376559e71032b478fb01a84fdb9bdd6611736` — V5 Stable — 15 août 2026**
 
-## Démarrage
+## Sources de vérité
+- Objet / métadonnées : `engine/object-library.js`
+- Placement / instanciation : `engine/object-spawner.js`
+- Biomes / population : `engine/biome-rules.js`
+- Micro-scènes : `engine/micro-scenes.js` + `data/custom-micro-scenes.*`
+- Monde / transitions / autonomie : `engine/world-engine.js`
+- MissionManager : `engine/mission-manager.js`
+- Mémoire mission : `engine/mission-memory.js`
+- Patrons Bible : `data/bible-patterns.js`
+- Catalogue Bible injecté : `data/bible-catalog.js`
+- Contrat Bible : `engine/bible-contract-v0-1.js`
+- Runtime Bible : `engine/bible-runtime-v0-1-unified.js`
+- Exécution mission : `engine/action-bridge.js`
+- Événements objets : `engine/object-event-registry.js`
 
-`LANCER_BLUEFOX.bat` lance `tools/bluefox-local-server.ps1`.
+## Contrat CUO → événements → missions
+Le CUO ne sert pas uniquement au rendu 3D. Les définitions normalisées exposent :
+- actions ;
+- états ;
+- familles ;
+- tags ;
+- connaissances ;
+- recherche ;
+- ressources ;
+- progression ;
+- rareté ;
+- biomes ;
+- spawn.
 
-Le serveur :
+Ces métadonnées sont projetées dans `userData` puis réinjectées dans les événements consommés par le Runtime Bible.
 
-- écoute uniquement sur `127.0.0.1` ;
-- choisit un port local ;
-- désactive le cache HTTP ;
-- sert les images, modèles, scripts et styles ;
-- permet à WebGL de charger les fichiers du dossier `Images`.
+## Contrat des micro-scènes CUSTOM
+- CUO Lab enregistre les transformations locales.
+- MAP_Test et le jeu doivent interpréter exactement les mêmes données.
+- `ObjectSpawner` ne réécrit pas les pivots internes.
+- Une MSC peut avoir trois rôles missionnels indépendants :
+  - `triggerContext`
+  - `objectiveSubject`
+  - `scenarioSupport`
+- Une MSC associée à une mission n'est donc pas automatiquement un objectif.
 
-Le lancement direct de `index.html` avec le protocole `file:` n’est pas une
-procédure de test valide.
+## Contrat missionnel actuel
+Le moteur possède déjà :
+- missions simultanément actives ;
+- mission primaire / secondaires ;
+- prérequis ;
+- persistance ;
+- séquences d'objectifs ;
+- triggers interaction, mouvement, exploration et progression ;
+- filtres `objectId`, `family`, `subject`, `mapId`, `zoneId`, `biome`, tags ;
+- `uniqueOnly` sur les triggers ;
+- `targetBinding = instance | definition` dans le contrat ;
+- mission instanciable par map ;
+- fan-out passif d'une action vers plusieurs missions actives.
 
-## Ordre obligatoire des scripts
+### Écart V5 identifié : ciblage exact d'instance
+Le Runtime mémorise `instanceId` et le contrat autorise `targetBinding=instance`, mais l'ActionBridge ne garantit pas encore que la cible choisie est précisément cette instance.
 
-`index.html` fait autorité sur l’ordre de chargement :
-
-1. `map-assets.js`
-2. `Images/images-catalog.js`
-3. `engine/bluefox3d-core.js`
-4. `engine/object-library.js`
-5. `engine/object-event-registry.js`
-6. `engine/map-generation-rules.js`
-7. `engine/biome-rules.js`
-8. `engine/micro-scenes.js`
-9. `engine/object-spawner.js`
-10. `engine/map-registry.js`
-11. `engine/map-generator.js`
-12. modules de déplacement, missions et progression
-13. `engine/world-engine.js`
-14. `game.js`
-15. ponts UI et `engine/ui-enhancements.js`
-
-Les quatre modules du catalogue doivent exister et être chargés avant
-`map-registry.js`. Toute modification de cet ordre exige un test de lancement.
-
-## Matrice des responsabilités
-
-| Besoin | Fichier autoritaire |
-| --- | --- |
-| Définir ou construire un objet | `engine/object-library.js` |
-| Régler les biomes, densités et budgets | `engine/biome-rules.js` |
-| Définir un amas ou un landmark | `engine/micro-scenes.js` |
-| Créer, placer et raccorder collisions/interactions | `engine/object-spawner.js` |
-| Définir les Maps, terrains, sorties et textures | `engine/map-registry.js` |
-| Reconnaître et associer les fichiers image | `map-assets.js` |
-| Fixer l’ordre de démarrage | `index.html` |
-| Piloter monde, transitions et autonomie | `engine/world-engine.js` |
-| Afficher et manipuler la carte Planète | `engine/ui-enhancements.js` et `engine/ui-enhancements.css` |
-| Définir les pondérations de génération | `engine/map-generation-rules.js` |
-| Générer et restaurer les définitions procédurales | `engine/map-generator.js` |
-
-## Discipline des hotfixes cumulatifs
-
-Avant tout sprint, constituer une base de travail à partir du dernier livrable
-cumulatif et comparer ses fichiers à GitHub. La version GitHub ne doit pas
-écraser un hotfix local qui n’a pas encore été intégré au dépôt.
-
-Pour chaque fichier modifié :
-
-1. recenser les correctifs antérieurs attendus ;
-2. vérifier leur présence avant la nouvelle modification ;
-3. exécuter les contrôles de non-régression associés ;
-4. livrer un paquet cumulatif lorsqu’un même sous-système a reçu plusieurs
-   hotfixes.
-
-## Protection de `map-registry.js`
-
-> **FICHIER ARCHITECTURAL PROTÉGÉ — `engine/map-registry.js`**
->
-> Ne pas ajouter ni modifier ici la génération, les définitions ou les règles
-> de placement des objets. Toute évolution du catalogue passe par
-> `object-library.js`, `biome-rules.js`, `micro-scenes.js` et
-> `object-spawner.js`.
-
-Une modification de `map-registry.js` reste autorisée uniquement pour :
-
-- le registre et les métadonnées des Maps ;
-- les terrains et textures de plateaux ;
-- les sorties, portails et limites de Map ;
-- la construction ou destruction de la Map ;
-- une correction explicitement localisée relevant de ces responsabilités.
-
-Avant livraison : vérifier les dépendances, lancer le jeu, charger une Map,
-changer de Zone et contrôler les collisions. Le verrouillage est architectural,
-pas un blocage technique absolu.
-
-## Catalogue Universel des Objets
-
-`engine/object-library.js` est la source unique des objets. Chaque définition
-active expose un identifiant unique, un type, une fonction de construction, ses
-métadonnées de gameplay et son profil de placement.
-
-Flux de génération :
-
+À corriger :
 ```text
-ObjectLibrary + BiomeRules + MicroScenes
-                    ↓
-              ObjectSpawner
-                    ↓
-               MapRegistry
+bibleTarget.instanceId
+→ MissionPlanner
+→ ActionBridge
+→ candidat interactable exact
 ```
 
-`MapRegistry` fournit le contexte de Map ; il ne décide plus quels objets
-générer.
+Cette correction est un raccord, pas un nouveau moteur.
 
-## Source unique de Zone
+### Distinction sur objectifs actifs
+Les triggers peuvent être uniques, mais `MissionNode` reste un compteur simple.
 
-Le moteur 3D est autoritaire pour :
+Extension requise :
+- `distinctBy: instanceId`
+- `distinctBy: mapId`
+- `distinctBy: biomeId`
+- `distinctBy: speciesId`
 
-- `mapId` ;
-- numéro et nom de Zone ;
-- décor panoramique ;
-- textures des plateaux ;
-- état exploré/inexploré ;
-- position de BlueFox.
+avec mémoire persistante des valeurs déjà comptées.
 
-L’événement `bluefox:map-state` synchronise le HUD et les menus. L’interface
-historique ne doit pas imposer un identifiant divergent.
+### Portée
+Paramètre commun recommandé :
+- `local`
+- `map`
+- `global`
 
-## Topologie et carte Planète
+Ne pas créer un patron différent uniquement pour une différence de portée.
 
-- `map-registry.js` positionne les portails sur les bords réels : Nord `minZ`,
-  Sud `maxZ`, Est `maxX`, Ouest `minX`.
-- Les portails Nord/Sud suivent l’axe X ; Est/Ouest suivent l’axe Z.
-- `world-engine.js` conserve les sorties réciproques et calcule les itinéraires
-  uniquement entre Zones découvertes.
-- `ui-enhancements.js` projette cette topologie sur la carte Planète.
-- Une suggestion vers une Zone distante emprunte les portails connus ; ce
-  n’est pas une téléportation.
-- Une action directe du joueur annule l’itinéraire suggéré.
+### Exploration
+Les variantes d'exploration doivent être pilotées par paramètres :
+- seuil de surface ;
+- nombre de zones ;
+- nombre de maps distinctes ;
+- nombre de biomes distincts ;
+- direction ;
+- retour.
 
-## Génération procédurale des Maps
-
-`engine/map-generation-rules.js` contient les données stables : biomes,
-pondérations, tailles, richesse, affinités, ressources et classes de
-micro-scènes. `engine/map-generator.js` applique ces règles au moment d’une
-demande de première exploration.
-
-Ordre de restauration obligatoire :
-
-1. restaurer les définitions de Maps générées ;
-2. restaurer les découvertes ;
-3. restaurer les noms ;
-4. restaurer les liaisons topologiques ;
-5. restaurer la position de BlueFox.
-
-Crystal n’est jamais générée. Une nouvelle Map est créée uniquement pendant
-une partie active, après une demande du joueur vers une terre inconnue. Son nom
-n’est annoncé qu’après franchissement et enregistrement de la découverte.
-
-La sélection des textures privilégie les images associées au panorama. Les
-textures associées peuvent être répétées. Les exceptions sont limitées aux
-biomes identiques ou explicitement compatibles ; volcanique et glaciaire ne
-reçoivent aucun repli étranger.
-
-## Déplacement, caméra et panorama
-
-- Pathfinding avec points de passage, lissage et recalcul en cas de blocage.
-- Collisions adaptées à la fonction des objets.
-- Approche multipoint autour des ressources.
-- Vitesse autonome maximale connue : 3,55 unités.
-- Direction acceptée : multiplicateur de sprint 1,30 et `Run_fast`.
-- Root motion neutralisé dans les animations GLB.
-- Distance caméra connue : 4,5 à 34 unités.
-- Cyclorama incurvé, bord inférieur proche du plateau et défilement doux.
-
-## Nettoyage et persistance
-
-Une ancienne Map doit être détachée avec `removeFromParent()` avant la
-libération de ses ressources par `BF.disposeObject()`.
-
-Principales clés locales :
-
-- `bluefox_world_position_v2`
-- `bluefox_engine_discovered_maps_v2`
-- `bluefox_discovered_zones_v1`
-- `bluefox_generated_topology_v1`
-- `bluefox_generated_maps_v1`
-- `bluefox_planet_seed_v1`
-- `bluefox_map_names_v1`
-- `bluefox_planet_clock_v1`
-- `bluefox_odyssey_save_v1`
-- `bluefox_progression_registry_v1`
-- `bluefox_mission_memory_m0_v1`
-
-`bluefox_progression_registry_v1` est l'unique source de vérité des quantités
-transportées, déposées et consommées. Le champ `resources` de
-`bluefox_odyssey_save_v1` est conservé uniquement comme projection de
-compatibilité pour l'interface compilée ; après sa réconciliation initiale, il
-ne peut plus réécrire l'inventaire central. La mémoire M0 ne possède plus de
-copie d'inventaire.
-
-Les Maps procédurales sont régénérées à partir de leurs définitions et graines.
-
-## Banc 3D de validation CUO
-
-Le banc CUO est un point d’entrée autonome, distinct de `index.html`. Il peut
-réutiliser `bluefox3d-core.js` et `object-library.js`, mais ne charge pas le
-moteur de missions, l’autonomie, la météo, la sauvegarde de partie ni les menus
-du jeu.
-
-Il contient deux plateaux neutres : showroom automatique sur le premier,
-placement libre sur le second. Les objets sont instanciés exclusivement par
-les fonctions publiques de `ObjectLibrary` afin que le modèle validé soit le
-même que celui du moteur principal. La spécification complète se trouve dans
-`docs/CUO_BANC_VALIDATION_3D.md`.
-# Extension M0 — Fondation IA
-
-La couche de missions M0 est composée de six modules indépendants chargés avant
-`world-engine.js`. Elle observe l’état réel de la map, choisit une action
-réalisable, l’exécute par l’API publique de `WorldEngine`, puis ne valide la
-progression qu’au retour d’un hook d’achèvement réel. La mémoire locale
-`bluefox_mission_memory_m0_v1` permet une reprise sans modifier les sauvegardes
-historiques du monde.
-
-Référence détaillée : `docs/SPRINT_M0_FONDATION_IA.md`.
-
-La carte `.mission-card` est raccordée sans modifier le rendu React historique :
-`mission-ui-bridge.js` écoute `bluefox:mission-state`, affiche l’arbre M0 et
-réapplique cet état si React reconstruit la carte. Une mission historique n’est
-plus considérée comme source d’autorité visuelle.
-
-Une Zone n’est pas validée à l’arrivée. `EXPLORE_ZONE` représente la
-reconnaissance géographique ; l’objectif parent doit encore réunir trois relevés
-différents et une cartographie avant de devenir `completed`.
-
-
-# Extension BibleRuntime — Patrons, fiches et arbitrage BAC
-
-## Responsabilités
-
-| Besoin | Fichier / couche autoritaire |
-| --- | --- |
-| Patrons de mission | `data/bible-patterns.js` |
-| Fiches / catalogue Bible injectables | `data/bible-catalog.js` |
-| Traduction Patron + Fiche vers définition moteur | `engine/bible-runtime.js` |
-| Arbre et cycle de vie des missions | `engine/mission-manager.js` |
-| Planification d'une action réalisable | `engine/mission-planner.js` |
-| Exécution d'une action moteur | `engine/action-bridge.js` |
-| Événements objets réels et progression passive | `engine/object-m0-bridge.js` + `ObjectEvents` |
-| Arbitrage entre comportements / axes | BAC |
-| Persistance des missions | `engine/mission-memory.js` |
-| Quantités d'inventaire et transactions | `engine/progression-registry.js` |
-| Effets déclaratifs et sites établis | `engine/bible-runtime-v0-1-unified.js` |
-
-## Pipeline officiel
-
+### Spawn MSC missionnel
+L'infrastructure `site.establish` prouve déjà la chaîne :
 ```text
-Bible documentaire
-      ↓
-classification par patron
-      ↓
-fiche légère
-      ↓
-BibleRuntime
-      ↓
-définition MissionTree
-      ↓
-MissionManager / Planner
-      ↓
-ActionBridge / ObjectEvents
-      ↓
-BAC + WorldEngine
+mission effect
+→ placement
+→ ObjectSpawner.spawnMicroScene()
+→ rattachement map
+→ persistance
+→ restauration
 ```
 
-BibleRuntime n'est pas une seconde IA ni un moteur parallèle. Il sert d'adaptateur
-entre la documentation narrative et le moteur de missions existant.
+À généraliser en effet de type `microScene.spawn` au lieu de créer un moteur séparé.
 
-## Patrons V1
+### Durée / proximité / délai
+Nécessaires pour les comportements de faune et certaines scènes :
+- présence dans rayon pendant N secondes ;
+- délai avant deuxième signal ;
+- occurrence distincte si une scène doit être observée à nouveau.
 
-### DÉCOUVRIR / COMPRENDRE
-Cas type : observation → inspection éventuelle → analyse → connaissance.
-
-### ACCUMULER / ATTEINDRE UN SEUIL
-Cas type : N collectes, N observations, N rencontres, N zones, N analyses.
-Les événements sont comptés indépendamment de la mission qui a motivé l'action.
-
-### PRÉPARER → PRODUIRE / DÉBLOQUER
-Cas type : prérequis + ressources / connaissances → résolution automatique.
-
-Sorties normalisées :
-
-- `WORLD` : objet / micro-scène dans le monde ;
-- `INVENTORY` : objet ajouté à l'inventaire ;
-- `KNOWLEDGE` : blueprint / recherche débloqué.
-
-Une sortie de mission ne doit pas imposer artificiellement une action `BUILD`
-si le résultat attendu peut être appliqué directement.
-
-## Multi-missions et BAC
-
-Le moteur distingue :
-
+### Excursion / retour
+Un cycle valide est :
 ```text
-Mission principale
-    → influence forte sur les décisions autonomes
-
-Missions secondaires
-    → influence faible mais réelle
-    → progression passive permanente
+départ
+→ au moins un changement de map
+→ retour à la cible connue
 ```
+Deux sorties demandées = deux cycles distincts.
 
-Le budget d'influence des missions secondaires est global : multiplier le nombre
-de missions secondaires ne doit jamais multiplier mécaniquement leur poids total.
+## Stratégie de patrons mutualisés
+Cible : environ 8 familles génériques au total, en incluant les 3 déjà présentes.
 
-Valeur de test validée : principale `100`, budget global secondaires `20`.
+Les différences doivent être des paramètres, notamment :
+- unicité ;
+- portée ;
+- même instance ;
+- séquence ;
+- contexte MSC ;
+- durée ;
+- seuil ;
+- direction ;
+- effets.
 
-Le BAC reçoit les axes :
+Les patrons doivent être développés en parallèle des extensions moteur qu'ils utilisent.
 
-- survival ;
-- exploration ;
-- collection / logistics ;
-- research / knowledge ;
-- construction / technology.
+## CUO / factions
+Ajouter au niveau des créatures/PNJ :
+- `speciesId`
+- `factionId`
 
-## Contrat d'exécution d'une action mission
+`cultureId` peut être porté par une MSC/instance.
 
-`ActionBridge.execute()` ne peut renvoyer `true` que si une action réelle a
-effectivement été acceptée par le moteur.
+Les événements doivent hériter de ces identités afin que les missions puissent filtrer et modifier une réputation simple.
 
-Une interaction refusée doit :
+## Ration
+`survival.rationRecipe` est déjà référencé par le moteur. Ne pas créer une seconde recette avant audit de cette source.
 
-1. renvoyer `false` ;
-2. nettoyer les marqueurs de l'objet ;
-3. ne pas créer de `currentAction` fantôme ;
-4. remettre à zéro toute cible de déplacement devenue résiduelle.
-
-## Watchdog des actions orphelines
-
-Une `currentAction` peut être annulée et replannifiée si :
-
-- elle existe depuis plusieurs secondes ;
-- aucune interaction réelle n'est en cours ;
-- aucune routine, transition, exploration de zone ou portail n'est actif ;
-- BlueFox n'est plus réellement en déplacement.
-
-Ce watchdog est une sécurité ; il ne doit pas interrompre une action moteur encore
-active.
-
-## Persistance F5
-
-`MissionMemory` restaure :
-
-- mission principale ;
-- missions actives ;
-- lifecycle ;
-- arbres ;
-- compteurs ;
-- activations en attente.
-
-Un simple chargement ou un catalogue vide ne doit jamais être interprété comme une
-commande de purge.
-
-Seule une action explicite de type **Nouvelle partie** peut remettre la progression
-de mission à zéro.
-
-## Contrat validé Camp / ressources
-
-La collecte suit une seule chaîne autoritaire :
-
-```text
-interaction réelle
-→ métadonnées CUO (`inventoryKey`, quantité)
-→ `RESOURCE_COLLECTED`
-→ registre central + fan-out missions
-```
-
-Une mission ne modifie jamais artificiellement son compteur pour compenser un
-événement manquant. Le même événement ne peut être appliqué deux fois, mais une
-nouvelle collecte après réapparition de l'objet constitue un nouvel événement.
-
-Pour `BIBLE-V01-CAMP`, la résolution est transactionnelle : le registre central
-consomme `10` bois une seule fois, puis `MissionMemory.state.siteProgression`
-enregistre le site `camp` de la Map. Le rendu `MSC-CUSTOM-CAMP` est dérivé de ce
-site. Une recharge ou un nouveau chargement de Map restaure le rendu à la fin de
-`WorldEngine.loadMap()` ; les temporisations UI et les événements de Map ne sont
-pas des mécanismes de restauration autoritaires.
-
-## Contrat validé des missions liées à une cible
-
-Une fiche peut demander une liaison à la définition d'objet ou à son instance.
-Pour `BIBLE-V01-ARCHAEOLOGY`, la liaison `instance` impose que Observer,
-Inspecter et Analyser concernent exactement la même instance. La validation
-finale dépend d'un site réellement établi à proximité, lu depuis
-`siteProgression`; aucun fallback propre à une Map n'est autorisé.
-
-## Hydratation des missions terminées
-
-`MissionManager` restaure aussi les arbres terminés enregistrés, tout en les
-excluant des missions actives. L'UI du catalogue calcule alors sa progression à
-partir de l'arbre restauré. Pour les anciennes sauvegardes marquées `completed`
-sans arbre sauvegardé, la projection publique utilise une progression complète
-de compatibilité ; elle ne recrée pas une mission active.
-
-# Extension topologie Planète — 8 août 2026
-
-La topologie spatiale est portée par des coordonnées canoniques. Une coordonnée ne
-peut représenter qu'une seule Map.
-
-Règle :
-
-```text
-déplacement vers coordonnée libre
-→ génération d'une nouvelle Map
-
-déplacement vers coordonnée déjà occupée
-→ reconnexion vers la Map existante
-```
-
-Le menu Planète est une projection de cette topologie, jamais une seconde source
-de vérité.
-
-Le rendu organique et la texture planétaire neutre font partie du jalon actuel.
-Le dernier réglage visuel du design de menu reste en validation.
+## Non-régression
+Tout correctif missionnel doit préserver :
+- un événement révèle au plus une mission ;
+- une action peut progresser plusieurs missions actives ;
+- commandes joueur prioritaires ;
+- MSC identiques entre CUO Lab / MAP_Test / jeu ;
+- camps jamais spontanés ;
+- navigation persistante ;
+- aucune logique objet dans `map-registry.js`.

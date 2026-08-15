@@ -61,7 +61,7 @@
       "biome"
     ]),
     "exploration.map_discovered": Object.freeze([
-      "biome"
+      "biome", "direction"
     ]),
     "exploration.sector_discovered": Object.freeze([
       "biome"
@@ -205,7 +205,9 @@
     }
 
     if (
-      trigger.type === "movement.portal_crossed" &&
+      ["movement.portal_crossed", "exploration.map_discovered"].includes(
+        trigger.type
+      ) &&
       trigger.direction != null &&
       !["north", "south", "east", "west"].includes(trigger.direction)
     ) {
@@ -569,6 +571,18 @@
         "doit valoir instance ou definition."
       );
     }
+    if (
+      mission.prerequisites != null &&
+      (!Array.isArray(mission.prerequisites) ||
+        mission.prerequisites.some((id) => !isNonEmptyString(id)))
+    ) {
+      add(
+        errors,
+        missionId,
+        "prerequisites",
+        "doit être un tableau d’identifiants de missions non vides."
+      );
+    }
 
     validatePatternUse(
       mission,
@@ -621,6 +635,13 @@
     });
 
     list.forEach((mission) => {
+      (mission?.prerequisites || []).forEach((prerequisiteId) => {
+        if (!ids.has(prerequisiteId)) {
+          warnings.push(
+            `${mission.id} · prerequisites : mission requise absente du lot courant : ${prerequisiteId}.`
+          );
+        }
+      });
       (mission?.next || []).forEach((nextId) => {
         if (!ids.has(nextId)) {
           warnings.push(

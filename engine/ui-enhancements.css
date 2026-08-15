@@ -253,10 +253,21 @@ body:has(.drawer, .full-screen-panel) .bluefox-speech-button {
   animation: planet-current-pulse 1.9s ease-in-out infinite;
 }
 
-.planet-map-pin {
+.planet-map-markers {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  transform: rotate(calc(-1 * var(--zone-turn)));
+}
+
+.planet-map-marker {
   position: relative;
-  width: 14px;
-  height: 14px;
+  display: inline-grid;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  place-items: center;
   border: 3px solid #dffaff;
   border-radius: 50% 50% 50% 0;
   background: #35d9ff;
@@ -264,12 +275,69 @@ body:has(.drawer, .full-screen-panel) .bluefox-speech-button {
   transform: rotate(-45deg);
 }
 
-.planet-map-pin::after {
+.planet-map-marker::after {
   content: "";
   position: absolute;
   inset: 3px;
   border-radius: 50%;
   background: #06233a;
+}
+
+.planet-map-marker.bluefox {
+  width: 30px;
+  height: 30px;
+  border: 2px solid #e9fbff;
+  border-radius: 50%;
+  background: #05162b url("../assets/planet/bluefox-map-icon.png?v=fox-pin-r2") center / cover no-repeat;
+  box-shadow: 0 0 0 2px rgba(50, 214, 255, .38), 0 0 16px #35d9ff;
+  transform: none;
+}
+
+.planet-map-marker.bluefox::after {
+  display: none;
+}
+
+.planet-map-marker.camp {
+  border-color: #fff3c4;
+  background: #f2b64b;
+  box-shadow: 0 0 12px rgba(255, 191, 73, .82);
+}
+
+.planet-map-marker.camp::after {
+  content: "⌂";
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 0;
+  color: #2b1902;
+  background: none;
+  font-size: 11px;
+  font-weight: 900;
+  transform: rotate(45deg);
+}
+
+.planet-map-marker.beacon {
+  border-color: #fff1f7;
+  background: #ff4d9a;
+  box-shadow: 0 0 12px rgba(255, 77, 154, .82);
+}
+
+.planet-map-marker.drone {
+  border-color: #eeedff;
+  background: #8e79ff;
+  box-shadow: 0 0 12px rgba(142, 121, 255, .82);
+}
+
+.planet-map-marker.drone::after {
+  content: "✣";
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #13093d;
+  background: none;
+  font-size: 10px;
+  font-weight: 900;
+  transform: rotate(45deg);
 }
 
 .planet-map-zone > b {
@@ -1029,8 +1097,16 @@ body:has(.drawer, .full-screen-panel) .bluefox-speech-button {
 }
 
 .planet-panel-enhanced .planet-layout > .planet-info-pane {
-  position: relative;
+  position: sticky;
+  top: 0;
   z-index: 2;
+  align-self: start;
+  max-height: calc(100vh - 12px);
+  margin-top: -54px;
+  padding-top: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
   border-left: 1px solid rgba(103, 218, 255, .42);
   box-shadow: -1px 0 rgba(164, 238, 255, .07);
 }
@@ -1049,6 +1125,10 @@ body:has(.drawer, .full-screen-panel) .bluefox-speech-button {
   }
 
   .planet-panel-enhanced .planet-layout > .planet-info-pane {
+    position: relative;
+    top: auto;
+    max-height: none;
+    margin-top: 0;
     border-left: 0;
     box-shadow: none;
   }

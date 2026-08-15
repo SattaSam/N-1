@@ -74,6 +74,87 @@
         "progress",
         "completed"
       ])
+    }),
+
+    OBSERVE_TARGET: Object.freeze({
+      id: "OBSERVE_TARGET",
+      version: 1,
+      autonomyAxis: "research",
+      steps: Object.freeze([
+        Object.freeze({
+          slot: "study",
+          action: "observe"
+        })
+      ]),
+      narrativeMoments: Object.freeze([
+        "revealed",
+        "progress",
+        "completed"
+      ])
+    }),
+
+    EXPLORE_SCOPE: Object.freeze({
+      id: "EXPLORE_SCOPE",
+      version: 1,
+      autonomyAxis: "exploration",
+      steps: Object.freeze([
+        Object.freeze({
+          slot: "explore",
+          action: "explore-zone"
+        })
+      ]),
+      narrativeMoments: Object.freeze([
+        "revealed",
+        "progress",
+        "completed"
+      ])
+    }),
+
+    SEQUENCE_ACTIONS: Object.freeze({
+      id: "SEQUENCE_ACTIONS",
+      version: 1,
+      autonomyAxis: "research",
+      dynamicSequence: true,
+      minSteps: 2,
+      narrativeMoments: Object.freeze([
+        "revealed",
+        "progress",
+        "completed"
+      ])
+    }),
+
+    CONTEXT_MSC: Object.freeze({
+      id: "CONTEXT_MSC",
+      version: 1,
+      autonomyAxis: "research",
+      steps: Object.freeze([
+        Object.freeze({
+          slot: "context",
+          action: "observe"
+        })
+      ]),
+      narrativeMoments: Object.freeze([
+        "revealed",
+        "progress",
+        "completed"
+      ])
+    }),
+
+    TRAVEL_CYCLE: Object.freeze({
+      id: "TRAVEL_CYCLE",
+      version: 1,
+      autonomyAxis: "exploration",
+      steps: Object.freeze([
+        Object.freeze({
+          slot: "travel",
+          action: "travel"
+        })
+      ]),
+      narrativeMoments: Object.freeze([
+        "revealed",
+        "progress",
+        "completed"
+      ])
     })
   });
 })(window);

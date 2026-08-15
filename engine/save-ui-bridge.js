@@ -54,6 +54,7 @@
     verified: false,
     fileApiAvailable: false,
     restoredFromFile: false,
+    exactRestore: true,
     origin: global.location.origin
   };
 
@@ -66,6 +67,14 @@
     Array.from({ length: global.localStorage.length }, (_, index) =>
       global.localStorage.key(index)
     ).filter(Boolean);
+
+  const clearActive = () => {
+    keys().forEach((key) => {
+      if (key.startsWith("bluefox_") && !RESERVED_KEYS.has(key)) {
+        global.localStorage.removeItem(key);
+      }
+    });
+  };
 
   const persistRuntime = () => {
     const calls = [
@@ -80,11 +89,7 @@
     ];
     const errors = [];
     calls.forEach((call) => {
-      try {
-        call();
-      } catch (error) {
-        errors.push(error);
-      }
+      try { call(); } catch (error) { errors.push(error); }
     });
     return errors;
   };
@@ -109,25 +114,25 @@
 
   const buildSnapshot = (slot) => {
     const runtimeErrors = persistRuntime();
-    const snapshot = {
-      format: "bluefox-save-file",
-      schemaVersion: 1,
-      gameVersion: global.document
-        .querySelector('meta[name="description"]')
-        ?.content?.replace(/^BlueFox Odyssey\s*/i, "") || "unknown",
-      slot: String(slot),
-      savedAt: Date.now(),
-      originAtSave: global.location.origin,
-      state: captureState()
+    return {
+      snapshot: {
+        format: "bluefox-save-file",
+        schemaVersion: 1,
+        gameVersion: global.document
+          .querySelector('meta[name="description"]')
+          ?.content?.replace(/^BlueFox Odyssey\s*/i, "") || "unknown",
+        slot: String(slot),
+        savedAt: Date.now(),
+        originAtSave: global.location.origin,
+        state: captureState()
+      },
+      runtimeErrors
     };
-    return { snapshot, runtimeErrors };
   };
 
   const readLocalSnapshot = (slot) => {
     try {
-      const value = JSON.parse(
-        global.localStorage.getItem(SLOT_KEYS[slot]) || "null"
-      );
+      const value = JSON.parse(global.localStorage.getItem(SLOT_KEYS[slot]) || "null");
       if (validSnapshot(value)) return value;
       if (value?.version === 1 && value?.state) {
         return {
@@ -140,19 +145,15 @@
           state: value.state
         };
       }
-      return null;
-    } catch {
-      return null;
-    }
+    } catch {}
+    return null;
   };
 
   const writeLocalCache = (slot, snapshot) => {
     const serialized = JSON.stringify(snapshot);
     if (slot === "auto") {
       const previous = global.localStorage.getItem(SLOT_KEYS.auto);
-      if (previous) {
-        global.localStorage.setItem(SLOT_KEYS.backup, previous);
-      }
+      if (previous) global.localStorage.setItem(SLOT_KEYS.backup, previous);
     }
     global.localStorage.setItem(SLOT_KEYS[slot], serialized);
     global.localStorage.setItem(ACTIVE_SLOT_KEY, String(slot));
@@ -171,9 +172,7 @@
     });
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
-      throw new Error(
-        `API sauvegarde ${response.status}${detail ? ` : ${detail}` : ""}`
-      );
+      throw new Error(`API sauvegarde ${response.status}${detail ? ` : ${detail}` : ""}`);
     }
     diagnostics.fileApiAvailable = true;
     return response.status === 204 ? null : response.json();
@@ -181,9 +180,7 @@
 
   const readFileSnapshot = async (slot) => {
     try {
-      const snapshot = await fileRequest(
-        `/api/saves/${encodeURIComponent(String(slot))}`
-      );
+      const snapshot = await fileRequest(`/api/saves/${encodeURIComponent(String(slot))}`);
       return validSnapshot(snapshot) ? snapshot : null;
     } catch (error) {
       if (/404/.test(error.message)) return null;
@@ -198,9 +195,11 @@
       throw new Error("Instantané de sauvegarde invalide.");
     }
 
-    // Important : on ne supprime plus toutes les clés actives avant chargement.
-    // Cela préserve les paramètres ajoutés par des hotfixs ultérieurs, absents
-    // des anciennes sauvegardes.
+    // Une sauvegarde est un état complet du jeu, pas un calque sur la partie courante.
+    // Sans cette purge, un inventaire/progression plus récent pouvait survivre au
+    // chargement d'une sauvegarde plus ancienne.
+    clearActive();
+
     Object.entries(snapshot.state).forEach(([key, value]) => {
       if (
         key.startsWith("bluefox_") &&
@@ -215,14 +214,6 @@
     global.localStorage.setItem(RESTORED_AT_KEY, String(snapshot.savedAt));
   };
 
-  const clearActive = () => {
-    keys().forEach((key) => {
-      if (key.startsWith("bluefox_") && !RESERVED_KEYS.has(key)) {
-        global.localStorage.removeItem(key);
-      }
-    });
-  };
-
   const writeSnapshot = async (slot = "auto") => {
     diagnostics.lastAttemptAt = Date.now();
     diagnostics.lastSlot = String(slot);
@@ -235,13 +226,10 @@
 
     try {
       writeLocalCache(slot, snapshot);
-      const stored = await fileRequest(
-        `/api/saves/${encodeURIComponent(String(slot))}`,
-        {
-          method: "POST",
-          body: serialized
-        }
-      );
+      const stored = await fileRequest(`/api/saves/${encodeURIComponent(String(slot))}`, {
+        method: "POST",
+        body: serialized
+      });
       if (!validSnapshot(stored) || stored.savedAt !== snapshot.savedAt) {
         throw new Error("Le fichier relu ne correspond pas à l’écriture.");
       }
@@ -251,19 +239,12 @@
         diagnostics.lastError =
           `${runtimeErrors.length} sous-système(s) n’ont pas pu être forcés.`;
       }
-      global.localStorage.setItem(
-        FILE_DIAGNOSTICS_KEY,
-        JSON.stringify(diagnostics)
-      );
+      global.localStorage.setItem(FILE_DIAGNOSTICS_KEY, JSON.stringify(diagnostics));
       return snapshot;
     } catch (error) {
       diagnostics.lastFailureAt = Date.now();
       diagnostics.lastError = error?.message || String(error);
-      diagnostics.verified = false;
-      global.localStorage.setItem(
-        FILE_DIAGNOSTICS_KEY,
-        JSON.stringify(diagnostics)
-      );
+      global.localStorage.setItem(FILE_DIAGNOSTICS_KEY, JSON.stringify(diagnostics));
       return false;
     }
   };
@@ -286,7 +267,6 @@
       (await readFileSnapshot(slot)) ||
       readLocalSnapshot(slot) ||
       (slot === "auto" ? readLocalSnapshot("backup") : null);
-
     if (!snapshot) return false;
 
     await createRecoverySnapshot();
@@ -307,27 +287,20 @@
       const localSnapshot =
         readLocalSnapshot(slot) ||
         (slot === "auto" ? readLocalSnapshot("backup") : null);
-      const restoredAt =
-        Number(global.localStorage.getItem(RESTORED_AT_KEY)) || 0;
+      const restoredAt = Number(global.localStorage.getItem(RESTORED_AT_KEY)) || 0;
 
       if (
         fileSnapshot &&
-        fileSnapshot.savedAt > Math.max(
-          restoredAt,
-          Number(localSnapshot?.savedAt) || 0
-        )
+        fileSnapshot.savedAt >
+          Math.max(restoredAt, Number(localSnapshot?.savedAt) || 0)
       ) {
         applySnapshot(fileSnapshot, slot);
         writeLocalCache(slot, fileSnapshot);
         diagnostics.restoredFromFile = true;
-        global.localStorage.setItem(
-          FILE_BOOTSTRAP_KEY,
-          String(fileSnapshot.savedAt)
-        );
+        global.localStorage.setItem(FILE_BOOTSTRAP_KEY, String(fileSnapshot.savedAt));
         global.location.reload();
         return false;
       }
-
       startupReady = true;
       return true;
     })();
@@ -344,8 +317,7 @@
   };
 
   BF.saveGame = async (slot = 1) => Boolean(await writeSnapshot(slot));
-  BF.createManualSave = async (slot = 1) =>
-    Boolean(await writeSnapshot(slot));
+  BF.createManualSave = async (slot = 1) => Boolean(await writeSnapshot(slot));
   BF.loadGame = async (slot = "auto") => restoreSnapshot(slot);
   BF.getSaveSlots = async () => ({
     auto: (await readFileSnapshot("auto")) || readLocalSnapshot("auto"),
@@ -380,7 +352,6 @@
     const popover = global.document.createElement("div");
     popover.className = "save-game-popover";
     const slots = await BF.getSaveSlots();
-
     [1, 2].forEach((slot) =>
       popover.append(
         button(
@@ -404,7 +375,6 @@
     const popover = global.document.createElement("div");
     popover.className = "save-game-popover";
     const slots = await BF.getSaveSlots();
-
     [
       ["auto", "Automatique"],
       ["recovery", "Récupération"],
@@ -426,16 +396,8 @@
   const resetRuntimeState = () => {
     const errors = [];
     const run = (callback) => {
-      try {
-        callback();
-      } catch (error) {
-        errors.push(error);
-      }
+      try { callback(); } catch (error) { errors.push(error); }
     };
-
-    // Réinitialise d'abord les sources de vérité encore vivantes en mémoire.
-    // Elles ne doivent pas pouvoir réécrire l'ancien inventaire ou les anciennes
-    // progressions pendant les événements pagehide/beforeunload du rechargement.
     run(() => BF.progression?.reset?.());
     run(() => BF.multiProgression?.reset?.());
     run(() => BF.mapExploration?.reset?.());
@@ -477,31 +439,21 @@
       manager.trees?.clear?.();
       manager.tree = null;
     });
-
     return errors;
   };
 
   const startNewGame = async () => {
-    // La récupération doit contenir l'état de la partie qui va être abandonnée.
     await createRecoverySnapshot();
-
-    // Bloque immédiatement toute sauvegarde automatique pendant la purge.
     newGameResetInProgress = true;
     BF.newGameResetInProgress = true;
     startupReady = false;
-
     try {
       await fileRequest("/api/saves/auto", { method: "DELETE" });
-    } catch {
-      // La nouvelle partie locale reste possible même si le fichier auto
-      // ne peut pas être supprimé.
-    }
+    } catch {}
 
     resetRuntimeState();
     clearActive();
 
-    // Les sauvegardes manuelles sont volontairement conservées. Seuls les
-    // instantanés automatiques et les marqueurs de session active sont retirés.
     global.localStorage.removeItem(SLOT_KEYS.auto);
     global.localStorage.removeItem(SLOT_KEYS.backup);
     global.localStorage.removeItem(ACTIVE_SLOT_KEY);
@@ -535,56 +487,40 @@
     root.id = SAVE_UI_CONFIG.rootId;
     root.className = "save-game-controls";
     root.dataset.saveUiVersion = SAVE_UI_CONFIG.version;
-
     const title = global.document.createElement("h3");
     title.textContent = "SAUVEGARDE";
-
     const status = global.document.createElement("p");
     status.className = "save-game-status";
     status.textContent =
       "Sauvegarde fichier active · auto toutes les 90 s · 5 versions tournantes.";
-
     const actions = global.document.createElement("div");
     actions.className = SAVE_UI_CONFIG.actionClass;
     actions.append(
       button("Sauvegarder", "save-game-button", () => showSaveChoices(root)),
       button("Charger", "load-game-button", () => showLoadChoices(root)),
-      button(
-        "Nouvelle partie",
-        "new-game-button",
-        () => showNewGameConfirmation(root)
-      )
+      button("Nouvelle partie", "new-game-button", () => showNewGameConfirmation(root))
     );
-
     root.append(title, status, actions);
     return root;
   };
 
   const hasLockedContract = (root) => {
-    if (!root || root.dataset.saveUiVersion !== SAVE_UI_CONFIG.version) {
-      return false;
-    }
+    if (!root || root.dataset.saveUiVersion !== SAVE_UI_CONFIG.version) return false;
     const labels = [
       ...root.querySelectorAll(`.${SAVE_UI_CONFIG.actionClass} > button`)
     ].map((node) => node.textContent.trim());
     return (
       labels.length === SAVE_UI_CONFIG.actions.length &&
-      SAVE_UI_CONFIG.actions.every(
-        (action, index) => labels[index] === action.label
-      )
+      SAVE_UI_CONFIG.actions.every((action, index) => labels[index] === action.label)
     );
   };
 
   const ensureSaveControls = () => {
-    const target = global.document.querySelector(
-      SAVE_UI_CONFIG.targetSelector
-    );
+    const target = global.document.querySelector(SAVE_UI_CONFIG.targetSelector);
     if (!target) return false;
-
     let root = global.document.getElementById(SAVE_UI_CONFIG.rootId);
     if (root && root.parentElement !== target) root.remove();
     root = global.document.getElementById(SAVE_UI_CONFIG.rootId);
-
     if (!hasLockedContract(root)) {
       root?.remove();
       root = buildSaveControls();
@@ -610,11 +546,7 @@
     subtree: true
   });
 
-  global.addEventListener(
-    "DOMContentLoaded",
-    scheduleSaveControls,
-    { once: true }
-  );
+  global.addEventListener("DOMContentLoaded", scheduleSaveControls, { once: true });
   scheduleSaveControls();
 
   Object.defineProperty(BF, "saveUiConfig", {
@@ -636,6 +568,7 @@
       ),
       sourceOfTruth: "file",
       autosaveIntervalMs: AUTOSAVE_INTERVAL_MS,
+      exactRestore: true,
       origin: global.location.origin
     });
 

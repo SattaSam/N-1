@@ -59,14 +59,8 @@
 
   function activatePassiveFromMap(event) {
     if (completed(PASSIVE)) return;
-    if (!active(PASSIVE)) {
-      BF.bibleRuntime?.consumeTriggerEvent?.({
-        type: "exploration.map_discovered",
-        mapId: event.mapId,
-        toMapId: event.mapId,
-        amount: 1
-      });
-    }
+    // BibleRuntime reçoit désormais directement la transition complète
+    // (direction comprise). Ce pont historique ne doit plus la recompter.
     if (active(PASSIVE) && rememberUnique(PASSIVE, event.mapId)) {
       increment(PASSIVE, "exploreMaps");
     }
