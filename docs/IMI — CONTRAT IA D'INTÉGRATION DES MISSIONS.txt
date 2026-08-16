@@ -1,0 +1,93 @@
+IMI — CONTRAT IA D'INTÉGRATION DES MISSIONS
+
+OBJECTIF
+Transformer les missions narratives en données moteur sans modifier
+le fonctionnement général du jeu lorsqu'un patron existant suffit.
+
+SOURCE DE VÉRITÉ
+1. SHA explicitement fourni par l'utilisateur.
+2. Code réellement présent à ce SHA.
+3. Contrats/patrons/tests présents dans ce dépôt.
+4. Bible documentaire pour l'intention narrative.
+
+Ne jamais supposer qu'un ancien comportement, fichier ou chemin existe encore.
+
+RÈGLE 1 — AUDIT AVANT ÉCRITURE
+Avant toute modification :
+- identifier le patron ;
+- identifier l'événement canonique ;
+- identifier le propriétaire ;
+- vérifier que la cible CUO existe ;
+- vérifier les tests existants.
+Aucun fichier ne doit être modifié avant cette étape.
+
+RÈGLE 2 — DATA-ONLY PAR DÉFAUT
+Si le mécanisme existe déjà :
+→ modifier uniquement la donnée missionnelle nécessaire.
+Ne jamais modifier BAC/CUO/WorldEngine/MissionManager pour adapter
+une mission particulière.
+
+RÈGLE 3 — UN PROPRIÉTAIRE
+Une anomalie doit être corrigée dans le propriétaire réel du comportement.
+Interdiction des wrappers/hotfix spécifiques à une mission ou à un objet.
+
+RÈGLE 4 — INTERPRÉTATION SÉMANTIQUE
+La Bible utilise du langage naturel.
+Ne jamais faire de correspondance mot-à-mot avec les enums moteur.
+Comprendre synonymes et contexte.
+Si deux interprétations entraînent des gameplays différents :
+STOP → demander à l'utilisateur.
+
+RÈGLE 5 — PAS DE NOUVELLE MÉCANIQUE CACHÉE
+Si une mission exige une capacité absente :
+STOP → ENGINE EXTENSION REQUIRED.
+Créer/valider l'extension séparément avant d'intégrer les missions concernées.
+
+RÈGLE 6 — NE PAS CORRIGER LE CUO PAR LES MISSIONS
+Une mission sélectionne des propriétés CUO existantes.
+Si la définition CUO est mauvaise :
+signaler le problème CUO séparément.
+
+RÈGLE 7 — HIÉRARCHIE
+Joueur > contraintes physiques CUO > intention missionnelle >
+arbitrage autonomie/BAC.
+BAC ne change jamais les conditions de validation d'une mission.
+
+RÈGLE 8 — ÉVÉNEMENT CANONIQUE
+Une action réelle produit un événement canonique.
+Les missions, inventaire, recherche, journal, etc. le consomment ensuite.
+Ne jamais créer un second chemin événementiel uniquement pour une mission.
+
+RÈGLE 9 — FAN-OUT
+Un événement peut progresser plusieurs missions déjà actives.
+Il ne doit pas être artificiellement consommé par une seule mission.
+
+RÈGLE 10 — TEST AVANT JEU
+Le test humain n'est pas le premier test.
+Avant livraison :
+- tests positifs ;
+- tests négatifs ;
+- patrons ;
+- lifecycle ;
+- simultanéité ;
+- sauvegarde/reprise ;
+- non-régression BAC/CUO.
+
+RÈGLE 11 — STOP CONDITIONS
+Ne pas produire de patch si :
+- patron ambigu ;
+- propriétaire incertain ;
+- événement inconnu ;
+- cible CUO non confirmée ;
+- besoin moteur non isolé ;
+- un test de non-régression échoue.
+
+RÈGLE 12 — RAPPORT OBLIGATOIRE
+Avant livraison indiquer :
+- missions intégrées ;
+- patrons utilisés ;
+- ambiguïtés résolues ;
+- fichiers modifiés ;
+- nouveaux événements : oui/non ;
+- modification moteur : oui/non ;
+- tests passés/échoués.
