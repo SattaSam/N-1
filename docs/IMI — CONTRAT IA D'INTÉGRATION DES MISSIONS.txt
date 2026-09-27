@@ -1,0 +1,229 @@
+IMI — CONTRAT IA D'INTÉGRATION DES MISSIONS
+
+OBJECTIF
+Transformer les missions narratives en données moteur sans modifier
+le fonctionnement général du jeu lorsqu'un patron existant suffit.
+
+SOURCE DE VÉRITÉ
+1. SHA explicitement fourni par l'utilisateur.
+2. Code réellement présent à ce SHA.
+3. Contrats/patrons/tests présents dans ce dépôt.
+4. Bible documentaire pour l'intention narrative.
+
+Ne jamais supposer qu'un ancien comportement, fichier ou chemin existe encore.
+
+RÈGLE 1 — AUDIT AVANT ÉCRITURE
+Avant toute modification :
+- identifier le patron ;
+- identifier l'événement canonique ;
+- identifier le propriétaire ;
+- vérifier que la cible CUO existe ;
+- vérifier les tests existants.
+Aucun fichier ne doit être modifié avant cette étape.
+
+RÈGLE 2 — DATA-ONLY PAR DÉFAUT
+Si le mécanisme existe déjà :
+→ modifier uniquement la donnée missionnelle nécessaire.
+Ne jamais modifier BAC/CUO/WorldEngine/MissionManager pour adapter
+une mission particulière.
+
+RÈGLE 3 — UN PROPRIÉTAIRE
+Une anomalie doit être corrigée dans le propriétaire réel du comportement.
+Interdiction des wrappers/hotfix spécifiques à une mission ou à un objet.
+
+RÈGLE 4 — INTERPRÉTATION SÉMANTIQUE
+La Bible utilise du langage naturel.
+Ne jamais faire de correspondance mot-à-mot avec les enums moteur.
+Comprendre synonymes et contexte.
+Si deux interprétations entraînent des gameplays différents :
+STOP → demander à l'utilisateur.
+
+D'une manière générale, toute incertitude significative doit être soumise à
+validation humaine avant écriture : fonctionnalité supposée inexistante,
+propriétaire non confirmé, ambiguïté d'interprétation, lacune documentaire,
+contradiction entre sources, niveau de détail insuffisant ou prescription
+susceptible de modifier le gameplay de plusieurs façons plausibles.
+Ne pas combler silencieusement une lacune documentaire par une invention.
+
+RÈGLE 4B — RELATION DÉCLENCHEUR / CIBLE
+Pour toute mission déclenchée par une interaction avec un objet, l’intégration
+doit déduire automatiquement la relation entre l’objet déclencheur et les
+objectifs avant de produire la fiche moteur. Les missions documentaires source
+ne doivent pas être retouchées manuellement pour fournir cette information.
+
+Cette relation reste portée par les propriétaires existants :
+- la fiche missionnelle déclare l’intention dans data/bible-catalog.js ;
+- engine/bible-contract-v0-1.js valide le contrat des fiches/patrons ;
+- engine/bible-runtime-v0-1-unified.js interprète la déclaration validée.
+Aucun propriétaire, patron, bridge ou système parallèle ne doit être créé pour
+porter cette relation. Le runtime ne doit jamais la déduire à la place de la
+chaîne d’intégration.
+
+Trois résultats seulement sont autorisés :
+- REVEAL-ONLY : l’objet révèle la mission mais ne devient pas sa cible
+  → générer triggerOnly: true ;
+- SAME-DEFINITION : la suite porte explicitement sur le même type/définition
+  → générer targetBinding: "definition" ;
+- SAME-INSTANCE : la suite porte explicitement sur ce même spécimen/objet
+  → générer targetBinding: "instance".
+
+Inférence obligatoire pour les cas non ambigus :
+- objectif cumulatif sur une catégorie/famille/kind plus large que le premier
+  objet rencontré → REVEAL-ONLY ;
+- objectif exigeant plusieurs objectId/familles/types distincts → REVEAL-ONLY ;
+- formulation explicite « même type / même définition » → SAME-DEFINITION ;
+- formulation explicite « même spécimen / cet objet / cette instance »
+  → SAME-INSTANCE.
+
+En l’absence d’une exigence documentaire explicite SAME-DEFINITION ou
+SAME-INSTANCE, une mission cumulative, multi-cible ou portant sur une catégorie
+plus large doit être générée en REVEAL-ONLY. Cette valeur conservatrice est
+produite par l’intégration dans la fiche ; elle n’est pas un fallback runtime.
+
+Toute fiche générée avec un trigger interaction.* doit déclarer exactement une
+relation :
+- triggerOnly: true ;
+- ou targetBinding: "definition" ;
+- ou targetBinding: "instance".
+
+Avant enregistrement, le contrat strict des fiches/patrons doit refuser :
+- l’absence simultanée de triggerOnly et targetBinding ;
+- la présence contradictoire de triggerOnly et targetBinding ;
+- toute valeur non autorisée.
+
+Le runtime consomme uniquement la relation validée. Il lui est interdit de
+remplacer une absence par targetBinding: "definition" ou par une autre valeur
+implicite. Si la relation documentaire reste réellement indécidable ou si des
+indices se contredisent : STOP → ambiguïté fonctionnelle à faire valider.
+
+RÈGLE 4C — PRESCRIPTIONS PSYCHOLOGIQUES MISSIONNELLES
+Lorsqu'une mission documentaire porte des informations psychologiques, celles-ci
+font partie du contrat d'intégration au même titre que ses objectifs, déclencheurs
+et effets narratifs. L'intégration doit reconnaître, valider et transporter sans
+perte les prescriptions supportées par le moteur, notamment :
+- ponderation ;
+- obsessionEligible ;
+- obsessionIntensity ;
+- souvenir ;
+- memoryValence ;
+- scoreTrauma ;
+- narrativeAxis ;
+- reinforcesNarrativeAxis ;
+- narrativeAxisWeight.
+
+Ces champs décrivent une prescription ; ils ne constituent jamais eux-mêmes
+l'effet psychologique runtime.
+
+Chaîne obligatoire :
+document missionnel → fiche Bible → validation contrat → compilation/runtime
+→ événement réellement vécu → propriétaire CUM/progression → BAC/consommateurs.
+
+Règles impératives :
+- une simple déclaration documentaire ne doit jamais créer un souvenir avant
+  que l'événement correspondant ait réellement été vécu ;
+- un souvenir persistant est créé et conservé par le propriétaire CUM/progression,
+  puis seulement consommé par le BAC dans les contextes compatibles ;
+- une obsession n'agit que si obsessionEligible est explicitement vrai et selon
+  le mécanisme BAC/CUM existant ;
+- un renforcement d'axe narratif n'est appliqué qu'au moment prévu par le
+  lifecycle réel de la mission ;
+- les effets de completion doivent rester idempotents ;
+- une mission dépourvue de prescription psychologique explicite conserve un
+  comportement psychologique neutre ;
+- aucune logique psychologique spécifique à une mission ne doit être ajoutée
+  dans MissionManager, WorldEngine, BAC ou un bridge ad hoc.
+
+Si un champ psychologique documentaire ne correspond à aucune capacité moteur
+existante, si sa portée est ambiguë, ou si sa traduction risque de modifier le
+gameplay de plusieurs façons possibles :
+STOP → demander confirmation/validation à l'utilisateur avant intégration.
+
+RÈGLE 5 — PAS DE NOUVELLE MÉCANIQUE CACHÉE
+Si une mission exige une capacité absente :
+STOP → ENGINE EXTENSION REQUIRED.
+Créer/valider l'extension séparément avant d'intégrer les missions concernées.
+
+RÈGLE 6 — NE PAS CORRIGER LE CUO PAR LES MISSIONS
+Une mission sélectionne des propriétés CUO existantes.
+Si la définition CUO est mauvaise :
+signaler le problème CUO séparément.
+
+RÈGLE 7 — HIÉRARCHIE
+Joueur > contraintes physiques CUO > intention missionnelle >
+arbitrage autonomie/BAC.
+BAC ne change jamais les conditions de validation d'une mission.
+
+RÈGLE 8 — ÉVÉNEMENT CANONIQUE
+Une action réelle produit un événement canonique.
+Les missions, inventaire, recherche, journal, etc. le consomment ensuite.
+Ne jamais créer un second chemin événementiel uniquement pour une mission.
+
+RÈGLE 8B — ENRICHISSEMENT DU VOCABULAIRE NARRATIF
+L'intégration peut enrichir la formulation des sorties narratives prévues par la
+mission — pensées/thoughts, journal et textes associés — afin d'éviter les
+répétitions mécaniques lorsque le sens documentaire est clair.
+
+Cet enrichissement est particulièrement attendu pour les missions à fort
+potentiel narratif ou produisant des effets notables sur :
+- l'histoire ;
+- les axes narratifs ;
+- la psychologie ;
+- les souvenirs ;
+- les obsessions ;
+- la relation au joueur ;
+- les découvertes majeures ou étapes structurantes.
+
+L'enrichissement doit :
+- préserver exactement le sens, les faits et les conséquences documentaires ;
+- varier le vocabulaire, la syntaxe et l'angle de formulation ;
+- rester cohérent avec le ton de BlueFox et le contexte de la mission ;
+- éviter les formulations génériques répétées entre missions proches ;
+- ne jamais inventer un événement, une émotion, une conséquence, une relation ou
+  une information absente de la source.
+
+Si le document ne permet pas de déterminer avec certitude le ton, la portée ou
+la conséquence narrative attendue, ou si plusieurs interprétations changeraient
+le sens de la mission :
+STOP → demander validation à l'utilisateur.
+
+RÈGLE 9 — FAN-OUT
+Un événement peut progresser plusieurs missions déjà actives.
+Il ne doit pas être artificiellement consommé par une seule mission.
+
+RÈGLE 10 — TEST AVANT JEU
+Le test humain n'est pas le premier test.
+Avant livraison :
+- tests positifs ;
+- tests négatifs ;
+- patrons ;
+- lifecycle ;
+- simultanéité ;
+- sauvegarde/reprise ;
+- non-régression BAC/CUO ;
+- transport sans perte des prescriptions psychologiques ;
+- absence d'effet souvenir avant vécu réel ;
+- neutralité des missions sans prescription psychologique ;
+- idempotence des effets psychologiques de completion ;
+- qualité et non-répétitivité des sorties narratives enrichies lorsqu'elles sont prévues.
+
+RÈGLE 11 — STOP CONDITIONS
+Ne pas produire de patch si :
+- patron ambigu ;
+- propriétaire incertain ;
+- événement inconnu ;
+- cible CUO non confirmée ;
+- besoin moteur non isolé ;
+- fonctionnalité documentaire sans équivalent moteur confirmé ;
+- lacune ou imprécision documentaire susceptible de changer le gameplay ;
+- ambiguïté psychologique ou narrative non validée ;
+- un test de non-régression échoue.
+
+RÈGLE 12 — RAPPORT OBLIGATOIRE
+Avant livraison indiquer :
+- missions intégrées ;
+- patrons utilisés ;
+- ambiguïtés résolues ;
+- fichiers modifiés ;
+- nouveaux événements : oui/non ;
+- modification moteur : oui/non ;
+- tests passés/échoués.

@@ -1,0 +1,23 @@
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050b14;font-family:Arial,sans-serif;color:#eef7ff}
+body{touch-action:none;user-select:none}
+#game-shell{position:relative;width:100%;height:100%}
+#game{display:block;width:100%;height:100%;background:#101b2a}
+#hud{position:absolute;inset:12px 12px auto 12px;display:flex;gap:10px;justify-content:space-between;pointer-events:none}
+.panel{background:rgba(5,16,31,.82);border:1px solid rgba(94,194,255,.35);border-radius:12px;padding:10px 12px;backdrop-filter:blur(6px);box-shadow:0 8px 24px rgba(0,0,0,.28)}
+.panel strong{display:block;color:#74d7ff;font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.inventory{display:flex;align-items:center;gap:12px}
+.inventory strong{margin:0 4px 0 0}
+#message{position:absolute;left:50%;bottom:120px;transform:translateX(-50%);min-width:240px;text-align:center;padding:10px 14px;border-radius:12px;background:rgba(5,16,31,.88);opacity:0;transition:opacity .2s;pointer-events:none}
+#message.show{opacity:1}
+#resetCamera{position:absolute;right:14px;bottom:18px;width:52px;height:52px;border:1px solid rgba(116,215,255,.5);border-radius:50%;background:rgba(5,16,31,.86);color:#fff;font-size:25px}
+#touchControls{position:absolute;left:14px;bottom:14px;display:none;flex-direction:column;align-items:center;gap:5px}
+#touchControls>div{display:flex;gap:5px}
+#touchControls button{width:56px;height:56px;border:1px solid rgba(116,215,255,.45);border-radius:14px;background:rgba(5,16,31,.86);color:white;font-size:22px;touch-action:none}
+@media (pointer:coarse),(max-width:760px){
+  #touchControls{display:flex}
+  #hud{font-size:13px;gap:6px}
+  .panel{padding:8px 10px}
+  .mission{max-width:58%}
+  #message{bottom:155px}
+}
