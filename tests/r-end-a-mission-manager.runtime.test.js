@@ -1,0 +1,14 @@
+const fs=require('fs'),vm=require('vm'),path=require('path'),assert=require('assert/strict');
+const root=process.env.BLUEFOX_ROOT||path.resolve(__dirname,'..');
+const w={BlueFox3D:{Missions:{ActionType:{TRAVEL:'travel'},normalizeActionType:(value)=>value},getAutonomyMode:()=> 'full'},addEventListener(){},removeEventListener(){},performance:{now:()=>0}};w.window=w;
+const ctx=vm.createContext({window:w,console,performance:w.performance,setTimeout,clearTimeout});
+vm.runInContext(fs.readFileSync(path.join(root,'data/bible-catalog.js'),'utf8'),ctx);vm.runInContext(fs.readFileSync(path.join(root,'engine/mission-manager.js'),'utf8'),ctx);
+const BF=w.BlueFox3D,MM=BF.Missions.MissionManager,by=new Map(BF.BibleCatalog.map(m=>[m.id,m]));const m=by.get('END-CHOICE'),step=m.sequence.find(s=>s.slot==='returnCamp');
+const params={...step.params},node={id:'END-CHOICE:returnCamp',type:'travel',params,isComplete:false};const travel={missionId:m.id,mission:m,node};
+let returnCalls=0;const facts={};
+const mm=Object.create(MM.prototype);mm.primaryMissionId=m.id;mm.activeMissionIds=[m.id];mm.trees=new Map([[m.id,{root:{isComplete:false},availableLeaves(){return[node]}}]]);mm.memory={state:{missionLifecycle:{'END-CHOICE':{status:'active'}}},getFact:(k,d=null)=>facts[k]??d,setFact(k,v){facts[k]=v;return true},save(){}};mm.definition=id=>by.get(id);mm.engine={currentMapId:'far',findOptimalRoute:(a,b)=>[a,'mid',b],findKnownRoute:(a,b)=>[a,'mid',b],returnToBase(){returnCalls++},transitioning:false,pendingGate:null,pendingInteraction:null,currentRoutine:null};mm.bridge={context:()=>({mapId:mm.engine.currentMapId}),isEngineBusy:()=>false};mm.currentAction=null;mm.transitionLocalCandidates=()=>[];mm.chooseTransitionDeferralMission=()=>null;mm.shouldDeferMissionTransition=()=>false;
+assert.equal(mm.isAutonomousUnknownTravel(travel),false);assert.equal(mm.missionTransitionTargetMapId(travel),'crystal');assert.equal(mm.missionTransitionExecutable(travel),true);
+let intent=mm.ensureMissionTransitionIntent({mapId:'far'});assert.equal(intent.kind,'return-base');assert.equal(intent.targetMapId,'crystal');
+mm.engine.currentMapId='crystal';assert.equal(mm.missionTransitionExecutable(travel),true,'sur Crystal le retour local Camp doit rester exécutable via returnToBase');
+assert.equal(mm.resumeMissionTransitionIntent({mapId:'crystal'}),true);assert.equal(returnCalls,1,'MissionManager doit appeler le vrai returnToBase une fois revenu sur Crystal');
+console.log('PASS END-A MissionManager: known return -> Crystal -> real returnToBase, never unknown travel');

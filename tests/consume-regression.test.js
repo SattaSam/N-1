@@ -1,0 +1,5 @@
+const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const vm=require('node:vm');const path=require('node:path');const root=path.resolve(__dirname,'..');
+const context={console:{info(){},warn(){},error(){}}};context.window=context;vm.createContext(context);vm.runInContext(fs.readFileSync(path.join(root,'data/bible-catalog.js'),'utf8'),context);const byId=id=>context.BlueFox3D.BibleCatalog.find(m=>m.id===id);
+test('sentinelles gameplay historiques restent présentes',()=>{for(const id of ['T03','GAME-shelter','GAME-base','GAME-fire','ENE-11','ARCH-29'])assert.ok(byId(id),id);});
+test('GAME-fire conserve 8 bois et son réarmement scalaire',()=>{const m=byId('GAME-fire');assert.equal(m.repeatable,true);assert.equal(m.repeatableCondition.inventoryKey,'wood');assert.equal(m.repeatableCondition.minimum,80);assert.equal(m.repeatableCondition.rearmIncrease,8);assert.equal(m.effects.find(e=>e.type==='inventory.consume').quantity,8);});
+test('aucune pseudo-ration améliorée n’est ajoutée silencieusement',()=>{assert.equal(Boolean(byId('SUR-07')),false);});

@@ -1,0 +1,21 @@
+const fs=require('fs'),vm=require('vm'),path=require('path'),assert=require('assert/strict');
+const root=process.env.BLUEFOX_ROOT||path.resolve(__dirname,'..');
+const listeners={};const window={BlueFox3D:{},localStorage:{getItem:()=>null,setItem(){},removeItem(){}},addEventListener(t,f){listeners[t]=f},removeEventListener(){},dispatchEvent(){},setTimeout(){return 0},clearTimeout(){},setInterval(){return 0},clearInterval(){},queueMicrotask(){},performance:{now:()=>0},document:null,CustomEvent:function(t,i){this.type=t;this.detail=i?.detail}};window.window=window;
+const BF=window.BlueFox3D;BF.BiblePatterns={SEQUENCE_ACTIONS:{steps:[]},NARRATIVE_ONLY:{steps:[],narrativeOnly:true}};
+const ctx=vm.createContext({window,console,performance:window.performance,CustomEvent:window.CustomEvent,setTimeout:window.setTimeout,clearTimeout:window.clearTimeout,setInterval:window.setInterval,clearInterval:window.clearInterval,Promise});
+vm.runInContext(fs.readFileSync(path.join(root,'data/bible-catalog.js'),'utf8'),ctx);let code=fs.readFileSync(path.join(root,'engine/bible-runtime-v0-1-unified.js'),'utf8');code=code.replace(/\n\s*runtime\.start\(\);\n\}\)\(window\);\s*$/,'\n})(window);');vm.runInContext(code,ctx);
+const rt=BF.bibleRuntime,m=BF.BibleCatalog.find(x=>x.id==='END-CHOICE');rt.catalog=[m];rt.byId=new Map([[m.id,m]]);
+function node(id,done=false){return{id,progress:done?1:0,target:1,isComplete:done,increment(n){if(this.isComplete)return false;this.progress=Math.min(1,this.progress+n);this.isComplete=this.progress>=1;return true}}}
+const ret=node('END-CHOICE:returnCamp'),dec=node('END-CHOICE:decision');const tree={root:{isComplete:false},find(id){return id===ret.id?ret:id===dec.id?dec:null},availableLeaves(){return ret.isComplete?(dec.isComplete?[]:[dec]):[ret]},refresh(){this.root.isComplete=ret.isComplete&&dec.isComplete}};
+const facts={};const lifecycle={'END-CHOICE':{status:'active'},'EXP-LONG-05':{status:'completed'},'ENV-WORLD-20':{status:'completed'},'SIS-03':{status:'completed'},'ANN-07':{status:'completed'}};
+const memory={state:{missionLifecycle:lifecycle},getFact(k,d=null){return Object.prototype.hasOwnProperty.call(facts,k)?facts[k]:d},setFact(k,v){facts[k]=v;return true},save(){},saveTree(){}};
+const manager={memory,trees:new Map([[m.id,tree]]),syncLifecycleFromTrees(){if(tree.root.isComplete)lifecycle['END-CHOICE'].status='completed'},reevaluatePendingActivations(){},catalogController:{schedule(){}},publish(){}};rt.manager=()=>manager;
+assert.equal(rt.prerequisitesSatisfied(m),true);lifecycle['ANN-07'].status='active';assert.equal(rt.prerequisitesSatisfied(m),false,'un axe indépendant manquant doit bloquer la maturité');lifecycle['ANN-07'].status='completed';
+BF.currentEngine={missionManager:manager,currentMapId:'crystal',character:{root:{position:{x:0,z:0}}},currentMap:{group:{userData:{microScenes:[{id:'MSC-CUSTOM-CAMP',instanceRoot:{position:{x:0,z:0}}}]}}}};rt.observationPoint=(anchor)=>anchor.position||anchor;
+assert.equal(BF.getMissionChoiceState('END-CHOICE').available,false,'choix interdit avant retour réel au Camp');
+assert.equal(rt.reviewProximityContexts(),true);assert.equal(ret.isComplete,true);assert(facts['endChoice:campReached']);
+let state=BF.getMissionChoiceState('END-CHOICE');assert.equal(state.available,true);assert.deepEqual(Array.from(state.options,x=>x.id),['stay','return']);
+assert.equal(BF.submitMissionChoice('END-CHOICE','invalid'),false);assert.equal(BF.submitMissionChoice('END-CHOICE','stay'),true);assert.equal(facts['endChoice:decision'].choiceId,'stay');assert.equal(dec.isComplete,true);assert.equal(lifecycle['END-CHOICE'].status,'completed');assert.equal(BF.submitMissionChoice('END-CHOICE','return'),false,'choix persistant et non réversible');
+assert.equal(Object.prototype.hasOwnProperty.call(lifecycle,'FIN-01'),false,'Rester ne doit révéler/activer aucune FIN');
+assert.equal(Object.prototype.hasOwnProperty.call(lifecycle,'FIN-02'),false,'Rester ne doit révéler/activer aucune FIN');
+console.log('PASS END-A runtime: independent maturity + real Camp proximity + persistent irreversible choice + stay keeps world open');

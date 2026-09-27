@@ -1,0 +1,16 @@
+const fs=require('fs'),vm=require('vm'),path=require('path'),assert=require('assert/strict');
+const root=process.env.BLUEFOX_ROOT||path.resolve(__dirname,'..');
+const w={BlueFox3D:{}};w.window=w;vm.runInNewContext(fs.readFileSync(path.join(root,'data/bible-catalog.js'),'utf8'),{window:w,console});
+const cat=w.BlueFox3D.BibleCatalog,by=new Map(cat.map(m=>[m.id,m]));
+assert.equal(cat.length,322,'END-A préservé + FIN-01/FIN-02 : catalogue attendu à 322 missions');
+const m=by.get('END-CHOICE');assert(m,'END-CHOICE absente');
+assert.equal(m.title,'Là où je suis arrivé');
+assert.equal(m.trigger.type,'progression.mission_completed');assert.equal(m.trigger.missionId,'EXP-LONG-05');
+assert.deepEqual(Array.from(m.prerequisites),['EXP-LONG-05','ENV-WORLD-20','SIS-03','ANN-07']);
+assert.equal(m.navigation.autonomousKnownReturn,true);
+const ret=m.sequence.find(s=>s.slot==='returnCamp'),decision=m.sequence.find(s=>s.slot==='decision');
+assert(ret&&decision);assert.equal(ret.action,'travel');assert.equal(ret.params.toMapId,'crystal');assert.equal(ret.params.eventDriven,true);assert.equal(ret.params.catalogManaged,true);
+assert.equal(decision.params.eventDriven,true);assert.equal(decision.params.catalogManaged,true);assert.deepEqual(Array.from(decision.requires),['returnCamp']);
+assert.deepEqual(Array.from(m.proximityContexts,x=>x.microSceneId),['MSC-CUSTOM-CAMP','MSC-CUSTOM-CAMP-BASE','MSC-CUSTOM-CAMP-BASE-REINFORCED']);
+assert.equal(m.runtimeValidation.type,'mission-choice');assert.equal(m.runtimeValidation.fact,'endChoice:decision');assert.deepEqual(Array.from(m.runtimeValidation.options,x=>x.id),['stay','return']);
+console.log('PASS END-A catalogue: maturity gate + real Camp return + persistent choice contract');

@@ -1,0 +1,4 @@
+const fs=require('fs'),vm=require('vm'),path=require('path'),assert=require('assert/strict');
+const root=process.env.BLUEFOX_ROOT||path.resolve(__dirname,'..');const baseline=process.env.BLUEFOX_HEAD_CATALOG;if(!baseline){console.log('SKIP OPP legacy catalog parity: set BLUEFOX_HEAD_CATALOG to exact starting HEAD catalog');process.exit(0)}
+function load(p){const w={BlueFox3D:{}};w.window=w;vm.runInNewContext(fs.readFileSync(p,'utf8'),{window:w,console});return w.BlueFox3D.BibleCatalog}
+const base=load(baseline),cand=load(path.join(root,'data','bible-catalog.js'));const legacy=cand.filter(m=>!m.id?.startsWith('OPP-'));assert.equal(legacy.length,base.length);for(let i=0;i<base.length;i++)assert.deepEqual(JSON.parse(JSON.stringify(legacy[i])),JSON.parse(JSON.stringify(base[i])),`legacy mission changed at ${base[i]?.id}`);console.log(`PASS OPP legacy catalog parity: ${base.length}/${base.length} pre-existing missions byte-semantic equal`);
