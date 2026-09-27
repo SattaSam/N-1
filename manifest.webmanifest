@@ -1,0 +1,17 @@
+{
+  "name": "BlueFox Odyssey",
+  "short_name": "BlueFox",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": [
+    "fullscreen",
+    "standalone",
+    "minimal-ui",
+    "browser"
+  ],
+  "orientation": "landscape",
+  "background_color": "#041122",
+  "theme_color": "#041122",
+  "lang": "fr"
+}
