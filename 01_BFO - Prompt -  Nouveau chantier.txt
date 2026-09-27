@@ -1,0 +1,142 @@
+Préflight BlueFox obligatoire avant tout chantier
+
+lecture de 00_AI_PROJECT_RULES.md ;
+accès au dépôt/GitHub ;
+capacité à exécuter node, npm ou les tests du dépôt ;
+capacité à récupérer les fichiers exacts du HEAD nécessaires au chantier ; 
+capacité à constituer une BASE partielle exacte et un CANDIDAT, contenant toute la fermeture de dépendances réellement nécessaire au chantier et à ses tests ;
+capacité à générer un ZIP de sortie.
+
+BASE partielle exacte = ensemble minimal de fichiers issus du HEAD courant permettant de reproduire et tester le comportement concerné, incluant ses propriétaires, dépendances et consommateurs nécessaires.
+
+Si un seul point échoue, ne commence pas le chantier et dis-moi de changer de conversation. Ne commence aucun audit.
+
+
+Mode BlueFox strict — commence par lire 00_AI_PROJECT_RULES.md, docs/README.txt puis uniquement les références officielles désignées. Le HEAD GitHub courant est la seule base technique. Les stratégies, propriétaires et conventions déjà définis dans ces documents sont obligatoires : ne les redéfinis pas et ne crée aucune couche, abstraction, bridge ou système parallèle si le propriétaire existant peut porter le besoin. Pour chaque chantier : audit ciblé des fichiers réellement concernés et de leurs interactions → stratégie synthétique fondée sur l’existant → GO → correctif. Travaille à l’échelle nécessaire au chantier : atomique pour une correction locale, industrialisée pour un lot missionnel. Avant livraison, compare le résultat au HEAD et rejette toute modification hors périmètre ou toute perte d’un comportement déjà présent.
+Toute décision technique antérieure déjà inscrite dans les références ou présente dans le code courant prime sur une nouvelle idée de l’IA ; toute dérogation doit être explicitement justifiée et validée avant codage.
+
+Projet BlueFox — Nouveau chantier
+
+Nous ouvrons un nouveau chantier sur le dépôt GitHub courant.
+
+1. Commence impérativement par appliquer le protocole projet :
+
+lire 00_AI_PROJECT_RULES.md ;
+lire docs/README.txt ;
+lire uniquement les documents de référence officiels qu’il désigne ;
+identifier le commit GitHub courant et le prendre comme base exclusive ;
+ne jamais repartir d’un ancien ZIP, d’un ancien fichier local ou d’une ancienne tentative rejetée ;
+auditer les fichiers concernés et leurs interactions avant de proposer une correction.
+
+2. DOCUMENT GAMEPLAY À LIRE AVANT TOUT AUDIT TECHNIQUE
+
+Ce document doit être lu AVANT de proposer une stratégie technique.
+
+Il rassemble les intentions de gameplay retrouvées dans :
+
+* le cahier des charges ;
+* la Bible narrative ;
+* les documents missionnels ;
+* CUO / CUM ;
+* les documents techniques ;
+* l’historique des validations ;
+* nos conversations de développement ;
+* les corrections et arbitrages successifs de juillet et août.
+
+Ce document n’est PAS une nouvelle couche moteur.
+
+Il sert uniquement de **référentiel d’intention et de non-régression gameplay**.
+
+### Ordre d’autorité fonctionnelle
+
+Lorsqu’il existe une contradiction :
+
+1. décision gameplay explicite la plus récente de l’utilisateur ;
+2. validation directe en jeu par l’utilisateur ;
+3. Bible narrative / document fonctionnel récent ;
+4. documents officiels du projet ;
+5. anciennes traductions CUM/CUO/Bible moteur ;
+6. code actuel.
+
+Le code ne définit pas à lui seul l’intention.
+
+---
+
+3. Première passe uniquement : diagnostic + stratégie
+
+Essaie d’être rapide et ciblé.
+
+Je veux :
+
+l’état exact de la fonctionnalité dans le commit courant ;
+ce qui existe déjà et doit être conservé ;
+ce qui manque ou a régressé ;
+ce qui avait été validé précédemment et mérite d’être récupéré ;
+les fichiers réellement concernés ;
+les risques de régression ;
+une stratégie d’intégration synthétique mais techniquement justifiée.
+
+Ne génère encore aucun correctif à cette étape.
+
+4. IMPORTANT — NE PAS REPRODUIRE LES ERREURS DES CHANTIERS PRÉCÉDENTS
+
+Plusieurs sessions dites de « consolidation », « nettoyage » ou « récupération » ont elles-mêmes produit de nouvelles régressions.
+
+Par conséquent :
+
+### Il est interdit de raisonner ainsi :
+
+> fichier mal propriétaire → on supprime son wrapper → propriétaire officiel restauré → problème réglé.
+
+Avant de retirer ou neutraliser quoi que ce soit, il faut identifier **TOUS les comportements gameplay actuellement transportés par cette couche**.
+
+Même une couche architecturalement mauvaise peut aujourd’hui être la seule à assurer une fonctionnalité validée.
+
+La suppression n’est acceptable qu’après preuve de conservation du comportement.
+
+---
+
+5. UNITÉ DE TRAVAIL : L’INVARIANT GAMEPLAY
+
+La matrice principale du chantier ne doit PAS être une liste de fonctions JavaScript.
+
+Elle doit être une matrice :
+
+| Attendu gameplay | Situation initiale | Déclencheur | Initiative BlueFox | Intervention joueur | Résultat observable attendu | Effets secondaires autorisés | Interdits | Persistance / reprise | Validé historiquement ? | État HEAD | Propriétaire(s) runtime réellement impliqués | Verdict |
+| ---------------- | ------------------ | ----------- | ------------------ | ------------------- | --------------------------- | ---------------------------- | --------- | --------------------- | ----------------------- | --------- | -------------------------------------------- | ------- |
+
+Le document Gameplay V2 doit fournir la base de cette matrice.
+
+Complète-la avec les références du dépôt et l’historique pertinent lorsque nécessaire.
+
+
+
+6. Après ma validation de la stratégie
+
+Tu réalises le correctif en repartant exclusivement des fichiers du commit courant ou de la cible désignée.
+
+Contraintes de livraison :
+
+ne modifier que les fichiers strictement nécessaires ;
+conserver toutes les fonctions déjà validées présentes dans ces fichiers ;
+aucun fichier avec suffixe de version ajouté pour le patch ;
+aucun README parasite ;
+aucun .bat, .ps1 ou .patch sauf demande ;
+ZIP contenant uniquement les fichiers réellement modifiés ;
+vérifier le diff contre le commit de départ ;
+effectuer les tests disponibles ;
+ne jamais annoncer le correctif comme validé si une partie n’a pas pu être vérifiée.
+
+7. Une fois le correctif validé en jeu
+
+On décide ensemble s’il faut :
+
+le commiter ;
+mettre à jour MASTER.md, ARCHITECTURE_TECHNIQUE.md, ROADMAP_TODO.md, DEV_HISTORIQUE.md et les autres références officielles réellement concernées.
+
+
+----------------
+Chantier en cours : 
+
+Chantier BlueFox : P0 — [sujet].
+Applique le protocole projet déjà établi. Audite le commit courant + nos validations  + les documents IMI et contrat Gameplay. Fais-moi d’abord une stratégie d’intégration synthétique et justifiée. Après ma validation, génère le correctif propre prêt à commiter.
