@@ -29,7 +29,16 @@
     const directory = slash >= 0 ? raw.slice(0, slash + 1) : "";
     const filename = slash >= 0 ? raw.slice(slash + 1) : raw;
     const encoded = `${directory}${encodeURIComponent(filename)}`;
-    return [...new Set([value, raw, encoded].filter(Boolean))];
+    // Les cartes sauvegardées avant la conversion média peuvent encore porter
+    // l'ancien nom PNG. Le catalogue conserve le nom logique et son URL WebP.
+    const logicalName = filename.replace(/\.png$/i, ".webp").toLocaleLowerCase("fr");
+    const replacement = registeredEntries.get(logicalName);
+    const mappedUrl = replacement ? urlOf(replacement) : "";
+    const mappedSlash = mappedUrl.lastIndexOf("/");
+    const encodedMapped = mappedUrl
+      ? `${mappedUrl.slice(0, mappedSlash + 1)}${encodeURIComponent(mappedUrl.slice(mappedSlash + 1))}`
+      : "";
+    return [...new Set([value, raw, encoded, mappedUrl, encodedMapped].filter(Boolean))];
   };
 
   const readableName = (value) =>

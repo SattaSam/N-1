@@ -7,11 +7,11 @@ window.BlueFoxCustomMaps = [
     "plateauCount": 3,
     "profile": "crystalline",
     "terrainUrls": [
-      "Images/01_0Crash_Crystal.png",
-      "Images/01_0Crash_Crystal.png",
-      "Images/01_0Crash_Crystal.png"
+      "Images/030_0Crash_Crystal.png",
+      "Images/030_0Crash_Crystal.png",
+      "Images/030_0Crash_Crystal.png"
     ],
-    "terrainUrl": "Images/01_0Crash_Crystal.png",
+    "terrainUrl": "Images/030_0Crash_Crystal.png",
     "sceneUrl": "./Images/1Crystal site du crash.png",
     "seed": 1176255096,
     "palette": {
@@ -660,7 +660,7 @@ window.BlueFoxCustomMaps = [
       "./Images/014_1.png"
     ],
     "terrainUrl": "./Images/014_1.png",
-    "sceneUrl": "./Images/14Désert magnétique aux roches en lévitation.png",
+    "sceneUrl": "./Images/14Désert magnétique aux roches en lévitation.webp",
     "seed": 111003,
     "palette": {
       "ground": 8414289,
