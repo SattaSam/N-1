@@ -19,6 +19,7 @@
   ]);
 
   const isFlora = (definition, type = "") => {
+    if (definition?.passiveBehavior?.enabled === false) return false;
     const tags = tagSet(definition);
     return definition?.category === "flora" ||
       definition?.family === "flora" ||

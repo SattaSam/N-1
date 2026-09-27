@@ -2362,6 +2362,7 @@
         harvestPriority: 0,
         danger: 0
       }),
+      passiveBehavior: Object.freeze({ enabled: false }),
       build: ruinDebris
     }),
 

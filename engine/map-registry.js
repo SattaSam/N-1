@@ -956,7 +956,7 @@
           } else if (type === "frond" || type === "spore") {
             root.rotation.z = pulse * 0.018;
             root.rotation.x = Math.cos(elapsed * 0.72 + phase) * 0.012;
-          } else if (type === "needle" || type === "debris") {
+          } else if (type === "needle") {
             root.children.forEach((part) => {
               if (part.material?.emissive) {
                 part.material.emissiveIntensity = 0.5 + (pulse + 1) * 0.15;

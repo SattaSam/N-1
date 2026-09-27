@@ -15,7 +15,7 @@
   const nowSeconds = () => (global.performance?.now?.() || Date.now()) / 1000;
 
   const isFlora = (definition, type) => {
-    if (!definition || EXCLUDED_TYPES.has(type)) return false;
+    if (!definition || definition.passiveBehavior?.enabled === false || EXCLUDED_TYPES.has(type)) return false;
     const tags = new Set([
       ...(definition.spawn?.tags || []),
       ...(definition.spawnProfile?.tags || []),
