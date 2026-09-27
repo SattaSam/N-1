@@ -1231,6 +1231,7 @@
       const leafMaterial = material(THREE, { color: 0x75b58b, emissive: 0x123f32, emissiveIntensity: 0.18, roughness: 0.76, side: THREE.DoubleSide });
       const sphereMaterial = material(THREE, { color: 0xbcecff, emissive: 0x7ccfff, emissiveIntensity: 1.35, roughness: 0.2 });
       const stemCount = 7 + (variant % 3);
+      const stemGeometries = [];
       let sphereAnchor = null;
       for (let index = 0; index < stemCount; index += 1) {
         const angle = (index / stemCount) * Math.PI * 2 + variant * 0.17;
@@ -1244,8 +1245,7 @@
           new THREE.Vector3(baseX + Math.cos(angle) * lean * 0.45, height * 0.72, baseZ + Math.sin(angle) * lean * 0.45),
           new THREE.Vector3(baseX + Math.cos(angle) * lean, height, baseZ + Math.sin(angle) * lean)
         ]);
-        const stem = new THREE.Mesh(new THREE.TubeGeometry(curve, 14, 0.025 + (index % 2) * 0.006, 6, false), stemMaterial);
-        plant.add(stem);
+        stemGeometries.push(new THREE.TubeGeometry(curve, 14, 0.025 + (index % 2) * 0.006, 6, false));
         if (index === Math.floor(stemCount / 2)) sphereAnchor = curve.getPoint(0.72);
         const leafCount = index % 3 === 0 ? 2 : 1;
         for (let leafIndex = 0; leafIndex < leafCount; leafIndex += 1) {
@@ -1259,6 +1259,29 @@
           plant.add(leaf);
         }
       }
+      // Les tiges partagent le même matériau et ne sont pas animées séparément.
+      // Une géométrie commune conserve leurs sommets tout en réduisant les draw calls.
+      const positions = [];
+      const normals = [];
+      const uvs = [];
+      const indices = [];
+      let vertexOffset = 0;
+      for (const geometry of stemGeometries) {
+        positions.push(...geometry.getAttribute("position").array);
+        normals.push(...geometry.getAttribute("normal").array);
+        uvs.push(...geometry.getAttribute("uv").array);
+        indices.push(...Array.from(geometry.index.array, (index) => index + vertexOffset));
+        vertexOffset += geometry.getAttribute("position").count;
+        geometry.dispose();
+      }
+      const stemsGeometry = new THREE.BufferGeometry();
+      stemsGeometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+      stemsGeometry.setAttribute("normal", new THREE.Float32BufferAttribute(normals, 3));
+      stemsGeometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+      stemsGeometry.setIndex(indices);
+      const stems = new THREE.Mesh(stemsGeometry, stemMaterial);
+      stems.name = "LunarVineStems";
+      plant.add(stems);
       const coreSphere = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 10), sphereMaterial);
       coreSphere.name = "LunarCoreSphere";
       coreSphere.position.copy(sphereAnchor || new THREE.Vector3(0, 2.2, 0));
