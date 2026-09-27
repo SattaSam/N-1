@@ -1,0 +1,179 @@
+.save-game-controls {
+  position: relative;
+  display: grid;
+  gap: 7px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, .12);
+}
+
+.save-game-controls > h3,
+.save-game-controls > p {
+  margin: 0;
+}
+
+.save-game-controls > p {
+  color: #a9c7d8;
+  font-size: 10px;
+}
+
+.save-game-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.save-game-controls button {
+  min-height: 30px;
+  padding: 6px 8px;
+  border: 1px solid rgba(100, 220, 255, .26);
+  border-radius: 7px;
+  color: #dff8ff;
+  background: rgba(14, 55, 84, .58);
+  font-size: 10px;
+  line-height: 1.15;
+  cursor: pointer;
+}
+
+.save-game-controls button:disabled {
+  opacity: .42;
+  cursor: not-allowed;
+}
+
+.save-game-controls .new-game-button,
+.save-game-controls .new-game-confirm-button {
+  border-color: rgba(255, 154, 120, .32);
+  background: rgba(105, 32, 24, .42);
+}
+
+.save-game-popover {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  padding: 9px;
+  border: 1px solid rgba(100, 220, 255, .24);
+  border-radius: 8px;
+  background: rgba(5, 24, 39, .96);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, .28);
+}
+
+.new-game-confirmation {
+  grid-template-columns: 1fr 1fr;
+  border-color: rgba(255, 154, 120, .3);
+  background: rgba(58, 22, 22, .96);
+}
+
+.new-game-confirmation p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #ffd6ca;
+  font-size: 10px;
+}
+
+/* Premier lancement : le joueur ne voit que Nouvelle partie. */
+.save-game-controls.first-launch > h3,
+.save-game-controls.first-launch > .save-game-status,
+.save-game-controls.first-launch .save-game-button,
+.save-game-controls.first-launch .load-game-button {
+  display: none;
+}
+
+.save-game-controls.first-launch {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.save-game-controls.first-launch .save-game-actions {
+  grid-template-columns: minmax(180px, 260px);
+  justify-content: center;
+}
+
+/* Intro nouvelle partie. Aucun nouveau module UI : l'overlay appartient au Save UI. */
+html.bluefox-intro-open,
+html.bluefox-intro-open body,
+html.bluefox-first-launch-open,
+html.bluefox-first-launch-open body {
+  overflow: hidden !important;
+}
+
+.bluefox-first-launch-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483645;
+  display: grid;
+  place-items: center;
+  background: #000;
+}
+
+.bluefox-first-launch-button {
+  min-width: min(320px, calc(100vw - 40px));
+  min-height: 52px;
+  padding: 12px 22px;
+  border: 1px solid rgba(125, 220, 255, .72);
+  border-radius: 9px;
+  color: #effcff;
+  background: rgba(14, 55, 84, .78);
+  box-shadow: 0 0 28px rgba(81, 203, 255, .18);
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.bluefox-first-launch-button:hover,
+.bluefox-first-launch-button:focus-visible {
+  background: rgba(18, 75, 108, .92);
+  outline: 2px solid rgba(125, 220, 255, .7);
+  outline-offset: 3px;
+}
+
+.bluefox-intro-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483646;
+  display: grid;
+  place-items: center;
+  background: #000;
+}
+
+.bluefox-intro-video {
+  width: 100vw;
+  height: 100vh;
+  object-fit: contain;
+  background: #000;
+}
+
+.bluefox-intro-skip {
+  position: fixed;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 2147483647;
+  min-width: 96px;
+  min-height: 38px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, .52);
+  border-radius: 8px;
+  color: #fff;
+  background: rgba(0, 0, 0, .58);
+  font: inherit;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+
+.bluefox-intro-skip:hover,
+.bluefox-intro-skip:focus-visible {
+  background: rgba(18, 48, 66, .82);
+  outline: 2px solid rgba(125, 220, 255, .7);
+  outline-offset: 2px;
+}
+
+@media (max-width: 520px) {
+  .save-game-actions {
+    grid-template-columns: repeat(3, minmax(78px, 1fr));
+    overflow-x: auto;
+  }
+
+  .save-game-controls.first-launch .save-game-actions {
+    grid-template-columns: minmax(160px, 1fr);
+    overflow: visible;
+  }
+}

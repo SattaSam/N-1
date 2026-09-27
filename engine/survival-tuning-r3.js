@@ -1,0 +1,1 @@
+(function(global){"use strict";const BF=global.BlueFox3D=global.BlueFox3D||{};if(BF.SurvivalTuningR3)return;BF.SurvivalTuningR3=Object.freeze({version:"survival-tuning-r3",owner:"survival-ai-bridge",integrated:true});})(window);

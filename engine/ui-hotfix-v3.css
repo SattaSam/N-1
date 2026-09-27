@@ -1,0 +1,53 @@
+/* BlueFox Odyssey — UI Hotfix V3
+   - suppression du décalage supérieur du shell 3D
+   - cadre des jauges visible uniquement au survol */
+
+html,
+body,
+#root {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden !important;
+}
+
+body,
+#root {
+  top: 0 !important;
+}
+
+#root {
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.bluefox-progress-hover-frame {
+  border-color: transparent !important;
+  outline-color: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transition:
+    border-color .16s ease,
+    background-color .16s ease,
+    box-shadow .16s ease,
+    backdrop-filter .16s ease !important;
+}
+
+.bluefox-progress-hover-frame:hover,
+.bluefox-progress-hover-frame:focus-within {
+  border-color: rgba(116, 221, 255, .22) !important;
+  background-color: rgba(5, 18, 32, .72) !important;
+  box-shadow:
+    inset 0 0 18px rgba(61, 179, 218, .05),
+    0 8px 24px rgba(0, 0, 0, .22) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
