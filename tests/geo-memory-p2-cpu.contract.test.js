@@ -1,0 +1,10 @@
+const fs=require('fs'),path=require('path'),assert=require('assert/strict');
+const ROOT=process.env.TARGET_ROOT||path.join(__dirname,'..');
+const mm=fs.readFileSync(path.join(ROOT,'engine/mission-manager.js'),'utf8');
+assert.match(mm,/knownDestinationCandidates\(/);
+assert.match(mm,/BF\.getKnownSites\(siteCriteria\)\.slice\(0, 24\)/);
+assert.match(mm,/knownDestinationSignature/);
+assert.match(mm,/previous\?\.decisionResolved === true/);
+assert.doesNotMatch(mm,/ObjectEvents\?\.history|ObjectEvents\.history/);
+assert.match(mm,/this\.engine\?\.discoveredMaps instanceof Set/);
+console.log('PASS GEO-MEM-P2 CPU bounded + no history/world oracle scan');

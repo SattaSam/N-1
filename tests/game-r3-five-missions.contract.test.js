@@ -1,0 +1,17 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),path=require('path');
+const ROOT=path.join(__dirname,'..');
+const window={console,BlueFox3D:{}}; window.window=window; vm.runInNewContext(fs.readFileSync(path.join(ROOT,'data/bible-catalog.js'),'utf8'),window,{filename:'bible-catalog.js'});
+const byId=new Map(window.BlueFox3D.BibleCatalog.map(m=>[m.id,m]));
+for(const id of ['GAME-collection_samples','GAME-collection_variety','GAME-travel_biomes','GAME-travel_short','GAME-travel_long']) assert(byId.has(id),`${id} absent`);
+const samples=byId.get('GAME-collection_samples');
+assert.equal(samples.trigger.type,'exploration.map_discovered'); assert.equal(samples.trigger.count,4); assert.equal(samples.trigger.uniqueOnly,true); assert.deepEqual(Array.from(samples.prerequisites),['GAME-survival_stable']);
+assert.equal(samples.sequence.find(s=>s.slot==='mineral').target,3); assert.equal(samples.sequence.find(s=>s.slot==='plant').target,1); assert.equal(samples.sequence.find(s=>s.slot==='other').target,1);
+const variety=byId.get('GAME-collection_variety');
+assert.deepEqual(Array.from(variety.prerequisites),['GAME-collection_samples']);
+assert.equal(variety.sequence.find(s=>s.slot==='newMap').params.newOnly,true); assert.equal(variety.sequence.find(s=>s.slot==='newMap').params.distinctBy,'mapId');
+const varStep=variety.sequence.find(s=>s.slot==='variety'); assert.equal(varStep.target,5); assert.equal(varStep.params.distinctBy,'family'); assert.equal(varStep.params.requiredMapFact,'tutorialExcursion:GAME-collection_variety'); assert.equal(varStep.params.requiredMapField,'generatedTargetMapId');
+assert.equal(variety.completionGate.requireDeposit,true); assert.equal(variety.completionGate.mapId,'crystal');
+const biomes=byId.get('GAME-travel_biomes'); assert.deepEqual(Array.from(biomes.prerequisites),['GAME-exploration_complete']); assert.equal(biomes.slots.explore.target,3); assert.equal(biomes.slots.explore.params.distinctBy,'biomeId');
+const short=byId.get('GAME-travel_short'); assert.deepEqual(Array.from(short.prerequisites),['GAME-foundation','GAME-exploration_total_20']); assert.equal(short.slots.travel.target,3); assert.equal(short.slots.travel.params.newOnly,true); assert.equal(short.slots.travel.params.distinctBy,'mapId'); assert.equal(short.slots.travel.params.direction,'north'); assert.equal(short.navigation.repeatUnknownTravelUntilComplete,true);
+const long=byId.get('GAME-travel_long'); assert.deepEqual(Array.from(long.prerequisites),['GAME-travel_short']); assert.equal(long.slots.travel.target,8); assert.equal(long.slots.travel.params.newOnly,true); assert.equal(long.slots.travel.params.distinctBy,'mapId'); assert.equal(long.slots.travel.params.direction,'north'); assert.equal(long.navigation.repeatUnknownTravelUntilComplete,true);
+console.log('PASS GAME-R3 five mission contracts');

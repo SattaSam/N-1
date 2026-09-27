@@ -1,0 +1,13 @@
+const fs=require('fs'),vm=require('vm'),path=require('path'),assert=require('assert/strict');
+const ROOT=process.argv[2]?path.resolve(process.argv[2]):path.join(__dirname,'..');
+const eventsSrc=fs.readFileSync(path.join(ROOT,'engine/object-event-registry.js'),'utf8');
+const progSrc=fs.readFileSync(path.join(ROOT,'engine/progression-multisystem.js'),'utf8');
+assert(eventsSrc.includes('siteContextCache = new WeakMap()'),'ObjectEvents must cache resolved site context');
+assert(eventsSrc.includes('(!directMicroSceneId || (!pivot && !instanceRoot))'),'map MSC index must be fallback-only');
+assert(progSrc.includes('siteIndexes = this.createSiteIndexes()'),'site queries must use prebuilt indexes');
+assert(progSrc.includes('this.indexSiteValue("resource", key, siteId)'),'resource index updated incrementally');
+assert(progSrc.includes('this.indexSiteValue("family", key, siteId)'),'family index updated incrementally');
+const getSites=progSrc.slice(progSrc.indexOf('getKnownSites(criteria = {})'),progSrc.indexOf('getKnownSite(siteId)'));
+assert(!getSites.includes('ObjectEvents.history'),'known-site query must not scan event history');
+assert(!getSites.includes('currentMap'),'known-site query must not traverse current map');
+console.log('PASS GEO-MEM-P1 CPU bounded indexes + fallback-only MSC scan');

@@ -1,0 +1,21 @@
+const fs=require('fs'),vm=require('vm'),path=require('path'),assert=require('assert/strict');
+const ROOT=process.argv[2] ? path.resolve(process.argv[2]) : path.join(__dirname,'..');
+class CE{constructor(type,init={}){this.type=type;this.detail=init.detail;}}
+const store=new Map(),listeners=new Map();
+const window={console,Math,JSON,Set,Map,WeakMap,Date,CustomEvent:CE,localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,String(v))},addEventListener(t,f){if(!listeners.has(t))listeners.set(t,new Set());listeners.get(t).add(f)},dispatchEvent(e){for(const f of listeners.get(e.type)||[])f(e);return true},BlueFox3D:{}};window.window=window;
+const ctx=vm.createContext(window),BF=window.BlueFox3D,load=f=>vm.runInContext(fs.readFileSync(path.join(ROOT,f),'utf8'),ctx,{filename:f});
+load('engine/object-event-registry.js');load('engine/progression-multisystem.js');
+BF.currentEngine={currentMapId:'map-ruin',currentMap:{group:{userData:{microScenes:[]}}}};
+const outer={name:'PersistentMicroScene:ruin-X',userData:{persistent:true,persistentMicroSceneId:'ruin-X',microSceneId:'MSC-RUIN'},position:{x:31,y:0,z:-11},parent:null};
+const inner={userData:{microSceneInstance:true,microSceneId:'MSC-RUIN',persistentMicroSceneId:'ruin-X'},position:{x:0,y:0,z:0},parent:outer};
+const pivot={userData:{microScenePivot:true,microSceneId:'MSC-RUIN',microSceneObjectIndex:4},position:{x:2,y:0,z:1},parent:inner};
+const def={id:'debris',knowledge:{family:'archaeology'},spawn:{tags:['ruin']}};
+const root={userData:{catalogId:'debris',instanceId:'volatile-1',functional:def,microSceneId:'MSC-RUIN',microScenePivot:pivot,persistentMicroSceneId:'ruin-X'},parent:pivot};
+const hitbox={userData:{worldAnchor:root,persistentMicroSceneId:'ruin-X'},parent:root};
+const e=BF.ObjectEvents.emit(BF.ObjectEvents.types.OBJECT_INSPECTED,hitbox,{mapId:'map-ruin'});
+assert.equal(e.microSceneInstanceId,'persistent:ruin-X');
+assert.equal(e.microSceneAnchor.x,31);assert.equal(e.microSceneAnchor.y,0);assert.equal(e.microSceneAnchor.z,-11);
+assert.equal(e.microSceneObjectIndex,4);
+const site=BF.getKnownSite('persistent:ruin-X');
+assert(site);assert.equal(site.mapId,'map-ruin');assert.equal(site.persistentMicroSceneId,'ruin-X');assert.equal(site.knownInstanceCount,1);
+console.log('PASS GEO-MEM-P1 persistent MSC identity/anchor authority');

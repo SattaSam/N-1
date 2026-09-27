@@ -1,0 +1,20 @@
+const fs=require('fs'),vm=require('vm'),path=require('path'),assert=require('assert/strict');
+const ROOT=process.argv[2] ? path.resolve(process.argv[2]) : path.join(__dirname,'..');
+class CE{constructor(type,init={}){this.type=type;this.detail=init.detail;}}
+const store=new Map(),listeners=new Map();
+const window={console,Math,JSON,Set,Map,WeakMap,Date,CustomEvent:CE,localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,String(v))},addEventListener(t,f){if(!listeners.has(t))listeners.set(t,new Set());listeners.get(t).add(f)},dispatchEvent(e){for(const f of listeners.get(e.type)||[])f(e);return true},BlueFox3D:{}};window.window=window;
+const ctx=vm.createContext(window),BF=window.BlueFox3D,load=f=>vm.runInContext(fs.readFileSync(path.join(ROOT,f),'utf8'),ctx,{filename:f});
+load('engine/object-event-registry.js');load('engine/progression-multisystem.js');
+const def={id:'fiber',resource:{inventoryKey:'fiber',family:'plant'},knowledge:{family:'flora'},spawn:{tags:['resource','plant']}};
+const root1={userData:{catalogId:'fiber',instanceId:'volatile-A',functional:def,microSceneId:'MSC-NONCUSTOM'},position:{x:7,y:0,z:8},parent:null};
+const root2={userData:{catalogId:'fiber',instanceId:'volatile-B',functional:def,microSceneId:'MSC-NONCUSTOM'},position:{x:9,y:0,z:10},parent:null};
+const h1={userData:{worldAnchor:root1},parent:root1},h2={userData:{worldAnchor:root2},parent:root2};
+const records=[{root:root1,position:{x:7,y:0,z:8},instance:{hitbox:h1}},{root:root2,position:{x:9,y:0,z:10},instance:{hitbox:h2}}];
+BF.currentEngine={currentMapId:'map-n',currentMap:{group:{userData:{microScenes:[{id:'MSC-NONCUSTOM',instanceId:'MSC-NONCUSTOM:1',instanceRoot:null,records}]}}}};
+const e1=BF.ObjectEvents.emit(BF.ObjectEvents.types.OBJECT_SEEN,h1,{mapId:'map-n'});
+const e2=BF.ObjectEvents.emit(BF.ObjectEvents.types.OBJECT_SEEN,h2,{mapId:'map-n'});
+assert.equal(e1.microSceneInstanceId,'msc:map-n:MSC-NONCUSTOM:8.00:9.00');
+assert.equal(e2.microSceneInstanceId,e1.microSceneInstanceId);
+assert.equal(e1.microSceneObjectIndex,0);assert.equal(e2.microSceneObjectIndex,1);
+const site=BF.getKnownSite(e1.microSceneInstanceId);assert(site);assert.equal(site.knownInstanceCount,2);assert.equal(site.resources.fiber.distinctInstances,2);
+console.log('PASS GEO-MEM-P1 non-custom MSC grouping without ObjectSpawner changes');

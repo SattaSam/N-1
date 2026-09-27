@@ -1,0 +1,13 @@
+'use strict';
+const fs = require('fs');
+const path = require('path');
+const assert = require('assert');
+const src = fs.readFileSync(path.join(__dirname, '..', 'engine', 'ui-enhancements.js'), 'utf8');
+assert.ok(src.includes('let journalConsolidationPending = false;'));
+assert.ok(src.includes('function requestJournalConsolidation()'));
+assert.ok(src.includes('if (target.includes("journal")) requestJournalConsolidation();'));
+assert.ok(!src.includes('const consolidatedJournalPanels = new WeakSet();'));
+assert.ok(!/setInterval\s*\(/.test(src), 'journal patch must not introduce polling');
+const calls = [...src.matchAll(/buildJournalEvolutionThemes\s*\(/g)].length;
+assert.strictEqual(calls, 2, 'builder should exist once and be invoked only from open consolidation path');
+console.log('PASS journal lazy open static');
