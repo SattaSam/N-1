@@ -1,0 +1,87 @@
+(function (global) {
+  "use strict";
+  const BF = global.BlueFox3D = global.BlueFox3D || {};
+  const definitions = Array.isArray(global.BlueFoxCustomMaps) ? global.BlueFoxCustomMaps : [];
+  definitions.forEach((source) => {
+    if (!source?.id || BF.maps?.[source.id]) return;
+    BF.maps[source.id] = {
+      ...source,
+      zones: Array.from({ length: Math.max(1, Number(source.plateauCount) || 1) }, (_, index) => `Plateau ${index + 1}`),
+      entry: source.entry || { x: 0, z: 10 },
+      exits: {},
+      traits: source.traits || [{ id: "custom", label: "composition personnalisée" }],
+      description: source.description || `${source.name} — map créée dans le laboratoire mono-map.`,
+      synthesis: source.synthesis || "Je vais examiner l’agencement de cette map personnalisée.",
+      resourceHints: source.resourceHints || "Ressources distribuées par le profil de biome et les micro-scènes enregistrées.",
+      palette: source.palette || { ground: 0x5b526f, accent: 0xc795ff }
+    };
+  });
+
+  const baseBuildMap = BF.buildMap;
+  if (typeof baseBuildMap !== "function" || baseBuildMap.customMapRegistryWrapped) return;
+  const wrappedBuildMap = function buildMapWithCustomScenes(THREE, definition, assets, renderer) {
+    const built = baseBuildMap(THREE, definition, assets, renderer);
+    const customMicroScenes = Array.isArray(definition.customMicroScenes)
+      ? definition.customMicroScenes
+      : [];
+    const customObjects = Array.isArray(definition.customObjects)
+      ? definition.customObjects
+      : [];
+    if (!customMicroScenes.length && !customObjects.length) return built;
+    const spawner = new BF.ObjectSpawner({ THREE, scene: built.group, palette: definition.palette });
+    customMicroScenes.forEach((placement, index) => {
+      const root = new THREE.Group();
+      const position = placement.position || [0, 0, 0];
+      const rotation = placement.rotation || [0, 0, 0];
+      root.position.set(...position);
+      root.rotation.set(...rotation);
+      root.userData.customMicroSceneId = placement.id;
+      root.userData.customMicroSceneIndex = index;
+      built.group.add(root);
+      const records = spawner.spawnMicroScene(placement.id, { origin: { x: 0, y: 0, z: 0 }, scene: root, force: true, source: `custom-map:${definition.id}` });
+      records.forEach((record) => {
+        if (record.instance.hitbox) built.interactables.push(record.instance.hitbox);
+        record.instance.colliders.forEach((collider) => {
+          const transformRoot = record.objectRoot || record.root;
+          transformRoot.updateWorldMatrix(true, false);
+          const position = transformRoot.localToWorld(collider.offset.clone());
+          built.colliders.push({ position, radius: collider.radius, owner: record.root });
+        });
+      });
+    });
+    customObjects.forEach((placement, index) => {
+      if (!placement?.type) return;
+      const position = placement.position || [0, 0, 0];
+      const record = spawner.spawn(placement.type, {
+        position: { x: Number(position[0]) || 0, y: Number(position[1]) || 0, z: Number(position[2]) || 0 },
+        rotation: Number(placement.rotation) || 0,
+        variant: Number(placement.variant) || 0,
+        force: true,
+        scene: built.group,
+        source: `custom-map:${definition.id}`,
+        instanceId: placement.instanceId || `custom-map:${definition.id}:object:${index}`
+      });
+      if (!record) return;
+      const metadata = {
+        ...(placement.userData || {}),
+        customMapObject: true,
+        customMapObjectIndex: index,
+        cityMapId: definition.id
+      };
+      if (record.root?.userData) Object.assign(record.root.userData, metadata);
+      if (record.instance?.hitbox?.userData) Object.assign(record.instance.hitbox.userData, metadata);
+      if (record.instance?.hitbox) built.interactables.push(record.instance.hitbox);
+      (record.instance?.colliders || []).forEach((collider) => {
+        const transformRoot = record.objectRoot || record.root;
+        if (!transformRoot || !collider?.offset?.clone) return;
+        transformRoot.updateWorldMatrix(true, false);
+        const worldPosition = transformRoot.localToWorld(collider.offset.clone());
+        built.colliders.push({ position: worldPosition, radius: collider.radius, owner: record.root });
+      });
+    });
+    return built;
+  };
+  wrappedBuildMap.customMapRegistryWrapped = true;
+  BF.buildMap = wrappedBuildMap;
+  BF.CustomMapRegistry = Object.freeze({ list: () => definitions.slice(), count: definitions.length });
+})(window);
