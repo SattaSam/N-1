@@ -1083,10 +1083,17 @@
       if (!explicit && !fromFact) return null;
       const merged = { ...(explicit || {}), ...(fromFact || {}) };
       const criteria = {};
-      ["siteId", "microSceneId", "resource", "family", "biome"].forEach((key) => {
+      ["siteId", "microSceneId", "resource", "family", "biome", "mapId"].forEach((key) => {
         const value = String(merged[key] ?? "").trim();
         if (value) criteria[key] = value;
       });
+      if (Array.isArray(merged.excludeObjectIds)) {
+        criteria.excludeObjectIds = [...new Set(
+          merged.excludeObjectIds
+            .map((value) => String(value || "").trim())
+            .filter(Boolean)
+        )];
+      }
       const minKnownInstances = Number(merged.minKnownInstances);
       if (Number.isFinite(minKnownInstances) && minKnownInstances > 0) {
         criteria.minKnownInstances = Math.max(1, Math.floor(minKnownInstances));
@@ -1094,13 +1101,114 @@
       return Object.keys(criteria).length ? criteria : null;
     }
 
-    missionNodeKnownDestinationCriteria(node) {
+    missionRelationKnownMapCriteria(tree, node) {
+      const relation = node?.params?.relation;
+      const fromSlot = String(relation?.fromSlot || "").trim();
+      const sameBy = Array.isArray(relation?.sameBy)
+        ? relation.sameBy.map(String)
+        : [];
+      if (!tree || !fromSlot || !sameBy.includes("instanceId")) return null;
+
+      const source = tree.find?.(`${tree.id}:${fromSlot}`);
+      if (!source) return null;
+      const evidences = (source.historyValues || []).map((value) => {
+        try {
+          const parsed = JSON.parse(value);
+          return parsed?.owner === "object-m0" ? parsed.evidence || null : null;
+        } catch {
+          return null;
+        }
+      }).filter(Boolean);
+
+      const reference = [...evidences].reverse().find((evidence) =>
+        String(evidence?.mapId || "").trim() &&
+        String(evidence?.instanceId || "").trim()
+      );
+      return reference
+        ? { mapId: String(reference.mapId).trim() }
+        : null;
+    }
+
+    knownObjectMatchesGeographicFamily(objectId, storedFamily, family) {
+      const requested = this.normalizeKnownDestinationToken(family);
+      if (!requested) return false;
+      if (this.normalizeKnownDestinationToken(storedFamily) === requested) return true;
+
+      const id = String(objectId || "").trim();
+      const definition =
+        BF.ObjectLibrary?.getById?.(id) ||
+        BF.ObjectLibrary?.get?.(id) ||
+        null;
+      if (!definition) return false;
+      const semanticValues = [
+        definition.knowledge?.family,
+        definition.resource?.family,
+        definition.category,
+        definition.type,
+        definition.subtype,
+        ...(Array.isArray(definition.spawn?.tags) ? definition.spawn.tags : [])
+      ].map((value) => this.normalizeKnownDestinationToken(value)).filter(Boolean);
+      return semanticValues.includes(requested);
+    }
+
+    hasKnownGeographicFamily(family) {
+      const key = String(family || "").trim();
+      if (!key) return false;
+      if (
+        typeof BF.getKnownSites === "function" &&
+        BF.getKnownSites({ family: key }).length > 0
+      ) return true;
+      const discovered = this.engine?.discoveredMaps instanceof Set
+        ? this.engine.discoveredMaps
+        : BF.discoveredMaps instanceof Set
+          ? BF.discoveredMaps
+          : new Set([String(this.engine?.currentMapId || "")].filter(Boolean));
+      if (typeof BF.getMapProgressionIndicators !== "function") return false;
+      return [...discovered].some((mapId) => {
+        const bucket = BF.getMapProgressionIndicators(String(mapId));
+        return Object.entries(bucket?.uniqueObjects || {}).some(([objectId, detail]) =>
+          this.knownObjectMatchesGeographicFamily(objectId, detail?.family, key)
+        );
+      });
+    }
+
+    missionNodeKnownDestinationCriteria(node, tree = null) {
       const params = node?.params || {};
       const criteria = {};
       ["siteId", "microSceneId", "resource", "family", "biome"].forEach((key) => {
         const value = String(params[key] ?? "").trim();
         if (value) criteria[key] = value;
       });
+
+      const relationCriteria = this.missionRelationKnownMapCriteria(tree, node);
+      if (relationCriteria?.mapId) criteria.mapId = relationCriteria.mapId;
+
+      const subject = String(params.subject || "").trim();
+      const distinctByObjectId =
+        String(params.distinctBy || "").trim() === "objectId";
+      const multiTypeObjective =
+        distinctByObjectId && Math.max(1, Number(node?.target) || 1) > 1;
+      const worldSearchSubject = this.normalizeKnownDestinationToken(subject);
+      if (
+        !criteria.family &&
+        worldSearchSubject === "mineral" &&
+        multiTypeObjective &&
+        !relationCriteria?.mapId &&
+        this.hasKnownGeographicFamily(worldSearchSubject)
+      ) {
+        criteria.family = worldSearchSubject;
+      }
+
+      if (
+        distinctByObjectId &&
+        Array.isArray(node?.distinctValues) &&
+        node.distinctValues.length
+      ) {
+        criteria.excludeObjectIds = [...new Set(
+          node.distinctValues.map((value) => String(value || "").trim()).filter(Boolean)
+        )];
+      }
+
       const minKnownInstances = Number(params.minKnownInstances);
       if (Number.isFinite(minKnownInstances) && minKnownInstances > 0) {
         criteria.minKnownInstances = Math.max(1, Math.floor(minKnownInstances));
@@ -1141,6 +1249,7 @@
         /^(?:OPP|ANN|PROS)-/.test(String(missionId)) ||
         this.missionHasHistoricalCollectionObjective(missionId)
       ) return false;
+      const tree = this.trees.get(missionId) || null;
       return (availableMapStates || []).some(({ node, state }) => {
         if (!node || node.isComplete) return false;
         if (
@@ -1148,7 +1257,7 @@
           String(state.targetMapId || "") === currentMapId
         ) return true;
         const criteria =
-          this.missionNodeKnownDestinationCriteria(node) ||
+          this.missionNodeKnownDestinationCriteria(node, tree) ||
           this.missionGenerationKnownDestinationCriteria(mission);
         if (!criteria) return false;
         const travel = {
@@ -1184,6 +1293,7 @@
         /^(?:OPP|ANN|PROS)-/.test(String(missionId)) ||
         this.missionHasHistoricalCollectionObjective(missionId)
       ) return null;
+      const tree = this.trees.get(missionId) || null;
       const candidates = [];
       (availableMapStates || []).forEach(({ node, state }) => {
         if (!node || node.isComplete) return;
@@ -1192,7 +1302,7 @@
           String(state.targetMapId || "") === currentMapId
         ) return;
         const criteria =
-          this.missionNodeKnownDestinationCriteria(node) ||
+          this.missionNodeKnownDestinationCriteria(node, tree) ||
           this.missionGenerationKnownDestinationCriteria(mission);
         if (!criteria) return;
         const travel = {
@@ -1290,15 +1400,32 @@
         return normalized;
       };
       const siteCriteria = {};
-      ["siteId", "microSceneId", "resource", "family"].forEach((key) => {
+      ["siteId", "microSceneId", "resource", "family", "mapId"].forEach((key) => {
         if (criteria[key]) siteCriteria[key] = criteria[key];
       });
-      const hasSiteCriteria = Object.keys(siteCriteria).length > 0;
+      const hasSemanticSiteCriteria = ["siteId", "microSceneId", "resource", "family"]
+        .some((key) => Boolean(siteCriteria[key]));
+      const excludedObjectIds = new Set(
+        Array.isArray(criteria.excludeObjectIds)
+          ? criteria.excludeObjectIds.map((value) => String(value || "").trim()).filter(Boolean)
+          : []
+      );
+      const siteHasUsefulDistinctObject = (site) => {
+        if (!excludedObjectIds.size) return true;
+        const instances = Object.values(site?.instances || {});
+        return instances.some((instance) => {
+          const objectId = String(instance?.objectId || "").trim();
+          if (!objectId || excludedObjectIds.has(objectId)) return false;
+          if (criteria.family && !instance?.families?.[criteria.family]) return false;
+          if (criteria.resource && !instance?.resources?.[criteria.resource]) return false;
+          return true;
+        });
+      };
       let rawCandidates = [];
 
-      if (hasSiteCriteria) {
+      if (hasSemanticSiteCriteria) {
         const knownSites = typeof BF.getKnownSites === "function"
-          ? BF.getKnownSites(siteCriteria).slice(0, 24)
+          ? BF.getKnownSites(siteCriteria)
           : [];
         rawCandidates = knownSites
           .filter((site) => site?.mapId && discovered.has(String(site.mapId)))
@@ -1307,6 +1434,8 @@
             !criteria.minKnownInstances ||
             Number(site.knownInstanceCount) >= Number(criteria.minKnownInstances)
           )
+          .filter(siteHasUsefulDistinctObject)
+          .slice(0, 24)
           .map((site) => ({
             mapId: String(site.mapId),
             siteId: site.siteId || null,
@@ -1320,6 +1449,52 @@
               ? Number(site.families?.[criteria.family]?.distinctInstances) || 0
               : 0
           }));
+
+        // Les objets de population normale n'ont pas nécessairement de contexte
+        // MSC et ne figurent donc pas dans knownSites. ProgressionMultiSystem
+        // conserve néanmoins leur objectId + family par map dans mapIndicators.
+        // Cette source complète la mémoire de sites sans créer de second registre.
+        if (criteria.family && typeof BF.getMapProgressionIndicators === "function") {
+          const existingMaps = new Set(rawCandidates.map((entry) => String(entry.mapId)));
+          [...discovered].map(String).forEach((mapId) => {
+            if (existingMaps.has(mapId)) return;
+            if (criteria.biome && !this.mapMatchesKnownBiome(mapId, criteria.biome)) return;
+            const bucket = BF.getMapProgressionIndicators(mapId);
+            const usefulObjects = Object.entries(bucket?.uniqueObjects || {})
+              .filter(([objectId, detail]) =>
+                this.knownObjectMatchesGeographicFamily(
+                  objectId,
+                  detail?.family,
+                  criteria.family
+                ) &&
+                !excludedObjectIds.has(String(objectId))
+              );
+            if (!usefulObjects.length) return;
+            rawCandidates.push({
+              mapId,
+              siteId: null,
+              microSceneId: null,
+              anchor: null,
+              knownInstanceCount: usefulObjects.length,
+              resourceCount: 0,
+              familyCount: usefulObjects.length
+            });
+            existingMaps.add(mapId);
+          });
+        }
+      } else if (criteria.mapId) {
+        const mapId = String(criteria.mapId);
+        rawCandidates = discovered.has(mapId)
+          ? [{
+              mapId,
+              siteId: null,
+              microSceneId: null,
+              anchor: null,
+              knownInstanceCount: 0,
+              resourceCount: 0,
+              familyCount: 0
+            }]
+          : [];
       } else if (criteria.biome) {
         rawCandidates = [...discovered]
           .map(String)

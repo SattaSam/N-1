@@ -426,7 +426,8 @@
     metadata = {},
     mapId = null,
     instanceId = null,
-    persistentMicroSceneId = null
+    persistentMicroSceneId = null,
+    legacyInstanceSequence = null
   ) => ({
     objectId: lower(metadata.objectId),
     cuoType: lower(metadata.cuoType),
@@ -435,6 +436,10 @@
     category: lower(metadata.category),
     mapId: String(mapId || ""),
     instanceId: String(instanceId || ""),
+    legacyInstanceSequence:
+      Number.isInteger(Number(legacyInstanceSequence)) && Number(legacyInstanceSequence) > 0
+        ? Number(legacyInstanceSequence)
+        : null,
     persistentMicroSceneId: String(
       persistentMicroSceneId ||
       metadata.persistentMicroSceneId ||
@@ -447,21 +452,25 @@
       eventMissionMetadata(event),
       event?.mapId,
       event?.instanceId,
-      event?.persistentMicroSceneId
+      event?.persistentMicroSceneId,
+      event?.legacyInstanceSequence
     );
 
-  const relationEvidenceFromResolved = (resolved, mapId) =>
-    relationEvidence(
+  const relationEvidenceFromResolved = (resolved, mapId) => {
+    const identity = identityOf(resolved);
+    return relationEvidence(
       {
         ...definitionMissionMetadata(resolved?.definition, resolved),
-        ...identityOf(resolved)
+        ...identity
       },
       mapId,
-      identityOf(resolved).instanceId,
+      identity.instanceId,
       resolved?.object?.userData?.persistentMicroSceneId ||
         resolved?.anchor?.userData?.persistentMicroSceneId ||
-        null
+        null,
+      identity.legacyInstanceSequence
     );
+  };
 
   const parsedRelationEvidence = (node) =>
     (node?.historyValues || []).map((value) => {
@@ -473,6 +482,68 @@
       }
     }).filter(Boolean);
 
+  // Compatibilité P3 strictement identitaire. Les anciennes instances générées
+  // par ObjectSpawner portaient <objectId>:<temps-base36>:<sequence-base36>
+  // (ou <objectId>:msc:<scene>:<temps>:<sequence>). P3 conserve désormais en
+  // parallèle l'ordinal exact qu'aurait produit ce compteur historique.
+  // Aucun rapprochement par type seul, position approchée ou famille n'est permis.
+  const legacyTemporalSequence = (instanceId, objectId) => {
+    const identity = String(instanceId || "");
+    const expectedObjectId = lower(objectId);
+    if (!identity || !expectedObjectId) return null;
+    const parts = identity.split(":");
+    if (parts.length < 3) return null;
+    const sequenceToken = parts.pop();
+    const timeToken = parts.pop();
+    const prefix = lower(parts.join(":"));
+    if (!(prefix === expectedObjectId || prefix.startsWith(`${expectedObjectId}:msc:`))) return null;
+    if (!/^[0-9a-z]{6,}$/i.test(timeToken) || !/^[0-9a-z]+$/i.test(sequenceToken)) return null;
+    const sequence = Number.parseInt(sequenceToken, 36);
+    return Number.isInteger(sequence) && sequence > 0 ? sequence : null;
+  };
+
+  const samePhysicalInstance = (left = {}, right = {}) => {
+    const leftId = String(left.instanceId || "");
+    const rightId = String(right.instanceId || "");
+    if (!leftId || !rightId) return false;
+    if (leftId === rightId) return true;
+
+    const stableContextMatches = () => {
+      const leftObject = lower(left.objectId);
+      const rightObject = lower(right.objectId);
+      const leftType = lower(left.cuoType);
+      const rightType = lower(right.cuoType);
+      const leftMap = String(left.mapId || "");
+      const rightMap = String(right.mapId || "");
+      if (!leftObject || leftObject !== rightObject) return false;
+      if (!leftType || leftType !== rightType) return false;
+      if (!leftMap || leftMap !== rightMap) return false;
+      const leftSite = String(left.persistentMicroSceneId || "");
+      const rightSite = String(right.persistentMicroSceneId || "");
+      if ((leftSite || rightSite) && (!leftSite || leftSite !== rightSite)) return false;
+      return true;
+    };
+    if (!stableContextMatches()) return false;
+
+    const legacyAgainstCurrent = (legacy, current) => {
+      const legacySequence = legacyTemporalSequence(legacy.instanceId, legacy.objectId);
+      const currentSequence = Number(current.legacyInstanceSequence);
+      return legacySequence != null &&
+        Number.isInteger(currentSequence) &&
+        currentSequence > 0 &&
+        legacySequence === currentSequence;
+    };
+
+    return legacyAgainstCurrent(left, right) || legacyAgainstCurrent(right, left);
+  };
+
+  const relationFieldMatches = (field, left, right) => {
+    if (field === "instanceId") return samePhysicalInstance(left, right);
+    return Boolean(String(left?.[field] || "")) &&
+      Boolean(String(right?.[field] || "")) &&
+      String(left[field]) === String(right[field]);
+  };
+
   const relationMatches = (tree, node, evidence) => {
     const relation = node?.params?.relation;
     if (!relation) return true;
@@ -483,15 +554,13 @@
     const differentBy = asArray(relation.differentBy).filter((field) => STEP_RELATION_FIELDS.has(field));
     return parsedRelationEvidence(source).some((reference) => {
       const same = sameBy.every((field) =>
-        String(reference[field] || "") &&
-        String(evidence[field] || "") &&
-        String(reference[field]) === String(evidence[field])
+        relationFieldMatches(field, reference, evidence)
       );
       if (!same) return false;
       return differentBy.every((field) =>
-        String(reference[field] || "") &&
-        String(evidence[field] || "") &&
-        String(reference[field]) !== String(evidence[field])
+        Boolean(String(reference[field] || "")) &&
+        Boolean(String(evidence[field] || "")) &&
+        !relationFieldMatches(field, reference, evidence)
       );
     });
   };
@@ -630,7 +699,16 @@
     if (!bound || (!bound.instanceId && !bound.objectId && !bound.cuoType && !bound.missionSceneMissionId)) return true;
     if (bound.mapId && String(event.mapId || "") !== String(bound.mapId)) return false;
     if (bound.binding === "instance" && bound.instanceId) {
-      return String(event.instanceId || "") === String(bound.instanceId);
+      return samePhysicalInstance(
+        {
+          instanceId: bound.instanceId,
+          objectId: bound.objectId,
+          cuoType: bound.cuoType,
+          mapId: bound.mapId || event.mapId,
+          persistentMicroSceneId: bound.persistentMicroSceneId || ""
+        },
+        relationEvidenceFromEvent(event)
+      );
     }
     const eventType = String(event.detail?.cuoType || "").toLowerCase();
     const sameType = bound.cuoType &&
@@ -987,6 +1065,13 @@
       resolved.object?.userData?.instanceId ||
       resolved.anchor?.userData?.instanceId || ""
     ),
+    legacyInstanceSequence: (() => {
+      const value = Number(
+        resolved.object?.userData?.legacyInstanceSequence ??
+        resolved.anchor?.userData?.legacyInstanceSequence
+      );
+      return Number.isInteger(value) && value > 0 ? value : null;
+    })(),
     objectId: String(resolved.definition?.id || "").toLowerCase(),
     cuoType: String(resolved.definition?.type || "").toLowerCase()
   });
@@ -1075,7 +1160,20 @@
     if (bound.mapId && String(engine?.currentMapId || "") !== String(bound.mapId)) return false;
     const identity = identityOf(resolved);
     if (bound.binding === "instance" && bound.instanceId) {
-      return identity.instanceId === String(bound.instanceId);
+      return samePhysicalInstance(
+        {
+          instanceId: bound.instanceId,
+          objectId: bound.objectId,
+          cuoType: bound.cuoType,
+          mapId: bound.mapId || engine?.currentMapId,
+          persistentMicroSceneId: bound.persistentMicroSceneId || ""
+        },
+        {
+          ...identity,
+          mapId: engine?.currentMapId,
+          persistentMicroSceneId: missionCandidateMicroSceneId(resolved)
+        }
+      );
     }
     const sameType = bound.cuoType &&
       identity.cuoType === String(bound.cuoType).toLowerCase();

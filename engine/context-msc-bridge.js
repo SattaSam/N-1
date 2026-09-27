@@ -57,12 +57,17 @@
     return true;
   };
 
-  const progressContextMissions = (detail = {}) => {
+  const progressContextMissions = (detail = {}, options = {}) => {
     const manager = BF.currentEngine?.missionManager;
     if (!manager?.trees?.size || !detail.microSceneId) return 0;
 
+    const missionFilter = Array.isArray(options.missionIds)
+      ? new Set(options.missionIds.map((value) => String(value)).filter(Boolean))
+      : null;
+
     let changed = 0;
     manager.trees.forEach((tree, missionId) => {
+      if (missionFilter && !missionFilter.has(String(missionId))) return;
       if (manager.ensureLifecycle?.(missionId)?.status !== "active") return;
       let treeChanged = false;
 

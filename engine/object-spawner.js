@@ -53,6 +53,10 @@
       this.random = options.random || Math.random;
       this.instances = [];
       this.instanceSequence = 0;
+      // Compteur miroir du comportement pré-P3 : il ne pilote jamais l’identité
+      // courante. Il permet seulement de rattacher strictement une preuve
+      // SAME-INSTANCE legacy à la même instance reconstruite.
+      this.legacyInstanceSequence = 0;
       this.microSceneInstances = [];
       if (!this.THREE) throw new Error("ObjectSpawner nécessite THREE.");
       if (!BF.ObjectLibrary) throw new Error("ObjectSpawner nécessite ObjectLibrary.");
@@ -100,9 +104,14 @@
         root.userData.spawnSource = options.source || "object-spawner";
         (options.scene || this.scene)?.add(root);
       }
+      const legacyInstanceSequence =
+        (!options.instanceId || options.legacyTemporalIdentity === true)
+          ? ++this.legacyInstanceSequence
+          : null;
       const instanceId = options.instanceId || `${definition.id}:${Date.now().toString(36)}:${(++this.instanceSequence).toString(36)}`;
       if (root) {
         root.userData.instanceId = instanceId;
+        if (legacyInstanceSequence != null) root.userData.legacyInstanceSequence = legacyInstanceSequence;
         root.userData.variant = options.variant || 0;
         root.userData.catalogId = definition.id;
         root.userData.libraryType = type;
@@ -111,12 +120,22 @@
       }
       if (instance.hitbox) {
         instance.hitbox.userData.instanceId = instanceId;
+        if (legacyInstanceSequence != null) instance.hitbox.userData.legacyInstanceSequence = legacyInstanceSequence;
         instance.hitbox.userData.catalogId = definition.id;
         instance.hitbox.userData.libraryType = type;
         instance.hitbox.userData.variant = options.variant || 0;
         instance.hitbox.userData.functional = definition;
+        if (
+          !Number.isFinite(Number(instance.hitbox.userData.interactionRadius)) &&
+          Array.isArray(instance.colliders) &&
+          instance.colliders.length
+        ) {
+          instance.hitbox.userData.interactionRadius = Math.max(
+            ...instance.colliders.map((collider) => Math.max(0, Number(collider?.radius) || 0))
+          );
+        }
       }
-      const record = { type, definition, instance, instanceId, root, position: { x: position.x || 0, y: position.y || 0, z: position.z || 0 } };
+      const record = { type, definition, instance, instanceId, legacyInstanceSequence, root, position: { x: position.x || 0, y: position.y || 0, z: position.z || 0 } };
       this.instances.push(record);
       return record;
     }
@@ -232,11 +251,16 @@
           }
           instanceRoot.add(objectPivot);
 
+          const legacyInstanceSequence =
+            (!options.instanceId || options.legacyTemporalIdentity === true)
+              ? ++this.legacyInstanceSequence
+              : null;
           const instanceId = options.instanceId
             ? `${options.instanceId}:${index}`
             : `${definition.id}:msc:${template.id}:${Date.now().toString(36)}:${(++this.instanceSequence).toString(36)}`;
           const metadata = {
             instanceId,
+            ...(legacyInstanceSequence != null ? { legacyInstanceSequence } : {}),
             variant: entry.variant || 0,
             catalogId: definition.id,
             libraryType: entry.type,
@@ -250,13 +274,25 @@
               specialRuntimeRoot: true
             });
           }
-          if (instance.hitbox) Object.assign(instance.hitbox.userData, metadata);
+          if (instance.hitbox) {
+            Object.assign(instance.hitbox.userData, metadata);
+            if (
+              !Number.isFinite(Number(instance.hitbox.userData.interactionRadius)) &&
+              Array.isArray(instance.colliders) &&
+              instance.colliders.length
+            ) {
+              instance.hitbox.userData.interactionRadius = Math.max(
+                ...instance.colliders.map((collider) => Math.max(0, Number(collider?.radius) || 0))
+              );
+            }
+          }
 
           const record = {
             type: entry.type,
             definition,
             instance,
             instanceId,
+            legacyInstanceSequence,
             root: objectPivot,
             objectRoot,
             pivot: objectPivot,
@@ -276,8 +312,9 @@
       }
 
       const plan = BF.MicroScenes.plan(id, options.origin, options.rotation || 0);
-      const records = plan.map((entry) => this.spawn(entry.type, {
+      const records = plan.map((entry, index) => this.spawn(entry.type, {
         ...options,
+        instanceId: options.instanceId ? `${options.instanceId}:${index}` : undefined,
         position: entry.position,
         rotation: entry.rotation,
         rotationX: entry.rotationX,
@@ -491,6 +528,10 @@
       let standaloneFloatingIsletCount = 0;
       let elevatedFogIndex = 0;
       const placedTypeCounts = new Map();
+      // L'ordre de placement est déterministe pour une définition/seed de map.
+      // Utiliser cet ordre pour stabiliser l'identité des objets reconstruits
+      // sans créer de registre persistant parallèle.
+      let populationInstanceSequence = 0;
       const contextText = `${definition.generator?.biomeId || ""} ${definition.name || ""} ${definition.description || ""} ${(definition.traits || []).map((trait) => `${trait.id || ""} ${trait.label || ""}`).join(" ")}`.toLocaleLowerCase("fr").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       const floatingContext = /flott|suspend|levitat|ilot|island/.test(contextText);
       const frozenIdentity = `${definition.generator?.biomeId || ""} ${definition.profile || ""} ${definition.name || ""} ${(definition.traits || []).map((trait) => trait.id || "").join(" ")}`.toLocaleLowerCase("fr").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -509,7 +550,11 @@
           force: true,
           scene: group,
           palette: definition.palette,
-          source: "map-population"
+          source: "map-population",
+          // P3 remplace ici un ID temporel préexistant. Le marqueur permet au
+          // compteur legacy miroir de continuer comme avant sans changer l’ID P3.
+          legacyTemporalIdentity: true,
+          instanceId: `${definition.id}:population:${type}:${++populationInstanceSequence}`
         });
         const object = record.instance;
         placedTypeCounts.set(type, (placedTypeCounts.get(type) || 0) + 1);

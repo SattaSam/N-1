@@ -5273,6 +5273,60 @@
         : false;
     }
 
+    progressDiscoveredContextMissions(event = {}) {
+      const manager = this.manager();
+      if (
+        !manager?.trees?.size ||
+        typeof BF.progressContextMSCMissions !== "function"
+      ) return 0;
+
+      const mapId = String(event.mapId || event.toMapId || "");
+      const currentMap = String(BF.currentEngine?.currentMapId || "") === mapId
+        ? BF.currentEngine?.currentMap
+        : null;
+      if (!mapId || !currentMap) return 0;
+
+      const missionIds = this.allMissions()
+        .filter((mission) =>
+          mission?.pattern === "CONTEXT_MSC" &&
+          mission?.trigger?.type === "exploration.map_discovered" &&
+          this.missionLifecycle(mission.id).active
+        )
+        .map((mission) => String(mission.id));
+      if (!missionIds.length) return 0;
+
+      const scenes = asArray(currentMap?.group?.userData?.microScenes);
+      let changed = 0;
+      scenes.forEach((scene) => {
+        const microSceneId = String(scene?.id || scene?.microSceneId || "");
+        if (!microSceneId) return;
+        const instanceRoot = scene?.instanceRoot || null;
+        changed += Number(BF.progressContextMSCMissions({
+          microSceneId,
+          microSceneInstanceId:
+            scene?.instanceId ||
+            instanceRoot?.userData?.persistentMicroSceneId ||
+            instanceRoot?.uuid ||
+            instanceRoot?.id ||
+            `${mapId}:${microSceneId}`,
+          mapId,
+          rarity: scene?.rarity || null,
+          mscMissionId:
+            scene?.missionId ||
+            instanceRoot?.userData?.bibleMissionId ||
+            null,
+          contextRole:
+            scene?.contextRole ||
+            instanceRoot?.userData?.contextRole ||
+            null
+        }, {
+          missionIds,
+          source: "exploration.map_discovered"
+        })) || 0;
+      });
+      return changed;
+    }
+
     onMapTransition(detail) {
       // La transition est émise après chargement de la map courante.
       this.captureObservationMap(BF.currentEngine);
@@ -5326,10 +5380,19 @@
       });
 
       if (detail.isNew === true) {
-        this.consumeTriggerEvent({
+        const discoveryEvent = {
           ...event,
           type: "exploration.map_discovered"
-        }, { allowActivation: !crossing.activatedMissionId });
+        };
+        this.consumeTriggerEvent(
+          discoveryEvent,
+          { allowActivation: !crossing.activatedMissionId }
+        );
+        // La découverte est la preuve causale : après l'activation éventuelle,
+        // les CONTEXT_MSC dont le contrat est map_discovered consomment les MSC
+        // réellement matérialisées sur cette même map. Les missions locales
+        // déclenchées par interaction restent hors de ce chemin.
+        this.progressDiscoveredContextMissions(discoveryEvent);
       }
 
       // FAU-01 devient active sur la découverte de cette map. À ce stade la

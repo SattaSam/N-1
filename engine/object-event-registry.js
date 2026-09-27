@@ -227,6 +227,10 @@
       at: Date.now(),
       objectId: data.catalogId || root?.userData?.catalogId || definition.id || null,
       instanceId: data.instanceId || root?.userData?.instanceId || null,
+      legacyInstanceSequence:
+        Number.isInteger(Number(data.legacyInstanceSequence ?? root?.userData?.legacyInstanceSequence))
+          ? Number(data.legacyInstanceSequence ?? root?.userData?.legacyInstanceSequence)
+          : null,
       persistentMicroSceneId:
         microSceneContext?.persistentMicroSceneId ||
         detail.persistentMicroSceneId ||

@@ -2638,7 +2638,37 @@
       fromResource.y = 0;
       if (fromResource.lengthSq() < 0.001) fromResource.set(0, 0, 1);
       const baseAngle = Math.atan2(fromResource.z, fromResource.x);
-      const colliders = this.currentMap?.colliders || [];
+      const allColliders = this.currentMap?.colliders || [];
+      const targetInstanceId = String(
+        object?.userData?.instanceId || anchor?.userData?.instanceId || ""
+      );
+      const targetMicroScenePivot =
+        object?.userData?.microScenePivot || anchor?.userData?.microScenePivot || null;
+      const sameLogicalTarget = (owner) => {
+        if (owner === anchor || owner === object) return true;
+        if (!owner) return false;
+        const ownerInstanceId = String(owner.userData?.instanceId || "");
+        if (targetInstanceId && ownerInstanceId === targetInstanceId) return true;
+        const ownerMicroScenePivot = owner.userData?.microScenePivot || null;
+        if (targetMicroScenePivot && ownerMicroScenePivot === targetMicroScenePivot) {
+          return true;
+        }
+        let cursor = owner.parent || null;
+        for (let depth = 0; cursor && depth < 4; depth += 1, cursor = cursor.parent) {
+          if (cursor === anchor || cursor === object) return true;
+        }
+        cursor = anchor?.parent || null;
+        for (let depth = 0; cursor && depth < 4; depth += 1, cursor = cursor.parent) {
+          if (cursor === owner) return true;
+        }
+        return false;
+      };
+      // Les volumes physiques appartenant à la cible logique ne sont pas des
+      // obstacles étrangers. Ils restent décrits par interactionRadius ; seuls
+      // les vrais bloqueurs participent au filtre local et au PathPlanner.
+      const colliders = allColliders.filter(
+        (collider) => !sameLogicalTarget(collider?.owner)
+      );
       const mapBounds = (this.currentMap?.bounds || 27) - 0.4;
       const searchLimit = preferred != null
         ? preferred + 0.8
