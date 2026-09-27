@@ -1,0 +1,16 @@
+const fs=require('fs'),vm=require('vm'),path=require('path'),assert=require('assert/strict');
+const root=path.resolve(__dirname,'..');
+const store={bluefox_special_objects_v1:JSON.stringify({version:1,teleporter:{active:true}})};
+const defs={hub:{id:'hub'},b:{id:'b'},c:{id:'c'}};
+const beacon=(id,x)=>({instanceId:`${id}:beacon`,contextRole:'deployed_beacon',kind:'deployed_beacon',persistent:true,anchor:{x,y:0,z:x}});
+const records={hub:[{instanceId:'hub:astro',microSceneId:'MSC-CUSTOM-ASTROLOGY',contextRole:'teleporter_anchor',kind:'teleporter_site',persistent:true,anchor:{x:0,y:0,z:0}}],b:[beacon('b',10)],c:[beacon('c',20)]};
+const lifecycle={'TP-10':{status:'completed'},'TP-11':{status:'completed'},'TP-AFTER-04':{status:'active'}};
+const engine={currentMapId:'hub',discoveredMaps:new Set(['hub','b','c']),character:{root:{position:{x:0,y:0,z:0}},target:null},currentMap:{group:null},missionManager:{memory:{state:{missionLifecycle:lifecycle}}},transitioning:false,pendingInteraction:null,currentRoutine:null,pendingZoneExploration:null,pendingGate:null};
+const BF={maps:defs,currentEngine:engine,PersistentMicroScenes:{list(def){return records[def.id]||[]}},MicroScenes:{get(){return {radius:6,objects:[]}}},ObjectEvents:{subscribe(){return()=>{}},types:{}}};
+const w={BlueFox3D:BF,localStorage:{getItem:k=>store[k]||null,setItem:(k,v)=>store[k]=v},addEventListener(){},dispatchEvent(){},CustomEvent:class{},setTimeout(fn){fn();return 0},Date,Math,console};w.window=w;
+vm.runInNewContext(fs.readFileSync(path.join(root,'engine/special-object-runtime.js'),'utf8'),w);
+const rt=BF.SpecialObjectRuntime; assert.equal(rt.isTeleporterActive(),true);
+assert.equal(rt.routingNetwork(),null,'TP-AFTER-04 non terminé: autonomie TP doit rester verrouillée');
+lifecycle['TP-AFTER-04'].status='completed';
+const net=rt.routingNetwork();assert(net);assert.equal(net.hub.mapId,'hub');assert.deepEqual(Array.from(net.destinations.map(x=>x.mapId)).sort(),['b','c']);
+console.log('PASS TP autonomous network gated by TP-AFTER-04 completion');

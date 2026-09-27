@@ -1,0 +1,10 @@
+const fs=require('fs'),vm=require('vm'),path=require('path'),assert=require('assert/strict'); const ROOT=path.join(__dirname,'..');
+class CE{constructor(t,i={}){this.type=t;this.detail=i.detail}} const store=new Map(); const window={console,Date,Math,JSON,Set,Map,WeakMap,CustomEvent:CE,localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,String(v)),removeItem:k=>store.delete(k)},addEventListener(){},removeEventListener(){},dispatchEvent(){return true},BlueFox3D:{}}; window.window=window; const ctx=vm.createContext(window);
+vm.runInContext(fs.readFileSync(path.join(ROOT,'engine/progression-registry.js'),'utf8'),ctx); const BF=window.BlueFox3D;
+BF.grantInventory('parts',10); BF.allocateInventoryToExpedition('parts',6); BF.grantCampStorage('parts',4);
+assert.equal(BF.availableInventory('parts'),14,'availableInventory retains historical total-stock meaning');
+assert.equal(BF.consumeInventoryPool('parts',8),8,'historical pool consumption remains inventory then camp');
+let s=BF.getProgressionState(); assert.equal(s.inventory.parts,2); assert.equal(s.expeditionAllocation.parts,2,'allocation follows physical stock instead of blocking consumption'); assert.equal(s.campStorage.parts,4);
+const files=['engine/progression-registry.js','engine/bible-runtime-v0-1-unified.js','engine/special-object-runtime.js','data/bible-catalog.js'].map(f=>fs.readFileSync(path.join(ROOT,f),'utf8')).join('\n');
+assert(!files.includes('includeExpeditionKeys')); assert(!files.includes('inventorySource: "expedition"')); assert(!files.includes('consumeExpeditionRequirementsOnce'));
+console.log('PASS R4-A no residual alternate Kit-consumption contract');

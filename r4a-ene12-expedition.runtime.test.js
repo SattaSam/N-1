@@ -1,0 +1,3 @@
+const fs=require('fs'),path=require('path'),assert=require('assert/strict'); const ROOT=path.join(__dirname,'..'); const cat=fs.readFileSync(path.join(ROOT,'data/bible-catalog.js'),'utf8'); const runtime=fs.readFileSync(path.join(ROOT,'engine/bible-runtime-v0-1-unified.js'),'utf8');
+const block=cat.slice(cat.indexOf('const ENE12'),cat.indexOf('const ENE13')); assert(block.includes('inventoryKey: "accumulator"')); assert(!block.includes('inventorySource: "expedition"')); assert(!runtime.includes('includeExpeditionKeys: ["accumulator"]'));
+console.log('PASS R4-A ENE-12 restored to historical inventory consumption contract');

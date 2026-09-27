@@ -1,0 +1,15 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),path=require('path'); const ROOT=path.join(__dirname,'..');
+class CE{constructor(type,init={}){this.type=type;this.detail=init.detail;}}
+const window={console,Date,Math,JSON,Set,Map,WeakMap,Promise,performance:{now:()=>1000},CustomEvent:CE,queueMicrotask:fn=>fn(),setTimeout:()=>1,clearTimeout(){},setInterval:()=>1,clearInterval(){},localStorage:{getItem(){return null},setItem(){},removeItem(){}},addEventListener(){},removeEventListener(){},dispatchEvent(){return true},BlueFox3D:{Missions:{},BiblePatterns:{},ObjectEvents:{types:{DRONE_FAILED:'DRONE_FAILED',OBJECT_REPAIRED:'OBJECT_REPAIRED'}}}}; window.window=window; const ctx=vm.createContext(window);
+let src=fs.readFileSync(path.join(ROOT,'engine/bible-runtime-v0-1-unified.js'),'utf8').replace(/\n\s*runtime\.start\(\);\s*\n\}\)\(window\);\s*$/,'\n})(window);'); vm.runInContext(src,ctx,{filename:'bible-runtime-v0-1-unified.js'});
+const BF=window.BlueFox3D, rt=Object.create(BF.BibleRuntimeV01.prototype); const mission={id:'DRN-05',repeatable:true}; rt.byId=new Map([['DRN-05',mission]]);
+const lifecycle={status:'completed'},facts={}; let rearmed=0,activated=0,lastEvent=null;
+const manager={memory:{setFact(k,v){facts[k]=v},getFact(k,d=null){return Object.prototype.hasOwnProperty.call(facts,k)?facts[k]:d},save(){}},rearmRepeatableMission(id){assert.equal(id,'DRN-05');rearmed++;lifecycle.status='available';return true}};
+rt.manager=()=>manager; rt.missionLifecycle=()=>({active:lifecycle.status==='active',completed:lifecycle.status==='completed',status:lifecycle.status}); rt.activateMission=(m,e)=>{assert.equal(m.id,'DRN-05');activated++;lastEvent=e;lifecycle.status='active';return true};
+BF.currentEngine={currentMapId:'crystal'};
+const first={droneType:'harvest_drone',droneId:'harvest-1',failureId:'harvest-1:failure-1',failureIndex:1,mapId:'remote-a',zoneId:0,instanceId:'remote-a:harvest_drone:harvest-1',requirements:{accumulator:1},failedAt:10};
+const second={droneType:'scout_drone',droneId:'scout_drone',failureId:'scout_drone:failure-1',failureIndex:1,mapId:'remote-b',zoneId:1,instanceId:'remote-b:scout_drone:scout_drone',requirements:{accumulator:1},failedAt:20};
+BF.SpecialObjectRuntime={failures:()=>[second]}; assert.equal(rt.activateDroneRepairMission(first),true); assert.equal(rearmed,1); assert.equal(activated,1); assert.equal(lastEvent.instanceId,first.instanceId); assert.equal(facts['droneRepairTarget:DRN-05'].failureId,first.failureId);
+rt.progressRuntimeValidationSlot=(id,slot)=>{assert.equal(id,'DRN-05');assert.equal(slot,'repairDrone');lifecycle.status='completed';return true};
+assert.equal(rt.handleDroneMissionObjectEvent({type:'OBJECT_REPAIRED',detail:{interactionSource:'drone',failureId:first.failureId}}),true); assert.equal(rearmed,2,'same repeatable mission rearmed for queued failure'); assert.equal(activated,2); assert.equal(facts['droneRepairTarget:DRN-05'].failureId,second.failureId); assert.equal(lastEvent.instanceId,second.instanceId);
+console.log('PASS R4-B queued failures reuse and rearm the canonical DRN-05 mission');

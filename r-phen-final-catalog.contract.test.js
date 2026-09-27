@@ -1,0 +1,16 @@
+const fs=require('fs');const vm=require('vm');const path=require('path');const assert=require('assert');
+const root=path.resolve(__dirname,'..'); const window={BlueFox3D:{}}; window.window=window;
+vm.runInNewContext(fs.readFileSync(path.join(root,'data/bible-catalog.js'),'utf8'),{window,console},{filename:'bible-catalog.js'});
+const catalog=window.BlueFox3D.BibleCatalog; const byId=new Map(catalog.map(m=>[m.id,m]));
+assert(catalog.length >= 287,'les 282 missions du HEAD PROS + PHEN-07→11 doivent rester présentes sans bloquer les lots ultérieurs');
+for(const id of ['PHEN-01','PHEN-02','PHEN-03','PHEN-04','PHEN-05','PHEN-06','PHEN-07','PHEN-08','PHEN-09','PHEN-10','PHEN-11']) assert(byId.has(id),`${id} absent`);
+const s=(m,slot)=>m.sequence.find(x=>x.slot===slot);
+const p7=byId.get('PHEN-07'); assert.deepStrictEqual(Array.from(p7.prerequisites),['PHEN-01']);
+assert.equal(s(p7,'reachSite1').params.completionArrivalFact,'phen07:site1'); assert.equal(s(p7,'reachSite2').params.completionArrivalFact,'phen07:site2');
+assert.equal(s(p7,'scoutSite1').params.actor,'scout'); assert.equal(s(p7,'scoutSite2').params.actor,'scout'); assert.equal(s(p7,'scoutSite2').params.relation.differentBy[0],'mapId');
+const p8=byId.get('PHEN-08'); assert.equal(s(p8,'reachSite3').params.completionArrivalFact,'phen08:site3'); assert.equal(s(p8,'networkReadings').params.actor,'scout'); assert.equal(s(p8,'networkReadings').params.remote,true); assert.equal(s(p8,'networkReadings').params.distinctBy,'mapId'); assert.equal(s(p8,'networkReadings').target,3);
+const p9=byId.get('PHEN-09'); assert.equal(s(p9,'returnSite1').params.targetMapFact,'phen07:site1'); assert.equal(s(p9,'returnSite2').params.targetMapFact,'phen07:site2'); assert.deepStrictEqual(Array.from(s(p9,'remeasureSite1').params.actorsAny),['bluefox','scout']);
+const p10=byId.get('PHEN-10'); assert(p10.proximityContexts.some(x=>x.slot==='experiment'&&x.inventoryConsume),'PHEN-10 doit consommer de vrais échantillons à l établi');
+const p11=byId.get('PHEN-11'); assert.deepStrictEqual(Array.from(p11.prerequisites),['PHEN-09','PHEN-10']); assert(p11.rewards.some(r=>r.type==='research.knowledge'&&r.id==='planetary_phenomena_atlas'));
+const ene14=byId.get('ENE-14'); assert(!JSON.stringify(ene14).includes('PHEN-'),'PHEN ne doit pas devenir un prérequis/contrat ENE-14');
+console.log('PASS R-PHEN-FINAL catalog PHEN-07→11 contract');

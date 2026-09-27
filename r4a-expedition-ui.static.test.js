@@ -1,0 +1,28 @@
+const fs = require('fs');
+const path = require('path');
+const assert = require('assert/strict');
+const ROOT = path.join(__dirname, '..');
+const ui = fs.readFileSync(path.join(ROOT, 'engine/inventory-ui-clean-v0-2.js'), 'utf8');
+
+assert(ui.includes('inventory-kit-clean-v0.3'));
+assert(ui.includes('LOCKED_KIT_INVENTORY_KEYS'));
+assert(ui.includes('"deployed_beacon"'));
+assert(ui.includes('"survival_bag"'));
+assert(ui.includes('safeKey === "accumulator"'), 'accumulator remains explicitly transferable');
+assert(ui.includes('category === "equipment"'), 'equipment/tools are excluded from generic Kit transfer');
+assert(ui.includes('tags.has("tool")'));
+assert(ui.includes('tags.has("drone")'));
+assert(ui.includes('button.dataset.expeditionLocked = item.locked ? "true" : "false"'));
+assert(ui.includes('button.draggable = false'), 'historical Kit entries are never draggable');
+assert(ui.includes('locked: true'), 'rations/beacon/drone slots are marked locked');
+assert(ui.includes('input.type = "number"'));
+assert(ui.includes('minus.textContent = "−"'));
+assert(ui.includes('plus.textContent = "+"'));
+assert(ui.includes('input.addEventListener("wheel"'), 'quantity can scroll with wheel/counter');
+assert(ui.includes('BF.transferCampToExpedition?.(key, amount)'));
+assert(ui.includes('BF.transferExpeditionToCamp?.(key, amount)'));
+assert(ui.includes('BF.allocateInventoryToExpedition?.(key, amount)'));
+assert(ui.includes('BF.releaseExpeditionAllocation?.(key, amount)'));
+assert(ui.includes('const moved = BF.depositAllInventory?.() || 0'), 'auto deposit delegates protection to canonical owner');
+assert(!ui.includes('EXPEDITION_INVENTORY_KEYS = new Set(["accumulator", "deployed_beacon"])'));
+console.log('PASS R4-A quantity selector / locked historical Kit UI');
