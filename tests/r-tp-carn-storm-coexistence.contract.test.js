@@ -1,0 +1,10 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),path=require('path');
+const ROOT=path.join(__dirname,'..');const w={BlueFox3D:{}};w.window=w;vm.runInNewContext(fs.readFileSync(path.join(ROOT,'data/bible-catalog.js'),'utf8'),{window:w,console});
+const cat=w.BlueFox3D.BibleCatalog,by=new Map(cat.map(m=>[m.id,m]));
+const ids=['TERR-CARN-01','TERR-CARN-02','TERR-CARN-03','TERR-CARN-04','TERR-STORM-01','TERR-STORM-02','TERR-STORM-03','TERR-STORM-04','TP-10','TP-11','TP-AFTER-01','TP-AFTER-02','TP-AFTER-03','TP-AFTER-04'];
+for(const id of ids) assert(by.has(id),`${id} absente du catalogue combiné`);
+assert.equal(cat.length,322,'CARN/STORM + TP-AFTER préservés dans le catalogue END/FIN à 322 missions');
+assert.equal(by.get('TP-10').sequence[0].params.eventDriven,true);
+assert.equal(by.get('TP-11').sequence[0].params.eventDriven,true);
+assert.equal(by.get('TP-11').sequence[1].params.eventDriven,true);
+console.log('PASS coexistence CARN/STORM + TP-10/11');

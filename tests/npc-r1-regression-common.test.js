@@ -1,0 +1,21 @@
+const fs=require('fs'), vm=require('vm'), assert=require('assert');
+const file=process.argv[2]; if(!file) throw new Error('runtime path required');
+let now=0, queue=[], disabled=0, budget=0, events=[];
+class V{constructor(x=0,y=0,z=0){this.x=x;this.y=y;this.z=z;}clone(){return new V(this.x,this.y,this.z)}copy(v){this.x=v.x;this.y=v.y;this.z=v.z;return this}set(x,y,z){this.x=x;this.y=y;this.z=z;return this}}
+const part=name=>({name,userData:{},position:new V(),rotation:new V(),scale:new V(1,1,1),material:null});
+const children=['NpcEye','NpcCore','TranslucentHeadFine','TranslucentTorsoFine','TranslucentMembrane','TranslucentFilament','TranslucentShoulder','TranslucentUpperArm','TranslucentForearm'].map(part);
+const root={userData:{},position:new V(7,0,0),rotation:new V(),scale:new V(1,1,1),parent:{},visible:true,traverse(fn){children.forEach(fn)},dispatchEvent(){}};
+const hooks=[];
+const w={performance:{now:()=>now},Date,Math,console,CustomEvent:class{constructor(type,o){this.type=type;this.detail=o.detail}},dispatchEvent(e){events.push(e)},requestAnimationFrame(fn){queue.push(fn)},BlueFox3D:{ObjectLibrary:{create(){},registerCreateHook(fn){hooks.push(fn)}},PassiveObjectRuntime:{setEnabled(){disabled++}},RuntimeBudget:{shouldUpdate(){budget++;return true}}}};w.window=w;
+vm.runInContext(fs.readFileSync(file,'utf8'),vm.createContext(w));
+hooks[0]({root},{type:'npc_translucent'});
+assert.equal(disabled,1,'PNJ excludes passive runtime');
+assert.equal(w.BlueFox3D.NpcRuntime.getState(root).state,'rest');
+w.BlueFox3D.currentEngine={character:{root:{position:new V(7,0,1)}}};
+now=500;queue.shift()();
+assert.equal(w.BlueFox3D.NpcRuntime.getState(root).state,'vigilance','near proximity remains vigilant');
+assert(budget>0,'RuntimeBudget still gates update');
+assert(events.some(e=>e.type==='bluefox:npc-state'),'state event remains published');
+assert.equal(w.BlueFox3D.NpcRuntime.setEnabled(root,false),true);
+assert.equal(root.position.x,7,'disable restore preserves anchor');
+console.log('PASS common',file);

@@ -1,0 +1,36 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert'),path=require('path');
+const ROOT=path.resolve(__dirname,'..');
+const window={BlueFoxCustomMaps:[{id:'custom-map-30-village',name:'village',marker:'arch-keep'},{id:'custom-map-31-tinycity',name:'TinyCity'}]};window.window=window;
+vm.runInContext(fs.readFileSync(path.join(ROOT,'data/civilization-cities.js'),'utf8'),vm.createContext(window));
+const village=window.BlueFoxCustomMaps.find(m=>m.id==='custom-map-30-village');
+const tiny=window.BlueFoxCustomMaps.find(m=>m.id==='custom-map-31-tinycity');
+const source=window.BlueFoxCustomMaps.find(m=>m.id==='custom-map-32-rock-village');
+assert.equal(village.marker,'arch-keep','ARCH village must remain untouched');
+assert.equal(village.civilizationRole,undefined,'ARCH village must not become a capital');
+assert.equal(tiny.civilizationId,'translucent');assert.equal(tiny.civilizationRole,'city');
+assert.deepEqual(Array.from(tiny.civilizationMerchant.position),[-36,0,-20],'TinyCity merchant must occupy the visually validated plateau position');
+const tinyNpcs=Array.from(tiny.customObjects||[]).filter(o=>o.type==='npc_translucent');
+assert.equal(tinyNpcs.length,3,'TinyCity must contain exactly 2 residents + 1 translucent merchant');
+assert.equal(tinyNpcs.filter(o=>o.userData?.npcRole==='merchant').length,1,'TinyCity keeps exactly one merchant');
+assert.equal(tinyNpcs.filter(o=>o.userData?.npcRole==='resident').length,2,'TinyCity adds exactly two residents');
+assert.deepEqual(Array.from(tinyNpcs.find(o=>o.userData?.npcRole==='merchant').position),[-36,0,-20],'TinyCity merchant placement must remain fixed');
+
+assert.equal(source.name,'ROCK_VILLAGE');assert.equal(source.plateauCount,2);assert.equal(source.civilizationId,'rocky');assert.equal(source.civilizationRole,'city');
+assert(source.customMicroScenes.length>=15,'rock village must preserve its authored urban layout');
+const rockyNpcs=Array.from(source.customObjects||[]).filter(o=>o.type==='npc_rocky');
+assert.equal(rockyNpcs.length,3,'RockyCity must contain exactly 2 residents + 1 Rocky merchant');
+assert.equal(rockyNpcs.filter(o=>o.userData?.npcRole==='merchant').length,1,'RockyCity keeps exactly one merchant');
+assert.equal(rockyNpcs.filter(o=>o.userData?.npcRole==='resident').length,2,'RockyCity adds exactly two residents');
+assert.deepEqual(Array.from(rockyNpcs.find(o=>o.userData?.npcRole==='merchant').position),[10.5,0,3.3],'Rocky merchant placement must remain fixed');
+assert.equal(new Set([...tinyNpcs,...rockyNpcs].map(o=>o.instanceId)).size,6,'capital NPC instanceIds must be unique');
+
+const merchant={x:source.civilizationMerchant.position[0],z:source.civilizationMerchant.position[2]};
+const distances=source.customMicroScenes.map(scene=>Math.hypot(scene.position[0]-merchant.x,scene.position[2]-merchant.z));
+assert(Math.min(...distances)>=7.5,'merchant place must remain reasonably clear of authored structures');
+assert(distances.filter(distance=>distance<=12).length>=6,'merchant place must be surrounded by several habitations/ruins');
+const mainIndex=fs.readFileSync(path.join(ROOT,'index.html'),'utf8');
+const mapTestIndex=fs.readFileSync(path.join(ROOT,'map-test/index.html'),'utf8');
+assert(mainIndex.indexOf('custom-maps.js') < mainIndex.indexOf('civilization-cities.js'));
+assert(mainIndex.indexOf('civilization-cities.js') < mainIndex.indexOf('map-registry.js'));
+assert(mapTestIndex.includes('../data/civilization-cities.js?v='));
+console.log('PASS npc-r3-rock-city-layout');

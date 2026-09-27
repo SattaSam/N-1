@@ -1,0 +1,28 @@
+const fs=require('fs'),vm=require('vm'),path=require('path'),assert=require('assert');
+const root=path.resolve(__dirname,'..');
+const store={};const listeners={};const events=[];let progressed=[];let transitionCalls=[];
+const defs={hub:{id:'hub',name:'Hub'},b:{id:'b',name:'B'},c:{id:'c',name:'C'},d:{id:'d',name:'D'},e:{id:'e',name:'E'},unknown:{id:'unknown',name:'U'}};
+const beacon=(id,x)=>({instanceId:`${id}:beacon`,contextRole:'deployed_beacon',kind:'deployed_beacon',persistent:true,anchor:{x,y:0,z:x}});
+const records={hub:[{instanceId:'hub:astro',microSceneId:'MSC-CUSTOM-ASTROLOGY',contextRole:'teleporter_anchor',kind:'teleporter_site',persistent:true,anchor:{x:0,y:0,z:0}}],b:[beacon('b',10)],c:[beacon('c',20)],d:[beacon('d',30)],e:[beacon('e',40)],unknown:[]};
+const engine={currentMapId:'hub',discoveredMaps:new Set(['hub','b','c','d','e']),character:{root:{position:{x:0,y:0,z:0}},target:null},currentMap:{group:null},missionManager:{memory:{state:{missionLifecycle:{'TP-10':{status:'active'},'TP-11':{status:'active'}}}}},transitioning:false,pendingInteraction:null,currentRoutine:null,pendingZoneExploration:null,pendingGate:null};
+const inventory={magnetic_ore:70,energy_crystal:30,parts:50,core:20,fiber:100,accumulator:10,biocapital:50};
+const BF={maps:defs,currentEngine:engine,PersistentMicroScenes:{list(def){return records[def.id]||[]}},MicroScenes:{get(){return {radius:6,objects:[{type:'eroded_monolith',offset:[5,0,0]},{type:'eroded_monolith',offset:[-5,0,0]}]}}},bibleRuntime:{progressRuntimeValidationSlot(m,s){progressed.push(`${m}:${s}`);return true}},ObjectEvents:{subscribe(){return()=>{}},types:{}},availableInventory(k){return inventory[k]||0}};
+const w={BlueFox3D:BF,localStorage:{getItem:k=>store[k]||null,setItem:(k,v)=>store[k]=v},addEventListener(t,f){(listeners[t]||=[]).push(f)},dispatchEvent(e){events.push(e)},CustomEvent:class{constructor(type,o={}){this.type=type;this.detail=o.detail}},setTimeout(fn){fn();return 0},Date,Math,console};w.window=w;
+vm.runInNewContext(fs.readFileSync(path.join(root,'engine/special-object-runtime.js'),'utf8'),w);
+const rt=BF.SpecialObjectRuntime;
+assert.equal(rt.isTeleporterActive(),false);assert.equal(rt.activateTeleporter(),true);assert.equal(rt.isTeleporterActive(),true);assert(progressed.includes('TP-10:assemble'));assert(store.bluefox_special_objects_v1);
+assert.deepStrictEqual(Array.from(rt.destinations().map(x=>x.mapId)).sort(),['b','c','d','e']);
+engine.transitionToKnownMap=async(target,opts)=>{transitionCalls.push({target,opts});await opts.beforeLoad();engine.currentMapId=target;return true};
+(async()=>{
+  engine.missionManager.currentAction={type:'observe'};
+  assert.equal(await rt.calibrateTeleporter('b'),false,'une action missionnelle active doit bloquer la téléportation/calibration');
+  engine.missionManager.currentAction=null;
+  assert.equal(await rt.teleportTo('b'),false,'BlueFox ne doit pas partir avant calibration/transfert inerte');
+  assert.equal(await rt.calibrateTeleporter('b'),true);assert(progressed.includes('TP-11:calibrateNetwork'));assert(progressed.includes('TP-11:inertTransfer'));assert.equal(rt.isTeleporterCalibrated(),true);
+  assert.equal(await rt.teleportTo('c'),false,'pendant TP-11 seule la balise calibrée doit servir au premier aller');
+  assert.equal(await rt.teleportTo('b'),true);assert.equal(transitionCalls[0].opts.source,'teleporter');assert.equal(transitionCalls[0].opts.mode,'teleport');assert.equal(transitionCalls[0].opts.direction,'teleport-outbound');
+  engine.character.root.position={x:10,y:0,z:10};assert.equal(await rt.teleportTo('c'),false,'beacon→beacon doit être refusé');engine.currentMapId='b';assert.equal(await rt.teleportTo('hub'),true);assert.equal(transitionCalls[1].opts.direction,'teleport-return');
+  engine.currentMapId='hub';engine.character.root.position={x:0,y:0,z:0};assert.equal(await rt.teleportTo('unknown'),false,'destination inconnue/non balisée refusée');
+  const saved=JSON.parse(store.bluefox_special_objects_v1);assert.equal(saved.teleporter.calibratedBeaconMapId,'b');assert(saved.teleporter.calibratedAt>0);assert(saved.teleporter.firstOutboundAt>0);
+  console.log('PASS SpecialObjectRuntime activation + 4 balises + inert calibration + hub↔beacon / persistence');
+})().catch(e=>{console.error(e);process.exit(1)});

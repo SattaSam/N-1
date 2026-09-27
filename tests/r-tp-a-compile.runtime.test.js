@@ -1,0 +1,11 @@
+const fs=require('fs');const vm=require('vm');const path=require('path');const assert=require('assert');
+const root=path.resolve(__dirname,'..');
+const window={BlueFox3D:{},localStorage:{getItem:()=>null,setItem:()=>{},removeItem:()=>{}},addEventListener:()=>{},removeEventListener:()=>{},dispatchEvent:()=>{},setTimeout:()=>0,clearTimeout:()=>{},setInterval:()=>0,clearInterval:()=>{},performance:{now:()=>0},document:null,CustomEvent:function(type,init){this.type=type;this.detail=init?.detail;}};window.window=window;
+window.BlueFox3D.BiblePatterns={SEQUENCE_ACTIONS:{autonomyAxis:'research'},TRAVEL_CYCLE:{autonomyAxis:'exploration'},EXPLORE_SCOPE:{autonomyAxis:'exploration'},OBSERVE_TARGET:{autonomyAxis:'research'},COLLECT_THEN_REWARD:{autonomyAxis:'collection'}};
+const context=vm.createContext({window,console,performance:window.performance,CustomEvent:window.CustomEvent,setTimeout:window.setTimeout,clearTimeout:window.clearTimeout,setInterval:window.setInterval,clearInterval:window.clearInterval});
+vm.runInContext(fs.readFileSync(path.join(root,'data/bible-catalog.js'),'utf8'),context);
+let runtime=fs.readFileSync(path.join(root,'engine/bible-runtime-v0-1-unified.js'),'utf8');runtime=runtime.replace(/\n\s*runtime\.start\(\);\n\}\)\(window\);\s*$/,'\n})(window);');
+window.BlueFox3D.ObjectEvents={types:{}};window.BlueFox3D.ObjectLibrary={list:()=>[]};window.BlueFox3D.getProgressionState=()=>({counters:{global:{}}});
+vm.runInContext(runtime,context);const rt=window.BlueFox3D.bibleRuntime,by=new Map(window.BlueFox3D.BibleCatalog.map(m=>[m.id,m]));
+for(const id of ['POSTDIP-01','TP-01','TP-02','TP-03','TP-04','TP-05','TP-06','TP-07','TP-08','TP-09']) assert(rt.compileMission(by.get(id)),`${id} ne compile pas`);
+console.log('PASS R-TP-A compile POSTDIP + TP-01→09');

@@ -1,0 +1,10 @@
+const fs=require('fs'),vm=require('vm'),path=require('path'),assert=require('assert');
+const root=path.resolve(__dirname,'..');
+let progress=0;const node={id:'TP-11:outbound',isComplete:false,progress:0,target:1,params:{eventDriven:true,direction:'teleport-outbound',transitionSource:'teleporter',transitionMode:'teleport',distinctBy:'transition'},type:'travel',incrementDistinct(){this.progress++;this.isComplete=true;progress++;return true}};
+const tree={availableLeaves:()=>[node],refresh(){},find(){return node}};
+const manager={trees:new Map([['TP-11',tree]]),ensureLifecycle(){return{status:'active'}},memory:{saveTree(){},save(){},getFact(){return null},setFact(){}},definition(){return{sequence:[{slot:'outbound',action:'travel',params:node.params}]}},syncLifecycleFromTrees(){},reevaluatePendingActivations(){},catalogController:{schedule(){}},publish(){}};
+const BF={Missions:{ActionType:{TRAVEL:'travel'},normalizeActionType:x=>x},currentEngine:{missionManager:manager,currentMapId:'hub'},maps:{b:{}}};
+const listeners={};const w={BlueFox3D:BF,addEventListener(t,f){listeners[t]=f},CustomEvent:class{},console};w.window=w;
+vm.runInNewContext(fs.readFileSync(path.join(root,'engine/travel-cycle-bridge.js'),'utf8'),w);
+BF.progressTravelCycleMissions({fromMapId:'hub',toMapId:'b',direction:'teleport-outbound',source:'gate',mode:'teleport',isNew:false});assert.equal(progress,0,'mauvaise source ne doit pas valider TP-11');
+BF.progressTravelCycleMissions({fromMapId:'hub',toMapId:'b',direction:'teleport-outbound',source:'teleporter',mode:'teleport',isNew:false});assert.equal(progress,1);console.log('PASS travel bridge transition source/mode filter');

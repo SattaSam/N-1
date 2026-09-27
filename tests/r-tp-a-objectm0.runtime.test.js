@@ -1,0 +1,19 @@
+const fs=require('fs'),vm=require('vm'),path=require('path'),assert=require('assert');const root=path.resolve(__dirname,'..');
+const window={};window.window=window;window.performance={now:()=>0};window.BlueFox3D={Missions:{},ObjectLibrary:null,ObjectEvents:{types:{OBJECT_SEEN:'OBJECT_SEEN',OBJECT_INSPECTED:'OBJECT_INSPECTED',OBJECT_ANALYZED:'OBJECT_ANALYZED',PHENOMENON_OBSERVED:'PHENOMENON_OBSERVED',RESOURCE_COLLECTED:'RESOURCE_COLLECTED',RESOURCE_EXTRACTED:'RESOURCE_EXTRACTED',NPC_REACTION:'NPC_REACTION'},subscribe(){return()=>{};}}};
+const BF=window.BlueFox3D,M=BF.Missions;M.ActionType={OBSERVE:'observe',INSPECT:'inspect',ANALYZE:'analyze',COLLECT:'collect',EXTRACT:'extract'};M.normalizeActionType=v=>String(v||'').toLowerCase();class MissionManager{};M.MissionManager=MissionManager;
+const cw={BlueFox3D:{}};cw.window=cw;vm.runInNewContext(fs.readFileSync(path.join(root,'data/bible-catalog.js'),'utf8'),{window:cw,console});BF.BibleCatalog=cw.BlueFox3D.BibleCatalog;
+vm.runInContext(fs.readFileSync(path.join(root,'engine/object-m0-bridge.js'),'utf8'),vm.createContext({window,console,performance:window.performance,CustomEvent:function(){}}));
+function nodeFor(mission,slot){const s=mission.sequence.find(x=>x.slot===slot);return{id:`${mission.id}:${slot}`,type:s.action,params:s.params,isComplete:false,progress:0,target:s.target,historyValues:[],increment(n=1){this.progress+=n;this.isComplete=this.progress>=this.target;return true;},incrementDistinct(v,n=1){this.d??=new Set();if(!v||this.d.has(v))return false;this.d.add(v);this.progress+=n;this.isComplete=this.progress>=this.target;return true;},hasDistinctValue(v){return this.d?.has(v)||false;},pushHistoryValue(v){this.historyValues.push(v);return true;}}}
+function manager(mission,node,facts={}){const tree={id:mission.id,root:{walk(cb){cb(node)}},availableLeaves(){return[node]},find(id){return id===node.id?node:null},refresh(){}};const m=new M.MissionManager();m.trees=new Map([[mission.id,tree]]);m.ensureLifecycle=()=>({status:'active'});const seen=new Set();m.memory={getFact:k=>facts[k]??null,hasProcessedObjectEvent:id=>seen.has(id),markProcessedObjectEvent:id=>seen.add(id),saveTree(){},remember(){},save(){}};m.syncLifecycleFromTrees=()=>{};m.reevaluatePendingActivations=()=>{};m.catalogController={schedule(){}};m.publish=()=>{};return m;}
+let seq=0;function scout(mapId,{remote=true,cuoType='relay_block'}={}){seq++;return{id:`e${seq}`,type:'OBJECT_SEEN',objectId:cuoType,instanceId:`${cuoType}-${mapId}-${seq}`,mapId,tags:['drone-scouted',...(remote?['remote']:[])],detail:{interactionSource:'drone',droneType:'scout_drone',remote,cuoType,kind:'structure',tags:['drone-scouted',...(remote?['remote']:[])]}}}
+{
+ const mission=BF.BibleCatalog.find(x=>x.id==='TP-05'),node=nodeFor(mission,'remoteWitness'),facts={'tp05:receiverMap':{mapId:'remote'}};const m=manager(mission,node,facts);
+ m.consumeObjectEvent(scout('remote',{remote:false}));assert.equal(node.progress,0,'Scout local interdit pour TP-05');m.consumeObjectEvent(scout('other',{remote:true}));assert.equal(node.progress,0,'mauvaise map interdite');m.consumeObjectEvent(scout('remote',{remote:true}));assert.equal(node.progress,1,'Scout distant sur le récepteur doit valider TP-05');
+}
+{
+ const mission=BF.BibleCatalog.find(x=>x.id==='TP-09'),node=nodeFor(mission,'networkProof'),m=manager(mission,node,{});
+ m.consumeObjectEvent(scout('A',{remote:false,cuoType:'crystal'}));assert.equal(node.progress,0);
+ m.consumeObjectEvent(scout('A',{remote:true,cuoType:'crystal'}));m.consumeObjectEvent(scout('A',{remote:true,cuoType:'fog_bank'}));assert.equal(node.progress,1,'une map balisée ne compte qu une fois');
+ for(const id of ['B','C','D'])m.consumeObjectEvent(scout(id,{remote:true,cuoType:'crystal'}));assert.equal(node.progress,4,'quatre maps distantes distinctes valident le réseau');
+}
+console.log('PASS R-TP-A ObjectM0 remote TP-05 + réseau TP-09');
