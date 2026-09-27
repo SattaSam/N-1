@@ -1,0 +1,3 @@
+(function(global){
+"use strict";const BF=global.BlueFox3D=global.BlueFox3D||{},P=BF.ObjectSpawner?.prototype;if(!P?.spawnMicroScene||P.__integrityR6)return;
+const orig=P.spawnMicroScene;P.spawnMicroScene=function(id,opt={}){const t=BF.MicroScenes?.get?.(id);if(!t)throw new Error(`MSC inconnue ${id}`);const missing=(t.objects||[]).filter(e=>!BF.ObjectLibrary?.exists?.(e.type)).map(e=>e.type);if(missing.length)throw new Error(`MSC ${t.id}: CUO absents ${[...new Set(missing)].join(", ")}`);const r=orig.call(this,id,opt);if(r.length!==(t.objects||[]).length)throw new Error(`MSC ${t.id}: ${r.length}/${t.objects.length} objets insérés`);return r;};Object.defineProperty(P,"__integrityR6",{value:true});BF.MicroSceneIntegrityR6=Object.freeze({version:"integrity-r6"});})(window);

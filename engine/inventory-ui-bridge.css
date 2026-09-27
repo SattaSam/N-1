@@ -1,0 +1,182 @@
+.inventory-sections {
+  display: grid;
+  gap: 12px;
+}
+
+.inventory-sections > details {
+  border: 1px solid rgba(107, 214, 255, .2);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .035);
+}
+
+.inventory-sections > details > summary {
+  padding: 12px 14px;
+  color: #a8edff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.inventory-transfer-grid {
+  padding: 0 10px 10px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.inventory-transfer-grid article {
+  min-width: 0;
+  padding: 8px 4px;
+  border-radius: 10px;
+  cursor: grab;
+}
+
+.inventory-transfer-grid article > span {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.inventory-transfer-grid article > b {
+  margin: 2px;
+  font-size: 14px;
+}
+
+.inventory-transfer-grid article > small {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 10px;
+  line-height: 1.15;
+}
+
+.inventory-transfer-grid .inventory-empty-state {
+  grid-column: 1 / -1;
+}
+
+.inventory-transfer-grid article:active {
+  cursor: grabbing;
+}
+
+.inventory-auto-deposit {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #a9c7d8;
+  font-size: 11px;
+}
+
+.inventory-bag-controls {
+  margin: -2px 12px 10px;
+  padding: 3px 0;
+  border: 0;
+  background: transparent;
+}
+
+.inventory-bag-controls input {
+  margin: 0;
+}
+
+.inventory-camp-locked {
+  padding: 16px;
+  border: 1px solid rgba(255, 190, 100, .25);
+  border-radius: 12px;
+  color: #ffd9a4;
+  background: rgba(130, 80, 20, .12);
+  line-height: 1.5;
+}
+
+.expedition-kit-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0 10px 10px;
+}
+
+.expedition-kit-slot {
+  appearance: none;
+  width: 100%;
+  min-width: 0;
+  min-height: 72px;
+  border: 1px solid rgba(145, 220, 255, .24);
+  border-radius: 10px;
+  background: rgba(7, 25, 42, .72);
+  color: inherit;
+  padding: 8px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.expedition-kit-slot:hover,
+.expedition-kit-slot:focus-visible {
+  border-color: rgba(145, 220, 255, .62);
+  background: rgba(10, 38, 61, .9);
+  outline: none;
+}
+
+.expedition-kit-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.expedition-kit-label {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.expedition-kit-count {
+  font-size: 14px;
+  font-weight: 700;
+  opacity: .9;
+}
+
+.inventory-camp-readonly {
+  margin: -2px 12px 10px;
+  color: #ffd9a4;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.tool-rail button:disabled {
+  opacity: .38;
+  cursor: not-allowed;
+  filter: grayscale(.75);
+}
+
+@media (max-width: 650px) {
+  .inventory-transfer-grid,
+  .expedition-kit-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 5px;
+    padding-inline: 6px;
+  }
+
+  .inventory-transfer-grid article {
+    padding: 7px 2px;
+  }
+
+  .inventory-transfer-grid article > span {
+    font-size: 18px;
+  }
+
+  .inventory-transfer-grid article > b {
+    font-size: 13px;
+  }
+
+  .inventory-transfer-grid article > small {
+    font-size: 9px;
+  }
+}
+
+/* Garde-fou runtime : le contenu React historique reste monté mais invisible
+   pendant que l'Inventaire moderne est affiché. */
+.drawer[aria-label^="Inventaire"] > p[data-bluefox-legacy-inventory-hidden="true"],
+.drawer[aria-label^="Inventaire"] > .inventory-grid[data-bluefox-legacy-inventory-hidden="true"],
+.full-screen-panel[aria-label^="Inventaire"] > p[data-bluefox-legacy-inventory-hidden="true"],
+.full-screen-panel[aria-label^="Inventaire"] > .inventory-grid[data-bluefox-legacy-inventory-hidden="true"] {
+  display: none !important;
+}
