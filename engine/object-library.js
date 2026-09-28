@@ -614,8 +614,8 @@
         chunk.rotation.set(index * 0.17, index * 0.63 + variant, index * 0.11);
         root.add(chunk);
       }
-      const radius = type === "large_rock" ? 2.35 : 0.92;
-      const hitboxRadius = type === "large_rock" ? 1.5 : 0.82;
+      const radius = type === "large_rock" ? 1.1 : 0.92;
+      const hitboxRadius = type === "large_rock" ? 1.2 : 0.82;
       const hitboxHeight = type === "large_rock" ? 2.6 : 2.1;
       hitbox = makeHitbox(THREE, root, hitboxRadius, hitboxHeight, type);
       if (type === "strong_rock") hitbox.userData.interactionRadius = 1.28;
@@ -730,8 +730,13 @@
         ridge.rotation.y = Math.PI / 4 + variant * 0.13;
         root.add(ridge);
       }
-      hitbox = makeHitbox(THREE, root, 4.6, 1.4, type);
-      colliders = [{ offset: new THREE.Vector3(), radius: 4.2 }];
+      // Deux petits volumes sur les extrémités rocheuses laissent un passage
+      // central à BlueFox tout en préservant les crêtes visibles.
+      hitbox = makeHitbox(THREE, root, 1.15, 1.4, type);
+      colliders = [
+        { offset: new THREE.Vector3(-2.65, 0, 0), radius: 0.72 },
+        { offset: new THREE.Vector3(2.65, 0, 0), radius: 0.72 }
+      ];
     } else if (type === "ancient_machine_wreck") {
       const hull = new THREE.Mesh(new THREE.BoxGeometry(3.3, 1.35, 1.8), darkMetal);
       hull.position.y = 0.72;

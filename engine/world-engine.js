@@ -2680,7 +2680,7 @@
       const searchLimit = preferred != null
         ? preferred + 0.8
         : interactionDistance;
-      const blockerPadding = 0.16;
+      const blockerPadding = 0.12;
       const maxPathPlans = 12;
       let pathPlans = 0;
 
@@ -2713,8 +2713,17 @@
             blockerPadding
         }));
 
+      const targetBlockers = allColliders
+        .filter((collider) => collider?.position && sameLogicalTarget(collider.owner))
+        .map((collider) => ({
+          x: Number(collider.position.x) || 0,
+          z: Number(collider.position.z) || 0,
+          radius: this.character.radius +
+            Math.max(0, Number(collider.radius) || 0) + blockerPadding
+        }));
+      const localBlockers = blockers.concat(targetBlockers);
       const pointIsClear = (point, paddingAdjustment = 0) =>
-        blockers.every((entry) =>
+        localBlockers.every((entry) =>
           Math.hypot(point.x - entry.x, point.z - entry.z) >=
             Math.max(0, entry.radius + paddingAdjustment)
         );
@@ -2734,7 +2743,7 @@
         const path = this.character.pathPlanner.plan(
           this.character.root.position,
           point,
-          colliders,
+          allColliders,
           this.character.radius,
           blockerPadding
         );
@@ -2751,6 +2760,7 @@
           return null;
         }
         if (!pointIsClear(finalPoint, -0.005)) return null;
+        if (preferred == null && finalRadius > this.interactionValidationDistance(object)) return null;
 
         const pathLength = path.reduce((total, waypoint, pathIndex) => {
           const previous = pathIndex
@@ -2766,7 +2776,12 @@
       if (
         preferred == null &&
         horizontalDistanceToAnchor(this.character.root.position) <= interactionDistance &&
-        pointIsClear(this.character.root.position, -0.02)
+        blockers.every((entry) =>
+          Math.hypot(
+            this.character.root.position.x - entry.x,
+            this.character.root.position.z - entry.z
+          ) >= entry.radius - 0.02
+        )
       ) {
         const result = {
           point: this.character.root.position.clone(),
