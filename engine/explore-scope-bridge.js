@@ -95,6 +95,7 @@
     if (!manager?.trees?.size) return 0;
 
     let changed = 0;
+    let progressedAction = null;
     manager.trees.forEach((tree, missionId) => {
       if (manager.ensureLifecycle?.(missionId)?.status !== "active") return;
       let treeChanged = false;
@@ -109,9 +110,18 @@
         if (!scopeMatches(node, detail, BF.currentEngine, manager)) return;
         if (!biomeMatches(node, detail)) return;
 
+        const previousProgress = Number(node.progress) || 0;
         if (progressExploreNode(node, detail)) {
           changed += 1;
           treeChanged = true;
+          const current = manager.currentAction;
+          if (
+            !historicalOnly && detail.revealedSectorCount > 0 &&
+            current?.missionId === missionId && current.nodeId === node.id &&
+            node.params?.metric === "surfacePercent"
+          ) {
+            progressedAction = { previousProgress, mapId: detail.mapId };
+          }
         }
       });
 
@@ -122,10 +132,17 @@
     });
 
     if (changed) {
-      manager.syncLifecycleFromTrees?.();
-      manager.reevaluatePendingActivations?.();
-      manager.catalogController?.schedule?.();
-      manager.publish?.();
+      const acknowledged = progressedAction && manager.notifyActionCompleted?.(
+        Missions.ActionType.EXPLORE_ZONE,
+        { ...progressedAction, amount: 0 },
+        { passive: false, progressAlreadyApplied: true }
+      );
+      if (!acknowledged) {
+        manager.syncLifecycleFromTrees?.();
+        manager.reevaluatePendingActivations?.();
+        manager.catalogController?.schedule?.();
+        manager.publish?.();
+      }
     }
     return changed;
   };

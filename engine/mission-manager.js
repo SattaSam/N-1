@@ -1463,6 +1463,33 @@
               : 0
           }));
 
+        // A prescribed persistent MSC is already a known map destination,
+        // even before its first object has been observed as a known site.
+        // The record does not prove resources, families or object distinctness.
+        if (
+          criteria.microSceneId && !criteria.siteId && !criteria.resource &&
+          !criteria.family && !criteria.minKnownInstances &&
+          !excludedObjectIds.size
+        ) {
+          [...discovered].map(String).forEach((mapId) => {
+            if (criteria.mapId && criteria.mapId !== mapId) return;
+            if (criteria.biome && !this.mapMatchesKnownBiome(mapId, criteria.biome)) return;
+            if (rawCandidates.some((candidate) => candidate.mapId === mapId &&
+              candidate.microSceneId === criteria.microSceneId)) return;
+            const records = BF.maps?.[mapId]?.persistentMicroScenes || [];
+            const record = records.find((entry) =>
+              String(entry?.microSceneId || "") === criteria.microSceneId &&
+              BF.MicroScenes?.get?.(criteria.microSceneId)
+            );
+            if (!record) return;
+            rawCandidates.push({
+              mapId, siteId: null, microSceneId: criteria.microSceneId,
+              anchor: record.anchor || null, knownInstanceCount: 0,
+              resourceCount: 0, familyCount: 0
+            });
+          });
+        }
+
         // Les objets de population normale n'ont pas nécessairement de contexte
         // MSC et ne figurent donc pas dans knownSites. ProgressionMultiSystem
         // conserve néanmoins leur objectId + family par map dans mapIndicators.
@@ -1638,6 +1665,18 @@
       // Les destinations sans siteId proviennent principalement des indicateurs
       // de population par map. Elles doivent être revalidées sur la map choisie
       // elle-même, sans repasser par le Top-N pondéré des destinations.
+      if (criteria.microSceneId && !criteria.siteId && !criteria.resource &&
+          !criteria.family && !criteria.minKnownInstances && !excludedObjectIds.size) {
+        const record = (BF.maps?.[targetMapId]?.persistentMicroScenes || [])
+          .find((entry) => String(entry?.microSceneId || "") === criteria.microSceneId);
+        if (!record || !BF.MicroScenes?.get?.(criteria.microSceneId)) return null;
+        return {
+          mapId: targetMapId, siteId: null, microSceneId: criteria.microSceneId,
+          anchor: record.anchor || null, knownInstanceCount: 0,
+          resourceCount: 0, familyCount: 0, route,
+          routeHops: Math.max(0, route.length - 1), criteria
+        };
+      }
       if (criteria.siteId || criteria.microSceneId || criteria.resource) return null;
       let knownInstanceCount = 0;
       let familyCount = 0;
@@ -3551,7 +3590,12 @@
       const missionId = completedAction.missionId || this.primaryMissionId;
       const actionTree = this.trees.get(missionId) || this.tree;
       if (!actionTree) return false;
-      if (!this.planner.applyCompletion(actionTree, completedAction, detail)) {
+      const node = actionTree.find(completedAction.nodeId);
+      const alreadyProgressed = options.progressAlreadyApplied === true &&
+        completedAction.type === Missions.ActionType.EXPLORE_ZONE &&
+        node?.params?.metric === "surfacePercent" &&
+        Number(node.progress) > Number(detail.previousProgress);
+      if (!alreadyProgressed && !this.planner.applyCompletion(actionTree, completedAction, detail)) {
         return false;
       }
       this.memory.remember(type, detail);
