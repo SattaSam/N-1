@@ -326,6 +326,27 @@
     });
 
     steps.forEach((step, index) => {
+      const evidenceMode = String(step?.params?.evidenceMode || "").trim();
+      const evidenceFromSlot = String(step?.params?.evidenceFromSlot || "").trim();
+      const evidencePath = `sequence[${index}].params`;
+      if (evidenceMode || evidenceFromSlot) {
+        if (evidenceMode !== "sample") {
+          add(errors, mission?.id, `${evidencePath}.evidenceMode`, "doit valoir sample.");
+        }
+        if (!evidenceFromSlot || !slotIndexes.has(evidenceFromSlot)) {
+          add(errors, mission?.id, `${evidencePath}.evidenceFromSlot`, "doit référencer un slot existant.");
+        } else if (slotIndexes.get(evidenceFromSlot) >= index) {
+          add(errors, mission?.id, `${evidencePath}.evidenceFromSlot`, "doit référencer une étape antérieure.");
+        }
+        const action = String(step?.action || "").trim().toLowerCase();
+        if (!["analyze", "inspect"].includes(action)) {
+          add(errors, mission?.id, evidencePath, "sample-evidence est réservé aux étapes analyze/inspect.");
+        }
+        if (step?.params?.relation != null) {
+          add(errors, mission?.id, evidencePath, "sample-evidence et relation physique sont contradictoires.");
+        }
+      }
+
       const relation = step?.params?.relation;
       if (relation == null) return;
       const path = `sequence[${index}].params.relation`;

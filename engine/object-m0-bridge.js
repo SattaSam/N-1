@@ -482,6 +482,75 @@
       }
     }).filter(Boolean);
 
+  const catalogMission = (missionId) => {
+    const id = String(missionId || "");
+    const baseId = id.split("@")[0];
+    const catalog = Array.isArray(BF.BibleCatalog)
+      ? BF.BibleCatalog
+      : Object.values(BF.BibleCatalog || {});
+    return BF.bibleRuntime?.byId?.get?.(id) ||
+      BF.bibleRuntime?.byId?.get?.(baseId) ||
+      catalog.find((entry) => entry?.id === id) ||
+      catalog.find((entry) => entry?.id === baseId) ||
+      null;
+  };
+
+  const evidenceContractForAction = (engine, action) => {
+    if (!engine || !action?.missionId || !action?.nodeId) return null;
+    const tree = engine?.missionManager?.trees?.get?.(action.missionId);
+    const node = tree?.find?.(action.nodeId);
+    if (!tree || !node) return null;
+
+    const runtimeMode = String(action?.params?.evidenceMode || node?.params?.evidenceMode || "").trim();
+    const runtimeFrom = String(action?.params?.evidenceFromSlot || node?.params?.evidenceFromSlot || "").trim();
+    if (runtimeMode || runtimeFrom) {
+      return runtimeMode === "sample" && runtimeFrom
+        ? { mode: runtimeMode, fromSlot: runtimeFrom, tree, node }
+        : null;
+    }
+
+    // Une sauvegarde existante conserve les anciens params du nœud. Le contrat
+    // courant du catalogue reste la source d'intention et peut donc réconcilier
+    // le runtime sans migrer ni réécrire la sauvegarde.
+    const mission = catalogMission(action.missionId);
+    const slot = String(
+      node?.params?.sequenceSlot ||
+      action?.params?.sequenceSlot ||
+      String(action.nodeId).slice(String(tree.id).length + 1)
+    ).trim();
+    const step = asArray(mission?.sequence).find((entry) =>
+      String(entry?.slot || "").trim() === slot
+    );
+    const mode = String(step?.params?.evidenceMode || "").trim();
+    const fromSlot = String(step?.params?.evidenceFromSlot || "").trim();
+    return mode === "sample" && fromSlot
+      ? { mode, fromSlot, tree, node }
+      : null;
+  };
+
+  const missionEvidenceForAction = (engine, action) => {
+    const contract = evidenceContractForAction(engine, action);
+    if (!contract) return null;
+    const source = contract.tree?.find?.(`${contract.tree.id}:${contract.fromSlot}`);
+    if (!source) return null;
+    const complete = source.isComplete === true ||
+      String(source.status || "").toLowerCase() === "completed" ||
+      Number(source.progress || 0) >= Math.max(1, Number(source.target) || 1);
+    if (!complete) return null;
+    const evidence = parsedRelationEvidence(source);
+    return {
+      contract,
+      source,
+      evidence: evidence.length
+        ? evidence[evidence.length - 1]
+        : {
+            legacyCompletedSlot: true,
+            missionId: String(action.missionId || ""),
+            sequenceSlot: contract.fromSlot
+          }
+    };
+  };
+
   // Compatibilité P3 strictement identitaire. Les anciennes instances générées
   // par ObjectSpawner portaient <objectId>:<temps-base36>:<sequence-base36>
   // (ou <objectId>:msc:<scene>:<temps>:<sequence>). P3 conserve désormais en
@@ -585,8 +654,13 @@
       BF.bibleRuntime?.byId?.get?.(tree.id) ||
       catalog.find((entry) => entry?.id === tree.id) ||
       null;
-    return asArray(mission?.mapGeneration?.requiredObjects).some((entry) =>
+    const requiredByMapGeneration = asArray(mission?.mapGeneration?.requiredObjects).some((entry) =>
       String(entry?.sourceSlot || "").trim() === slot
+    );
+    if (requiredByMapGeneration) return true;
+    return asArray(mission?.sequence).some((step) =>
+      String(step?.params?.evidenceMode || "").trim() === "sample" &&
+      String(step?.params?.evidenceFromSlot || "").trim() === slot
     );
   };
 
@@ -1343,6 +1417,12 @@
 
   const probeMissionActionTarget = (engine, action) => {
     if (!engine || !action?.missionId || !action?.nodeId) return null;
+    const evidenceContract = evidenceContractForAction(engine, action);
+    if (evidenceContract) {
+      return missionEvidenceForAction(engine, action)
+        ? { missionEvidence: true }
+        : null;
+    }
     const type = Missions.normalizeActionType(action.type);
     if ([Missions.ActionType.COLLECT, Missions.ActionType.EXTRACT].includes(type)) {
       return selectAcquisitionTarget(engine, { ...action, type });
@@ -1413,6 +1493,29 @@
     }
     const originalExecute = proto.execute;
     const executeObjectAware = function executeObjectAware(action, now) {
+      const evidenceContract = evidenceContractForAction(this.engine, action);
+      if (evidenceContract) {
+        if (this.isEngineBusy()) return false;
+        const sourceProof = missionEvidenceForAction(this.engine, action);
+        if (!sourceProof) return false;
+        const evidence = sourceProof.evidence || {};
+        Object.defineProperty(action, "__missionEvidenceCompletion", {
+          value: {
+            amount: 1,
+            narrativeEvidence: true,
+            evidenceMode: "sample",
+            evidenceFromSlot: evidenceContract.fromSlot,
+            sourceMissionId: action.missionId || null,
+            sourceObjectId: evidence.objectId || null,
+            sourceCuoType: evidence.cuoType || null,
+            sourceMapId: evidence.mapId || null,
+            legacyCompletedSlot: evidence.legacyCompletedSlot === true
+          },
+          enumerable: false,
+          configurable: true
+        });
+        return true;
+      }
       if ([
         Missions.ActionType.COLLECT,
         Missions.ActionType.EXTRACT

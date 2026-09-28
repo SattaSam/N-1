@@ -3031,6 +3031,27 @@
           : `Mission secondaire : ${action.title}.`
       );
       this.memory.remember("action-started", action);
+
+      // Les études de preuve sont des étapes missionnelles narratives : le bridge
+      // a validé la preuve source mais n'a lancé aucune interaction monde. On
+      // complète donc uniquement l'action courante, sans fan-out passif ni faux
+      // événement OBJECT_ANALYZED.
+      const evidenceCompletion = action.__missionEvidenceCompletion || null;
+      if (evidenceCompletion) {
+        delete action.__missionEvidenceCompletion;
+        const completed = this.notifyActionCompleted(
+          action.type,
+          evidenceCompletion,
+          { passive: false }
+        );
+        if (!completed) {
+          this.currentAction = null;
+          this.recordExecutionFailure(action, "evidence-completion-failed", now);
+          return false;
+        }
+        return true;
+      }
+
       this.memory.saveTree(tree);
       this.publish();
       return true;

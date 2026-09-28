@@ -1926,7 +1926,7 @@
       Object.freeze({ slot: "exposedPlant", title: "Observer une plante exposée", action: "observe", target: 1, requires: Object.freeze([]), params: Object.freeze({ subject: "flora", tagsAny: Object.freeze(["prismatic", "crystal", "ground_cover"]), excludeCuoTypes: Object.freeze(["thermosap_moss", "fern", "lantern_mushrooms"]) }) }),
       Object.freeze({ slot: "controlPlant", title: "Observer un témoin végétal distinct", action: "observe", target: 1, requires: Object.freeze(["exposedPlant"]), params: Object.freeze({ subject: "flora", relation: Object.freeze({ fromSlot: "exposedPlant", sameBy: Object.freeze(["family"]), differentBy: Object.freeze(["instanceId"]) }) }) }),
       Object.freeze({ slot: "sample", title: "Prélever un spécimen compatible", action: "collect", target: 1, requires: Object.freeze(["controlPlant"]), params: Object.freeze({ subject: "flora", excludeKinds: Object.freeze(["wood"]) }) }),
-      Object.freeze({ slot: "sampleStudy", title: "Réétudier le prélèvement", action: "analyze", target: 1, requires: Object.freeze(["sample"]), params: Object.freeze({ subject: "flora", excludeKinds: Object.freeze(["wood"]) }) })
+      Object.freeze({ slot: "sampleStudy", title: "Réétudier le prélèvement", action: "analyze", target: 1, requires: Object.freeze(["sample"]), params: Object.freeze({ subject: "flora", excludeKinds: Object.freeze(["wood"]), evidenceMode: "sample", evidenceFromSlot: "sample" }) })
     ]),
     narrative: Object.freeze({
       revealed: Object.freeze(["Une plante exposée porte une trace que je n’avais pas isolée jusque-là. Je vais la comparer avant de conclure."]),
@@ -6047,17 +6047,15 @@
       }),
       Object.freeze({
         slot: "analyzeCandidate",
-        title: "Analyser cette même plante avant toute consommation",
+        title: "Analyser les données de la plante observée",
         action: "analyze",
         target: 1,
         requires: Object.freeze(["observeCandidate"]),
         params: Object.freeze({
           subject: "flora",
           tagsAny: Object.freeze(["fiber", "adaptive", "biological", "fungus"]),
-          relation: Object.freeze({
-            fromSlot: "observeCandidate",
-            sameBy: Object.freeze(["instanceId"])
-          })
+          evidenceMode: "sample",
+          evidenceFromSlot: "observeCandidate"
         })
       })
     ]),
