@@ -1557,6 +1557,125 @@
         .slice(0, 12);
     }
 
+    validatePersistedKnownDestination(travel, criteria, previous) {
+      if (!criteria || previous?.kind !== "known-destination") return null;
+      if (previous?.active !== true) return null;
+      if (String(previous.nodeId || "") !== String(travel?.node?.id || "")) return null;
+      const signature = JSON.stringify(criteria);
+      if (String(previous.knownDestinationSignature || "") !== signature) return null;
+
+      const targetMapId = String(previous.targetMapId || previous.mapId || "");
+      if (!targetMapId) return null;
+      const currentMapId = String(this.engine?.currentMapId || "");
+      if (!currentMapId) return null;
+      const discovered = this.engine?.discoveredMaps instanceof Set
+        ? this.engine.discoveredMaps
+        : BF.discoveredMaps instanceof Set
+          ? BF.discoveredMaps
+          : new Set([currentMapId]);
+      if (!discovered.has(targetMapId)) return null;
+      if (criteria.mapId && String(criteria.mapId) !== targetMapId) return null;
+      if (criteria.biome && !this.mapMatchesKnownBiome(targetMapId, criteria.biome)) return null;
+
+      const route = targetMapId === currentMapId
+        ? [currentMapId]
+        : (this.engine?.findOptimalRoute?.(currentMapId, targetMapId) ||
+          this.engine?.findKnownRoute?.(currentMapId, targetMapId));
+      if (!Array.isArray(route) || route.length < 1) return null;
+      if (targetMapId !== currentMapId && route.length < 2) return null;
+
+      const excludedObjectIds = new Set(
+        Array.isArray(criteria.excludeObjectIds)
+          ? criteria.excludeObjectIds.map((value) => String(value || "").trim()).filter(Boolean)
+          : []
+      );
+      const targetSiteId = String(previous.targetSiteId || "").trim();
+
+      if (targetSiteId) {
+        const site = typeof BF.getKnownSite === "function"
+          ? BF.getKnownSite(targetSiteId)
+          : null;
+        if (!site || String(site.mapId || "") !== targetMapId) return null;
+        if (criteria.siteId && String(criteria.siteId) !== String(site.siteId || "")) return null;
+        if (
+          criteria.microSceneId &&
+          String(criteria.microSceneId) !== String(site.microSceneId || "")
+        ) return null;
+        if (criteria.resource && !site.resources?.[criteria.resource]) return null;
+        if (criteria.family && !site.families?.[criteria.family]) return null;
+        if (
+          criteria.minKnownInstances &&
+          Number(site.knownInstanceCount) < Number(criteria.minKnownInstances)
+        ) return null;
+        if (excludedObjectIds.size) {
+          const usefulInstance = Object.values(site.instances || {}).some((instance) => {
+            const objectId = String(instance?.objectId || "").trim();
+            if (!objectId || excludedObjectIds.has(objectId)) return false;
+            if (criteria.family && !instance?.families?.[criteria.family]) return false;
+            if (criteria.resource && !instance?.resources?.[criteria.resource]) return false;
+            return true;
+          });
+          if (!usefulInstance) return null;
+        }
+        return {
+          mapId: targetMapId,
+          siteId: site.siteId || targetSiteId,
+          microSceneId: site.microSceneId || previous.targetMicroSceneId || null,
+          anchor: site.anchor || previous.targetAnchor || null,
+          knownInstanceCount: Number(site.knownInstanceCount) || 0,
+          resourceCount: criteria.resource
+            ? Number(site.resources?.[criteria.resource]?.distinctInstances) || 0
+            : 0,
+          familyCount: criteria.family
+            ? Number(site.families?.[criteria.family]?.distinctInstances) || 0
+            : 0,
+          route,
+          routeHops: Math.max(0, route.length - 1),
+          criteria
+        };
+      }
+
+      // Les destinations sans siteId proviennent principalement des indicateurs
+      // de population par map. Elles doivent être revalidées sur la map choisie
+      // elle-même, sans repasser par le Top-N pondéré des destinations.
+      if (criteria.siteId || criteria.microSceneId || criteria.resource) return null;
+      let knownInstanceCount = 0;
+      let familyCount = 0;
+      if (criteria.family) {
+        if (typeof BF.getMapProgressionIndicators !== "function") return null;
+        const bucket = BF.getMapProgressionIndicators(targetMapId);
+        const usefulObjects = Object.entries(bucket?.uniqueObjects || {})
+          .filter(([objectId, detail]) =>
+            this.knownObjectMatchesGeographicFamily(
+              objectId,
+              detail?.family,
+              criteria.family
+            ) &&
+            !excludedObjectIds.has(String(objectId))
+          );
+        if (!usefulObjects.length) return null;
+        knownInstanceCount = usefulObjects.length;
+        familyCount = usefulObjects.length;
+        if (
+          criteria.minKnownInstances &&
+          knownInstanceCount < Number(criteria.minKnownInstances)
+        ) return null;
+      }
+
+      return {
+        mapId: targetMapId,
+        siteId: null,
+        microSceneId: null,
+        anchor: null,
+        knownInstanceCount,
+        resourceCount: 0,
+        familyCount,
+        route,
+        routeHops: Math.max(0, route.length - 1),
+        criteria
+      };
+    }
+
     resolveKnownDestination(travel) {
       const criteria = this.knownDestinationCriteria(travel);
       if (!criteria) return null;
@@ -1781,13 +1900,13 @@
       const previous = this.memory.getFact?.(key, null);
       const currentMapId = String(this.engine?.currentMapId || "");
       const knownSignature = knownCriteria ? JSON.stringify(knownCriteria) : "";
+      const persistedKnownResolution = knownCriteria
+        ? this.validatePersistedKnownDestination(travel, knownCriteria, previous)
+        : null;
       if (
-        knownCriteria &&
+        persistedKnownResolution &&
         previous?.decisionResolved === true &&
-        previous.kind === "known-destination" &&
-        String(previous.nodeId || "") === String(travel.node?.id || "") &&
-        String(previous.evaluatedMapId || "") === currentMapId &&
-        String(previous.knownDestinationSignature || "") === knownSignature
+        String(previous.evaluatedMapId || "") === currentMapId
       ) {
         const cachedTargetMapId = String(previous.targetMapId || previous.mapId || "");
         if (cachedTargetMapId && travel.node?.params) {
@@ -1814,7 +1933,7 @@
         return previous;
       }
       const knownResolution = knownCriteria
-        ? this.resolveKnownDestination(travel)
+        ? persistedKnownResolution || this.resolveKnownDestination(travel)
         : null;
       const semanticTargetMapId = String(knownResolution?.mapId || "");
       const targetMapId = staticTargetMapId || factTargetMapId || semanticTargetMapId;
