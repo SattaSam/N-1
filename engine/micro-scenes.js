@@ -225,6 +225,14 @@
   ));
 
   const TEMPLATES = Object.freeze({ ...BUILTIN_TEMPLATES, ...CUSTOM_TEMPLATES });
+  const modularRuin = Object.values(CUSTOM_TEMPLATES).find(
+    (scene) => scene.id === "MSC-CUSTOM-RUINE-MODULAIRE2"
+  );
+  const missionRuin = modularRuin && Object.freeze({
+    ...modularRuin,
+    id: "MSC-CUSTOM-RUINE-MODULAIRE4",
+    missionOnly: true
+  });
 
   const MAP_LANDMARKS = Object.freeze({
     volcanic: Object.freeze([["rock", -1.25, 0.25, 2], ["rock", 1.1, 0.5, 1], ["needle", 0, -0.45, 2], ["debris", 0.2, 1.25, 0]].map(Object.freeze)),
@@ -247,7 +255,10 @@
     data: TEMPLATES,
     mapLandmarks: MAP_LANDMARKS,
     mapClusters: MAP_CLUSTERS,
-    get(id) { return TEMPLATES[id] || Object.values(TEMPLATES).find((scene) => scene.id === id) || null; },
+    get(id) {
+      if (id === "MSC-CUSTOM-RUINE-MODULAIRE4") return missionRuin || null;
+      return TEMPLATES[id] || Object.values(TEMPLATES).find((scene) => scene.id === id) || null;
+    },
     list(biome) { return Object.values(TEMPLATES).filter((scene) => !biome || scene.biomes.includes("all") || scene.biomes.includes(biome)); },
     getMapLandmark(profile) { return MAP_LANDMARKS[profile] || MAP_LANDMARKS.alien; },
     getMapCluster(kind) { return MAP_CLUSTERS[kind] || null; },
