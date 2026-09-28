@@ -174,13 +174,26 @@
 
     syncMissionSelection() {
       if (this.persistenceHydrationBlocked) return false;
+      const state = this.memory.state;
+      const activeIds = this.activeMissionIds;
+      const selectionChanged =
+        state.primaryMissionId !== this.primaryMissionId ||
+        state.activeMissionId !== this.primaryMissionId ||
+        !Array.isArray(state.activeMissionIds) ||
+        state.activeMissionIds.length !== activeIds.length ||
+        state.activeMissionIds.some((id, index) => id !== activeIds[index]);
       this.memory.state.primaryMissionId = this.primaryMissionId;
       this.memory.state.activeMissionId = this.primaryMissionId;
-      this.memory.state.activeMissionIds = [...this.activeMissionIds];
+      this.memory.state.activeMissionIds = [...activeIds];
       if (!this.primaryMissionId) return true;
+      const existingLifecycle = state.missionLifecycle?.[this.primaryMissionId];
       const lifecycle = this.ensureLifecycle(this.primaryMissionId, "active");
-      lifecycle.selectionReason = this.selectionReason || lifecycle.selectionReason || "";
-      lifecycle.updatedAt = Date.now();
+      const reason = this.selectionReason || lifecycle.selectionReason || "";
+      const reasonChanged = lifecycle.selectionReason !== reason;
+      lifecycle.selectionReason = reason;
+      if (selectionChanged || reasonChanged || !existingLifecycle) {
+        lifecycle.updatedAt = Date.now();
+      }
       return true;
     }
 
@@ -3073,7 +3086,9 @@
         return false;
       }
       this.applyPendingTransitions();
-      this.ensureMissionTransitionIntent();
+      // An active action cannot start a mission transition. Its completion
+      // and cancellation paths already reassess the pending intent.
+      if (!this.currentAction) this.ensureMissionTransitionIntent();
       if (
         now - this.lastPriorityReviewAt > 5000 &&
         !this.currentAction &&
@@ -3090,15 +3105,22 @@
       if (this.currentAction) {
         const actionAge =
           Date.now() - Number(this.currentAction.issuedAt || Date.now());
+        const character = this.engine.character;
+        const pendingGate = this.engine.pendingGate;
+        const stationaryBeforeGate = Boolean(
+          pendingGate &&
+          character.root.position.distanceTo(character.target) < 0.2 &&
+          character.root.position.distanceTo(pendingGate.position) >
+            (Number(pendingGate.userData?.triggerRadius) || 2.35)
+        );
         const engineIdle =
-          !this.bridge.isEngineBusy() &&
+          (!this.bridge.isEngineBusy() || stationaryBeforeGate) &&
+          !this.engine.transitioning &&
           !this.engine.pendingInteraction &&
           !this.engine.currentRoutine &&
-          !this.engine.pendingGate &&
+          (!pendingGate || stationaryBeforeGate) &&
           !this.engine.pendingZoneExploration &&
-          this.engine.character.root.position.distanceTo(
-            this.engine.character.target
-          ) < 0.25;
+          character.root.position.distanceTo(character.target) < 0.25;
 
         if (engineIdle && actionAge > 5000) {
           const orphan = this.currentAction;
@@ -3331,7 +3353,7 @@
         lifecycle.status = "completed";
         lifecycle.completedAt = wasWaitingForBibleGate
           ? Date.now()
-          : (tree.root.completedAt || Date.now());
+          : (tree.root.completedAt || lifecycle.completedAt || Date.now());
         delete lifecycle.waitingForBibleGate;
         delete lifecycle.waitingForBibleGateMessage;
         this.activeMissionIds = this.activeMissionIds.filter(

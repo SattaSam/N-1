@@ -1840,12 +1840,22 @@
           typeof this.missionManager?.hasMissionExecutionAuthority === "function"
             ? this.missionManager.hasMissionExecutionAuthority() === true
             : this.missionManager?.hasPrimaryMissionAuthority?.() === true;
-        if (missionExecutionAuthority) {
-          this.lastAutonomyAt = now;
-          return;
-        }
 
         if (this.pendingGate) {
+          // A stopped autonomous gate cannot keep a runnable mission busy.
+          // A requested route, however, must retain its destination.
+          const directedRoute = Boolean(
+            this.persistentNavigationIntent ||
+            this.returningToBase ||
+            this.navigationRoute?.length
+          );
+          if (missionExecutionAuthority && !directedRoute) {
+            this.pendingGate = null;
+            if (this.destinationMarker) this.destinationMarker.visible = false;
+            if (this.pathLine) this.pathLine.visible = false;
+            this.lastAutonomyAt = 0;
+            return;
+          }
           const survival = BF.getSurvivalState?.() || {};
           const lastManualAt = Number(survival.lastManualAt) || 0;
           const recentlyInterruptedByPlayer = lastManualAt > 0 && now - lastManualAt < 22000;
@@ -1862,11 +1872,18 @@
             this.character.setTarget?.(this.character.root.position);
             this.lastAutonomyAt = 0;
           } else {
-            this.character.setTarget(this.pendingGate.position, "run");
-            this.showWorldMarker?.(this.pendingGate.position);
-            this.lastActivityAt = now;
+            const gate = this.pendingGate;
+            if (this.character.setTarget(gate.position, "run") !== false && this.pendingGate === gate) {
+              this.showWorldMarker?.(gate.position);
+              this.lastActivityAt = now;
+            }
             return;
           }
+        }
+
+        if (missionExecutionAuthority) {
+          this.lastAutonomyAt = now;
+          return;
         }
 
         this.lastAutonomyAt = 0;
