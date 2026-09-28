@@ -38,7 +38,11 @@
     const encodedMapped = mappedUrl
       ? `${mappedUrl.slice(0, mappedSlash + 1)}${encodeURIComponent(mappedUrl.slice(mappedSlash + 1))}`
       : "";
-    return [...new Set([value, raw, encoded, mappedUrl, encodedMapped].filter(Boolean))];
+    const sourceRegistered = registeredEntries.has(filename.toLocaleLowerCase("fr"));
+    const candidates = sourceRegistered
+      ? [value, raw, encoded, mappedUrl, encodedMapped]
+      : [mappedUrl, encodedMapped, value, raw, encoded];
+    return [...new Set(candidates.filter(Boolean))];
   };
 
   const readableName = (value) =>
