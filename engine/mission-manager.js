@@ -2028,9 +2028,12 @@
               ? "return-base"
               : "map-travel";
       const causalArrivalEligible = Boolean(
-        travel.missionId !== this.primaryMissionId &&
         !this.missionHasHistoricalCollectionObjective(travel.missionId) &&
-        targetMapId
+        targetMapId &&
+        (
+          travel.missionId !== this.primaryMissionId ||
+          travel.source === "required-map"
+        )
       );
       const previousSameContext = Boolean(
         previous?.active === true &&
@@ -2140,8 +2143,12 @@
       const currentMapId = String(this.engine?.currentMapId || context?.mapId || "");
       if (!currentMapId) return null;
 
-      for (const missionId of this.activeMissionIds) {
-        if (!missionId || missionId === this.primaryMissionId) continue;
+      const missionIds = [
+        this.primaryMissionId,
+        ...this.activeMissionIds.filter((id) => id !== this.primaryMissionId)
+      ];
+      for (const missionId of missionIds) {
+        if (!missionId) continue;
         if (this.missionHasHistoricalCollectionObjective(missionId)) continue;
         const key = this.missionReturnIntentKey(missionId);
         const intent = this.memory.getFact?.(key, null);
@@ -2163,6 +2170,32 @@
             )
           : null;
         if (action) return { missionId, action, intent };
+
+        // Pour la primaire, un voyage required-map est causal : l'absence
+        // momentanée de cible physique à l'arrivée ne signifie pas que le
+        // travail local est terminé. Tant que le même noeud reste incomplet et
+        // contraint à cette map, conserver l'autorité géographique sans créer
+        // de polling ni de nouvelle politique de recovery.
+        if (
+          missionId === this.primaryMissionId &&
+          intent.transitionSource === "required-map" &&
+          lifecycle.status === "active" &&
+          tree &&
+          !tree.root.isComplete
+        ) {
+          const causalNode = tree.find?.(String(intent.nodeId || "")) || null;
+          const requiredMapState = causalNode && !causalNode.isComplete
+            ? this.planner.requiredMapState?.(causalNode, context) || null
+            : null;
+          if (
+            causalNode &&
+            !causalNode.isComplete &&
+            requiredMapState?.constrained === true &&
+            String(requiredMapState.targetMapId || "") === currentMapId
+          ) {
+            return { missionId, action: null, intent, awaitingTarget: true };
+          }
+        }
 
         this.memory.setFact?.(key, {
           ...intent,
@@ -2361,7 +2394,13 @@
     }
 
     travelAllowsSecondaryMission(missionId, context) {
-      if (this.causalArrivalWork(context)?.missionId === missionId) return true;
+      const causalArrival = this.causalArrivalWork(context);
+      if (causalArrival?.missionId === missionId) return true;
+      // Cette fonction n'est appelée que pour une secondaire qui possède déjà
+      // une action locale runnable. Pendant l'attente causale de la primaire,
+      // cette action locale reste donc autorisée ; les travels secondaires sont
+      // filtrés séparément dans prioritizedMissionWork().
+      if (causalArrival?.missionId === this.primaryMissionId) return true;
       const travel = this.primaryMissionTransition(context);
       if (!travel || missionId === travel.missionId) return true;
 
@@ -2750,6 +2789,9 @@
 
     hasPrimaryMissionAuthority() {
       const context = this.bridge.context();
+      if (this.causalArrivalWork(context)?.missionId === this.primaryMissionId) {
+        return true;
+      }
       const transition = this.primaryMissionTransition(context);
       if (transition && this.knownDestinationCriteria(transition)) {
         const intent = this.ensureMissionTransitionIntent(context);
@@ -3012,6 +3054,7 @@
           this.trees.has(id)
         )
         .slice(0, 4);
+      const causalArrival = this.causalArrivalWork(context);
 
       for (const missionId of prioritizedMissionIds) {
         const assessment = this.assessMission(missionId, context);
@@ -3028,7 +3071,14 @@
         }
 
         const travel = this.missionTransitionFor(missionId, context);
-        if (travel && this.missionTransitionExecutable(travel)) {
+        if (
+          travel &&
+          this.missionTransitionExecutable(travel) &&
+          !(
+            causalArrival?.missionId === this.primaryMissionId &&
+            missionId !== this.primaryMissionId
+          )
+        ) {
           return {
             kind: "travel",
             missionId,
