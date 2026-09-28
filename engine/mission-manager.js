@@ -1096,7 +1096,7 @@
       if (!explicit && !fromFact) return null;
       const merged = { ...(explicit || {}), ...(fromFact || {}) };
       const criteria = {};
-      ["siteId", "microSceneId", "resource", "family", "biome", "mapId"].forEach((key) => {
+      ["siteId", "microSceneId", "persistentMicroSceneId", "resource", "family", "biome", "mapId"].forEach((key) => {
         const value = String(merged[key] ?? "").trim();
         if (value) criteria[key] = value;
       });
@@ -1188,7 +1188,7 @@
     missionNodeKnownDestinationCriteria(node, tree = null) {
       const params = node?.params || {};
       const criteria = {};
-      ["siteId", "microSceneId", "resource", "family", "biome"].forEach((key) => {
+      ["siteId", "microSceneId", "persistentMicroSceneId", "resource", "family", "biome"].forEach((key) => {
         const value = String(params[key] ?? "").trim();
         if (value) criteria[key] = value;
       });
@@ -1416,8 +1416,15 @@
       ["siteId", "microSceneId", "resource", "family", "mapId"].forEach((key) => {
         if (criteria[key]) siteCriteria[key] = criteria[key];
       });
-      const hasSemanticSiteCriteria = ["siteId", "microSceneId", "resource", "family"]
-        .some((key) => Boolean(siteCriteria[key]));
+      const persistentMicroSceneId = String(
+        criteria.persistentMicroSceneId || ""
+      ).trim();
+      const hasPersistentMicroSceneIdentity = Boolean(persistentMicroSceneId);
+      const hasSemanticSiteCriteria = Boolean(
+        hasPersistentMicroSceneIdentity ||
+        ["siteId", "microSceneId", "resource", "family"]
+          .some((key) => Boolean(siteCriteria[key]))
+      );
       const excludedObjectIds = new Set(
         Array.isArray(criteria.excludeObjectIds)
           ? criteria.excludeObjectIds.map((value) => String(value || "").trim()).filter(Boolean)
@@ -1437,7 +1444,8 @@
       let rawCandidates = [];
 
       if (hasSemanticSiteCriteria) {
-        const knownSites = typeof BF.getKnownSites === "function"
+        const knownSites = !hasPersistentMicroSceneIdentity &&
+          typeof BF.getKnownSites === "function"
           ? BF.getKnownSites(siteCriteria)
           : [];
         rawCandidates = knownSites
@@ -1462,6 +1470,34 @@
               ? Number(site.families?.[criteria.family]?.distinctInstances) || 0
               : 0
           }));
+
+        // Une identité persistante explicite (ex. GEO-01/FALAISE1-A) est
+        // plus forte qu'une famille sémantique. Elle doit être résolue sur le
+        // record canonique PersistentMicroScenes et ne peut jamais retomber
+        // vers une autre MSC simplement parce qu'elle expose la même famille.
+        if (hasPersistentMicroSceneIdentity) {
+          [...discovered].map(String).forEach((mapId) => {
+            if (criteria.mapId && criteria.mapId !== mapId) return;
+            if (criteria.biome && !this.mapMatchesKnownBiome(mapId, criteria.biome)) return;
+            const records = BF.maps?.[mapId]?.persistentMicroScenes || [];
+            const record = records.find((entry) =>
+              String(entry?.instanceId || "") === persistentMicroSceneId &&
+              entry?.microSceneId &&
+              BF.MicroScenes?.get?.(String(entry.microSceneId))
+            );
+            if (!record) return;
+            rawCandidates.push({
+              mapId,
+              siteId: null,
+              microSceneId: String(record.microSceneId),
+              persistentMicroSceneId,
+              anchor: record.anchor || null,
+              knownInstanceCount: 0,
+              resourceCount: 0,
+              familyCount: 0
+            });
+          });
+        }
 
         // A prescribed persistent MSC is already a known map destination,
         // even before its first object has been observed as a known site.
@@ -1494,7 +1530,11 @@
         // MSC et ne figurent donc pas dans knownSites. ProgressionMultiSystem
         // conserve néanmoins leur objectId + family par map dans mapIndicators.
         // Cette source complète la mémoire de sites sans créer de second registre.
-        if (criteria.family && typeof BF.getMapProgressionIndicators === "function") {
+        if (
+          criteria.family &&
+          !hasPersistentMicroSceneIdentity &&
+          typeof BF.getMapProgressionIndicators === "function"
+        ) {
           const existingMaps = new Set(rawCandidates.map((entry) => String(entry.mapId)));
           [...discovered].map(String).forEach((mapId) => {
             if (existingMaps.has(mapId)) return;
@@ -1617,6 +1657,32 @@
           : []
       );
       const targetSiteId = String(previous.targetSiteId || "").trim();
+      const persistentMicroSceneId = String(
+        criteria.persistentMicroSceneId || ""
+      ).trim();
+
+      if (persistentMicroSceneId) {
+        const record = (BF.maps?.[targetMapId]?.persistentMicroScenes || [])
+          .find((entry) =>
+            String(entry?.instanceId || "") === persistentMicroSceneId &&
+            entry?.microSceneId &&
+            BF.MicroScenes?.get?.(String(entry.microSceneId))
+          );
+        if (!record) return null;
+        return {
+          mapId: targetMapId,
+          siteId: null,
+          microSceneId: String(record.microSceneId),
+          persistentMicroSceneId,
+          anchor: record.anchor || null,
+          knownInstanceCount: 0,
+          resourceCount: 0,
+          familyCount: 0,
+          route,
+          routeHops: Math.max(0, route.length - 1),
+          criteria
+        };
+      }
 
       if (targetSiteId) {
         const site = typeof BF.getKnownSite === "function"
