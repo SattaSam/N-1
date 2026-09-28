@@ -1792,11 +1792,22 @@
       return null;
     }
 
+    isMissionTransitionDeferralEligible(
+      missionId,
+      context = this.bridge.context()
+    ) {
+      // Les missions de collecte historique sont cumulatives et progressent
+      // passivement. Elles ne constituent donc pas une opportunité locale
+      // perdable capable de retarder un voyage missionnel exécutable.
+      if (this.missionHasHistoricalCollectionObjective(missionId)) return false;
+      return this.isMissionTransitionOpportunity(missionId, context);
+    }
+
     transitionLocalCandidates(missionId, context = this.bridge.context()) {
       return this.activeMissionIds
         .filter((id) => id !== missionId)
         .filter((id) => this.ensureLifecycle(id).status === "active")
-        .filter((id) => this.isMissionTransitionOpportunity(id, context))
+        .filter((id) => this.isMissionTransitionDeferralEligible(id, context))
         .filter((id) => {
           const tree = this.trees.get(id);
           return Boolean(
@@ -1900,12 +1911,19 @@
       const previous = this.memory.getFact?.(key, null);
       const currentMapId = String(this.engine?.currentMapId || "");
       const knownSignature = knownCriteria ? JSON.stringify(knownCriteria) : "";
+      const cachedDeferMissionId = String(previous?.deferMissionId || "");
+      const cachedDeferralStillEligible = !cachedDeferMissionId ||
+        this.isMissionTransitionDeferralEligible(
+          cachedDeferMissionId,
+          decisionContext
+        );
       const persistedKnownResolution = knownCriteria
         ? this.validatePersistedKnownDestination(travel, knownCriteria, previous)
         : null;
       if (
         persistedKnownResolution &&
         previous?.decisionResolved === true &&
+        cachedDeferralStillEligible &&
         String(previous.evaluatedMapId || "") === currentMapId
       ) {
         const cachedTargetMapId = String(previous.targetMapId || previous.mapId || "");
@@ -2011,6 +2029,7 @@
               : "map-travel";
       const previousSameContext = Boolean(
         previous?.active === true &&
+        cachedDeferralStillEligible &&
         String(previous.nodeId || "") === String(travel.node?.id || "") &&
         String(previous.evaluatedMapId || "") === currentMapId &&
         previous.kind === kind
@@ -2122,7 +2141,7 @@
 
       const tree = this.trees.get(deferMissionId);
       const stillRunnable = Boolean(
-        this.isMissionTransitionOpportunity(deferMissionId, context) &&
+        this.isMissionTransitionDeferralEligible(deferMissionId, context) &&
         this.ensureLifecycle(deferMissionId).status === "active" &&
         tree &&
         !tree.root.isComplete &&
@@ -2301,7 +2320,7 @@
       if (!intent?.active) {
         const policy = this.travelMissionDefinition(travel)?.returnPolicy || {};
         if (policy.mode !== "bac-discretion") return true;
-        return this.isMissionTransitionOpportunity(missionId, context);
+        return this.isMissionTransitionDeferralEligible(missionId, context);
       }
 
       const eligible = Array.isArray(intent.eligibleLocalMissionIds)
@@ -2311,12 +2330,12 @@
         intent.decisionResolved !== true &&
         eligible.includes(missionId)
       ) {
-        return this.isMissionTransitionOpportunity(missionId, context);
+        return this.isMissionTransitionDeferralEligible(missionId, context);
       }
       return (
         intent.deferMissionId === missionId &&
         eligible.includes(missionId) &&
-        this.isMissionTransitionOpportunity(missionId, context)
+        this.isMissionTransitionDeferralEligible(missionId, context)
       );
     }
 
