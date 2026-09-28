@@ -1,6 +1,7 @@
 window.BlueFoxCustomMaps = [
   {
     "id": "custom-map-29-place-fixe-camp",
+    "generationTemplateEligible": false,
     "number": 29,
     "index": "29-place-fixe-camp",
     "name": "place fixe camp",

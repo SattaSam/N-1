@@ -437,7 +437,8 @@
       if (
         definition.generated === true &&
         definition.generator?.biomeId &&
-        Number(definition.generator?.visualIdentityVersion || 0) < VISUAL_IDENTITY_VERSION
+        (Number(definition.generator?.visualIdentityVersion || 0) < VISUAL_IDENTITY_VERSION ||
+          definition.generator?.templateId === "custom-map-29-place-fixe-camp")
       ) {
         const before = JSON.stringify({
           name: definition.name,

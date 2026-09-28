@@ -33,6 +33,7 @@
     if (!draft) return null;
     const candidates = Object.values(BF.maps || {}).filter((map) =>
       map?.id && map.id !== "crystal" && !map.generated &&
+      map.generationTemplateEligible !== false &&
       map.sceneUrl && (map.terrainUrls?.length || map.terrainUrl)
     );
     if (!candidates.length) return null;
