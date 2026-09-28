@@ -2027,6 +2027,11 @@
             : mission?.navigation?.autonomousKnownReturn === true
               ? "return-base"
               : "map-travel";
+      const causalArrivalEligible = Boolean(
+        travel.missionId !== this.primaryMissionId &&
+        !this.missionHasHistoricalCollectionObjective(travel.missionId) &&
+        targetMapId
+      );
       const previousSameContext = Boolean(
         previous?.active === true &&
         cachedDeferralStillEligible &&
@@ -2082,6 +2087,9 @@
         eligibleLocalMissionIds: [],
         deferMissionId: null,
         decisionResolved: false,
+        arrivalWorkMissionId: causalArrivalEligible ? travel.missionId : null,
+        arrivalWorkMapId: causalArrivalEligible ? targetMapId : null,
+        arrivalWorkPending: causalArrivalEligible,
         createdAt: Number(previous?.createdAt) || Date.now(),
         updatedAt: Date.now()
       };
@@ -2128,6 +2136,45 @@
       )?.active === true;
     }
 
+    causalArrivalWork(context = this.bridge.context()) {
+      const currentMapId = String(this.engine?.currentMapId || context?.mapId || "");
+      if (!currentMapId) return null;
+
+      for (const missionId of this.activeMissionIds) {
+        if (!missionId || missionId === this.primaryMissionId) continue;
+        if (this.missionHasHistoricalCollectionObjective(missionId)) continue;
+        const key = this.missionReturnIntentKey(missionId);
+        const intent = this.memory.getFact?.(key, null);
+        if (
+          intent?.arrivalWorkPending !== true ||
+          String(intent.arrivalWorkMissionId || "") !== String(missionId) ||
+          String(intent.arrivalWorkMapId || "") !== currentMapId
+        ) continue;
+
+        const lifecycle = this.ensureLifecycle(missionId);
+        const tree = this.trees.get(missionId);
+        const action = lifecycle.status === "active" && tree && !tree.root.isComplete
+          ? this.missionRunnableAction(
+              missionId,
+              tree,
+              context,
+              performance.now(),
+              { reportUnresolved: false }
+            )
+          : null;
+        if (action) return { missionId, action, intent };
+
+        this.memory.setFact?.(key, {
+          ...intent,
+          arrivalWorkPending: false,
+          arrivalWorkCompletedAt: Date.now(),
+          updatedAt: Date.now()
+        });
+        this.memory.save?.();
+      }
+      return null;
+    }
+
     shouldDeferMissionTransition(
       missionId,
       context = this.bridge.context()
@@ -2172,6 +2219,10 @@
     resumeMissionTransitionIntent(context = this.bridge.context(), travelOverride = null) {
       const travel = travelOverride || this.primaryMissionTransition(context);
       if (!travel) return false;
+      const causalArrival = this.causalArrivalWork(context);
+      if (causalArrival && causalArrival.missionId !== travel.missionId) {
+        return false;
+      }
       if (
         this.isAutonomousUnknownTravel(travel) &&
         !this.missionTransitionExecutable(travel)
@@ -2310,6 +2361,7 @@
     }
 
     travelAllowsSecondaryMission(missionId, context) {
+      if (this.causalArrivalWork(context)?.missionId === missionId) return true;
       const travel = this.primaryMissionTransition(context);
       if (!travel || missionId === travel.missionId) return true;
 

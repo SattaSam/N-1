@@ -232,15 +232,40 @@
     // du voyage inconnu. Elle ne prépare une destination missionnelle qu'une
     // fois la progression réellement autorisée à quitter le territoire connu.
     if (!unknownTravelUnlocked(engine)) return null;
+    const normalizedDirection = String(direction || "").toLowerCase();
+    const fromMapId = String(engine?.currentMapId || "");
+    const previewMapId = `__bible-map-preview__:${fromMapId}:${normalizedDirection}`;
+    const previewEvent = {
+      type: "exploration.map_discovered",
+      direction: normalizedDirection,
+      fromMapId,
+      mapId: previewMapId,
+      toMapId: previewMapId,
+      instanceId: previewMapId,
+      featuredMicroSceneIds: [],
+      amount: 1
+    };
+    const targetCoordinate = engine?.worldTopology?.targetFrom?.(
+      fromMapId,
+      normalizedDirection
+    ) || null;
+    const runtime = BF.bibleRuntime;
     return catalog()
       .filter((mission) => {
         if (!mission?.id || !mission?.mapGeneration) return false;
+        if (mission?.trigger?.type !== "exploration.map_discovered") return false;
+        if (typeof runtime?.wouldActivateMissionOnEvent === "function") {
+          return runtime.wouldActivateMissionOnEvent(
+            mission,
+            previewEvent,
+            { targetCoordinate }
+          );
+        }
         if (!foundationTutorialAllows(mission)) return false;
         if (missionStatus(engine, mission.id) != null) return false;
-        if (mission?.trigger?.type !== "exploration.map_discovered") return false;
         if (
           mission.trigger.direction != null &&
-          String(mission.trigger.direction) !== String(direction)
+          String(mission.trigger.direction) !== normalizedDirection
         ) return false;
         return prerequisitesSatisfied(engine, mission);
       })

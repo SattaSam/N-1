@@ -2464,6 +2464,12 @@
     }
 
     navigateNextRouteStep() {
+      // Une routine est une autorité physique : un callback de route différé ne
+      // doit jamais relancer la locomotion pendant un repos. La route et
+      // l'intention restent intactes et seront reprises à la fin de la routine.
+      if (["rest", "micro-rest", "critical-rest"].includes(this.currentRoutine?.type)) {
+        return false;
+      }
       const nextMapId = this.navigationRoute[0];
       if (!nextMapId || nextMapId === this.currentMapId) {
         if (nextMapId === this.currentMapId) this.navigationRoute.shift();
@@ -2514,6 +2520,7 @@
       this.callbacks.onStatus(
         `BlueFox rejoint le passage vers ${this.narrativeMapName(destinationId)}.`
       );
+      return true;
     }
 
     async executePendingTeleportRouteStep(pending) {
@@ -4309,6 +4316,15 @@
       }
       this.lastAutonomyAt = now - 5000;
       this.lastActivityAt = now;
+      if (
+        ["rest", "micro-rest", "critical-rest"].includes(finished) &&
+        this.navigationRoute.length &&
+        !this.transitioning &&
+        !this.pendingGate &&
+        !this.pendingTeleport
+      ) {
+        this.navigateNextRouteStep();
+      }
     }
 
     ensureActivity(now) {

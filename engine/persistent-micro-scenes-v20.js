@@ -105,6 +105,28 @@
     point.z <= Number(region.maxZ) - radius
   );
 
+  const regionKey = (region) => region
+    ? [region.minX, region.maxX, region.minZ, region.maxZ]
+        .map((value) => Number(value) || 0)
+        .join(":")
+    : "";
+
+  const regionForPoint = (built, point) =>
+    (built?.walkableRegions || []).find((region) => pointInside(region, point, 0)) || null;
+
+  const occupiedMicroSceneRegionKeys = (built) => {
+    const used = new Set();
+    const scenes = built?.group?.userData?.microScenes || [];
+    scenes.forEach((scene) => {
+      const root = scene?.instanceRoot;
+      const point = root?.position || scene?.anchor || null;
+      const region = point ? regionForPoint(built, point) : null;
+      const key = regionKey(region);
+      if (key) used.add(key);
+    });
+    return used;
+  };
+
   const clearOfColliders = (built, point, clearance) =>
     (built.colliders || []).every((collider) => {
       const p = collider?.position;
@@ -159,7 +181,14 @@
     );
   };
 
-  const findSafeAnchor = (built, definition, radius = 7, preferred = null) => {
+  const findSafeAnchor = (
+    built,
+    definition,
+    radius = 7,
+    preferred = null,
+    excludedRegionKeys = null,
+    requireUnusedRegion = false
+  ) => {
     const margin = Math.max(2, radius + 1.5);
     const regions = built.walkableRegions || [];
 
@@ -172,7 +201,11 @@
       return { x: preferred.x, y: Number(preferred.y) || 0, z: preferred.z };
     }
 
+    const excluded = excludedRegionKeys instanceof Set
+      ? excludedRegionKeys
+      : new Set(excludedRegionKeys || []);
     const candidate = candidatePoints(built, definition, radius).find(({ region, point }) =>
+      (!requireUnusedRegion || !excluded.has(regionKey(region))) &&
       pointInside(region, point, margin) &&
       clearOfColliders(built, point, margin) &&
       clearOfReserved(definition, point, margin)
@@ -181,10 +214,20 @@
     return candidate?.point || null;
   };
 
-  const missionFallbackCandidates = (built, definition, preferred = null) => {
+  const missionFallbackCandidates = (
+    built,
+    definition,
+    preferred = null,
+    excludedRegionKeys = null,
+    requireUnusedRegion = false
+  ) => {
+    const excluded = excludedRegionKeys instanceof Set
+      ? excludedRegionKeys
+      : new Set(excludedRegionKeys || []);
     const regions = (built.walkableRegions || []).filter((region) =>
       Number(region.maxX) - Number(region.minX) >= 4 &&
-      Number(region.maxZ) - Number(region.minZ) >= 4
+      Number(region.maxZ) - Number(region.minZ) >= 4 &&
+      (!requireUnusedRegion || !excluded.has(regionKey(region)))
     );
     const candidates = [];
     if (preferred) candidates.push({ point: preferred, preferred: true });
@@ -204,10 +247,22 @@
     return candidates;
   };
 
-  const findMissionFallbackAnchor = (built, definition, preferred = null) => {
+  const findMissionFallbackAnchor = (
+    built,
+    definition,
+    preferred = null,
+    excludedRegionKeys = null,
+    requireUnusedRegion = false
+  ) => {
     const regions = built.walkableRegions || [];
     if (!regions.length) return null;
-    const candidates = missionFallbackCandidates(built, definition, preferred);
+    const candidates = missionFallbackCandidates(
+      built,
+      definition,
+      preferred,
+      excludedRegionKeys,
+      requireUnusedRegion
+    );
 
     const withColliderClearance = candidates.find(({ point }) =>
       regions.some((region) => pointInside(region, point, 2)) &&
@@ -242,12 +297,28 @@
   // On conserve d'abord les réserves entrée/sorties, puis on accepte en ultime
   // recours une superposition avec le décor. La composition interne de la MSC
   // reste inchangée : seul son ancrage global est choisi ici.
-  const findMissionTerminalAnchor = (built, definition, preferred = null) => {
+  const findMissionTerminalAnchor = (
+    built,
+    definition,
+    preferred = null,
+    excludedRegionKeys = null,
+    requireUnusedRegion = false
+  ) => {
+    const excluded = excludedRegionKeys instanceof Set
+      ? excludedRegionKeys
+      : new Set(excludedRegionKeys || []);
     const regions = (built.walkableRegions || []).filter((region) =>
       Number(region.maxX) > Number(region.minX) &&
-      Number(region.maxZ) > Number(region.minZ)
+      Number(region.maxZ) > Number(region.minZ) &&
+      (!requireUnusedRegion || !excluded.has(regionKey(region)))
     );
-    const candidates = missionFallbackCandidates(built, definition, preferred);
+    const candidates = missionFallbackCandidates(
+      built,
+      definition,
+      preferred,
+      excludedRegionKeys,
+      requireUnusedRegion
+    );
 
     const reservedClear = candidates.find(({ point }) =>
       regions.some((region) => pointInside(region, point, 0.75)) &&
@@ -341,16 +412,42 @@
 
     const radius = Math.max(1, Number(template.radius) || Number(record.radius) || 7);
     const preferred = record.anchor || null;
+    const occupiedRegions = preferred || record.fixedAnchor === true
+      ? new Set()
+      : occupiedMicroSceneRegionKeys(built);
     let anchor = record.fixedAnchor === true
       ? preferred && {
           x: Number(preferred.x) || 0,
           y: Number(preferred.y) || 0,
           z: Number(preferred.z) || 0
         }
-      : findSafeAnchor(built, definition, radius, preferred);
+      : findSafeAnchor(
+          built,
+          definition,
+          radius,
+          preferred,
+          occupiedRegions,
+          occupiedRegions.size > 0
+        );
+
+    // Répartition d'abord : si plusieurs plateaux sont disponibles, une MSC
+    // nouvelle évite ceux déjà occupés. Si aucun placement sûr n'existe sur un
+    // plateau libre, on conserve ensuite le comportement historique.
+    if (!anchor && record.fixedAnchor !== true && occupiedRegions.size) {
+      anchor = findSafeAnchor(built, definition, radius, preferred);
+    }
 
     if (!anchor && record.missionId && record.fixedAnchor !== true) {
-      anchor = findMissionFallbackAnchor(built, definition, preferred);
+      anchor = findMissionFallbackAnchor(
+        built,
+        definition,
+        preferred,
+        occupiedRegions,
+        occupiedRegions.size > 0
+      );
+      if (!anchor && occupiedRegions.size) {
+        anchor = findMissionFallbackAnchor(built, definition, preferred);
+      }
       if (anchor) {
         console.warn("[BlueFox] Placement de secours utilisé pour une micro-scène missionnelle persistante.", {
           mapId: definition.id,
@@ -361,7 +458,16 @@
     }
 
     if (!anchor && record.missionId && record.fixedAnchor !== true) {
-      anchor = findMissionTerminalAnchor(built, definition, preferred);
+      anchor = findMissionTerminalAnchor(
+        built,
+        definition,
+        preferred,
+        occupiedRegions,
+        occupiedRegions.size > 0
+      );
+      if (!anchor && occupiedRegions.size) {
+        anchor = findMissionTerminalAnchor(built, definition, preferred);
+      }
       console.warn("[BlueFox] Placement terminal utilisé pour garantir une micro-scène missionnelle persistante.", {
         mapId: definition.id,
         missionId: record.missionId,

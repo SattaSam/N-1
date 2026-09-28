@@ -2132,6 +2132,58 @@
       return Number(this.state.triggerCounts[key]) || 0;
     }
 
+    previewTriggerCount(mission, event = {}) {
+      const trigger = mission?.trigger || {};
+      const key = this.triggerKey(mission);
+
+      if (trigger.uniqueOnly) {
+        const identity =
+          event.instanceId ||
+          event.toMapId ||
+          `${event.mapId ?? ""}:${event.zoneId ?? ""}:${event.objectId ?? ""}`;
+        const values = new Set(this.state.uniqueTriggerValues[key] || []);
+        if (identity) values.add(String(identity));
+        return values.size;
+      }
+
+      return (
+        (Number(this.state.triggerCounts[key]) || 0) +
+        Math.max(1, Number(event.amount) || 1)
+      );
+    }
+
+    siteDistanceGateSatisfiedAtCoordinate(mission, target) {
+      const gate = mission?.siteDistanceGate;
+      if (!gate) return true;
+      if (!target || !Number.isFinite(Number(target.x)) || !Number.isFinite(Number(target.y))) {
+        return false;
+      }
+      const topology = BF.currentEngine?.worldTopology;
+      if (!topology) return false;
+      const kinds = new Set(asArray(gate.kinds || ["camp", "refuge", "base"]).map(lower));
+      const minimumExclusive = Math.max(0, Number(gate.minimumExclusive) || 0);
+      const siteProgression = this.manager()?.memory?.state?.siteProgression || {};
+      let nearest = Infinity;
+
+      Object.entries(siteProgression).forEach(([bucketMapId, raw]) => {
+        const sites = raw?.sites && typeof raw.sites === "object"
+          ? raw.sites
+          : { [raw?.kind]: raw };
+        Object.entries(sites).forEach(([kind, site]) => {
+          if (!site || !kinds.has(lower(kind))) return;
+          const siteMapId = String(site.mapId || raw?.mapId || bucketMapId || "");
+          if (!siteMapId) return;
+          const point = topology.coordinateOf?.(siteMapId);
+          if (!point) return;
+          const distance =
+            Math.abs(Number(target.x) - Number(point.x)) +
+            Math.abs(Number(target.y) - Number(point.y));
+          if (Number.isFinite(distance)) nearest = Math.min(nearest, distance);
+        });
+      });
+      return nearest > minimumExclusive;
+    }
+
     siteDistanceGateSatisfied(mission, mapId = BF.currentEngine?.currentMapId) {
       const gate = mission?.siteDistanceGate;
       if (!gate) return true;
@@ -2140,26 +2192,109 @@
       const topology = BF.currentEngine?.worldTopology;
       const target = topology?.coordinateOf?.(targetMapId);
       if (!target) return false;
-      const kinds = new Set(asArray(gate.kinds || ["camp", "refuge", "base"]).map(lower));
-      const minimumExclusive = Math.max(0, Number(gate.minimumExclusive) || 0);
-      const siteProgression = this.manager()?.memory?.state?.siteProgression || {};
-      let nearest = Infinity;
-      Object.entries(siteProgression).forEach(([siteMapId, raw]) => {
-        const sites = raw?.sites && typeof raw.sites === "object"
-          ? raw.sites
-          : { [raw?.kind]: raw };
-        const hasRelevantSite = Object.entries(sites).some(([kind, site]) =>
-          Boolean(site) && kinds.has(lower(kind))
+      return this.siteDistanceGateSatisfiedAtCoordinate(mission, target);
+    }
+
+    wouldActivateMissionOnEvent(missionOrId, event = {}, options = {}) {
+      const mission = typeof missionOrId === "string"
+        ? this.byId.get(String(missionOrId))
+        : missionOrId;
+      if (!mission?.id || mission.localMission) return false;
+      if (!this.eventMatchesTrigger(mission.trigger, event)) return false;
+      if (!this.foundationTutorialAllows(mission)) return false;
+
+      const lifecycle = this.missionLifecycle(mission.id);
+      if (lifecycle.active || lifecycle.completed) return false;
+      if (!this.prerequisitesSatisfied(mission)) return false;
+
+      if (mission.siteDistanceGate) {
+        const targetCoordinate = options.targetCoordinate || null;
+        const gateSatisfied = targetCoordinate
+          ? this.siteDistanceGateSatisfiedAtCoordinate(mission, targetCoordinate)
+          : this.siteDistanceGateSatisfied(
+              mission,
+              event.mapId || event.toMapId || BF.currentEngine?.currentMapId
+            );
+        if (!gateSatisfied) return false;
+      }
+
+      const required = Math.max(1, Number(mission.trigger?.count) || 1);
+      return this.previewTriggerCount(mission, event) >= required;
+    }
+
+    reconcileBoundMissionMicroScenes(mission, mapId) {
+      if (mission?.bindActivationMap !== true) return false;
+      const required = asArray(mission?.mapGeneration?.requiredMicroScenes)
+        .filter((scene) => scene?.id && scene.persistent !== false);
+      if (!required.length || !BF.PersistentMicroScenes?.ensure) return false;
+
+      const targetMapId = String(mapId || "");
+      const definition = BF.maps?.[targetMapId];
+      if (!targetMapId || !definition) return false;
+
+      let changed = false;
+      const records = BF.PersistentMicroScenes.list?.(definition) || [];
+      required.forEach((scene) => {
+        const exists = records.some((record) =>
+          String(record?.missionId || "") === String(mission.id) &&
+          String(record?.microSceneId || "") === String(scene.id)
         );
-        if (!hasRelevantSite) return;
-        const point = topology.coordinateOf?.(siteMapId);
-        if (!point) return;
-        const distance =
-          Math.abs(Number(target.x) - Number(point.x)) +
-          Math.abs(Number(target.y) - Number(point.y));
-        if (Number.isFinite(distance)) nearest = Math.min(nearest, distance);
+        if (exists) return;
+        BF.PersistentMicroScenes.ensure(definition, {
+          missionId: mission.id,
+          microSceneId: scene.id,
+          contextRole: scene.contextRole || null,
+          persistent: true,
+          spawnOnce: scene.spawnOnce !== false,
+          anchor: scene.anchor || null,
+          rotation: Array.isArray(scene.rotation)
+            ? (Number(scene.rotation[1]) || 0)
+            : (Number(scene.rotation) || 0),
+          fixedAnchor: scene.fixedAnchor === true
+        });
+        changed = true;
       });
-      return nearest > minimumExclusive;
+
+      const engine = BF.currentEngine;
+      if (
+        String(engine?.currentMapId || "") === targetMapId &&
+        engine?.currentMap &&
+        engine?.THREE &&
+        BF.PersistentMicroScenes?.spawnForBuiltMap
+      ) {
+        BF.PersistentMicroScenes.spawnForBuiltMap(
+          engine.THREE,
+          engine.currentMap,
+          definition
+        );
+      }
+      return changed;
+    }
+
+    reconcileActiveBoundMissionMicroScenes(mapId = BF.currentEngine?.currentMapId) {
+      const manager = this.manager();
+      const targetMapId = String(mapId || "");
+      if (!manager?.memory || !targetMapId) return false;
+      let changed = false;
+      this.allMissions().forEach((mission) => {
+        if (mission?.bindActivationMap !== true) return;
+        if (!this.missionLifecycle(mission.id).active) return;
+        const binding = manager.memory.getFact?.(`bibleActivation:${mission.id}`, null);
+        if (String(binding?.mapId || "") !== targetMapId) return;
+        changed = this.reconcileBoundMissionMicroScenes(mission, targetMapId) || changed;
+      });
+      return changed;
+    }
+
+    scheduleBoundMissionMicroSceneReconciliation() {
+      [0, 100, 300, 700, 1400, 2600].forEach((delay) => {
+        global.setTimeout?.(() => {
+          const mapId = BF.currentEngine?.currentMapId;
+          if (!mapId || !BF.currentEngine?.currentMap || !this.manager()) return;
+          this.reconcileActiveBoundMissionMicroScenes(mapId);
+        }, delay);
+      });
+      return true;
     }
 
     prerequisitesSatisfied(mission) {
@@ -3790,6 +3925,7 @@
             toMapId: event.toMapId || event.mapId,
             activatedAt: Date.now()
           });
+          this.reconcileBoundMissionMicroScenes(mission, event.mapId);
         }
         if (mission.triggerOnly === true) {
           manager.memory?.setFact?.(`bibleTarget:${mission.id}`, null);
@@ -5337,6 +5473,7 @@
       this.reconcileSlotFactEffects();
 
       const eventMapId = detail.toMapId || detail.mapId || null;
+      this.reconcileActiveBoundMissionMicroScenes(eventMapId);
       const mapDefinition = BF.maps?.[eventMapId] || null;
       const missionPrescribedMicroSceneIds = asArray(mapDefinition?.persistentMicroScenes)
         .filter((entry) => {
@@ -8174,6 +8311,7 @@
       // transition après que WorldEngine et ObjectSpawner soient prêts.
       // On arme donc une restauration bornée, sans boucle permanente.
       this.scheduleCurrentSiteRestore();
+      this.scheduleBoundMissionMicroSceneReconciliation();
       this.started = true;
 
       console.info(
