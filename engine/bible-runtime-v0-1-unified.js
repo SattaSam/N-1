@@ -3404,9 +3404,25 @@
         .filter((mapId) => mapId && mapId !== current)
         .filter((mapId) => {
           const definition = BF.maps?.[mapId];
-          return asArray(definition?.generator?.requiredObjects).some((entry) =>
+          const requiredObjectPresent = asArray(
+            definition?.generator?.requiredObjects
+          ).some((entry) =>
             String(entry?.type || entry?.cuoType || "") === expected
           );
+          if (requiredObjectPresent) return true;
+
+          // Une destination connue peut porter le CUO via une micro-scène
+          // réellement matérialisée, sans l'avoir dupliqué dans requiredObjects.
+          // Ne jamais déduire la présence depuis une simple famille ou une MSC
+          // seulement annoncée : seule une instance persistante de la map fait foi.
+          return asArray(definition?.persistentMicroScenes).some((entry) => {
+            const microSceneId = String(entry?.microSceneId || entry?.id || "");
+            if (!microSceneId) return false;
+            const template = BF.MicroScenes?.get?.(microSceneId);
+            return asArray(template?.objects).some((object) =>
+              String(object?.type || object?.cuoType || "") === expected
+            );
+          });
         })
         .map((mapId) => ({
           mapId,
