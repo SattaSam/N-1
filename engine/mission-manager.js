@@ -652,6 +652,14 @@
       const planned = this.planner.nextAction({ availableLeaves }, context);
       if (!planned) return null;
 
+      // `catalogManaged` signifie que la progression de cette feuille appartient
+      // à un runtime spécialisé (compteur, proximité, validation, scène...).
+      // ObjectM0 et le fan-out passif refusent déjà volontairement de la créditer
+      // comme interaction missionnelle générique : ne pas créer ici une
+      // currentAction que personne ne pourra clôturer.
+      const plannedNode = tree.find?.(planned.nodeId) || null;
+      if (plannedNode?.params?.catalogManaged === true) return null;
+
       const action = { ...planned, missionId };
       const type = Missions.normalizeActionType(action.type);
       const objectAction = [
@@ -2256,15 +2264,47 @@
         if (!missionId) continue;
         if (this.missionHasHistoricalCollectionObjective(missionId)) continue;
         const key = this.missionReturnIntentKey(missionId);
-        const intent = this.memory.getFact?.(key, null);
+        let intent = this.memory.getFact?.(key, null);
+        const lifecycle = this.ensureLifecycle(missionId);
+        const tree = this.trees.get(missionId);
+        const excursion = intent?.kind === "unknown-travel"
+          ? this.memory.getFact?.(`tutorialExcursion:${missionId}`, null)
+          : null;
+        const generatedArrivalReady = Boolean(
+          intent?.active === true &&
+          intent.kind === "unknown-travel" &&
+          lifecycle.status === "active" &&
+          tree &&
+          !tree.root.isComplete &&
+          String(excursion?.generatedTargetMapId || "") === currentMapId &&
+          (!intent.frontierMapId ||
+            String(excursion?.fromMapId || "") === String(intent.frontierMapId)) &&
+          (!intent.direction ||
+            String(excursion?.direction || "") === String(intent.direction))
+        );
+
+        // Un voyage inconnu ne connaît sa destination concrète qu'après la
+        // génération. Le wrapper Bible conserve déjà cette preuve dans
+        // tutorialExcursion ; raccorder cette destination à l'intention
+        // causale existante, sans créer un second propriétaire de navigation.
+        if (generatedArrivalReady && intent.arrivalWorkPending !== true) {
+          intent = {
+            ...intent,
+            arrivalWorkMissionId: missionId,
+            arrivalWorkMapId: currentMapId,
+            arrivalWorkPending: true,
+            arrivalWorkResolvedAt: Date.now(),
+            updatedAt: Date.now()
+          };
+          this.memory.setFact?.(key, intent);
+          this.memory.save?.();
+        }
+
         if (
           intent?.arrivalWorkPending !== true ||
           String(intent.arrivalWorkMissionId || "") !== String(missionId) ||
           String(intent.arrivalWorkMapId || "") !== currentMapId
         ) continue;
-
-        const lifecycle = this.ensureLifecycle(missionId);
-        const tree = this.trees.get(missionId);
         const action = lifecycle.status === "active" && tree && !tree.root.isComplete
           ? this.missionRunnableAction(
               missionId,
@@ -2275,6 +2315,13 @@
             )
           : null;
         if (action) return { missionId, action, intent };
+
+        // La map générée peut être chargée avant que sa cible physique soit
+        // immédiatement runnable. La preuve canonique du travel synthétique est
+        // l'excursion confirmée vers cette map, pas un nœud absent du MissionTree.
+        if (generatedArrivalReady) {
+          return { missionId, action: null, intent, awaitingTarget: true };
+        }
 
         // Pour la primaire, un voyage required-map est causal : l'absence
         // momentanée de cible physique à l'arrivée ne signifie pas que le
@@ -2717,7 +2764,7 @@
       // CONTEXT_MSC porte une opportunité réellement liée à la scène
       // matérialisée sur la map courante. Elle peut être perdue en quittant la
       // map et reste donc éligible au deferral historique du travel.
-      if (definition.pattern === "CONTEXT_MSC") {
+      if ((definition.bible?.pattern || definition.pattern) === "CONTEXT_MSC") {
         const requiredIds = (Array.isArray(definition.mapGeneration?.requiredMicroScenes)
           ? definition.mapGeneration.requiredMicroScenes
           : [])
@@ -3180,8 +3227,8 @@
           travel &&
           this.missionTransitionExecutable(travel) &&
           !(
-            causalArrival?.missionId === this.primaryMissionId &&
-            missionId !== this.primaryMissionId
+            causalArrival?.missionId &&
+            missionId !== causalArrival.missionId
           )
         ) {
           return {

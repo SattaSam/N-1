@@ -1248,6 +1248,10 @@
             null,
           ...psychology,
           journalIntro: mission.narrative?.revealed?.[0] || "",
+          trigger: mission.trigger ? clone(mission.trigger) : null,
+          mapGeneration: mission.mapGeneration ? clone(mission.mapGeneration) : null,
+          targetMapFact: mission.targetMapFact || null,
+          targetMapField: mission.targetMapField || null,
           navigation: mission.navigation ? clone(mission.navigation) : null,
           returnPolicy: mission.returnPolicy ? clone(mission.returnPolicy) : null,
           allowsAutonomousRationCraft:
@@ -1367,6 +1371,10 @@
           null,
         ...psychology,
         journalIntro: mission.narrative?.revealed?.[0] || "",
+        trigger: mission.trigger ? clone(mission.trigger) : null,
+        mapGeneration: mission.mapGeneration ? clone(mission.mapGeneration) : null,
+        targetMapFact: mission.targetMapFact || null,
+        targetMapField: mission.targetMapField || null,
         navigation: mission.navigation ? clone(mission.navigation) : null,
         returnPolicy: mission.returnPolicy ? clone(mission.returnPolicy) : null,
         allowsAutonomousRationCraft:
@@ -4122,6 +4130,28 @@
       return changed;
     }
 
+    mapDiscoveryActivationContractSatisfied(mission, event = {}) {
+      if (event?.type !== "exploration.map_discovered") return true;
+      if (!mission?.id || mission.bindActivationMap === true) return true;
+
+      const excursionFactKey = `tutorialExcursion:${mission.id}`;
+      const requiresOwnGeneratedTarget = asArray(mission.sequence)
+        .filter((step) => asArray(step?.requires).length === 0)
+        .some((step) => {
+          const params = step?.params || {};
+          return (
+            String(params.requiredMapFact || "") === excursionFactKey &&
+            String(params.requiredMapField || "mapId") === "generatedTargetMapId"
+          );
+        });
+      if (!requiresOwnGeneratedTarget) return true;
+
+      const excursion = this.manager()?.memory?.getFact?.(excursionFactKey, null);
+      const targetMapId = String(excursion?.generatedTargetMapId || "");
+      const eventMapId = String(event.toMapId || event.mapId || "");
+      return Boolean(targetMapId && eventMapId && targetMapId === eventMapId);
+    }
+
     consumeTriggerEvent(event, options = {}) {
       const candidates = [];
       const isPhysicalOpportunity = (mission) => Boolean(
@@ -4145,6 +4175,11 @@
       for (const mission of this.catalog) {
         if (mission?.localMission) continue;
         if (!this.eventMatchesTrigger(mission.trigger, event)) continue;
+        // Une mission dont le premier travail dépend explicitement de la map
+        // qu'elle a fait générer ne peut pas être activée par la découverte
+        // fortuite d'une autre mission. Elle reste dormante jusqu'à ce que le
+        // wrapper de génération ait persisté sa destination canonique.
+        if (!this.mapDiscoveryActivationContractSatisfied(mission, event)) continue;
         // Le tutoriel filtre avant tout compteur/pending : les événements T01→T13
         // ne doivent pas armer rétroactivement les missions non autorisées.
         if (!this.foundationTutorialAllows(mission)) continue;
