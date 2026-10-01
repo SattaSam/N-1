@@ -1237,6 +1237,44 @@
       return Object.keys(criteria).length ? criteria : null;
     }
 
+    missionNodeProximityKnownDestinationCriteria(mission, node) {
+      const missionId = String(mission?.id || "").trim();
+      const nodeId = String(node?.id || "").trim();
+      if (!missionId || !nodeId.startsWith(`${missionId}:`)) return null;
+
+      const slot = nodeId.slice(missionId.length + 1);
+      if (!slot) return null;
+      const contexts = (Array.isArray(mission?.proximityContexts)
+        ? mission.proximityContexts
+        : [])
+        .filter((context) => String(context?.slot || "").trim() === slot)
+        .map((context) => {
+          const criteria = {};
+          ["siteId", "microSceneId", "persistentMicroSceneId", "mapId"].forEach((key) => {
+            const value = String(context?.[key] ?? "").trim();
+            if (value) criteria[key] = value;
+          });
+          return criteria;
+        })
+        .filter((criteria) => Object.keys(criteria).length > 0);
+      if (!contexts.length) return null;
+
+      const unique = new Map();
+      contexts.forEach((criteria) => {
+        const signature = JSON.stringify({
+          siteId: criteria.siteId || "",
+          microSceneId: criteria.microSceneId || "",
+          persistentMicroSceneId: criteria.persistentMicroSceneId || "",
+          mapId: criteria.mapId || ""
+        });
+        unique.set(signature, criteria);
+      });
+      // Several alternative places for the same slot do not define a unique
+      // implicit destination. Explicit mission routing remains authoritative.
+      if (unique.size !== 1) return null;
+      return [...unique.values()][0];
+    }
+
     missionGenerationKnownDestinationCriteria(mission) {
       const generation = mission?.mapGeneration || null;
       if (!generation) return null;
@@ -1267,7 +1305,6 @@
       if (
         mission?.instanceScope === "map" ||
         mission?.localVisibility === "current-map" ||
-        /^(?:OPP|ANN|PROS)-/.test(String(missionId)) ||
         this.missionHasHistoricalCollectionObjective(missionId)
       ) return false;
       const tree = this.trees.get(missionId) || null;
@@ -1279,6 +1316,7 @@
         ) return true;
         const criteria =
           this.missionNodeKnownDestinationCriteria(node, tree) ||
+          this.missionNodeProximityKnownDestinationCriteria(mission, node) ||
           this.missionGenerationKnownDestinationCriteria(mission);
         if (!criteria) return false;
         const travel = {
@@ -1311,7 +1349,6 @@
       if (
         mission?.instanceScope === "map" ||
         mission?.localVisibility === "current-map" ||
-        /^(?:OPP|ANN|PROS)-/.test(String(missionId)) ||
         this.missionHasHistoricalCollectionObjective(missionId)
       ) return null;
       const tree = this.trees.get(missionId) || null;
@@ -1324,6 +1361,7 @@
         ) return;
         const criteria =
           this.missionNodeKnownDestinationCriteria(node, tree) ||
+          this.missionNodeProximityKnownDestinationCriteria(mission, node) ||
           this.missionGenerationKnownDestinationCriteria(mission);
         if (!criteria) return;
         const travel = {
@@ -1986,7 +2024,8 @@
           "mission-target-map",
           "completion-gate",
           "known-destination",
-          "mission-map-generation"
+          "mission-map-generation",
+          "legacy-generated-target"
         ]);
         if (previous?.active === true && genericSources.has(String(previous.transitionSource || ""))) {
           const currentMapId = String(this.engine?.currentMapId || decisionContext?.mapId || "");
@@ -3397,6 +3436,61 @@
         : null;
     }
 
+    outsideShortlistMissionTravel(context, selectionOptions = {}) {
+      if (
+        typeof this.isMissionGuidanceEnabled === "function" &&
+        !this.isMissionGuidanceEnabled()
+      ) return null;
+
+      const excludedMissionIds = selectionOptions.excludedMissionIds instanceof Set
+        ? selectionOptions.excludedMissionIds
+        : new Set(selectionOptions.excludedMissionIds || []);
+      const activeMissionIds = this.activeMissionIds
+        .filter((id) => this.isMissionVisibleOnCurrentMap(id))
+        .filter((id) =>
+          this.ensureLifecycle(id).status === "active" &&
+          this.trees.has(id)
+        );
+      const activeMissionSet = new Set(activeMissionIds);
+      const storedPriorityIds = typeof this.getPrioritizedMissionIds === "function"
+        ? this.getPrioritizedMissionIds()
+        : Array.isArray(this.prioritizedMissionIds)
+          ? this.prioritizedMissionIds
+          : [];
+      const prioritizedMissionIds = [...new Set([
+        this.primaryMissionId,
+        ...storedPriorityIds
+      ].filter(Boolean))]
+        .filter((id) => activeMissionSet.has(id))
+        .slice(0, 4);
+      const prioritizedMissionSet = new Set(prioritizedMissionIds);
+      const structuredMissionIds = activeMissionIds
+        .filter((id) => !prioritizedMissionSet.has(id))
+        .filter((id) => !excludedMissionIds.has(id))
+        .filter((id) => !this.missionHasHistoricalCollectionObjective(id));
+
+      const causalArrival = this.causalArrivalWork(context);
+      const candidates = structuredMissionIds
+        .map((missionId) => ({
+          missionId,
+          assessment: this.assessMissionPriority(missionId, context),
+          travel: this.missionTransitionFor(missionId, context)
+        }))
+        .filter(({ missionId, travel }) =>
+          travel &&
+          this.missionTransitionExecutable(travel) &&
+          !(causalArrival?.missionId && missionId !== causalArrival.missionId)
+        )
+        .sort((left, right) =>
+          Number(right.assessment?.score || 0) -
+          Number(left.assessment?.score || 0)
+        );
+      const best = candidates[0] || null;
+      return best
+        ? { kind: "travel", missionId: best.missionId, travel: best.travel }
+        : null;
+    }
+
     executeSelectedMissionAction(selected, now) {
       if (!selected?.action) return false;
       const action = {
@@ -3479,15 +3573,16 @@
           this.assessMission(missionId, context)?.action
         );
 
-      // Le Top4 est la shortlist d'autorité. Une mission hors shortlist n'est
-      // consultée qu'en fallback R-STAB si toute la shortlist est stérile.
+      // Preserve the validated authority fast paths. Only when all of them are
+      // sterile do we look for a structured travel outside the persistent Top4.
       if (prioritizedMissionIds.some(hasExecutableMissionWork)) return true;
       if (
         activeMissionIds
           .filter((id) => !prioritizedMissionSet.has(id))
           .some(hasExecutableMissionWork)
       ) return true;
-      return Boolean(this.prioritizedMissionTransition(context));
+      if (this.prioritizedMissionTransition(context)) return true;
+      return Boolean(this.outsideShortlistMissionTravel(context));
     }
 
     update(now) {
@@ -3677,6 +3772,29 @@
           return true;
         }
         this.retryAfter = now + 4000;
+        this.idleRetryUntil = 0;
+        return false;
+      }
+
+      const fallbackTravel = this.outsideShortlistMissionTravel(decisionContext, {
+        excludedMissionIds: refusedMissionIds
+      });
+      if (fallbackTravel?.travel) {
+        const intent = this.ensureMissionTransitionIntent(
+          decisionContext,
+          fallbackTravel.travel
+        );
+        if (
+          intent?.active === true &&
+          this.resumeMissionTransitionIntent(decisionContext, fallbackTravel.travel)
+        ) {
+          this.retryAfter = now + 1200;
+          this.idleRetryUntil = 0;
+          return true;
+        }
+        // A real structured travel exists: retain mission authority and retry,
+        // rather than falling through to free autonomy in this cycle.
+        this.retryAfter = now + 1200;
         this.idleRetryUntil = 0;
         return false;
       }

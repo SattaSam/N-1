@@ -1252,6 +1252,9 @@
           mapGeneration: mission.mapGeneration ? clone(mission.mapGeneration) : null,
           targetMapFact: mission.targetMapFact || null,
           targetMapField: mission.targetMapField || null,
+          proximityContexts: Array.isArray(mission.proximityContexts)
+            ? clone(mission.proximityContexts)
+            : null,
           navigation: mission.navigation ? clone(mission.navigation) : null,
           returnPolicy: mission.returnPolicy ? clone(mission.returnPolicy) : null,
           allowsAutonomousRationCraft:
@@ -1375,6 +1378,9 @@
         mapGeneration: mission.mapGeneration ? clone(mission.mapGeneration) : null,
         targetMapFact: mission.targetMapFact || null,
         targetMapField: mission.targetMapField || null,
+        proximityContexts: Array.isArray(mission.proximityContexts)
+          ? clone(mission.proximityContexts)
+          : null,
         navigation: mission.navigation ? clone(mission.navigation) : null,
         returnPolicy: mission.returnPolicy ? clone(mission.returnPolicy) : null,
         allowsAutonomousRationCraft:
