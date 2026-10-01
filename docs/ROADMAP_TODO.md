@@ -1,283 +1,265 @@
 # BlueFox Odyssey — Roadmap et TODO
 
-Mise à jour : **16 septembre 2026**
+Mise à jour : **1 octobre 2026**
 
 Cette page est la **seule TODO active**.
 
 ## Base courante
 
-- [x] Checkpoint moteur R-HEALTH audité : `560249fb91ed2d5c719a4aafa5eabe88b6ee1e46` — `fix Save`.
-- [x] HEAD moteur vérifié pour la présente synchronisation : `3b01f2bf87ce0ffa5f2c385f21dce16866d6a518` — `CPU P3`.
-- [x] TP complet intégré au commit `e76af8f6bfba8dd599912c50e50ce641338c5985`, réconcilié avec CARN/STORM sur `bca4b01b…`, puis prolongé par TP-AFTER et l'autonomie post-arc au HEAD courant.
-- [x] CARN/STORM + correctif CUO Lab intégrés au commit `d521af2f3d6e5f221975d64729ec7eff8cc11606` ; coexistence catalogue restaurée sur `bca4b01b…`.
-- [x] HEAD GitHub courant = seule base technique ; le checkpoint R-HEALTH reste une référence de santé, pas une base alternative.
-- [x] MissionManager reste propriétaire du lifecycle et du choix missionnel.
-- [x] BibleRuntime reste propriétaire des effets/gates/sites sans reprendre le lifecycle.
-- [x] BAC reste arbitre comportemental.
-- [x] WorldEngine reste propriétaire monde/navigation/directive joueur.
-- [x] ProgressionRegistry reste propriétaire du stock physique.
-- [x] RuntimeBudget reste l'unique throttling adaptatif.
-- [x] `map-registry.js` reste protégé.
-- [x] R-HEALTH : 13 VERT + 3 VERT ÉVOLUÉ + 4 ORANGE + 0 ROUGE systémique démontré.
+- [x] HEAD courant vérifié : `d334ed2cb193c80c44e98c401b5947bbd263348e` — `Mission routines`.
+- [x] Parent : `93a6b7f11ee267764bacc471e8851ca156756ed3` — réconciliation transitions missionnelles R1→R5.
+- [x] R-HEALTH `560249…` conservé comme checkpoint historique de santé.
+- [x] HEAD GitHub courant = seule base technique.
+- [x] MissionManager = lifecycle/sélection/autorité missionnelle.
+- [x] WorldEngine = monde/navigation/transitions/autonomie exécutée/interaction physique.
+- [x] BAC = arbitrage comportemental, pas second lifecycle.
+- [x] ObjectM0 = matching/SAME-INSTANCE/fan-out.
+- [x] RuntimeBudget = unique throttling adaptatif.
+- [x] `map-registry.js` protégé.
 
-## Acquis désormais clôturés / à préserver
+## Acquis à préserver
 
-- [x] FLO-01→07.
-- [x] GEO-01→07.
-- [x] COL + ENV.
-- [x] LOC-01→17.
-- [x] SUR-01/02/03/05/06/07 + SURPLUS.
-- [x] GAME R1/R2.
-- [x] GAME-civilization_1→5.
-- [x] FAU-01→12 + extensions FAUNA validées.
-- [x] Templates FAUNA répétables par espèce : FAU-01A / FAU-03A / FAU-05A / FAU-11A.
-- [x] ENE-01→14 + ENE-15-A/B/C.
-- [x] GAME-engineering_1→6 + GAME-fire.
-- [x] Réserve abandonnée + `grantInventory()` sans faux historique COL.
-- [x] WORKBENCH sur Crystal et placement joueur persistant.
-- [x] BAL-01→03.
-- [x] DRN-01→05.
-- [x] `GAME-collection_samples`, `GAME-collection_variety`, `GAME-collection_reserves`, `GAME-exploration_cartographer`, `GAME-exploration_complete`, `GAME-travel_biomes`, `GAME-exploration_total`, `GAME-exploration_total_20`, `GAME-travel_short`, `GAME-travel_long`.
-- [x] Fauna réputation répétable.
-- [x] R-STAB : runnabilité missionnelle, transitions géographiques, libération des primaires stériles, retry causal.
-- [x] Journal lazy/persistant : consolidation à l'ouverture uniquement, sans polling.
-- [x] ARCH-01→40 présentes au HEAD.
-- [x] CONTACT-01→15 présentes au HEAD.
-- [x] DIP-01→03 présentes au HEAD.
-- [x] `GAME-contact_first`, `GAME-contact_cautious`, `GAME-contact_ambassador`.
-- [x] ANN-01→07 industrialisées ; chaîne canonique : `ANN-04 → ANN-06 → ANN-03 → ANN-02 → ANN-05 → ANN-01 → ANN-07`.
-- [x] SMART-CAMP ANN-06 : Camp réel, placement joueur, stockage partagé, coût 10 bois + 10 fibres, distance >10 maps de l'infrastructure la plus proche.
-- [x] ANN-01 : seuils d'exploration 10 % → 25 % → 60 % ; ancienne valeur 44 supprimée.
-- [x] ANN-07 : historique réel de faune nocturne, sans réobservation artificielle.
-- [x] Protection d'hydratation missionnelle au reload (`560249…`).
-- [x] R-HEALTH transversal : aucune panne systémique démontrée.
-- [x] POSTDIP / TP-01→09 présents avant la passe finale TP.
-- [x] TP-10 / TP-11 intégrées : construction du téléporteur, calibration, transfert de matière inerte puis trajet réel hub→balise→hub.
-- [x] Hub téléporteur = `MSC-CUSTOM-ASTROLOGY`, avec arches traversables uniquement dans cette MSC ; pas de modification globale des arches.
-- [x] Pendant TP-01→11 puis TP-AFTER-01→04, l'usage du réseau reste dans le cadre d'apprentissage/appropriation prévu ; aucune autonomie TP anticipée avant la clôture canonique.
-- [x] Après `TP-AFTER-04 completed`, l'autonomie peut utiliser le routage TP **opt-in** conformément à `TP_AUTONOMY_CONTRACT_2026-09-14.md` ; le BAC ne possède pas le téléporteur et `SpecialObjectRuntime.teleportTo()` reste l'unique primitive de transfert.
-- [x] TP-11 exige au moins 4 balises persistantes déployées, non consommées.
-- [x] Ressources TP préservées : 100 minerais, 50 composants, 20 cores, 100 fibres, 50 biocapital végétal Thermosève/plantes fluorescentes uniquement, 10 accumulateurs, plus sous-assemblages issus des blueprints déjà acquis.
-- [x] Autorité TP corrigée : les étapes catalogue gérées par le runtime ne peuvent plus être complétées par une action RESEARCH générique du Planner.
-- [x] TP-AFTER-01→04 intégrées et closes comme arc d'appropriation du téléporteur.
-- [x] Chantier de test TP clos au 16/09/2026 ; les contrôles futurs TP relèvent de la non-régression ordinaire lorsqu'un chantier traverse ce périmètre.
-- [x] TERR-CARN-01→04 et TERR-STORM-01→04 intégrées comme rencontres dangereuses opportunistes progressives.
-- [x] CARN/STORM : progression exposition irréfléchie → récidive moins exposée → observation prudente sous contrainte d'énergie → maîtrise/observation brève sans exposition prolongée.
-- [x] CARN/STORM : occurrence MSC déclenchée par progression 1→2→3→4 avec `uniqueOnly`, ciblage d'observation réel et poids renforcé sur trajets missionnels longs.
-- [x] Régression inter-chantier TP/CARN détectée après commit puis corrigée : le catalogue HEAD contient désormais TP et CARN/STORM simultanément.
-- [x] CUO Lab : fenêtre de test des mouvements PNJ fermable et visible uniquement lorsqu'un PNJ est sélectionné.
+- [x] T01→T13.
+- [x] FLO-01→07 ; GEO-01→07 ; COL/ENV ; LOC-01→17.
+- [x] SUR et missions de site déjà industrialisées.
+- [x] GAME R1/R2 ; engineering/fire ; civilization.
+- [x] FAU + variantes répétables.
+- [x] ENE + ENE-15-A/B/C.
+- [x] BAL-01→03 ; DRN-01→05.
+- [x] ARCH-01→40 ; CONTACT-01→15 ; DIP-01→03.
+- [x] ANN-01→07.
+- [x] TP-01→11 + TP-AFTER-01→04 + autonomie TP post-arc opt-in conformément à `TP_AUTONOMY_CONTRACT_2026-09-14.md`.
+- [x] TERR-CARN-01→04 et TERR-STORM-01→04.
+- [x] SAME-INSTANCE + fan-out.
+- [x] Journal lazy/persistant.
+- [x] Hydratation différée missionnelle au reload.
+- [x] Recherche/Inventaire sans écran noir/superposition.
+- [x] Responsive mobile/tablette, safe areas, tactile, desktop préservé.
+- [x] Profil mobile coarse-pointer/touch, sans bascule desktop par simple largeur.
+- [x] Réconciliation images PNG/WebP sans fusion volontaire des identités de maps.
+- [x] Débris de ruine ciblés rendus immobiles sur les voies d'animation auditées.
 
-## P0-A — Maturation post-TP / fin de jeu
+## P0 — Autorité missionnelle : Top1 → Top4 → travel → free
 
-Le chantier TP et sa campagne de test sont clos. TP-AFTER n'est plus un arc à industrialiser ; il constitue un acquis moteur à préserver. La continuité principale ouverte commence désormais après cet arc.
+**Chantier prioritaire ouvert.**
 
-### TP-AFTER — appropriation du téléporteur — CLOS
+- [ ] Réconcilier `WorldEngine.ensureActivity()` avec l'autorité missionnelle globale de `MissionManager` : une Top1 non-runnable ne doit pas permettre l'autonomie libre si Top2→Top4 ou un travel missionnel structuré reste exécutable.
+- [ ] Préserver le choix joueur Top1 sans churn automatique.
+- [ ] Sans choix joueur, préserver shortlist BAC/MissionManager de 3–4 missions prioritaires.
+- [ ] Respecter l'ordre `LOCAL → KNOWN → UNKNOWN CONTRACTUEL → FREE`.
+- [ ] Après échec/refus d'une candidate, essayer la candidate missionnelle suivante avant de tomber en autonomie libre.
+- [ ] Ne jamais marquer une mission « stérile » ou l'abandonner uniquement parce que sa cible est momentanément non exécutable.
+- [ ] Aucun nouveau moteur/scheduler/bridge d'autorité.
 
-- [x] `TP-AFTER-01 — Le monde paraît plus petit` : utiliser réellement le téléporteur vers une balise ancienne/déjà connue.
-- [x] `TP-AFTER-02 — Le chemin du retour` / formulation documentaire équivalente : revenir balise→hub sans refaire physiquement le trajet.
-- [x] `TP-AFTER-03 — Cela peut servir à autre chose` : utiliser le téléporteur comme outil transversal pour reprendre une mission/branche déjà ouverte sur une map balisée.
-- [x] `TP-AFTER-04 — Et maintenant ?` : clôture psychologique du projet ; satisfaction, baisse forte du poids/obsession Téléportation puis retour du BAC vers les autres axes encore ouverts.
-- [x] Après TP-AFTER, le téléporteur devient une **infrastructure transversale**, pas une branche dominante ni un substitut automatique aux déplacements ordinaires.
-- [x] L'autonomie TP n'est autorisée qu'après `TP-AFTER-04 completed`, en mode opt-in et sous les propriétaires définis par `TP_AUTONOMY_CONTRACT_2026-09-14.md`.
+### Critères de validation
 
-### EXP-LONG — expéditions lointaines / maturation
+- [ ] Top1 runnable : exécution prioritaire.
+- [ ] Top1 non-runnable + Top2 locale : Top2 exécutée.
+- [ ] Top1/Top2 locales non-runnable + Top3 destination connue : travel connu.
+- [ ] shortlist sans local/known mais mission autorisée unknown : travel inconnu contractuel.
+- [ ] aucun travail missionnel exécutable : autonomie libre seulement à ce moment.
+- [ ] save/reload conserve Top1, travel pending et causal arrival.
+- [ ] aucune collecte/observation générale parasite pendant l'autorité missionnelle.
 
-- [ ] Industrialiser le bloc EXP-LONG documenté : expéditions longues, exploitation du réseau de balises/téléportation et reprise des branches encore ouvertes sans précipiter artificiellement la fin.
-- [ ] Laisser vivre les axes scientifique, environnemental, archéologique et relationnel tant que leurs objectifs restent pertinents.
-- [ ] Utiliser le réseau TP comme facilitateur de retour/reprise, jamais comme validation implicite d'une mission distante.
+## P0 — Pollution inter-mission des interactions
 
-### END-CHOICE — bifurcation de fin
+**Défaut reproduit le 1 octobre.**
 
-- [ ] Déclencher la phase de fin uniquement lorsque la maturité globale du parcours est suffisante ; TP seul ne suffit pas.
-- [ ] Retour au Camp / lieu de départ avec tonalité de bilan et de nostalgie.
-- [ ] `END-CHOICE — Là où je suis arrivé` : proposer le choix **Rester** ou **Trouver un moyen de rentrer**.
-- [ ] Branche **Rester** : mémoriser le choix de rester ; pas de générique imposé, pas d'arrêt du jeu, monde ouvert poursuivable.
-- [ ] Branche **Trouver un moyen de rentrer** : ouvrir FIN-01 puis FIN-02.
+- [ ] Empêcher une mission secondaire d'injecter une observation comme précondition bloquante d'une collect/extract appartenant à une autre mission.
+- [ ] Conserver le fan-out passif : l'événement réel crédite toutes les missions compatibles.
+- [ ] Conserver l'étude intrinsèque SAME-INSTANCE réellement due avant acquisition.
+- [ ] Aucun `observe → collect → observe` infini.
+- [ ] `currentAction`, `pendingInteraction` et propriétaire de l'action restent cohérents.
+- [ ] Une observation non créditable par le consommateur qui l'a demandée ne doit jamais bloquer l'action suivante.
 
-### FIN-01 / FIN-02 — finalisation de la recherche et capsule
+### Reproduction de référence
 
-- [ ] `FIN-01 — Ce qu'ils m'ont appris` : finaliser la connaissance nécessaire au retour, avec passage par le Temple et adieux aux Rocky et aux Translucides.
-- [ ] La réparation finale doit être l'aboutissement des connaissances accumulées : énergie, géologie, ingénierie, réseau, savoir ancien et connaissances acquises auprès des civilisations.
-- [ ] Le composant final de synthèse reste le **Noyau de navigation résonante** ; il ne doit pas devenir une nouvelle grosse boucle de grind.
-- [ ] Ne jamais réécrire rétroactivement la capsule comme déjà réparée : jusqu'à cette phase elle reste l'épave / point d'origine.
-- [ ] `FIN-02 — Le point de départ` : retour à la capsule, intégration du Noyau, capsule enfin potentiellement opérationnelle, entrée de BlueFox, fondu noir, générique puis retour vers Nouvelle partie / cinématique initiale.
+- boucle d'observation répétée sur la même instance de buisson ;
+- une mission CONTEXT_MSC/secondaire injectait une étude dans l'acquisition sans pouvoir la valider par le chemin d'événement générique ;
+- le correctif doit rester générique et ne pas cibler une mission par ID.
 
-## P0-B — Missions OPPORTUNITÉS / MSC remarquables
+## P0 — Validation exhaustive missionnelle
 
-Chantier documentaire validé à industrialiser en parallèle de la continuité principale, sans remplacer EXP-LONG/END-FIN.
+La fonctionnalité « missions universellement exécutables » reste **NON PROUVÉE** tant que chaque mission pertinente n'est pas classée.
 
-### Principes de fonctionnement
+Pour chaque mission/lot :
+- [ ] activation/révélation ;
+- [ ] cible et cardinalité ;
+- [ ] identité map/MSC/instance ;
+- [ ] local/known/unknown travel ;
+- [ ] exécution physique ;
+- [ ] événement canonique ;
+- [ ] progression/fan-out ;
+- [ ] completion gate ;
+- [ ] suite/activation suivante ;
+- [ ] reload/persistance ;
+- [ ] autorité Top1/Top4.
 
-- [ ] Une opportunité MSC **ne génère pas sa propre map** et ne force pas une MSC depuis la mission : la scène doit d'abord exister via les propriétaires normaux de génération/peuplement.
-- [ ] Lorsqu'une MSC qualifiante est réellement présente sur la nouvelle map, l'opportunité peut devenir disponible immédiatement à l'entrée/découverte locale, avec poids fort mais sous l'autorité normale MissionManager/BAC/directive joueur.
-- [ ] Réutiliser `featuredMicroSceneIds`, `CONTEXT_MSC`, ObjectM0, MissionMemory et les contrats de persistance existants avant toute extension moteur.
-- [ ] Les mini-séries qui demandent un retour doivent mémoriser la **même map + la même instance persistante** ; aucun respawn de substitution ne valide le retour.
-- [ ] Les MSC déjà engagées par une mission existante et déclarées protégées ne sont **pas réutilisées** pour une autre opportunité.
-- [ ] La liste de protection/réutilisation définie dans la Bible OPP fait foi : toute MSC déjà affectée à une mission ou explicitement protégée reste exclue ; seules les MSC explicitement retenues comme candidates OPP peuvent être réutilisées.
-- [ ] Orchidée et `MSC-ABANDONED-DRONE-001` doivent porter des mini-suites approfondies plutôt qu'un simple objectif jetable ; obsession/souvenir positif possibles selon progression.
-- [ ] Les autres MSC retenues (dont Oasis / scènes cachées ou protectrices / grand sanctuaire selon la Bible OPP) restent des opportunités locales cohérentes, data-only autant que les contrats existants le permettent.
-- [ ] Les apparitions fugaces de PNJ et interactions faune prévues par les missions OPP doivent rester portées par les propriétaires NPC/faune existants ; aucune logique relationnelle parallèle dans le catalogue.
-- [ ] CARN/STORM restent la branche dangereuse opportuniste déjà industrialisée et servent de référence de comportement pour une opportunité qui attire BlueFox sans détourner durablement son trajet.
+Verdicts autorisés : `PASS E2E`, `PASS structurel`, `NON PROUVÉ`, `FAIL`.
 
-### Spawn / arbitrage
+## P0 — Causalité des transitions / destinations
 
-- [ ] Préserver/corriger uniquement le mécanisme existant de sélection d'opportunité si nécessaire ; pas de scheduler parallèle.
-- [ ] Le critère `lowMissionProgress` ne doit pas rendre les opportunités MSC structurellement impossibles à faire apparaître.
-- [ ] Renforcer la probabilité/pondération des opportunités dangereuses sur les trajets missionnels longs (>3 maps) selon la décision validée.
-- [ ] Après traitement d'une opportunité locale, reprendre la transition/mission principale qui avait motivé le trajet.
-- [ ] Une opportunité ne doit jamais écraser une directive joueur persistante ni une primaire réellement runnable prioritaire.
+- [x] R1→R5 a réconcilié plusieurs ruptures : map générée propre à la mission, causal arrival, protections CONTEXT_MSC, runtime-managed/cataloManaged.
+- [x] `d334ed2` ajoute les `proximityContexts` et un fallback de travel structuré hors shortlist lorsque les fast paths sont stériles.
+- [ ] Revalider en jeu que la mission ayant provoqué un voyage reprend bien à l'arrivée.
+- [ ] Revalider destination connue multi-hop.
+- [ ] Revalider identité persistante MSC et absence de fallback générique de famille.
+- [ ] Revalider les missions ayant historiquement perdu `persistentMicroSceneId` ou activé sur MSC incomplète.
+- [ ] Aucun safe-net générique d'abandon de mission tant que les règles normales peuvent être réparées.
 
-### Validation OPP
+## P0 — Barrière de validation / livraison
 
-- [ ] Tester génération réelle → MSC réellement instanciée → disponibilité/révélation → MissionManager → Planner → ObjectM0/CONTEXT_MSC → ActionBridge → progression.
-- [ ] Tester persistance/reload des instances utilisées par une mini-série.
-- [ ] Tester les protections de réutilisation des MSC déjà missionnées.
-- [ ] Tester absence de double propriétaire de spawn/progression et absence de modification de `map-registry.js`.
+- [x] Ne plus utiliser le nombre brut de tests rouges comme indicateur de santé.
+- [ ] Classer tout échec préexistant : test/fixture obsolète, harness incomplet, contrat supersédé, panne runtime reproduite.
+- [ ] Ne modifier le moteur que pour une panne actuelle ou un contrat encore valide violé.
+- [ ] Pour chaque ZIP : mêmes tests BASE/CANDIDAT, diff exact, consommateurs directs/indirects, parent Git réel.
+- [ ] Ne jamais réutiliser une tentative rejetée ou un ancien ZIP comme base.
+- [ ] PASS gameplay uniquement après preuve observable.
 
-## P0 — Barrière de validation / tests historiques
+## P1 — Navigation / interaction physique
 
-- [x] Abandonner le nombre brut de tests rouges comme indicateur unique de santé.
-- [ ] Lors d'un échec préexistant pertinent, classer avant correction :
-  - test/API/fixture obsolète ;
-  - harness incomplet ;
-  - contrat historique remplacé ;
-  - panne runtime/gameplay actuelle reproduite.
-- [ ] Ne jamais modifier le moteur uniquement pour satisfaire un attendu historique devenu faux.
-- [ ] Pour chaque ZIP, vérifier d'abord la préservation de la carte R-HEALTH du HEAD et l'absence de nouvelle panne observable.
-- [ ] Vérifier systématiquement la coexistence avec le **parent Git réel au moment du commit** afin d'éviter un nouvel écrasement inter-chantier par ZIP construit sur une base devenue obsolète.
-- [ ] Si une panne actuelle est reproduite, ouvrir un chantier ciblé sur son propriétaire réel.
+- [x] Ajustement historique validé : reach d'observation augmenté sans modifier les colliders MSC/cibles concernées.
+- [x] Récupération après plusieurs échecs de replanification par retraits physiques bornés validée historiquement.
+- [x] Autonomie OFF : déplacement direct joueur au sol préservé ; pas d'annulation OFF→OFF répétitive.
+- [ ] Propager explicitement les échecs de `setTarget()/rebuildPath()` jusqu'au décideur missionnel.
+- [ ] Éviter qu'une simple existence de cible soit assimilée à une action réellement runnable.
+- [ ] Vérifier que les retries n'entretiennent pas un `pendingInteraction` stale.
+
+## P1 — Save / reload / inventaire
+
+- [x] Hydratation différée MissionManager.
+- [x] Réconciliation historique mapchange/save intégrée.
+- [ ] Revalider plusieurs missions actives + changement de map + reload.
+- [ ] Revalider inventaire physique lorsque la mission indique déjà une collecte/construction validée.
+- [ ] Revalider intention travel, causal arrival, MSC/sites, constructions et réseau spécial.
+- [ ] Ne pas réintroduire de migration automatique de vieux bindings rejetée.
+
+## P1 — Maps / MSC / identité visuelle
+
+- [x] Corrections PNG/WebP/alias/fallback intégrées fin septembre.
+- [x] Alias MSC ciblés utilisés uniquement lorsque nécessaire à la compatibilité de mission.
+- [ ] Revalider qu'aucune map non-Crystal ne reçoit la texture/image Crystal par fallback incorrect.
+- [ ] Préserver identités `1Crystal`, `1Jungle` et autres associations canoniques malgré conversion WebP.
+- [ ] Revalider 1→2→4→6 et protections tutoriel.
+- [ ] Revalider MSC + objets requis avant activation missionnelle.
+- [ ] Protéger les MSC déjà missionnées contre réutilisation OPP non validée.
+
+## P1 — Objets immobiles
+
+- [x] Débris de ruine : voies connues de mouvement/rotation/vent neutralisées dans le correctif dédié.
+- [ ] Revalider visuellement en jeu lors d'un chantier décor/animation.
+- [ ] Aucun traitement spécifique ne doit casser les animations légitimes de flore/vent des autres objets.
+
+## P1 — Missions OPPORTUNITÉS / MSC remarquables
+
+- [ ] Une mission OPP ne génère pas sa propre map pour se satisfaire.
+- [ ] MSC d'abord matérialisée par génération/peuplement normal.
+- [ ] Activation locale seulement si contexte réellement présent/complet.
+- [ ] Même map + même instance persistante pour mini-série de retour.
+- [ ] Pas de scheduler OPP parallèle.
+- [ ] Opportunité perdable peut différer ponctuellement un travel ; activité générique non perdable ne le peut pas.
+- [ ] Après opportunité, reprise du travel principal.
+- [ ] Directive joueur et primaire réellement runnable restent supérieures.
 
 ## P1 — Domaines ORANGE R-HEALTH
 
-Ces éléments ne sont pas déclarés cassés ; leur validation complète reste insuffisante.
-
-- [ ] Rejouer/observer un parcours tutoriel T01→T13 complet lorsque le prochain chantier traverse ce périmètre.
-- [ ] Revalider génération/population des maps et protections tutoriel lorsque le chantier touche maps/biomes/population.
-- [ ] Revalider visuellement l'UI réelle : Recherche, Inventaire, Journal, overlays et transitions de panneaux.
-- [ ] Revalider en jeu audio / caméra / déplacement / physique lors d'une passe globale adaptée.
+- [ ] Rejouer T01→T13 complet lorsqu'un chantier traverse le tutoriel.
+- [ ] Revalider génération/population/protections maps.
+- [ ] Revalider UI visuelle réelle Recherche/Inventaire/Journal/overlays.
+- [ ] Revalider audio/caméra/déplacement/physique lors d'une passe globale.
 
 ## P1 — Relations / civilisations
 
-- [x] Réactions NPC à l'approche raccordées au runtime relationnel.
-- [x] Dialogue/contact actif protégé contre fuite automatique concurrente.
-- [x] Réputation et commerce consomment les propriétaires canoniques.
-- [x] Récompenses relationnelles peuvent produire connaissances/blueprints réels.
-- [x] CONTACT-10→15 définies pour la seconde civilisation avec sélection persistante et retour vers CONTACT-10 en cas d'échec significatif.
-- [ ] Préserver Rocky/Translucides comme acteurs réels de FIN-01 ; ne pas remplacer leurs apports par une récompense générique de fin.
-- [ ] Continuer à tester les raccords CONTACT/DIP lors des prochains lots sans déplacer le comportement NPC dans le moteur de mission.
+- [x] NPC, dialogue, réputation, commerce et blueprints réels présents.
+- [ ] Revalider CONTACT/DIP lorsque touchés.
+- [ ] FIN-01 doit réutiliser Rocky/Translucides réels, pas un flag abstrait.
 
-## P1 — Drones / balise / réseau
+## P1 — Drones / balise / TP
 
-- [x] Balise déployable et missions BAL-01→03.
-- [x] Blueprints Scout/Harvest et chaîne DRN-01→05.
-- [x] Console réseau côté Recherche.
-- [x] Récolte distante et dépôt cargo raccordés au runtime existant.
-- [ ] Revalider en jeu les usages multi-map longue durée, reload et cas de plusieurs drones simultanés avant d'étendre davantage le réseau.
-- [x] La coexistence réseau balises / destinations téléporteur fait partie des acquis TP clos ; ne la revalider spécifiquement que lorsqu'un futur chantier touche ce périmètre.
-- [ ] Toute nouvelle capacité drone doit rester dans `special-object-runtime.js` ou ses propriétaires existants, jamais dans un runtime parallèle.
-
-## P1 — Save / reload
-
-- [x] Protection contre l'écrasement d'une mission sauvegardée dont la définition n'est pas encore chargée.
-- [x] Hydratation conservée dans MissionManager.
-- [ ] Revalider lors des prochains chantiers Save : changement de slot, reload avec plusieurs missions actives, sites/MSC persistants, constructions, directive joueur et réseau drone/balise.
-- [ ] Revalider explicitement hub téléporteur, balises destinations et mini-séries OPP SAME-INSTANCE après reload uniquement lorsqu'un chantier Save/TP/OPP traverse ces comportements.
-- [ ] Ne pas réintroduire de migration artificielle d'états rejetée par le runtime.
+- [x] BAL-01→03 et DRN-01→05.
+- [x] TP-01→11 + TP-AFTER-01→04 clos.
+- [x] Autonomie TP post-arc opt-in seulement.
+- [ ] Revalider multi-map/reload uniquement lorsqu'un futur chantier traverse ce périmètre.
 
 ## P1 — Kit d'expédition
 
-- [x] Le Kit n'est plus limité aux seules rations : accumulateur et balise peuvent être représentés comme objets transportables.
-- [x] L'activation reste déléguée au propriétaire métier.
-- [x] Aucun slot vide pour un item absent.
-- [ ] Toute nouvelle famille d'objet activable doit être ajoutée par généralisation minimale, uniquement lorsqu'un consommateur réel l'exige.
+- [x] Rations, accumulateur, balise transportables selon stock réel.
+- [x] Activation déléguée au runtime métier.
+- [x] Aucun slot vide pour item absent.
+- [ ] Étendre seulement lorsqu'un consommateur réel le nécessite.
 
 ## P1 — Journal
 
-- [x] Calcul/consolidation à l'ouverture uniquement.
-- [x] Aucun recalcul par simple événement/mutation UI.
-- [x] Briques persistantes.
-- [x] Branche inchangée = texte stable.
-- [x] Enrichissement seulement après évolution significative.
-- [x] Pas de polling ajouté.
-- [x] ANN-07 raccorde son premier catalogue à la branche Faune/Nature sans créer de journal parallèle.
-- [x] TP-AFTER est désormais clos ; ses effets documentaires doivent rester intégrés aux branches existantes sans second journal.
-- [ ] OPP et END/FIN devront enrichir les branches existantes sans créer de second journal.
-- [ ] Continuer à vérifier la stabilité du contenu au fur et à mesure de l'industrialisation des nouvelles branches.
+- [x] Lazy à l'ouverture, sans polling.
+- [x] Briques persistantes et texte stable sans changement significatif.
+- [ ] OPP/END/FIN enrichissent les branches existantes.
 
 ## P2 — Performance globale
 
-R-STAB et R-HEALTH ne remplacent pas un profilage global.
+- [x] Profil mobile/tablette et responsive déjà intégrés/validés lors du chantier dédié.
+- [x] Mesure fin septembre : ~39 FPS moyens sur session profilée ; `world-engine.js` principal contributeur CPU.
+- [ ] Profiler le HEAD courant sur déplacement ordinaire, interaction ordinaire, map dense et plusieurs missions actives.
+- [ ] Mesurer MissionManager/BAC/ObjectEvents sans se limiter aux cas pathologiques.
+- [ ] Éviter les scans map-wide par tick pour interaction déjà résolue.
+- [ ] Conserver RuntimeBudget unique.
+- [ ] Vérifier que les correctifs de mission n'augmentent pas la fréquence `updateAutonomy`/recalculs sans cause.
 
-- [ ] Profiler le coût CPU sur map connue et map dense au HEAD courant.
-- [ ] Mesurer fréquence BAC/MissionManager/ObjectEvents.
-- [ ] Vérifier les rescans d'intérêt et caches d'approche.
-- [ ] Vérifier les coûts lorsque plusieurs drones distants, balises TP et missions OPP actives coexistent.
-- [ ] Conserver RuntimeBudget unique ; aucun second système de throttling.
+## P2 — Survival / énergie
 
-## P2 — Survival / énergie-rest-food
-
-- [ ] Revalider l'effet réel des rations, micro-pauses et repos longs lors d'une passe gameplay adaptée.
-- [ ] Préserver la distinction rest / food / safety.
-- [ ] Ne pas transformer l'énergie affichée en deuxième état autoritaire.
-- [ ] Aucun changement de seuil sans preuve runtime.
-- [ ] Préserver dans CARN/STORM la contrainte d'énergie/risque sans créer un état énergétique parallèle.
+- [ ] Revalider ration, micro-pause et repos long.
+- [ ] Micro-pause produit une récupération réelle et reste courte.
+- [ ] Ration permet une excursion plus longue ; sans ration, repos long reste normal.
+- [ ] Pas de boucle une action→repos.
+- [ ] Aucun second état d'énergie autoritaire.
 
 ## P2 — IMI / interactions
 
-- [ ] Continuer à revalider le cycle `MissionManager → Planner → ObjectM0 → ActionBridge → interaction → progression` sur les nouveaux lots.
-- [x] SAME-INSTANCE encore présent au checkpoint R-HEALTH.
-- [x] Fan-out encore présent au checkpoint R-HEALTH.
-- [ ] Préserver `REVEAL-ONLY / SAME-DEFINITION / SAME-INSTANCE`.
-- [ ] Ne pas réintroduire de migration automatique de vieux bindings.
-- [x] `cuoTypes` OR optionnel préserve `cuoType` historique.
-- [ ] Les retours OPP vers une MSC remarquable doivent explicitement tester SAME-INSTANCE sur l'identité persistante mémorisée.
+- [x] `REVEAL-ONLY / SAME-DEFINITION / SAME-INSTANCE` restent les relations canoniques.
+- [x] `cuoTypes` OR optionnel préserve `cuoType`.
+- [ ] Revalider le cycle complet `MissionManager → Planner → ObjectM0 → ActionBridge → interaction → événement → progression` sur chaque nouveau lot.
+- [ ] Aucune migration automatique de bindings historiques sans preuve.
 
 ## P3 — Non-régression permanente
 
 - [ ] T01→T13.
-- [ ] Navigation joueur règle B + reload.
-- [ ] Pas de collecte/repos parasite sous mission prioritaire.
-- [x] SAME-INSTANCE et fan-out présents au R-HEALTH.
+- [ ] Top1/Top4 + LOCAL/KNOWN/UNKNOWN/FREE.
+- [ ] directive joueur règle B + reload.
+- [ ] aucune collecte/repos parasite sous autorité missionnelle.
+- [ ] SAME-INSTANCE et fan-out.
+- [ ] absence de pollution d'étude secondaire sur acquisition courante.
 - [ ] LOC map-scopé.
-- [x] Recherche / Inventaire : correction historique écran noir/superposition à préserver.
-- [ ] MSC/sites persistants après reload.
-- [ ] WORKBENCH.
-- [ ] Accumulateurs / balises / drones / cargo.
-- [x] TP-01→11 + TP-AFTER-01→04 + hub ASTROLOGY + réseau destinations + aller/retour + autonomie post-arc : chantier TP clos, acquis à préserver ; revalidation ciblée seulement si un futur chantier traverse ce périmètre.
-- [ ] CARN/STORM 01→04 pour les deux phénomènes.
-- [x] Journal lazy/persistant confirmé structurellement.
-- [ ] ARCH-01→40.
-- [ ] CONTACT/DIP.
-- [ ] ENE-15-A/B/C.
-- [ ] ANN-01→07, notamment placement manuel SMART-CAMP, consommation réelle des expérimentations et fallback faune nocturne.
+- [ ] Recherche/Inventaire sans écran noir/superposition.
+- [ ] MSC/sites persistants.
+- [ ] WORKBENCH, accumulateurs, balises, drones/cargo.
+- [ ] TP acquis.
+- [ ] CARN/STORM.
+- [ ] ARCH/CONTACT/DIP/ENE-15/ANN selon chantier traversé.
+- [ ] images map et identités biome.
+- [ ] débris immobiles sans casser flore/vent légitimes.
 
-## P4 — Maps / MSC
+## Continuité narrative
 
-- [ ] Préserver protections maps tutoriel.
-- [ ] Préserver rareté/faune/îlots.
-- [ ] Continuer MAP Test / CUO Lab lorsque le chantier touche au décor.
-- [ ] Conserver le principe : une composition qui doit compter comme une unité missionnelle utilise une MSC composite unique, pas un moteur de groupement parallèle.
-- [x] `MSC-CUSTOM-SMART-CAMP` enregistrée comme donnée MSC ; le comportement de Camp reste porté par le site `kind:"camp"`.
-- [ ] Protéger de la réutilisation opportuniste les MSC déjà affectées à des missions existantes.
-- [ ] Pour toute MSC OPP à retour, garantir identité persistante et réinstanciation fidèle après reload.
+### EXP-LONG
+- [ ] Industrialiser les expéditions longues sans forcer la fin.
+- [ ] TP = facilitateur, jamais validation implicite.
 
-## P5 — Audio
-
-- [x] Moteur adaptatif unique.
-- [x] Volumes musique / sons séparés.
-- [x] Silence musique adaptative pendant intro.
-- [x] Fondus de cues validés historiquement.
-- [ ] Revalidation globale d'écoute avant gel définitif.
+### END-CHOICE / FIN
+- [ ] Déclencher seulement à maturité globale suffisante.
+- [ ] Rester = monde ouvert poursuivable.
+- [ ] Retour = FIN-01 puis FIN-02.
+- [ ] Capsule non réparée avant FIN-02.
+- [ ] Noyau de navigation résonante = synthèse finale, pas grosse boucle de grind.
 
 ## Discipline de livraison
 
-- [x] HEAD courant seule base technique.
-- [x] Aucun bridge parallèle si un propriétaire existe.
-- [x] BASE partielle exacte ; ne jamais reconstruire le dépôt complet pour un chantier ciblé.
-- [x] Aucun fichier reconstruit depuis un extrait partiel.
-- [x] Diff exact avant livraison.
-- [x] Tests producteurs + propriétaires + runtime + consommateurs.
-- [x] Les symptômes servent de réfutation, pas de design.
-- [x] Les tests historiques rouges ne définissent pas à eux seuls l'état de santé.
-- [ ] Toujours comparer le candidat au **HEAD/parent effectif au moment de l'application**, pas seulement au HEAD utilisé lors de la fabrication initiale du ZIP.
-- [ ] Ne déclarer PASS gameplay qu'après preuve observable correspondante.
+- [x] préflight obligatoire ;
+- [x] HEAD courant seul ;
+- [x] Gameplay V2 avant audit ;
+- [x] invariant gameplay comme matrice principale ;
+- [x] propriétaires existants avant toute extension ;
+- [x] BASE partielle exacte ;
+- [x] aucun fichier reconstruit depuis ancien ZIP ;
+- [x] diff exact ;
+- [x] tests producteurs/propriétaires/runtime/consommateurs ;
+- [ ] toujours comparer au parent Git réel au moment de l'application ;
+- [ ] ne déclarer PASS gameplay qu'après preuve observable.

@@ -2,318 +2,285 @@
 
 ## État de référence
 
-Dernière mise à jour : **16 septembre 2026**
+Dernière mise à jour : **1 octobre 2026**
 
 ### Version de travail
-- HEAD moteur courant vérifié pour cette synchronisation : commit `3b01f2bf87ce0ffa5f2c385f21dce16866d6a518` — `CPU P3`.
-- TP complet : `e76af8f6bfba8dd599912c50e50ce641338c5985`, puis continuité TP-AFTER et autonomie post-arc présentes au HEAD courant.
-- CARN/STORM + correctif CUO Lab : `d521af2f3d6e5f221975d64729ec7eff8cc11606`, puis restauration de coexistence sur `bca4b01b…`.
-- Checkpoint moteur R-HEALTH sain conservé : commit `560249fb91ed2d5c719a4aafa5eabe88b6ee1e46` — `fix Save`.
-- Le HEAD GitHub courant reste la seule base technique de reprise ; le checkpoint R-HEALTH sert de référence de santé, jamais de base de codage à la place du HEAD.
-- Les recovery checkpoints existants restent historiques et ne priment pas sur le HEAD courant.
+- HEAD GitHub courant vérifié : `d334ed2cb193c80c44e98c401b5947bbd263348e` — `Mission routines`.
+- Parent direct : `93a6b7f11ee267764bacc471e8851ca156756ed3` — `R1->R5 transition missionnelles Big fix - réconciliation-réparation`.
+- Le HEAD courant reste la seule base technique de reprise.
+- Le checkpoint R-HEALTH `560249fb91ed2d5c719a4aafa5eabe88b6ee1e46` reste une référence historique de santé, jamais une base alternative au HEAD.
+- Les recovery checkpoints restent historiques.
 - `ROADMAP_TODO.md` reste la seule TODO active.
-- La Bible documentaire est la source de contenu missionnel ; les coches moteur ne doivent refléter que les définitions réellement intégrées et validées.
-- Le chantier de test TP est clos au 16 septembre 2026 ; TP-01→11 et TP-AFTER-01→04 sont des acquis à préserver.
+- `map-registry.js` reste protégé.
 
 ## Gouvernance documentaire officielle
 
-Les documents maintenus sont ceux désignés par `docs/README.txt`.
+Documents maintenus : ceux désignés par `docs/README.txt`.
 
-Règle de priorité :
-1. décision utilisateur la plus récente ;
-2. validation runtime / comportement observable ;
-3. Contrat Gameplay Opérationnel V2 + addendum courant ;
+Ordre d'autorité fonctionnelle :
+1. décision gameplay explicite utilisateur la plus récente ;
+2. validation directe en jeu / comportement observable ;
+3. Contrat Gameplay Opérationnel V2 + addenda courants ;
 4. MASTER / ARCHITECTURE / ROADMAP / DEV_HISTORIQUE ;
-5. documents historiques.
+5. documents officiels historiques ;
+6. anciennes traductions techniques ;
+7. code courant comme preuve du comportement exécuté, jamais comme définition autonome de l'intention.
 
-Le code courant prouve le comportement actuel, pas à lui seul l'intention gameplay. Une attente historique peut devenir obsolète si une évolution plus récente a été validée comme nouvelle vérité moteur.
+Une couche architecturalement imparfaite ne peut pas être supprimée avant identification et conservation de tous les comportements gameplay qu'elle transporte réellement.
 
-## Checkpoint R-HEALTH — 12 septembre 2026
+## Doctrine moteur actuelle — 1 octobre 2026
 
-Audit transversal réalisé sur `560249fb91ed2d5c719a4aafa5eabe88b6ee1e46`.
+### 1. Autorité missionnelle
 
-Verdict : **base saine pour poursuivre l'industrialisation**.
+Le moteur doit suivre la hiérarchie fonctionnelle suivante. Au HEAD courant, `MissionManager.hasMissionExecutionAuthority()` représente cette autorité globale plus large que la seule primaire :
 
-Carte synthétique :
-- **13 domaines VERT** ;
-- **3 domaines VERT ÉVOLUÉ** ;
-- **4 domaines ORANGE de validation incomplète** ;
-- **0 domaine ROUGE systémique démontré**.
+`directive joueur persistante / Top1 explicite → travail missionnel exécutable de la shortlist prioritaire → transition missionnelle structurée → fallback missionnel borné → autonomie libre en dernier recours`.
 
-VERT ÉVOLUÉ signifie qu'un comportement actuel diverge d'une ancienne attente mais constitue désormais une vérité moteur cohérente et contractuelle. Ce statut ne doit pas être ramené artificiellement à une ancienne implémentation pour faire passer un test historique.
+Règles :
+- le choix joueur fixe la mission Top1 ; il ne prescrit pas toutes les micro-actions ;
+- sans choix joueur, BAC/MissionManager arbitrent une shortlist de 3 à 4 missions prioritaires ;
+- une mission active ou primaire peut être localement non-runnable sans être terminée ni abandonnée ;
+- une Top1 non-runnable ne donne pas automatiquement la main à l'autonomie libre ;
+- Top2→Top4 doivent pouvoir fournir action locale, destination connue ou transition inconnue contractuelle ;
+- lorsqu'aucune mission de la shortlist n'est exécutable mais qu'une autre mission active possède un travel structuré et causal, ce travel peut être retenu en fallback borné ;
+- l'autonomie générale n'est autorisée qu'après épuisement des chemins missionnels réellement exécutables ;
+- aucun scheduler, moteur d'autorité ou file de missions parallèle ne doit être créé.
 
-Domaines ORANGE à surveiller lors des chantiers concernés :
-- parcours tutoriel T01→T13 complet de bout en bout ;
-- génération/population maps et protections de contenu ;
-- UI visuelle en conditions réelles ;
-- audio / caméra / déplacement / physique en observation jeu.
+### 2. Continuité spatiale missionnelle
 
-### Nouvelle règle de lecture des tests
+Ordre gameplay canonique :
 
-Le nombre brut de tests rouges n'est plus un indicateur suffisant de santé moteur.
+`LOCAL → KNOWN → UNKNOWN CONTRACTUEL → FREE AUTONOMY`.
 
-Un test rouge préexistant doit être classé avant toute correction :
-- dette de test / API ou fixture obsolète ;
-- harness de test incomplet ;
-- contrat historique remplacé par une vérité moteur plus récente ;
-- panne runtime/gameplay réellement reproduite.
+- **LOCAL** : action missionnelle physiquement exécutable sur la map courante.
+- **KNOWN** : cible/site/map connus, atteints par le graphe réel et les routes existantes.
+- **UNKNOWN CONTRACTUEL** : seulement si la mission ou une directive autorise explicitement l'ouverture de l'inconnu ; génération au passage réel.
+- **FREE AUTONOMY** : dernier recours, jamais substitut silencieux à une mission encore exécutable.
 
-Une non-régression de ZIP doit prioritairement prouver :
-1. préservation des capacités R-HEALTH du HEAD ;
-2. absence de nouvelle panne gameplay démontrée ;
-3. absence de nouveau nom d'échec pertinent ;
-4. conformité au contrat actuel des propriétaires et consommateurs ;
-5. coexistence avec le **parent Git réellement courant au moment de l'application**.
+Une destination connue reste physique : aucune téléportation implicite. Le routage TP autonome n'est utilisable qu'après TP-AFTER-04 et uniquement par un consommateur opt-in conforme à `TP_AUTONOMY_CONTRACT_2026-09-14.md`.
 
-Le cas TP/CARN du 13 septembre 2026 constitue le garde-fou de référence : un ZIP techniquement correct contre son ancienne base peut devenir régressif si un autre chantier a été committé entre-temps. Le contrôle post-commit du SHA réel est donc obligatoire.
+### 3. Causalité du voyage
+
+Une transition missionnelle transporte sa raison d'être.
+
+- une mission qui provoque un départ mémorise l'intention de travel ;
+- la destination réelle connue ou générée est rattachée à cette intention ;
+- à l'arrivée, le travail ayant motivé le trajet reste prioritaire tant qu'il n'est pas résolu ou réellement impossible ;
+- une autre mission ne doit pas voler l'arrivée causale ;
+- une cible momentanément non matérialisée à l'arrivée ne suffit pas à conclure que la mission est stérile ;
+- save/reload doit conserver l'identité de destination et l'intention de reprise.
+
+### 4. Missions locales et opportunités perdables
+
+Une opportunité locale réellement perdable au départ peut différer ponctuellement un travel si le contrat le permet. Exemples : contexte faune ou MSC locale réellement liée à la map.
+
+Interdits :
+- utiliser une collecte générique Shelter/COL/ENV comme prétexte pour différer indéfiniment un départ ;
+- relancer une réarbitration générale après chaque petite action locale ;
+- oublier le travel principal après la déviation ;
+- transformer une opportunité en autorité supérieure permanente.
+
+Après la déviation autorisée, le travel causal reprend.
+
+### 5. Interaction missionnelle / SAME-INSTANCE
+
+`ObjectM0` reste propriétaire du matching générique, de SAME-INSTANCE et du fan-out.
+
+Invariant : lorsqu'une acquisition exige réellement une ou plusieurs études missionnelles sur cette même ressource :
+
+`0..N études dues → même instance → collect/extract`.
+
+- aucune cible de substitution au milieu de la transaction ;
+- aucun double crédit du même nœud sur la même instance ;
+- plusieurs missions compatibles peuvent progresser par fan-out ;
+- un respawn déjà connu peut être collecté directement lorsqu'aucune nouvelle étude missionnelle n'est due.
+
+Règle renforcée au 1 octobre : une mission secondaire ne peut pas injecter son besoin d'étude comme **précondition bloquante** de l'action courante d'une autre mission. Son progrès doit rester passif via les événements canoniques, sauf si l'interaction intrinsèque de la cible exige elle-même l'étude avant acquisition.
+
+### 6. Atomicité et échec d'interaction
+
+Une interaction déjà engagée reste atomique jusqu'à succès, échec réel ou annulation légitime.
+
+- `currentAction` et `pendingInteraction` doivent rester cohérents ;
+- un échec d'approche ne doit pas être confondu avec une absence de cible ;
+- le moteur doit tenter ses récupérations physiques bornées avant de déclarer la cible inaccessible ;
+- après refus/échec d'une candidate, le moteur doit pouvoir essayer la candidate missionnelle suivante avant de rendre la main à l'autonomie libre ;
+- aucune boucle infinie observe/retry/collecte n'est acceptable.
+
+### 7. MSC, identité et destination
+
+Une mission qui vise une MSC doit conserver l'identité suffisamment précise pour retrouver la bonne scène : map, `siteId`, `microSceneId` et/ou `persistentMicroSceneId` selon le contrat.
+
+- une famille générique ne remplace pas une identité missionnelle prouvée ;
+- plusieurs `requiredMicroScenes` ne forment pas implicitement une unité ;
+- une unité visuelle/missionnelle composée doit être une MSC composite unique de données ;
+- les retours d'une mini-série visent la même map et la même instance persistante ;
+- une mission ne s'active pas sur une MSC incomplète lorsque son contrat exige aussi des objets/composants spécifiques.
+
+### 8. Navigation physique
+
+`WorldEngine`, `PathPlanner` et `CharacterController` restent les propriétaires du monde, des routes et du mouvement.
+
+- route connue = déplacement physique ;
+- inconnue = génération au passage réellement autorisé ;
+- aucun enchaînement incontrôlé de portails ;
+- après plusieurs échecs de replanification, récupération physique bornée autorisée puis échec explicite ;
+- le reach d'interaction peut être ajusté sans modifier les colliders/identités MSC quand le problème est une portée d'interaction ;
+- autonomie OFF bloque les décisions autonomes mais ne doit pas annuler les déplacements directs du joueur au sol.
+
+### 9. Performance / cadence
+
+La performance est un invariant gameplay : un correctif fonctionnel ne doit pas réintroduire de scans globaux par tick.
+
+- `RuntimeBudget` reste le seul propriétaire du throttling adaptatif ;
+- privilégier une résolution de cible au changement d'état / à l'entrée d'interaction / au retry plutôt qu'un scan map-wide chaque frame ;
+- une cible déjà résolue est suivie localement tant qu'elle reste valide ;
+- aucune nouvelle boucle CPU, cache global ou scheduler parallèle sans preuve ;
+- les chemins MissionManager/BAC/WorldEngine doivent être réveillés causalement autant que possible.
+
+Mesure de référence fin septembre : environ 39 FPS moyens sur la session profilée, avec `world-engine.js` principal contributeur CPU. Ces chiffres sont une photographie, pas un seuil contractuel.
+
+### 10. Survie / énergie
+
+- ration = récupération réelle et outil d'excursion ;
+- micro-pause courte = récupération réelle, commentaire possible « je souffle » ;
+- repos long = besoin plus important, pas substitut automatique à chaque action ;
+- sans ration, les repos longs restent possibles ; avec ration + micro-pause, BlueFox peut prolonger son excursion ;
+- aucune boucle artificielle `une action → repos` ;
+- Survival peut interrompre légitimement une mission en cas de besoin réel, mais ne doit pas devenir un prétexte à abandon missionnel.
+
+### 11. Maps / assets / monde
+
+- progression tutorielle structurelle : 1→2→4→6 plateaux ;
+- Crystal reste l'exception narrative initiale ;
+- seed/topologie/noms persistants ;
+- identité visuelle d'une map doit rester cohérente après reload ;
+- WebP/PNG/alias/fallback ne doivent jamais fusionner des identités de maps différentes ;
+- le fallback doit être compatible avec le biome et ne pas substituer arbitrairement Crystal ;
+- objets décoratifs immobiles, notamment les débris de ruine concernés, ne doivent recevoir aucun mouvement de vent/flore/idle.
+
+### 12. Save / reload / inventaire
+
+La sauvegarde doit préserver :
+- missions, lifecycles, priorités et faits ;
+- intention de travel et arrivée causale ;
+- exploration/topologie/seed/noms ;
+- MSC/sites persistants ;
+- inventaires physiques et ressources réellement consommées/créditées ;
+- constructions ;
+- recettes/research ;
+- ration/craft ;
+- réseau drone/balise/TP ;
+- directive joueur persistante.
+
+Une mission validée qui dépend de ressources physiques ne doit pas coexister avec une perte silencieuse correspondante de l'inventaire après save/reload.
 
 ## Architecture de référence
 
-Le registre détaillé des propriétaires est dans `ARCHITECTURE_TECHNIQUE.md`.
+- `MissionManager` : lifecycle, sélection missionnelle, shortlist/priorités, runnabilité et intentions de travel ;
+- `MissionPlanner` : traduction des objectifs en actions/contraintes ;
+- `BAC core + integration` : arbitrage comportemental, jamais second lifecycle ;
+- `WorldEngine` : monde, transitions, autonomie exécutée, directive joueur, interaction physique ;
+- `ObjectM0` : matching CUO, études dues, SAME-INSTANCE, fan-out ;
+- `ActionBridge` : exécution d'action missionnelle réelle ;
+- `BibleRuntime` : triggers, bindings, effets, gates, compteurs, sites ;
+- `MissionMemory` : faits/lifecycles/sites/intention persistée ;
+- `ProgressionRegistry` : stock physique/progression ;
+- `MicroScenes` / `PersistentMicroScenes` : définition et identité persistante MSC ;
+- `MapGenerator` / prescriptions Bible : génération et contraintes de map ;
+- `WorldTopology` : graphe réel des maps ;
+- `RuntimeBudget` : throttling adaptatif unique ;
+- `SpecialObjectRuntime` : drones/balises/téléporteur ;
+- UI : présentation et commandes, jamais propriétaire gameplay.
 
-Principes majeurs :
-- `MissionManager` : lifecycle + sélection canonique de l'action missionnelle ;
-- BAC : arbitrage comportemental, jamais propriétaire parallèle du choix missionnel ;
-- `WorldEngine` : monde, transitions, navigation et directive joueur persistante ;
-- `MissionPlanner` : traduction des objectifs vers des actions et contraintes géographiques ;
-- `ObjectM0` : matching CUO, même-instance, fan-out et critères missionnels génériques ;
-- `BibleRuntime` : interprétation Bible, effets, gates, bindings, sites et compteurs sans posséder le lifecycle ;
-- `ProgressionRegistry` : progression centrale et inventaires canoniques ;
-- `MicroScenes` : identité et composition des micro-scènes ; les MSC custom restent des données ;
-- `PersistentMicroScenes` : identité persistante des scènes/sites qui doivent survivre aux retours/reloads ;
-- `RuntimeBudget` : unique propriétaire du throttling adaptatif ;
-- `SpecialObjectRuntime` : runtime métier des drones, balises, téléporteur et objets spéciaux ;
-- UI : jamais propriétaire du gameplay ;
-- `map-registry.js` : protégé.
+## Acquis historiques à préserver
 
-## Contrat gameplay durable
+- T01→T13 ;
+- FLO-01→07 ; GEO-01→07 ; COL/ENV ; LOC-01→17 ;
+- SUR et missions de site déjà intégrées ;
+- GAME R1/R2, engineering/fire, civilization ;
+- FAU et variantes répétables ;
+- ENE + ENE-15-A/B/C ;
+- BAL-01→03 ; DRN-01→05 ;
+- ARCH-01→40 ; CONTACT-01→15 ; DIP-01→03 ;
+- ANN-01→07 ;
+- POSTDIP / TP-01→11 ; TP-AFTER-01→04 ;
+- TERR-CARN-01→04 et TERR-STORM-01→04 ;
+- Journal lazy/persistant ;
+- SAME-INSTANCE et fan-out ;
+- hydratation missionnelle différée au reload ;
+- Recherche/Inventaire sans écran noir/superposition ;
+- responsive mobile/tablette, safe areas, tactile et compatibilité desktop validés lors du chantier mobile ;
+- profil mobile basé sur capacité tactile/coarse pointer, sans transformer un desktop redimensionné en profil mobile.
 
-### Relation joueur / BlueFox
-Le joueur exprime une intention ; BlueFox conserve une marge de décision sauf ordre explicitement prioritaire.
+## État des chantiers ouverts au HEAD `d334ed2`
 
-Suggestion de changement de map — règle B :
-- mémorisée immédiatement ;
-- n'interrompt pas l'action atomique en cours ;
-- reprise après cette action avant une nouvelle décision missionnelle/BAC ;
-- persistée au reload.
+### P0 — Autorité missionnelle et fuite vers autonomie
 
-### Missions / runnabilité
-- plusieurs missions actives peuvent progresser en parallèle ;
-- une action réelle peut faire progresser plusieurs missions compatibles ;
-- une mission active/primary peut être non-runnable localement sans être artificiellement terminée ;
-- une contrainte géographique missionnelle peut produire une transition canonique via TRAVEL explicite, `requiredMapFact`, cible missionnelle mémorisée ou completion gate ;
-- une transition connue mais inexécutable ne doit pas conserver une exclusivité qui immobilise BlueFox ;
-- une opportunité secondaire locale peut être traitée avant un départ missionnel lorsqu'elle est réellement runnable, puis la transition primaire reprend ;
-- une primaire stérile ne bloque pas les secondaires runnables ;
-- les réveils de retry restent causaux ; aucun polling parallèle n'est ajouté ;
-- une réévaluation causale ne révèle au maximum qu'une nouvelle mission.
+**Ouvert / défaut HEAD démontré.** `MissionManager` dispose d'une autorité missionnelle plus large que la seule primaire, tandis que `WorldEngine.ensureActivity()` consulte encore l'autorité primaire. Il faut réparer sur les propriétaires existants, sans couche parallèle, et prouver en jeu :
+- Top1 non-runnable → Top2/Top4 ou travel structuré ;
+- aucune collecte/observation libre tant qu'un travail missionnel exécutable existe ;
+- pas de churn de Top1 ;
+- pas d'abandon d'objectif après échec d'une candidate.
 
-### BAC / prérequis expérimentaux
-Une expérimentation nécessaire à l'activation ou à la progression d'une mission peut être portée comme intention persistante et candidate pondérée du BAC.
+### P0 — Pollution inter-mission des interactions
 
-Règles actuelles :
-- le poids missionnel et l'axe thématique sont conservés ;
-- le BAC reste souverain face aux autres candidats, notamment Survival ;
-- une directive joueur persistante bloque la candidate expérimentale ;
-- une mission primaire réellement runnable conserve son autorité ;
-- si la prochaine étape expérimentale est distante, la navigation existante rejoint le site requis ;
-- sans ressources suffisantes, aucune expérience fictive ni déplacement inutile n'est déclenché.
+**Ouvert / défaut reproduit.** Une mission secondaire ne doit pas bloquer collect/extract d'une autre mission en injectant une observation qui ne peut pas être créditée. Réparer la frontière entre directive d'étude active, acquisition courante et fan-out passif.
 
-### CUO / relation trigger-cible
-- observer / inspecter / analyser restent des nuances missionnelles d'une même étude physique lorsque le CUO le prévoit ;
-- une acquisition missionnelle conserve la même instance après les études dues ;
-- l'IMI distingue `REVEAL-ONLY`, `SAME-DEFINITION` et `SAME-INSTANCE` ;
-- `object-m0-bridge.js` conserve le filtre historique `cuoType` et accepte aussi `cuoTypes` comme filtre OR optionnel, cumulatif avec les autres critères ;
-- aucune migration automatique de vieux bindings n'est autorisée sans preuve runtime complète.
+### P0/P1 — Validation mission par mission
 
-### Navigation et téléportation
-Navigation ordinaire :
-- trajet connu = déplacement physique ;
-- destination inconnue = génération au passage réellement demandé ;
-- absence de chemin = échec de navigation, pas marche infinie contre obstacle.
+La fonctionnalité universelle n'est pas considérée prouvée par quelques tests génériques. Les missions touchées doivent être classées : `PASS E2E`, `PASS structurel`, `NON PROUVÉ`, `FAIL`, sur activation → cible → travel → action → événement → progression → completion → suite → reload → autorité.
 
-Téléportation :
-- pendant TP-01→11 puis TP-AFTER-01→04, aucune autonomie TP anticipée n'est autorisée ;
-- après `TP-AFTER-04.status === "completed"`, le réseau devient une infrastructure générale que l'autonomie peut exploiter **uniquement en opt-in** selon `TP_AUTONOMY_CONTRACT_2026-09-14.md` ;
-- le BAC peut participer au choix de l'objectif/destination mais ne possède jamais le téléporteur et n'appelle pas directement `teleportTo()` ;
-- `WorldEngine` reste propriétaire du calcul/exécution des itinéraires inter-map ;
-- `SpecialObjectRuntime` reste propriétaire du réseau TP et de l'exécution réelle du transfert ;
-- hub unique = `MSC-CUSTOM-ASTROLOGY` ;
-- destinations = maps connues possédant une balise réellement déployée et persistante ;
-- aucune liaison directe balise↔balise : le hub ASTROLOGY reste obligatoire ;
-- BlueFox doit être près de la source ;
-- refus pendant action/séquence non interruptible et refus du double transfert ;
-- arrivée sur zone marchable sûre ; aucune création de map, découverte synthétique ou augmentation artificielle de l'exploration ;
-- la transition reste canonique et publie `bluefox:map-transition-completed` ;
-- TP-11 : calibration + matière inerte avant BlueFox, puis hub→balise→hub.
+### P1 — Transitions/identités restantes
+
+Continuer les validations des missions à destination connue/MSC/contextes, notamment les familles qui ont historiquement perdu `persistentMicroSceneId`, activé sur MSC incomplète ou repris une mauvaise famille générique.
+
+### P1 — Save / monde / assets
+
+Revalider lorsqu'un chantier traverse ces domaines :
+- inventaire versus progression missionnelle ;
+- mapchange/reload ;
+- identité MSC ;
+- identité des images de map ;
+- topologie et retour connu.
+
+### P2 — Performance globale
+
+Le profilage CPU global reste séparé des corrections fonctionnelles. Toute optimisation doit être mesurée sur déplacements et interactions ordinaires, pas uniquement sur un cas pathologique.
 
 ## Téléportation — acquis et continuité
 
-### Acquis moteur
-- POSTDIP / TP-01→09 déjà présents avant la passe finale ;
-- TP-10 / TP-11 intégrées ;
-- TP-AFTER-01→04 intégrées et clôturées comme arc d'appropriation ;
-- ressources TP : 100 minerais, 50 composants, 20 cores, 100 fibres, 50 biocapital végétal exclusivement Thermosève/plantes fluorescentes, 10 accumulateurs, sous-assemblages issus des blueprints géographiques/fragmentation ;
-- au moins 4 balises persistantes déployées requises et non consommées ;
-- ASTROLOGY conserve ses arches visuelles mais leurs colliders sont neutralisés **uniquement dans cette MSC** ;
-- l'autorité des étapes runtime TP est protégée contre un fallback RESEARCH générique du Planner ;
-- après TP-AFTER-04, le routage autonome TP opt-in est autorisé conformément au contrat dédié ;
-- chantier de test TP clos au 16/09/2026 : aucune validation TP dédiée ne reste ouverte hors non-régression future lorsqu'un chantier traverse ce périmètre.
+Le contrat officiel post-arc reste `TP_AUTONOMY_CONTRACT_2026-09-14.md`.
 
-### Continuité documentaire encore ouverte
-- `EXP-LONG` : expéditions lointaines et maturation du parcours sans déclencher artificiellement la fin ;
-- `END-CHOICE — Là où je suis arrivé` : choix Rester / Trouver un moyen de rentrer ;
-- `FIN-01 — Ce qu'ils m'ont appris` : Temple + connaissances finales + adieux Rocky/Translucides ;
-- `FIN-02 — Le point de départ` : Noyau de navigation résonante, capsule enfin potentiellement opérationnelle, départ/fondu/générique.
+- TP-01→11 et TP-AFTER-01→04 sont acquis ;
+- après TP-AFTER-04 seulement, routage autonome TP opt-in ;
+- `WorldEngine.findKnownRoute()` conserve sa sémantique physique historique ;
+- `SpecialObjectRuntime.teleportTo()` reste l'unique primitive TP ;
+- hub ASTROLOGY obligatoire ;
+- aucune balise↔balise directe ;
+- aucune génération/découverte synthétique.
 
-La capsule ne doit jamais être considérée comme déjà réparée avant FIN-02. Sa remise en fonctionnement est la synthèse finale des connaissances accumulées, pas une simple recette disponible depuis le début.
+## Continuité narrative
 
-La branche **Rester** ne ferme pas le monde : elle mémorise le choix et laisse l'exploration ouverte.
+- EXP-LONG : maturation/expéditions longues, sans déclencher artificiellement la fin ;
+- END-CHOICE : choix Rester / Trouver un moyen de rentrer ;
+- FIN-01 : Temple, connaissances finales, Rocky/Translucides ;
+- FIN-02 : Noyau de navigation résonante, capsule enfin potentiellement opérationnelle, départ/fondu/générique.
 
-## Missions OPPORTUNITÉS / MSC
-
-Le chantier OPPORTUNITÉS devient un axe officiel d'industrialisation.
-
-Principes :
-- une mission OPP ne génère pas une map pour se satisfaire ;
-- la MSC qualifiante doit exister réellement via la génération/peuplement normaux ;
-- l'opportunité peut alors devenir disponible à l'entrée/découverte locale ;
-- poids fort possible, mais sans écraser directive joueur persistante ni primaire réellement runnable ;
-- après traitement, reprise de la transition principale ;
-- aucune couche de scheduler missionnel parallèle ;
-- les MSC déjà affectées à des missions protégées ne sont pas réutilisées ;
-- les retours d'une mini-série ciblent la même map et la même instance persistante ;
-- Orchidée et `MSC-ABANDONED-DRONE-001` sont destinées à des mini-suites approfondies, avec mémoire/obsession/souvenir positif possibles ;
-- apparitions PNJ/faune restent sous leurs propriétaires existants.
-
-CARN/STORM constituent la première branche dangereuse opportuniste industrialisée :
-- quatre occurrences par phénomène ;
-- progression exposition → apprentissage → prudence → maîtrise ;
-- déclenchements distincts `1→2→3→4` avec `uniqueOnly` ;
-- ciblage d'observation réel ;
-- poids renforcé sur trajets missionnels longs ;
-- reprise du trajet après traitement.
-
-## Sauvegarde / persistance
-
-La sauvegarde doit préserver :
-- missions, lifecycles et faits ;
-- exploration et topologie ;
-- MSC/sites persistants ;
-- recettes/research unlocks ;
-- ration et compteurs de craft ;
-- directive joueur persistante ;
-- constructions placées ;
-- état du réseau drone/balise/téléporteur lorsqu'il est porté par ses propriétaires canoniques ;
-- briques du Journal déjà consolidées.
-
-Les états différés doivent être flushés avant snapshot.
-
-Depuis le checkpoint `560249…`, MissionManager protège aussi l'hydratation différée d'une sauvegarde : si une mission sauvegardée est connue dans l'état mais que sa définition n'est pas encore chargée, la restauration attend la disponibilité de la définition au lieu d'écraser prématurément l'état sauvegardé.
-
-Aucune propagation ou migration artificielle rejetée par le runtime ne doit être réintroduite.
-
-## Industrialisation missionnelle acquise
-
-Lots intégrés et à préserver :
-- T01→T13 ;
-- FLO-01→07 ;
-- GEO-01→07 ;
-- paliers COL et missions ENV ;
-- LOC-01→17 ;
-- SUR-01/02/03/05/06/07 + SURPLUS et missions de site associées ;
-- GAME R1/R2 et missions GAME complémentaires ;
-- GAME-civilization_1→5 ;
-- FAU-01→12 + templates répétables par espèce `FAU-01A`, `FAU-03A`, `FAU-05A`, `FAU-11A` ;
-- ENE-01→14 + sous-branche ENE-15-A/B/C ;
-- GAME-engineering_1→6 et GAME-fire ;
-- chaîne balise `BAL-01→03` ;
-- chaîne drones `DRN-01→05` ;
-- ARCH-01→40 ;
-- CONTACT-01→15 ;
-- DIP-01→03 ;
-- chaîne GAME contact : `GAME-contact_first`, `GAME-contact_cautious`, `GAME-contact_ambassador` ;
-- ANN-01→07 ;
-- POSTDIP / TP-01→11 ;
-- TP-AFTER-01→04 ;
-- TERR-CARN-01→04 ;
-- TERR-STORM-01→04.
-
-Les projets documentaires sans définition moteur — notamment EXP-LONG, END/FIN et le lot OPP restant — restent volontairement sans statut moteur validé.
-
-## Lot ANN — contrat acquis
-
-Commit de référence historique : `ca619120c502ff6b122d69ad3ed15d0e8dc8a1d0` — `ANN 01-07`.
-
-Acquis à préserver :
-- ANN-04 s'ouvre après T13 sur une nouvelle map Ouest et réutilise les phénomènes météo existants ;
-- ANN-06 établit un **Camp** réel via le mécanisme générique de site/placement joueur, avec `MSC-CUSTOM-SMART-CAMP`, coût 10 bois + 10 fibres et distance strictement >10 maps du Camp/Refuge/Base le plus proche ;
-- `MSC-NOCTURNAL-DEN-001` reste un contexte faune distinct du Camp ;
-- ANN-03 utilise l'épave réelle et ses composants physiques ;
-- ANN-02 collecte 25 Thermosèves puis consomme réellement 6 plantes + 2 minerais connus ;
-- ANN-05 analyse 3 types minéraux, collecte 4 de chacun et consomme réellement les 12 échantillons ;
-- ANN-01 utilise 10 % → 25 % → 60 % d'exploration réelle avant observation du relais ;
-- ANN-07 consomme l'historique réel `OBJECT_SEEN` / `observations.historical` pour la faune nocturne ;
-- aucune couche ANN parallèle n'a été créée.
-
-## Relations / civilisations
-
-Le moteur relationnel comprend :
-- réactions NPC à l'approche ;
-- fuite canonique lors d'une fermeture intrusive ;
-- comportement prudent après approche stable ;
-- protection d'un dialogue/contact déjà engagé ;
-- réputation ;
-- commerce consommant le stock physique ;
-- déblocage de connaissances et blueprints par les propriétaires existants.
-
-CONTACT/DIP restent les couches missionnelles consommatrices, pas les propriétaires du comportement NPC.
-
-FIN-01 devra réutiliser réellement les acquis des Rocky et des Translucides ; leur rôle final ne doit pas être remplacé par un simple flag abstrait.
-
-## Énergie / balise / drones
-
-### ENE
-La chaîne énergétique présente au catalogue va de ENE-01 à ENE-14, puis se prolonge par `ENE-15-A`, `ENE-15-B`, `ENE-15-C`.
-
-### Balise et drones
-- la balise déployée appartient au runtime d'objets spéciaux existant ;
-- le Kit d'expédition sait transporter les objets concernés sans devenir leur propriétaire métier ;
-- `BAL-01→03` formalise analyse, fabrication/déploiement et usage de la balise ;
-- `DRN-01→05` couvre Scout/Harvest, récolte distante, réseau et dépannage terrain ;
-- les observations du Scout utilisent le chemin canonique `OBJECT_SEEN`.
-
-Les balises servent désormais aussi de destinations TP lorsqu'elles sont réellement déployées et persistantes ; cette extension ne transfère pas leur propriété à l'UI ou au catalogue missionnel.
-
-## Journal évolutif
-
-Le Journal est lazy et persistant :
-- consolidation à l'ouverture uniquement ;
-- aucune consolidation due aux seules mutations DOM ;
-- briques persistantes ;
-- branche inchangée stable ;
-- enrichissement uniquement après évolution significative ;
-- aucun polling.
-
-TP-AFTER est clos et ses enrichissements doivent rester dans les branches existantes. OPP et END/FIN devront également enrichir les branches existantes plutôt que créer un second Journal.
-
-## Continuité
-
-- `560249fb91ed2d5c719a4aafa5eabe88b6ee1e46` reste le **checkpoint moteur R-HEALTH sain** ;
-- `3b01f2bf87ce0ffa5f2c385f21dce16866d6a518` est le **HEAD moteur vérifié de cette synchronisation documentaire** ;
-- TP et TP-AFTER sont clos ; prochaine continuité principale ouverte : EXP-LONG → END-CHOICE/FIN ;
-- chantier parallèle officiel : missions OPPORTUNITÉS / MSC remarquables ;
-- aucun chantier général de réparation moteur n'est ouvert ;
-- les quatre domaines ORANGE restent des zones de validation à compléter lorsqu'un chantier les traverse.
+La capsule reste une épave avant FIN-02. La branche Rester laisse le monde ouvert.
 
 ## Discipline d'industrialisation
 
-- données/contrats plutôt que branches par ID ;
-- propriétaires existants plutôt que bridges ;
-- réutiliser les MSC/CUO existants avant création nouvelle ;
-- une nouvelle MSC composite reste une donnée si le moteur sait déjà l'instancier comme une scène unique ;
-- protéger les MSC déjà missionnées contre une réutilisation opportuniste non validée ;
-- tests de réfutation et consommateurs réels avant PASS ;
-- BASE partielle exacte limitée au périmètre : ne jamais reconstruire le dépôt complet ;
-- contrôler le parent Git courant avant application d'un ZIP ;
-- un test historique rouge n'autorise une correction moteur qu'après reproduction d'une panne actuelle ou violation d'un contrat encore valide.
+- HEAD exact avant chaque chantier ;
+- préflight obligatoire ;
+- BASE partielle exacte + CANDIDAT ;
+- invariant gameplay comme unité de travail ;
+- producteur → propriétaire → runtime → événement → consommateurs ;
+- aucun correctif mission-ID spécifique si un patron générique existe ;
+- aucune suppression de wrapper/couche sans inventaire des comportements transportés ;
+- aucun polling/scheduler/cache global ajouté sans preuve ;
+- mêmes tests BASE/CANDIDAT ;
+- diff exact contre le HEAD de départ ;
+- comparaison au parent Git réel au moment de l'application ;
+- ZIP uniquement fichiers modifiés ;
+- aucun PASS gameplay sans preuve observable.

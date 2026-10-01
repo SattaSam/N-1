@@ -1,5 +1,108 @@
 # BLUEFOX ODYSSEY — DEV HISTORIQUE
 
+## Session du 1 octobre 2026 — synchronisation documentaire post-réconciliations missionnelles
+
+### Base
+- HEAD : `d334ed2cb193c80c44e98c401b5947bbd263348e` — `Mission routines`.
+- Parent : `93a6b7f11ee267764bacc471e8851ca156756ed3` — `R1->R5 transition missionnelles Big fix - réconciliation-réparation`.
+- Cette session documentaire ne modifie aucun fichier moteur.
+
+### But
+Les références officielles s'arrêtaient principalement aux 13–16 septembre alors que le moteur avait subi de nombreux chantiers structurels fin septembre. La documentation est réconciliée autour des invariants gameplay actuels plutôt qu'autour d'une accumulation de patchs.
+
+### Décisions consolidées
+
+1. **Autorité missionnelle**
+   - joueur : Top1 persistante ;
+   - sans choix : shortlist 3–4 missions ;
+   - ordre : LOCAL → KNOWN → UNKNOWN contractuel → FREE ;
+   - une Top1 non-runnable n'autorise pas directement l'autonomie libre ;
+   - échec d'une candidate → essayer une autre candidate missionnelle avant free autonomy ;
+   - aucune mission ne doit être abandonnée ou déclarée stérile pour masquer une régression de runnabilité.
+
+2. **Travel causal**
+   - destination connue = trajet physique réel ;
+   - route de retour vers map déjà découverte = route connue ;
+   - unknown uniquement par intention joueur/mission ;
+   - la mission qui provoque le travel garde la priorité de reprise à l'arrivée ;
+   - destination générée rattachée après matérialisation ;
+   - save/reload conserve l'intention.
+
+3. **Déviation locale**
+   - une opportunité réellement perdable peut différer ponctuellement un travel ;
+   - collecte générique/Shelter ne le peut pas ;
+   - reprise du travel ensuite.
+
+4. **Interaction inter-mission**
+   - SAME-INSTANCE et fan-out conservés ;
+   - une mission secondaire ne peut pas bloquer l'acquisition d'une autre mission par une observation injectée ;
+   - fan-out passif après événement réel ;
+   - observation intrinsèque réellement due reste autorisée.
+
+5. **Performance**
+   - pas de scan map-wide par tick comme solution de robustesse interactionnelle ;
+   - RuntimeBudget reste unique ;
+   - les corrections CPU doivent être mesurées sur cas ordinaires et denses.
+
+### Défauts HEAD encore ouverts
+
+- `WorldEngine.ensureActivity()` consulte encore l'autorité primaire alors que `MissionManager` possède une notion d'autorité missionnelle globale plus large ; risque de fuite vers autonomie libre lorsque Top1 est stérile mais qu'une autre mission peut travailler.
+- boucle d'observation inter-mission reproduite le 1 octobre : une directive d'étude secondaire peut interférer avec une acquisition d'une autre mission ; contrat cible = fan-out passif, pas précondition étrangère.
+- universalité missionnelle non prouvée : chaque mission doit être classée PASS E2E / PASS structurel / NON PROUVÉ / FAIL.
+
+### Séquence 24 septembre → 1 octobre 2026
+
+#### 24 septembre — Top4, unknown et récupération navigation
+- secondaires Top4 éligibles à l'unknown si contrat autorisé ; known prioritaire ; absence de frontier bloque ; non-full conserve ses restrictions ;
+- ne pas modifier les colliders MSC/cibles pour un simple problème de portée ; augmenter la portée BlueFox ;
+- après plusieurs replans échoués, retraits physiques bornés dans plusieurs directions puis reprise de la destination originale.
+
+#### 25 septembre — continuité missionnelle et autonomie OFF
+- hiérarchie consolidée en `LOCAL → KNOWN → UNKNOWN → FREE AUTONOMY` ;
+- existence d'une cible ≠ preuve d'approche physique possible ;
+- après échec d'une candidate, une autre candidate Top4 doit être essayée avant BAC libre ;
+- OFF→OFF ne doit pas annuler répétitivement un déplacement direct joueur ;
+- opportunité locale perdable peut différer travel ; Shelter/collecte générique ne le peut pas.
+
+#### 26 septembre — interaction canonique / mobile
+- collider de la cible exclu des obstacles, obstacles étrangers conservés ; reach et rayons explicites préservés ;
+- responsive, plein écran/PWA, safe areas, tactile et desktop préservés ;
+- profil mobile basé sur coarse pointer/touch, sans architecture mobile parallèle.
+
+#### 27 septembre — save, débris, CPU, médias maps
+- réconciliation save/mapchange ;
+- débris de ruine rendus immobiles sur les voies auditées ;
+- profil CPU : ~39 FPS moyens sur la capture fournie, `world-engine.js` principal contributeur ;
+- demande CPU globale, pas limitée aux débris ;
+- conversion médias ne doit pas fusionner les identités visuelles ;
+- incohérence inventaire/progression signalée comme risque de persistance.
+
+#### 28 septembre — images, MSC, identité géographique
+- correction PNG/WebP/alias/fallback ;
+- alias MSC ciblé sans nouveau moteur ;
+- perte de `persistentMicroSceneId` identifiée comme cause possible de mauvaise destination GEO ;
+- une MSC seule ne suffit pas quand la mission exige aussi des objets/composants ;
+- principe : préserver Top1/Top4, known-route, SAME-INSTANCE, lifecycle et autonomie ; pas de preuve par famille générique.
+
+#### 29 septembre — destination connue / réconciliation R1→R5
+- `ANN known destination` ;
+- propagation des données missionnelles utiles, activation sur la bonne map générée, `catalogManaged`, causal arrival unknown, protection de la mission causale, CONTEXT_MSC réconcilié ;
+- une arrivée causale reste du travail missionnel avant activité générale.
+
+#### 30 septembre — interaction CPU / autorité
+- éviter les scans complets répétés pendant interaction ;
+- shortlist spatiale locale temporaire + retries sur ensemble pertinent ;
+- runtime utilisateur : Top4 secondaire peut porter l'autorité missionnelle ;
+- question ouverte : pourquoi `updateAutonomy` continue lorsque cette autorité existe.
+
+#### 1 octobre — Mission routines / universalité / boucle observe
+- `d334ed2` : `proximityContexts`, destination connue par contexte unique, fallback de travel structuré hors shortlist après fast paths stériles ;
+- audit demandé mission par mission ;
+- universalité NON PROUVÉE tant qu'activation, cible, travel, crédit, same-instance/map, completion, suite, reload et autorité ne sont pas vérifiés ;
+- boucle d'observation répétée reproduite ; règle : aucune mission secondaire ne bloque l'interaction d'une autre par une observation étrangère.
+
+---
+
 ## Session des 13–14 septembre 2026 — CARN/STORM, Téléportation, réconciliation inter-chantiers et continuité documentaire
 
 ### Base finale vérifiée
@@ -183,7 +286,6 @@ Les projets documentaires sans définition moteur restent sans coche.
 - Cette mise à jour documentaire ne modifie aucun fichier moteur.
 
 ### Objet de la passe
-
 Après plusieurs campagnes de validation montrant plusieurs dizaines de tests rouges préexistants, l'objectif a été déplacé du simple comptage des échecs vers un audit de **santé fonctionnelle** :
 - capacités préservées ;
 - propriétaires encore cohérents ;
@@ -192,7 +294,6 @@ Après plusieurs campagnes de validation montrant plusieurs dizaines de tests ro
 - distinction entre dette de tests et panne gameplay réelle.
 
 ### Verdict R-HEALTH
-
 Résultat synthétique :
 - 13 domaines **VERT** ;
 - 3 domaines **VERT ÉVOLUÉ** ;
@@ -208,9 +309,6 @@ Les domaines ORANGE ne sont pas déclarés cassés :
 - audio/caméra/déplacement/physique.
 
 ### Nouvelle doctrine de validation
-
-Le nombre brut de tests rouges n'est plus utilisé comme mesure directe de santé du moteur.
-
 Avant toute correction liée à un test préexistant, distinguer :
 1. test/API/fixture obsolète ;
 2. harness incomplet ;
@@ -219,85 +317,46 @@ Avant toute correction liée à un test préexistant, distinguer :
 
 Une correction moteur n'est justifiée que par une panne actuelle ou la violation d'un contrat encore valide.
 
-La barrière de non-régression des futurs ZIP devient prioritairement :
-- préservation des capacités R-HEALTH ;
-- absence de nouvelle panne gameplay ;
-- absence de nouveau nom d'échec pertinent ;
-- conformité aux propriétaires et consommateurs actuels.
-
 ### Capacités confirmées pendant R-HEALTH
 
 #### ObjectM0 / SAME-INSTANCE / fan-out
 - ObjectM0 reste propriétaire du matching missionnel ;
 - les études dues puis l'acquisition conservent la même instance ;
-- le fan-out vers plusieurs missions compatibles est conservé ;
-- les relations trigger-cible IMI restent à préserver.
+- fan-out conservé ;
+- relations trigger-cible IMI à préserver.
 
 #### BAC / expérimentation
-Le modèle actuel est désormais :
-`mission bloquée par prérequis expérimental → intention persistante → candidate BAC pondérée → arbitrage → exécution quand réellement disponible`.
-
-Conséquences :
-- directive joueur persistante prioritaire ;
-- primaire réellement runnable prioritaire ;
-- Survival peut gagner l'arbitrage ;
-- navigation existante utilisée pour rejoindre un site expérimental distant ;
-- aucune expérience fictive si ressources absentes.
-
-Un ancien test exigeant une exécution expérimentale directe peut donc être rouge sans régression moteur.
+`mission bloquée par prérequis expérimental → intention persistante → candidate BAC pondérée → arbitrage → exécution quand disponible`.
 
 #### R-STAB
-Les décisions précédemment validées restent compatibles avec le HEAD :
 - active/primary ≠ nécessairement runnable localement ;
 - primaire stérile non exclusive ;
-- transition connue inexécutable ne bloque pas BlueFox ;
+- transition connue inexécutable ne bloque pas ;
 - secondaire locale runnable peut précéder un départ ;
 - retry causal sans polling.
 
 #### Relations / civilisations
-Le runtime relationnel comprend désormais :
-- approche intrusive pouvant provoquer une fuite ;
-- approche lente/stable permettant un comportement prudent ;
-- dialogue actif protégé contre fuite concurrente ;
-- réputation ;
-- commerce consommant le stock physique ;
-- déblocages de connaissances/blueprints réels.
-
-Le raccord CONTACT-10→CONTACT-11 reste un défaut local connu à traiter dans le lot missionnel prévu, et non une panne systémique du système relationnel.
+- approche intrusive/fuite ;
+- approche stable/prudente ;
+- dialogue actif protégé ;
+- réputation ; commerce ; connaissances/blueprints réels.
 
 #### Journal
-Le contrat lazy/persistant reste valide :
-- aucune consolidation au scan initial ou à la simple mutation DOM ;
-- une consolidation à l'ouverture ;
-- pas de reconsolidation pendant la même ouverture ;
-- nouvelle consolidation possible à la réouverture ;
-- aucun polling.
+- consolidation à l'ouverture ;
+- aucune consolidation par simple mutation DOM ;
+- pas de polling.
 
 #### Save / hydratation
-Le commit `560249…` ajoute une protection de restauration missionnelle :
-- une mission sauvegardée dont la définition n'est pas encore chargée n'est plus écrasée prématurément ;
-- MissionManager conserve la responsabilité de l'hydratation ;
-- la reprise attend la disponibilité de la définition ;
-- aucun moteur parallèle de sauvegarde missionnelle n'est créé.
+- une mission sauvegardée dont la définition n'est pas encore chargée n'est pas écrasée ;
+- MissionManager conserve la responsabilité ;
+- aucun moteur parallèle de sauvegarde.
 
 ### État de l'industrialisation visible au HEAD
-
-Les documents précédents étaient devenus en retard. Le HEAD audité contient déjà notamment :
 - ARCH-01→40 ;
 - CONTACT-01→15 ;
 - DIP-01→03 ;
 - `GAME_CONTACT_FIRST`, `GAME_CONTACT_CAUTIOUS`, `GAME_CONTACT_AMBASSADOR` ;
 - ENE-15.
-
-Les anciennes TODO « reprendre à ARCH-30 » et « intégrer ENE-15 » sont donc closes comme objectifs futurs.
-
-### Continuité après interruption
-
-- aucun chantier général de réparation moteur ouvert ;
-- prochaine reprise : choisir le prochain lot réellement restant dans la Bible/roadmap ;
-- confronter ce lot au HEAD courant et aux propriétaires existants ;
-- compléter les domaines ORANGE uniquement lorsqu'un chantier traverse leur périmètre ;
-- ne pas réparer le moteur pour satisfaire artificiellement des tests historiques devenus faux.
 
 ---
 
@@ -306,7 +365,7 @@ Les anciennes TODO « reprendre à ARCH-30 » et « intégrer ENE-15 » sont don
 ### Base finale de référence historique
 - HEAD validé pour ARCH-R4 : `296c048c0846198bf6326924ea4d3a9483907f68`
 - Parent : `017d646f6e861840b22a63a0a39e69aa231d5b7c` — `ARCH 13-18`
-- Commit : `/!\ ARCH R4 19-29     /!\ INDEX.HTML`
+- Commit : `/!\\ ARCH R4 19-29     /!\\ INDEX.HTML`
 - Cette section est historique ; le checkpoint actuel est désormais `560249…`.
 
 ### ENE-11→14

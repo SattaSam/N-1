@@ -1456,6 +1456,7 @@
       for (const node of tree.availableLeaves()) {
         if (
           !isStudyAction(node.type) ||
+          node.params?.biblePattern === "CONTEXT_MSC" ||
           node.params?.siteProgressionKind ||
           node.params?.eventDriven === true ||
           node.params?.catalogManaged === true
@@ -1936,11 +1937,9 @@
       // Dès que l'étude préalable de CE geste est satisfaite, la phase acquire
       // verrouille la même instance jusqu'à l'acquisition finale. Aucun nouvel
       // arbitrage de mission/BAC ne peut détourner la cible entre les deux.
-      const dueStudyDirective = activeStudyDirective(this, resolved);
-      const directive =
-        acquiringSameTarget && !dueStudyDirective
-          ? null
-          : dueStudyDirective;
+      const directive = acquiringSameTarget
+        ? null
+        : activeStudyDirective(this, resolved);
 
       if (directive) {
         object.userData.requestedInteraction = "observe";
@@ -2282,31 +2281,28 @@
           interactionState: { ...state }
         });
         rememberMissionCommit();
-        // Une étude missionnelle peut en débloquer une autre sur la même
-        // instance. OBSERVE reste l'unique geste physique ; le verbe narratif
-        // (observe/inspect/analyze) distingue l'objectif missionnel.
-        // Le distinct par instance du nœud empêche de recompter cette même
-        // instance pour le même objectif avant de reprendre l'acquisition.
-        const continueStudyDirective =
-          ["collect", "extract"].includes(object.userData.acquisitionIntent) &&
-          capabilities(definition).collectable
-            ? activeStudyDirective(this, resolved)
-            : null;
+        // Une étude réalisée pendant une acquisition ne devient jamais le
+        // prérequis d'une autre mission d'étude. Le geste physique reprend
+        // immédiatement sur la même instance ; les autres missions progressent
+        // passivement via l'événement canonique qui vient d'être émis.
         continueAcquisition =
           ["collect", "extract"].includes(object.userData.acquisitionIntent) &&
           capabilities(definition).collectable;
         if (continueAcquisition) {
-          object.userData.acquisitionPhase =
-            continueStudyDirective ? "study" : "acquire";
-          if (continueStudyDirective) {
-            object.userData.requestedInteraction = "observe";
-            object.userData.requestedInteractionSource = "mission";
-            object.userData.missionSubject = continueStudyDirective.subject;
-            object.userData.missionNarrativeVerb =
-              continueStudyDirective.narrativeVerb;
-            object.userData.missionNodeId = continueStudyDirective.nodeId;
-            object.userData.missionId = continueStudyDirective.missionId;
-          }
+          object.userData.acquisitionPhase = "acquire";
+          object.userData.requestedInteraction =
+            object.userData.acquisitionIntent;
+          object.userData.requestedInteractionSource =
+            object.userData.acquisitionIntentSource || "mission";
+          object.userData.missionSubject =
+            object.userData.acquisitionMissionSubject || null;
+          object.userData.missionNarrativeVerb =
+            object.userData.acquisitionMissionNarrativeVerb ||
+            object.userData.acquisitionIntent;
+          object.userData.missionNodeId =
+            object.userData.acquisitionMissionNodeId || null;
+          object.userData.missionId =
+            object.userData.acquisitionMissionId || null;
         }
         object.userData.lastInspectedAt = Date.now();
         object.userData.requestedInteraction = null;
