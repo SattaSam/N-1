@@ -275,6 +275,7 @@
     initialState: "active",
     prerequisites: Object.freeze(["T03"]),
     activationSource: "autonomy",
+    autoPrimaryEligible: false,
     priority: 54,
     passivePriorityAxis: "collection",
     sequence: Object.freeze([
@@ -285,7 +286,8 @@
         target: 100,
         requires: Object.freeze([]),
         params: Object.freeze({
-          kind: "fiber"
+          kind: "fiber",
+          backgroundProgressOnly: true
         })
       }),
       Object.freeze({
@@ -296,7 +298,8 @@
         requires: Object.freeze([]),
         params: Object.freeze({
           subject: "flora",
-          excludeKinds: Object.freeze(["wood"])
+          excludeKinds: Object.freeze(["wood"]),
+          backgroundProgressOnly: true
         })
       }),
       Object.freeze({
@@ -306,7 +309,8 @@
         target: 100,
         requires: Object.freeze([]),
         params: Object.freeze({
-          kind: "wood"
+          kind: "wood",
+          backgroundProgressOnly: true
         })
       }),
     ]),
@@ -364,6 +368,7 @@
     initialState: "active",
     prerequisites: Object.freeze(["GAME-shelter"]),
     activationSource: "autonomy",
+    autoPrimaryEligible: false,
     priority: 52,
     passivePriorityAxis: "collection",
     sequence: Object.freeze([
@@ -373,7 +378,7 @@
         action: "collect",
         target: 500,
         requires: Object.freeze([]),
-        params: Object.freeze({ kind: "fiber" })
+        params: Object.freeze({ kind: "fiber", backgroundProgressOnly: true })
       }),
       Object.freeze({
         slot: "minerals",
@@ -381,7 +386,7 @@
         action: "extract",
         target: 500,
         requires: Object.freeze([]),
-        params: Object.freeze({ subject: "mineral" })
+        params: Object.freeze({ subject: "mineral", backgroundProgressOnly: true })
       }),
       Object.freeze({
         slot: "rockStudy",
@@ -389,7 +394,7 @@
         action: "analyze",
         target: 100,
         requires: Object.freeze([]),
-        params: Object.freeze({ subject: "mineral" })
+        params: Object.freeze({ subject: "mineral", backgroundProgressOnly: true })
       })
     ]),
     stockBackedSlots: Object.freeze([

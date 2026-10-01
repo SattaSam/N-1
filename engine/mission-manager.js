@@ -659,6 +659,11 @@
       // currentAction que personne ne pourra clôturer.
       const plannedNode = tree.find?.(planned.nodeId) || null;
       if (plannedNode?.params?.catalogManaged === true) return null;
+      // Une mission de progression de fond consomme les événements canoniques
+      // par fan-out ; elle ne crée pas d'initiative physique autonome. Lire le
+      // contrat depuis la définition courante permet aussi de corriger les arbres
+      // hydratés depuis une sauvegarde antérieure au marqueur.
+      if (!this.missionAllowsAutomaticExecution(missionId)) return null;
 
       const action = { ...planned, missionId };
       const type = Missions.normalizeActionType(action.type);
@@ -2032,6 +2037,20 @@
     ensureMissionTransitionIntent(context = null, travelOverride = null) {
       const decisionContext = context || this.bridge.context();
       const travel = travelOverride || this.primaryMissionTransition(decisionContext);
+      if (travel && !this.missionAllowsAutomaticExecution(travel.missionId)) {
+        const key = this.missionReturnIntentKey(travel.missionId);
+        const previous = this.memory.getFact?.(key, null);
+        if (previous?.active === true) {
+          this.memory.setFact?.(key, {
+            ...previous,
+            active: false,
+            completedAt: Date.now(),
+            updatedAt: Date.now()
+          });
+          this.memory.save?.();
+        }
+        return null;
+      }
       if (!travel) {
         const key = this.missionReturnIntentKey(this.primaryMissionId);
         const previous = this.memory.getFact?.(key, null);
@@ -2689,9 +2708,38 @@
       return this.missionHasHistoricalCollectionObjective(missionId);
     }
 
+    missionIsBackgroundProgressOnly(missionId) {
+      const definition = this.definition(missionId);
+      const leaves = [];
+      const visit = (node) => {
+        if (!node || typeof node !== "object") return;
+        const children = Array.isArray(node.children) ? node.children : [];
+        if (children.length) {
+          children.forEach(visit);
+          return;
+        }
+        if (node.type === "group") return;
+        leaves.push(node);
+      };
+      visit(definition?.root);
+      return (
+        leaves.length > 0 &&
+        leaves.every((node) => node.params?.backgroundProgressOnly === true)
+      );
+    }
+
+    missionAllowsAutomaticExecution(missionId) {
+      if (!this.missionIsBackgroundProgressOnly(missionId)) return true;
+      return Boolean(
+        missionId === this.primaryMissionId &&
+        this.isPlayerSelectedPrimary()
+      );
+    }
+
     missionPriorityQueueEligible(missionId, context = this.bridge.context()) {
       if (!missionId || !this.trees.has(missionId)) return false;
       if (this.ensureLifecycle(missionId).status !== "active") return false;
+      if (!this.missionAllowsAutomaticExecution(missionId)) return false;
       if (missionId === this.primaryMissionId) return true;
       if (this.missionHasHistoricalCollectionObjective(missionId)) return false;
       if (this.isMissionVisibleOnCurrentMap(missionId)) return true;
@@ -2945,12 +2993,19 @@
         this.selectionReason = "Priorité suggérée par le joueur.";
         return false;
       }
-      if (this.hasPendingMissionReturn(this.primaryMissionId)) {
+      const backgroundOnlyPrimary = Boolean(
+        replacingActivePrimary &&
+        this.missionIsBackgroundProgressOnly(this.primaryMissionId)
+      );
+      if (
+        this.hasPendingMissionReturn(this.primaryMissionId) &&
+        !backgroundOnlyPrimary
+      ) {
         this.selectionReason =
           "Intention de transition missionnelle persistante ; l’arbitrage local reste borné à la map courante.";
         return false;
       }
-      if (!force && replacingActivePrimary) {
+      if (!force && replacingActivePrimary && !backgroundOnlyPrimary) {
         // La runnabilité locale décide quelle mission peut agir maintenant,
         // pas quelle intention globale occupe le Top 1. R-STAB autorise déjà
         // une secondaire à relayer une primaire momentanément stérile sans la
@@ -2995,6 +3050,10 @@
     }
 
     hasPrimaryMissionAuthority() {
+      if (
+        this.primaryMissionId &&
+        !this.missionAllowsAutomaticExecution(this.primaryMissionId)
+      ) return false;
       const context = this.bridge.context();
       if (this.causalArrivalWork(context)?.missionId === this.primaryMissionId) {
         return true;
@@ -3239,6 +3298,7 @@
       // missionnel. Le relais Top4 ne doit jamais lancer une action concurrente.
       if (
         this.hasActivePrimaryMission() &&
+        this.missionAllowsAutomaticExecution(this.primaryMissionId) &&
         this.delegatedRuntimeAction(this.primaryMissionId)
       ) {
         return null;
@@ -3260,6 +3320,7 @@
           this.ensureLifecycle(id).status === "active" &&
           this.trees.has(id)
         )
+        .filter((id) => this.missionAllowsAutomaticExecution(id))
         .slice(0, 4);
       const causalArrival = this.causalArrivalWork(context);
 
@@ -3332,10 +3393,12 @@
         ...storedPriorityIds
       ].filter(Boolean))]
         .filter((id) => activeMissionSet.has(id))
+        .filter((id) => this.missionAllowsAutomaticExecution(id))
         .slice(0, 4);
       const prioritizedMissionSet = new Set(prioritizedMissionIds);
       const assessRunnable = (missionIds) => missionIds
         .filter((id) => !excludedMissionIds.has(id))
+        .filter((id) => this.missionAllowsAutomaticExecution(id))
         .map((id) => this.assessMission(id, context))
         .filter((candidate) => candidate?.action);
 
@@ -3350,9 +3413,9 @@
         const fallbackMissionIds = activeMissionIds.filter(
           (id) => !prioritizedMissionSet.has(id)
         );
-        const structuredMissionIds = fallbackMissionIds.filter(
-          (id) => !this.missionHasHistoricalCollectionObjective(id)
-        );
+        const structuredMissionIds = fallbackMissionIds
+          .filter((id) => !this.missionHasHistoricalCollectionObjective(id))
+          .filter((id) => this.missionAllowsAutomaticExecution(id));
         assessments = assessRunnable(structuredMissionIds);
         if (!assessments.length) {
           assessments = assessRunnable(
@@ -3478,12 +3541,14 @@
         ...storedPriorityIds
       ].filter(Boolean))]
         .filter((id) => activeMissionSet.has(id))
+        .filter((id) => this.missionAllowsAutomaticExecution(id))
         .slice(0, 4);
       const prioritizedMissionSet = new Set(prioritizedMissionIds);
       const structuredMissionIds = activeMissionIds
         .filter((id) => !prioritizedMissionSet.has(id))
         .filter((id) => !excludedMissionIds.has(id))
-        .filter((id) => !this.missionHasHistoricalCollectionObjective(id));
+        .filter((id) => !this.missionHasHistoricalCollectionObjective(id))
+        .filter((id) => this.missionAllowsAutomaticExecution(id));
 
       const causalArrival = this.causalArrivalWork(context);
       const candidates = structuredMissionIds
@@ -3581,9 +3646,11 @@
         ...storedPriorityIds
       ].filter(Boolean))]
         .filter((id) => activeMissionSet.has(id))
+        .filter((id) => this.missionAllowsAutomaticExecution(id))
         .slice(0, 4);
       const prioritizedMissionSet = new Set(prioritizedMissionIds);
       const hasExecutableMissionWork = (missionId) =>
+        this.missionAllowsAutomaticExecution(missionId) &&
         Boolean(
           this.delegatedRuntimeAction(missionId) ||
           this.assessMission(missionId, context)?.action
