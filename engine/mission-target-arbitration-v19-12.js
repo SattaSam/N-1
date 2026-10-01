@@ -326,9 +326,9 @@
         }
 
         /*
-         * Cible absente de la map actuelle.
-         * Si sa map d'origine est connue et joignable, la mission propose
-         * un déplacement. Le BAC arbitre ce TRAVEL normalement.
+         * Cible absente de la map actuelle. La géographie du bibleTarget
+         * est consommée par MissionManager, propriétaire canonique du travel
+         * missionnel. Cette couche ne fabrique donc plus de proxy TRAVEL.
          */
         const route =
           mapExists(bound.mapId) &&
@@ -339,20 +339,8 @@
         if (route) {
           return {
             ...result,
-            action: {
-              id: `${action.id}:travel-target`,
-              nodeId: action.nodeId,
-              type: Missions.ActionType.TRAVEL,
-              title: `Rejoindre la cible de « ${action.title} »`,
-              params: {
-                ...(action.params || {}),
-                missionTargetTravel: true,
-                targetMapId: bound.mapId,
-                resumeActionType: action.type,
-                resumeNodeId: action.nodeId
-              },
-              issuedAt: Date.now()
-            },
+            action: null,
+            score: Number(result.score || 0) - 45,
             reasons: [
               ...(result.reasons || []).filter(
                 (reason) => reason !== "action réalisable"
@@ -407,33 +395,6 @@
           }
         }
 
-        if (
-          action?.type === Missions.ActionType.TRAVEL &&
-          action?.params?.missionTargetTravel
-        ) {
-          if (this.isEngineBusy()) return false;
-
-          const targetMapId = action.params.targetMapId;
-          const route = knownRoute(this.engine, targetMapId);
-          const nextMapId = route?.[1];
-
-          const gate = nextMapId
-            ? this.engine.currentMap?.gates?.find(
-                (candidate) =>
-                  candidate.userData?.exit?.targetMap === nextMapId
-              )
-            : null;
-
-          if (!gate) return false;
-
-          this.engine.pendingGate = gate;
-          this.engine.character.setTarget(gate.position, "run");
-          this.engine.showWorldMarker?.(gate.position);
-          this.engine.callbacks?.onStatus?.(
-            `Mission : BlueFox peut rejoindre une cible située sur un territoire connu.`
-          );
-          return true;
-        }
 
         return previousExecute.call(this, action, now);
       };
@@ -441,41 +402,6 @@
     Bridge.prototype.__targetArbitrationV19_12_1_1 = true;
   }
 
-  /*
-   * Le TRAVEL est un proxy, pas une étape de mission.
-   * À l'arrivée sur la map cible on libère simplement l'action afin que
-   * le planner repropose ensuite l'étude de l'objet.
-   */
-  global.addEventListener?.(
-    "bluefox:map-transition-completed",
-    (event) => {
-      const manager = BF.currentEngine?.missionManager;
-      const action = manager?.currentAction;
-
-      if (!action?.params?.missionTargetTravel) return;
-
-      const arrivedMap =
-        event?.detail?.mapId ||
-        event?.detail?.toMapId ||
-        BF.currentEngine?.currentMapId;
-
-      if (
-        String(arrivedMap || "") !==
-        String(action.params.targetMapId || "")
-      ) return;
-
-      manager.memory?.remember?.("mission-target-travel-arrived", {
-        missionId: action.missionId,
-        nodeId: action.nodeId,
-        mapId: arrivedMap
-      });
-
-      manager.currentAction = null;
-      manager.retryAfter = performance.now() + 300;
-      manager.lastPlanAt = 0;
-      manager.publish?.();
-    }
-  );
 
   BF.getMissionTargetArbitrationDiagnostics = (missionId) => {
     const engine = BF.currentEngine;

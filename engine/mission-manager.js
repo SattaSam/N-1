@@ -1237,6 +1237,20 @@
       return Object.keys(criteria).length ? criteria : null;
     }
 
+    missionBoundTargetMapCriteria(missionId, node) {
+      const type = Missions.normalizeActionType(node?.type);
+      if (![
+        Missions.ActionType.OBSERVE,
+        Missions.ActionType.INSPECT,
+        Missions.ActionType.ANALYZE
+      ].includes(type)) {
+        return null;
+      }
+      const bound = this.memory.getFact?.(`bibleTarget:${missionId}`, null);
+      const mapId = String(bound?.mapId || "").trim();
+      return mapId ? { mapId } : null;
+    }
+
     missionNodeProximityKnownDestinationCriteria(mission, node) {
       const missionId = String(mission?.id || "").trim();
       const nodeId = String(node?.id || "").trim();
@@ -1315,6 +1329,7 @@
           String(state.targetMapId || "") === currentMapId
         ) return true;
         const criteria =
+          this.missionBoundTargetMapCriteria(missionId, node) ||
           this.missionNodeKnownDestinationCriteria(node, tree) ||
           this.missionNodeProximityKnownDestinationCriteria(mission, node) ||
           this.missionGenerationKnownDestinationCriteria(mission);
@@ -1360,6 +1375,7 @@
           String(state.targetMapId || "") === currentMapId
         ) return;
         const criteria =
+          this.missionBoundTargetMapCriteria(missionId, node) ||
           this.missionNodeKnownDestinationCriteria(node, tree) ||
           this.missionNodeProximityKnownDestinationCriteria(mission, node) ||
           this.missionGenerationKnownDestinationCriteria(mission);
