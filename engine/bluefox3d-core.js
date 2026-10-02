@@ -14,7 +14,9 @@
   BF.clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
   BF.disposeObject = (object) => {
+    const descendants = [];
     object.traverse((child) => {
+      if (child !== object) descendants.push(child);
       if (child.geometry) child.geometry.dispose();
       if (!child.material) return;
       const materials = Array.isArray(child.material) ? child.material : [child.material];
@@ -25,6 +27,9 @@
         material.dispose();
       });
     });
+    for (let index = descendants.length - 1; index >= 0; index -= 1) {
+      descendants[index].removeFromParent?.();
+    }
     object.removeFromParent();
   };
 

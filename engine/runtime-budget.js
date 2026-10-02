@@ -35,6 +35,15 @@
     BF.characterController?.root ||
     null;
 
+  const isRuntimeAttached = (root) => {
+    let node = root || null;
+    while (node) {
+      if (node.isScene || node.type === "Scene") return true;
+      node = node.parent || null;
+    }
+    return false;
+  };
+
   const distance = (root) => {
     const player = playerRoot();
     if (!player || !root?.position) return 0;
@@ -150,7 +159,7 @@
   const shouldUpdate = (root, category = "passive", elapsed = 0) => {
     if (
       global.document?.hidden ||
-      !root?.parent ||
+      !isRuntimeAttached(root) ||
       root.visible === false
     ) {
       return false;
@@ -199,6 +208,7 @@
   BF.RuntimeBudget = Object.freeze({
     version: VERSION,
     shouldUpdate,
+    isRuntimeAttached,
     distance,
     getInterval(root, category = "passive") {
       return intervalData(category, root).interval;
