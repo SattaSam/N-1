@@ -7580,6 +7580,12 @@
           persistent: true,
           spawnOnce: true,
           contextRole: "archFirstSite"
+        }),
+        Object.freeze({
+          id: "MSC-CUSTOM-RUINE-MODULAIRE2",
+          persistent: true,
+          spawnOnce: true,
+          contextRole: "archFirstSite"
         })
       ])
     }),
@@ -7591,7 +7597,10 @@
         target: 5,
         requires: Object.freeze([]),
         params: Object.freeze({
-          microSceneId: "MSC-CUSTOM-RUINE-MODULAIRE1",
+          microSceneIds: Object.freeze([
+            "MSC-CUSTOM-RUINE-MODULAIRE1",
+            "MSC-CUSTOM-RUINE-MODULAIRE2"
+          ]),
           distinctBy: "instanceId",
           requiredMapFact: "bibleActivation:ARCH-07",
           requiredMapField: "mapId"
@@ -9903,7 +9912,7 @@
       Object.freeze({ slot: "wood", inventoryKey: "wood", maximum: 10 }),
       Object.freeze({ slot: "fiber", inventoryKey: "fiber", maximum: 10 })
     ]),
-    completionGate: Object.freeze({ type: "proximity.shelter", shelterKinds: Object.freeze(["camp"]), radius: 9999, scope: "current-map" }),
+    completionGate: Object.freeze({ type: "proximity.shelter", shelterKinds: Object.freeze(["camp"]), radius: 9999, scope: "current-map", autonomousTravel: false }),
     effects: Object.freeze([
       Object.freeze({ type: "inventory.consume", inventoryKey: "wood", quantity: 10 }),
       Object.freeze({ type: "inventory.consume", inventoryKey: "fiber", quantity: 10 }),

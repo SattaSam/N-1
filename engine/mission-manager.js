@@ -804,7 +804,13 @@
       if (tree.root.isComplete) {
         const gate = BF.bibleRuntime?.completionGateState?.(missionId) || null;
         const targetMapId = String(gate?.targetMapId || "");
-        if (gate?.managed === true && gate.canFinalize !== true && targetMapId && targetMapId !== currentMapId) {
+        if (
+          mission?.completionGate?.autonomousTravel !== false &&
+          gate?.managed === true &&
+          gate.canFinalize !== true &&
+          targetMapId &&
+          targetMapId !== currentMapId
+        ) {
           return {
             missionId,
             mission,
@@ -2065,7 +2071,11 @@
         if (previous?.active === true && genericSources.has(String(previous.transitionSource || ""))) {
           const currentMapId = String(this.engine?.currentMapId || decisionContext?.mapId || "");
           const targetMapId = String(previous.targetMapId || previous.mapId || "");
-          if (!targetMapId || targetMapId === currentMapId) {
+          const completionGateTravelDisabled = Boolean(
+            String(previous.transitionSource || "") === "completion-gate" &&
+            this.definition(this.primaryMissionId)?.completionGate?.autonomousTravel === false
+          );
+          if (completionGateTravelDisabled || !targetMapId || targetMapId === currentMapId) {
             this.memory.setFact?.(key, {
               ...previous,
               active: false,

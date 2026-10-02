@@ -1252,6 +1252,7 @@
           mapGeneration: mission.mapGeneration ? clone(mission.mapGeneration) : null,
           targetMapFact: mission.targetMapFact || null,
           targetMapField: mission.targetMapField || null,
+          completionGate: mission.completionGate ? clone(mission.completionGate) : null,
           proximityContexts: Array.isArray(mission.proximityContexts)
             ? clone(mission.proximityContexts)
             : null,
@@ -1378,6 +1379,7 @@
         mapGeneration: mission.mapGeneration ? clone(mission.mapGeneration) : null,
         targetMapFact: mission.targetMapFact || null,
         targetMapField: mission.targetMapField || null,
+        completionGate: mission.completionGate ? clone(mission.completionGate) : null,
         proximityContexts: Array.isArray(mission.proximityContexts)
           ? clone(mission.proximityContexts)
           : null,
