@@ -4445,7 +4445,8 @@
         params: Object.freeze({
           scope: "map",
           metric: "surfacePercent",
-          threshold: 60
+          threshold: 60,
+          backgroundProgressOnly: true
         })
       })
     }),
@@ -4498,7 +4499,8 @@
         params: Object.freeze({
           scope: "map",
           metric: "surfacePercent",
-          threshold: 100
+          threshold: 100,
+          backgroundProgressOnly: true
         })
       })
     }),
@@ -6096,6 +6098,17 @@
     prerequisites: Object.freeze(["SUR-01"]),
     priority: 191,
     passivePriorityAxis: "survival",
+    mapGeneration: Object.freeze({
+      size: "random",
+      compatibleBiomes: Object.freeze(["forest", "fungal"]),
+      requiredMicroScenes: Object.freeze([
+        Object.freeze({
+          id: "MSC-PREDATOR-FLORA-001",
+          persistent: true,
+          spawnOnce: true
+        })
+      ])
+    }),
     sequence: Object.freeze([
       Object.freeze({
         slot: "observeToxic",
