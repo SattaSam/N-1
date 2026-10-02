@@ -619,6 +619,7 @@
       const hitboxHeight = type === "large_rock" ? 2.6 : 2.1;
       hitbox = makeHitbox(THREE, root, hitboxRadius, hitboxHeight, type);
       if (type === "strong_rock") hitbox.userData.interactionRadius = 1.28;
+      if (type === "large_rock") hitbox.userData.interactionRadius = hitboxRadius;
       colliders = [{ offset: new THREE.Vector3(), radius }];
     } else if (type === "crystalline_tree" || type === "luminescent_tree") {
       const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.62, 4.4, 7), type === "crystalline_tree" ? metal : green);

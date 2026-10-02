@@ -1864,6 +1864,8 @@
       this.onNavigationFailed = () => {
         this.navigationFailures += 1;
         const wasResource = Boolean(this.pendingInteraction);
+        const failedInteractionSource =
+          this.pendingInteraction?.userData?.requestedInteractionSource || null;
         const wasGate = Boolean(this.pendingGate);
         const wasTeleport = Boolean(this.pendingTeleport);
         this.pendingInteraction = null;
@@ -1879,6 +1881,9 @@
         this.pathLine && (this.pathLine.visible = false);
         this.lastAutonomyAt = performance.now() - 5200;
         this.lastActivityAt = performance.now();
+        if (wasResource && failedInteractionSource === "mission") {
+          this.missionManager?.cancelCurrentAction("interaction-navigation-failed");
+        }
         this.callbacks.onStatus(
           wasResource
             ? "BlueFox change d’approche : cette ressource est momentanément inaccessible."
@@ -2624,6 +2629,15 @@
       // Portée fonctionnelle fixe : elle ne dépend jamais d'un fallback
       // physique ou d'un collider rencontré pendant l'approche.
       return targetRadius + characterRadius + 0.7;
+    }
+
+    interactionApproachNavigationActive() {
+      const character = this.character;
+      if (!character?.root?.position || !character.target) return false;
+      if (character.navigationRecovery) return true;
+      if (Array.isArray(character.waypoints) && character.waypoints.length) return true;
+      if (Number(character.speed) > 0.08) return true;
+      return character.root.position.distanceTo(character.target) > 0.2;
     }
 
     interactionApproachPoint(object, attempt = 0, preferredDistance = null) {
@@ -4018,17 +4032,14 @@
               return;
             }
             if (now - this.interactionApproachStartedAt > 6500) {
-              this.interactionApproachAttempts += 1;
-              if (this.interactionApproachAttempts <= 3) {
-                this.targetInteraction(object, true);
+              if (this.interactionApproachNavigationActive()) {
+                // Le délai sert de point de contrôle, jamais de preuve d'échec.
+                // CharacterController conserve l'autorité tant que le trajet vit.
+                this.interactionApproachStartedAt = now;
               } else {
-                this.callbacks.onStatus(`BlueFox renonce temporairement : ${profile.label} est inaccessible.`);
-                this.pendingInteraction = null;
-                this.cautiousInteraction = null;
-                this.interactionApproachStartedAt = 0;
-                this.interactionApproachAttempts = 0;
-                this.character.stop();
-                this.missionManager?.cancelCurrentAction("interaction-inaccessible");
+                // Cible mobile ou ancien point d'approche atteint : recalculer sans
+                // déclarer l'interaction inaccessible sur la seule durée écoulée.
+                this.targetInteraction(object, true);
               }
             }
             return;
@@ -4058,17 +4069,13 @@
         verticalDistance > interactionDistance
       ) {
         if (!this.interactionStartedAt && now - this.interactionApproachStartedAt > 6500) {
-          this.interactionApproachAttempts += 1;
-          if (this.interactionApproachAttempts <= 3) {
-            this.targetInteraction(object, true);
+          if (this.interactionApproachNavigationActive()) {
+            // Trajet long mais vivant : préserver l'intention sans replan parasite.
+            this.interactionApproachStartedAt = now;
           } else {
-            this.callbacks.onStatus(`BlueFox renonce temporairement : ${profile.label} est inaccessible.`);
-            this.pendingInteraction = null;
-            this.cautiousInteraction = null;
-            this.interactionApproachStartedAt = 0;
-            this.interactionApproachAttempts = 0;
-            this.character.stop();
-            this.missionManager?.cancelCurrentAction("interaction-inaccessible");
+            // Si le point d'approche a été atteint mais que la cible a bougé,
+            // recalculer l'approche sans confondre durée et inaccessibilité.
+            this.targetInteraction(object, true);
           }
         }
         return;
