@@ -3191,10 +3191,17 @@
       }
 
       this.cautiousInteraction = null;
-      this.character.setTarget(
+      const accepted = this.character.setTarget(
         approach.point,
         object.userData.requestedMovementMode || "auto"
       );
+      if (accepted === false) {
+        this.pendingInteraction = null;
+        this.interactionApproachStartedAt = 0;
+        this.callbacks.onStatus("BlueFox ne trouve aucun chemin praticable vers ce point d’approche.");
+        this.missionManager?.cancelCurrentAction("interaction-navigation-failed");
+        return false;
+      }
       this.showWorldMarker(approach.point);
       this.callbacks.onStatus(object.userData.interactionProfile.approachText);
       return true;

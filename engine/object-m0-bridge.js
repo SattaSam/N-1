@@ -2012,7 +2012,14 @@
       }
       object.userData.requestedInteraction = mode;
       object.userData.requestedInteractionSource = directive ? "mission" : (source || "manual");
-      originalTarget(object, retry);
+      const accepted = originalTarget(object, retry);
+      if (accepted === false) {
+        object.userData.requestedInteraction = null;
+        object.userData.requestedInteractionSource = null;
+        object.userData.requestedMovementMode = null;
+        clearAcquisitionTransaction(this, object);
+        return false;
+      }
       const label = resolved.definition.label?.toLowerCase() || "l’objet";
       const narrativeVerb = object.userData.missionNarrativeVerb || mode;
       const approachTexts = {
