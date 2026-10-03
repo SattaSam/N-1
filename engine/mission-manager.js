@@ -867,14 +867,72 @@
       const generatedTargetMapId = String(
         generatedExcursion?.generatedTargetMapId || ""
       );
+      const generatedTargetProvenance = this.generatedMissionTargetProvenance(
+        missionId,
+        generatedTargetMapId
+      );
+      const foreignGeneratedBinding = Boolean(
+        mission?.mapGeneration &&
+        generatedTargetMapId &&
+        generatedTargetProvenance.known &&
+        generatedTargetProvenance.valid === false
+      );
+      // Une map explicitement prescrite par une autre mission ne peut jamais
+      // devenir la destination générée canonique de celle-ci. Ce cas peut
+      // subsister dans une sauvegarde ancienne après un fan-out de travel.
+      // Réémettre alors la génération canonique de la mission, sans reset
+      // d'arbre ni migration de sauvegarde.
+      if (foreignGeneratedBinding) {
+        // Invalider uniquement le binding généré prouvé étranger. On ne
+        // réinitialise ni l'arbre ni le lifecycle : la mission reste active et
+        // peut réémettre sa propre prescription de génération canonique.
+        this.memory.setFact?.(`tutorialExcursion:${missionId}`, {
+          ...(generatedExcursion && typeof generatedExcursion === "object"
+            ? generatedExcursion
+            : {}),
+          generatedTargetMapId: null,
+          mapId: null,
+          toMapId: null,
+          arrived: false,
+          requesting: false,
+          generatedAt: 0,
+          invalidatedTargetMapId: generatedTargetMapId,
+          invalidatedOwnerMissionId: generatedTargetProvenance.ownerMissionId || null,
+          invalidatedAt: Date.now()
+        });
+        this.memory.save?.();
+        const preferredDirection = String(mission.trigger?.direction || "")
+          .trim()
+          .toLowerCase();
+        return {
+          missionId,
+          mission,
+          source: "mission-map-generation",
+          node: {
+            id: `${missionId}:map-generation`,
+            type: Missions.ActionType.TRAVEL,
+            params: {
+              eventDriven: true,
+              missionDirectedUnknownTravel: true,
+              transitionSource: "mission-map-generation",
+              ...(["north", "south", "east", "west"].includes(preferredDirection)
+                ? { direction: preferredDirection }
+                : {})
+            }
+          }
+        };
+      }
       // CONTEXT_MSC possède une destination prescrite par mapGeneration mais
       // aucune feuille objet locale légitime avant l’arrivée. Réutiliser ici
       // uniquement cette destination causale. Les missions SEQUENCE_ACTIONS
       // (FAU/ENE/...) gardent leur cycle travel/étapes et ne peuvent donc pas
       // reprendre autorité via un ancien generatedTargetMapId.
+      const missionPattern = String(
+        mission?.bible?.pattern || mission?.pattern || ""
+      );
       const generatedContextTargetEligible = Boolean(
         !legacyGeneratedTargetMissions.has(missionId) &&
-        mission?.pattern === "CONTEXT_MSC" &&
+        missionPattern === "CONTEXT_MSC" &&
         mission?.mapGeneration &&
         generatedTargetMapId
       );
@@ -1059,6 +1117,39 @@
       return "";
     }
 
+    missionUndiscoveredAdjacentTarget(targetMapId) {
+      const target = String(targetMapId || "");
+      const currentMapId = String(this.engine?.currentMapId || "");
+      if (!target || !currentMapId || target === currentMapId) return null;
+      const discovered = this.engine?.discoveredMaps instanceof Set
+        ? this.engine.discoveredMaps
+        : new Set([currentMapId]);
+      if (discovered.has(target)) return null;
+      const exits = BF.maps?.[currentMapId]?.exits || {};
+      for (const direction of ["north", "east", "south", "west"]) {
+        if (String(exits?.[direction]?.targetMap || "") === target) {
+          return { targetMapId: target, direction, frontierMapId: currentMapId };
+        }
+      }
+      return null;
+    }
+
+    generatedMissionTargetProvenance(missionId, targetMapId) {
+      const target = String(targetMapId || "");
+      if (!missionId || !target) return { known: false, valid: true };
+      const generator = BF.maps?.[target]?.generator || null;
+      const ownerMissionId = String(generator?.bibleMissionId || "");
+      const prescribed = generator?.biblePrescriptionApplied === true;
+      if (!prescribed || !ownerMissionId) {
+        return { known: false, valid: true, ownerMissionId: ownerMissionId || null };
+      }
+      return {
+        known: true,
+        valid: ownerMissionId === String(missionId),
+        ownerMissionId
+      };
+    }
+
     missionTransitionExecutable(travel) {
       if (!travel) return false;
       const currentMapId = String(this.engine?.currentMapId || "");
@@ -1073,6 +1164,7 @@
       }
       const targetMapId = this.missionTransitionTargetMapId(travel);
       if (!targetMapId) return false;
+      if (this.missionUndiscoveredAdjacentTarget(targetMapId)) return true;
       if (currentMapId === targetMapId) {
         return Boolean(
           this.travelMissionDefinition(travel)?.navigation?.autonomousKnownReturn === true &&
@@ -2571,6 +2663,18 @@
 
       const targetMapId = String(intent.targetMapId || intent.mapId || "");
       if (!targetMapId) return false;
+
+      const undiscoveredAdjacent = this.missionUndiscoveredAdjacentTarget(targetMapId);
+      if (undiscoveredAdjacent) {
+        if (typeof this.engine?.handleNavigationSuggestion !== "function") return false;
+        this.engine.handleNavigationSuggestion({
+          discoverUnknown: true,
+          direction: undiscoveredAdjacent.direction,
+          source: "mission",
+          missionId: travel.missionId
+        });
+        return true;
+      }
 
       if (currentMapId === targetMapId) {
         if (
