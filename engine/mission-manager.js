@@ -860,29 +860,48 @@
       const legacyGeneratedTargetMissions = new Set([
         "ARCH-01", "ARCH-02", "ARCH-03", "ARCH-04", "ARCH-05", "ARCH-06"
       ]);
-      if (legacyGeneratedTargetMissions.has(missionId)) {
-        const excursion = this.memory.getFact?.(
-          `tutorialExcursion:${missionId}`,
-          null
-        );
-        const targetMapId = String(
-          excursion?.generatedTargetMapId ||
-          excursion?.toMapId ||
-          excursion?.mapId ||
-          ""
-        );
+      const generatedExcursion = this.memory.getFact?.(
+        `tutorialExcursion:${missionId}`,
+        null
+      );
+      const generatedTargetMapId = String(
+        generatedExcursion?.generatedTargetMapId || ""
+      );
+      // CONTEXT_MSC possède une destination prescrite par mapGeneration mais
+      // aucune feuille objet locale légitime avant l’arrivée. Réutiliser ici
+      // uniquement cette destination causale. Les missions SEQUENCE_ACTIONS
+      // (FAU/ENE/...) gardent leur cycle travel/étapes et ne peuvent donc pas
+      // reprendre autorité via un ancien generatedTargetMapId.
+      const generatedContextTargetEligible = Boolean(
+        !legacyGeneratedTargetMissions.has(missionId) &&
+        mission?.pattern === "CONTEXT_MSC" &&
+        mission?.mapGeneration &&
+        generatedTargetMapId
+      );
+      if (generatedContextTargetEligible || legacyGeneratedTargetMissions.has(missionId)) {
+        const targetMapId = generatedContextTargetEligible
+          ? generatedTargetMapId
+          : String(
+              generatedExcursion?.generatedTargetMapId ||
+              generatedExcursion?.toMapId ||
+              generatedExcursion?.mapId ||
+              ""
+            );
         if (targetMapId && targetMapId !== currentMapId) {
+          const transitionSource = generatedContextTargetEligible
+            ? "generated-target"
+            : "legacy-generated-target";
           return {
             missionId,
             mission,
-            source: "legacy-generated-target",
+            source: transitionSource,
             node: {
               id: `${missionId}:generated-target`,
               type: Missions.ActionType.TRAVEL,
               params: {
                 eventDriven: true,
                 toMapId: targetMapId,
-                transitionSource: "legacy-generated-target"
+                transitionSource
               }
             }
           };
@@ -2066,6 +2085,7 @@
           "completion-gate",
           "known-destination",
           "mission-map-generation",
+          "generated-target",
           "legacy-generated-target"
         ]);
         if (previous?.active === true && genericSources.has(String(previous.transitionSource || ""))) {

@@ -637,11 +637,36 @@
     return missionId;
   };
 
+  const autonomousCampResourceEvidence = (engine) => {
+    const mapId = String(engine?.currentMapId || "");
+    if (!mapId) return { useful: false, distinctResources: 0 };
+    const knowledge = mapKnowledge(engine) || {};
+    const resources = new Set(
+      Object.keys(knowledge.uniqueResources || {}).filter(Boolean)
+    );
+    const knownSites = typeof BF.getKnownSites === "function"
+      ? BF.getKnownSites({ mapId }) || []
+      : [];
+    knownSites.forEach((site) => {
+      Object.keys(site?.resources || {}).forEach((resource) => {
+        if (resource) resources.add(String(resource));
+      });
+    });
+    return {
+      useful: resources.size >= 2,
+      distinctResources: resources.size
+    };
+  };
+
   const autonomousShelterOpportunity = (engine, survival = {}) => {
     const runtime = BF.bibleRuntime;
     if (!runtime || !engine?.findKnownRoute || !engine?.currentMapId) return null;
     const currentMapId = String(engine.currentMapId);
     const loc14MissionId = localCampMissionReady(engine);
+    const campResourceEvidence = loc14MissionId
+      ? autonomousCampResourceEvidence(engine)
+      : null;
+    if (loc14MissionId && campResourceEvidence?.useful !== true) return null;
     const campState = runtime.constructionAvailability?.("camp", currentMapId);
     const refugeState = runtime.constructionAvailability?.("refuge", currentMapId);
     const kind = loc14MissionId
@@ -688,6 +713,7 @@
       estimatedReturnFatigue,
       projectedReturnEnergy,
       resourceCount: localResources,
+      distinctKnownResources: campResourceEvidence?.distinctResources || 0,
       missionId: loc14MissionId,
       missionDriven: Boolean(loc14MissionId),
       weight: (loc14MissionId ? 24 : 7) + distanceBoost + fatigueBoost + resourceBoost

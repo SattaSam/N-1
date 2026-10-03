@@ -1359,7 +1359,24 @@
     return objects;
   };
 
+  // Une étude CUO générique ne doit être lancée que pour une feuille dont
+  // ObjectM0 possède réellement l’exécution ET la progression. Ces exclusions
+  // existaient déjà dans activeStudyDirective(); les centraliser évite qu’une
+  // feuille spécialisée soit déclarée runnable par un objet générique.
+  const isGenericObjectStudyNode = (node) => Boolean(
+    node &&
+    node.params?.biblePattern !== "CONTEXT_MSC" &&
+    !node.params?.siteProgressionKind &&
+    node.params?.eventDriven !== true &&
+    node.params?.catalogManaged !== true
+  );
+
   const selectObservable = (engine, action, options = {}) => {
+    const missionNode = engine?.missionManager?.trees
+      ?.get?.(action?.missionId)
+      ?.find?.(action?.nodeId) || null;
+    if (!isGenericObjectStudyNode(missionNode)) return null;
+
     const passiveObjects = passiveMissionSceneObjects(engine, action, {
       activate: options.activatePassive !== false
     });
@@ -1484,13 +1501,7 @@
       if (manager.ensureLifecycle?.(missionId)?.status !== "active") continue;
       const tree = manager.trees.get(missionId);
       for (const node of tree.availableLeaves()) {
-        if (
-          !isStudyAction(node.type) ||
-          node.params?.biblePattern === "CONTEXT_MSC" ||
-          node.params?.siteProgressionKind ||
-          node.params?.eventDriven === true ||
-          node.params?.catalogManaged === true
-        ) continue;
+        if (!isStudyAction(node.type) || !isGenericObjectStudyNode(node)) continue;
         if (!requiredMapMatches(manager, node, engine.currentMapId)) continue;
         if (!requiredSiteMatchesResolved(manager, node, missionResolved, engine.currentMapId)) continue;
         if (!metadataMatchesMissionCriteria(
