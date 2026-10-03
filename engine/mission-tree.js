@@ -194,6 +194,18 @@
       return this.root.find(id);
     }
 
+    findSequenceSlot(slot) {
+      const key = String(slot || "").trim();
+      if (!key) return null;
+      const matches = [];
+      this.root.walk((node) => {
+        if (String(node.params?.sequenceSlot || "") === key) matches.push(node);
+      });
+      if (matches.length) return matches.length === 1 ? matches[0] : null;
+      // Les patrons hors SEQUENCE_ACTIONS conservent leur identifiant canonique.
+      return this.find(`${this.id}:${key}`);
+    }
+
     refresh() {
       return this.root.refresh(this.root);
     }

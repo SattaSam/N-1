@@ -1180,7 +1180,10 @@
       if (mission.pattern === "SEQUENCE_ACTIONS") {
         const steps = asArray(mission.sequence)
           .filter((step) => step && typeof step === "object");
-        if (steps.length < (mission.constructionMission === true ? 1 : 2)) return null;
+        const runtimeManagedSingleStep = steps.length === 1 &&
+          mission.runtimeValidation && typeof mission.runtimeValidation === "object" &&
+          !Array.isArray(mission.runtimeValidation) && steps[0]?.params?.catalogManaged === true;
+        if (steps.length < (mission.constructionMission === true || runtimeManagedSingleStep ? 1 : 2)) return null;
 
         const nodeIds = steps.map((step, index) =>
           `${mission.id}:${step.slot || `step${index + 1}`}`

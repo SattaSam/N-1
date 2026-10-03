@@ -99,7 +99,9 @@
       const sourceSlot = String(entry.sourceSlot || "").trim();
       const identityField = String(entry.identityField || "objectId").trim();
       const sourceNode = sourceSlot
-        ? tree?.find?.(`${tree.id}:${sourceSlot}`)
+        ? (tree?.findSequenceSlot
+            ? tree.findSequenceSlot(sourceSlot)
+            : tree?.find?.(`${tree.id}:${sourceSlot}`))
         : null;
       const evidence = parsedMissionEvidence(sourceNode)
         .slice()

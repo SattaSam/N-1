@@ -787,20 +787,6 @@
       const currentMapId = String(this.engine?.currentMapId || context?.mapId || "");
       if (!tree || lifecycle?.status !== "active" || !currentMapId) return null;
 
-      // Si une vraie action locale reste possible, la mission ne doit pas
-      // provoquer un départ simplement parce qu'une autre feuille est distante.
-      // Une simple intention du Planner ne suffit pas : ObjectM0 doit confirmer
-      // qu'une cible physique de cette mission existe réellement.
-      if (!tree.root.isComplete && this.missionRunnableAction(
-        missionId,
-        tree,
-        context,
-        performance.now(),
-        { reportUnresolved: false }
-      )) {
-        return null;
-      }
-
       if (tree.root.isComplete) {
         const gate = BF.bibleRuntime?.completionGateState?.(missionId) || null;
         const targetMapId = String(gate?.targetMapId || "");
@@ -831,32 +817,6 @@
           node,
           state: this.planner.requiredMapState?.(node, context) || null
         }));
-      const remote = availableMapStates.filter(({ state }) =>
-        state?.constrained === true &&
-        state.targetMapId &&
-        state.targetMapId !== currentMapId
-      );
-      const targetMapIds = [...new Set(remote.map(({ state }) => String(state.targetMapId)))];
-      if (targetMapIds.length === 1) {
-        const targetMapId = targetMapIds[0];
-        const sourceNode = remote[0].node;
-        return {
-          missionId,
-          mission,
-          source: "required-map",
-          node: {
-            id: sourceNode.id,
-            type: Missions.ActionType.TRAVEL,
-            params: {
-              eventDriven: true,
-              toMapId: targetMapId,
-              transitionSource: "required-map",
-              sourceNodeId: sourceNode.id
-            }
-          }
-        };
-      }
-
       const legacyGeneratedTargetMissions = new Set([
         "ARCH-01", "ARCH-02", "ARCH-03", "ARCH-04", "ARCH-05", "ARCH-06"
       ]);
@@ -880,13 +840,28 @@
       // Une map explicitement prescrite par une autre mission ne peut jamais
       // devenir la destination générée canonique de celle-ci. Ce cas peut
       // subsister dans une sauvegarde ancienne après un fan-out de travel.
-      // Réémettre alors la génération canonique de la mission, sans reset
-      // d'arbre ni migration de sauvegarde.
-      if (foreignGeneratedBinding) {
+      // Réémettre la génération canonique également si une feuille disponible
+      // exige cette liaison causale absente, sans reset d'arbre ni migration.
+      const generatedBindingRequired = availableMapStates.some(({ node }) =>
+        node.params?.requiredMapFact === `tutorialExcursion:${missionId}` &&
+        node.params?.requiredMapField === "generatedTargetMapId"
+      );
+      const missingGeneratedBinding = Boolean(
+        mission?.mapGeneration && generatedBindingRequired && !generatedTargetMapId &&
+        mission.instanceScope !== "map" && mission.localVisibility !== "current-map" &&
+        !/^(?:OPP|ANN|PROS)-/.test(String(missionId))
+      );
+      // Une action locale garde sa priorité, sauf si elle prétend consommer
+      // une destination générée dont la provenance est prouvée étrangère.
+      if (!missingGeneratedBinding && !(foreignGeneratedBinding && generatedBindingRequired) &&
+          this.missionRunnableAction(missionId, tree, context, performance.now(), { reportUnresolved: false })) {
+        return null;
+      }
+      if (foreignGeneratedBinding || missingGeneratedBinding) {
         // Invalider uniquement le binding généré prouvé étranger. On ne
         // réinitialise ni l'arbre ni le lifecycle : la mission reste active et
         // peut réémettre sa propre prescription de génération canonique.
-        this.memory.setFact?.(`tutorialExcursion:${missionId}`, {
+        if (foreignGeneratedBinding) this.memory.setFact?.(`tutorialExcursion:${missionId}`, {
           ...(generatedExcursion && typeof generatedExcursion === "object"
             ? generatedExcursion
             : {}),
@@ -922,6 +897,32 @@
           }
         };
       }
+      const remote = availableMapStates.filter(({ state }) =>
+        state?.constrained === true &&
+        state.targetMapId &&
+        state.targetMapId !== currentMapId
+      );
+      const targetMapIds = [...new Set(remote.map(({ state }) => String(state.targetMapId)))];
+      if (targetMapIds.length === 1) {
+        const targetMapId = targetMapIds[0];
+        const sourceNode = remote[0].node;
+        return {
+          missionId,
+          mission,
+          source: "required-map",
+          node: {
+            id: sourceNode.id,
+            type: Missions.ActionType.TRAVEL,
+            params: {
+              eventDriven: true,
+              toMapId: targetMapId,
+              transitionSource: "required-map",
+              sourceNodeId: sourceNode.id
+            }
+          }
+        };
+      }
+
       // CONTEXT_MSC possède une destination prescrite par mapGeneration mais
       // aucune feuille objet locale légitime avant l’arrivée. Réutiliser ici
       // uniquement cette destination causale. Les missions SEQUENCE_ACTIONS
@@ -934,7 +935,8 @@
         !legacyGeneratedTargetMissions.has(missionId) &&
         missionPattern === "CONTEXT_MSC" &&
         mission?.mapGeneration &&
-        generatedTargetMapId
+        generatedTargetMapId &&
+        (!availableMapStates.length || availableMapStates.some(({ node }) => !this.missionContextMapConsumed(node, generatedTargetMapId)))
       );
       if (generatedContextTargetEligible || legacyGeneratedTargetMissions.has(missionId)) {
         const targetMapId = generatedContextTargetEligible
@@ -1017,7 +1019,9 @@
           .map((entry) => String(entry?.id || ""))
           .filter(Boolean)
       );
-      const prescribedMicroScenesPresent = Boolean(
+      const exhaustedContextMap = availableMapStates.length > 0 &&
+        availableMapStates.every(({ node }) => this.missionContextMapConsumed(node, currentMapId));
+      const prescribedMicroScenesPresent = !exhaustedContextMap && Boolean(
         requiredMicroSceneIds.length &&
         requiredMicroSceneIds.every((id) => materializedMicroSceneIds.has(id))
       );
@@ -1252,7 +1256,9 @@
         : [];
       if (!tree || !fromSlot || !sameBy.includes("instanceId")) return null;
 
-      const source = tree.find?.(`${tree.id}:${fromSlot}`);
+      const source = tree.findSequenceSlot
+        ? tree.findSequenceSlot(fromSlot)
+        : tree.find?.(`${tree.id}:${fromSlot}`);
       if (!source) return null;
       const evidences = (source.historyValues || []).map((value) => {
         try {
@@ -1411,6 +1417,13 @@
       return [...unique.values()][0];
     }
 
+    missionContextMapConsumed(node, mapId) {
+      if (node?.params?.biblePattern !== "CONTEXT_MSC" ||
+          node.params.distinctBy !== "mapId") return false;
+      const prefix = `${String(mapId || "")}:`;
+      return (node.distinctValues || []).some((value) => String(value).startsWith(prefix));
+    }
+
     missionGenerationKnownDestinationCriteria(mission) {
       const generation = mission?.mapGeneration || null;
       if (!generation) return null;
@@ -1445,7 +1458,7 @@
       ) return false;
       const tree = this.trees.get(missionId) || null;
       return (availableMapStates || []).some(({ node, state }) => {
-        if (!node || node.isComplete) return false;
+        if (!node || node.isComplete || this.missionContextMapConsumed(node, currentMapId)) return false;
         if (
           state?.constrained === true &&
           String(state.targetMapId || "") === currentMapId
@@ -1518,7 +1531,8 @@
             }
           }
         };
-        const resolvedCandidates = this.knownDestinationCandidates(travel, criteria);
+        const resolvedCandidates = this.knownDestinationCandidates(travel, criteria)
+          .filter((entry) => !this.missionContextMapConsumed(node, entry.mapId));
         // Si une cible sémantiquement valide est déjà connue sur la map courante,
         // le problème reste local (approche, contexte, retry, propriétaire runtime).
         // Ne pas fuir vers une autre occurrence uniquement parce que l'action

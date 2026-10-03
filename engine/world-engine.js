@@ -2653,6 +2653,9 @@
         preferredDistance != null && Number.isFinite(Number(preferredDistance))
           ? Math.max(0.5, Number(preferredDistance))
           : null;
+      const preferredTolerance = preferred === 3 && this.missionFaunaResultTags(object).some((tag) =>
+        ["calm_nearby", "temporal_contrast", "familiar_encounter"].includes(tag)
+      ) ? 0.18 : 0.8;
       const interactionDistance = normalApproachDistance + 0.48;
       const fromResource = this.character.root.position.clone()
         .sub(anchorPosition);
@@ -2747,7 +2750,7 @@
         if (Math.abs(point.x) > mapBounds || Math.abs(point.z) > mapBounds) return null;
         const radius = horizontalDistanceToAnchor(point);
         if (preferred != null) {
-          if (radius < preferred - 0.8 || radius > preferred + 0.8) return null;
+          if (radius < preferred - preferredTolerance || radius > preferred + preferredTolerance) return null;
         } else if (radius > interactionDistance + 0.001) {
           return null;
         }
@@ -2765,7 +2768,7 @@
         const finalPoint = path[path.length - 1] || point;
         const finalRadius = horizontalDistanceToAnchor(finalPoint);
         if (preferred != null) {
-          if (finalRadius < preferred - 0.8 || finalRadius > preferred + 0.8) {
+          if (finalRadius < preferred - preferredTolerance || finalRadius > preferred + preferredTolerance) {
             return null;
           }
         } else if (finalRadius > interactionDistance + 0.001) {
@@ -3123,14 +3126,19 @@
       );
     }
 
-    isFau01CautiousInteraction(object) {
+    missionFaunaResultTags(object) {
       const data = object?.userData || {};
-      return (
-        data.requestedInteractionSource === "mission" &&
-        String(data.missionId || "") === "FAU-01" &&
-        String(data.missionNodeId || "") === "FAU-01:cautiousApproach" &&
-        this.faunaInteractionSceneId(object) === "MSC-CUSTOM-NID-DE-FAUNE5"
-      );
+      if (data.requestedInteractionSource !== "mission") return [];
+      const node = this.missionManager?.trees?.get?.(data.missionId)?.find?.(data.missionNodeId);
+      const tags = Array.isArray(node?.params?.tagsAll) ? node.params.tagsAll : [];
+      return tags.includes("fauna_behavior") ? tags : [];
+    }
+
+    isFau01CautiousInteraction(object) {
+      // Le nom historique reste compatible ; le contrat est désormais celui du nœud.
+      return this.missionFaunaResultTags(object).some((tag) => [
+        "cautious_approach", "calm_nearby", "temporal_contrast", "familiar_encounter"
+      ].includes(tag));
     }
 
     targetInteraction(object, retry = false) {
@@ -3149,11 +3157,16 @@
           this.character.root.position.z - cachedApproach.originZ
         ) <= 0.5
       );
-      const approach = cacheUsable
+      const faunaTags = this.missionFaunaResultTags(object);
+      const calmStudy = faunaTags.some((tag) => ["calm_nearby", "temporal_contrast", "familiar_encounter"].includes(tag));
+      const distanceStudy = faunaTags.some((tag) => ["behavior_observed", "peaceful_group", "tool_use_cycle"].includes(tag));
+      const behaviorDistance = calmStudy ? 3 : distanceStudy ? 4.6 : null;
+      const approach = cacheUsable && behaviorDistance == null
         ? cachedApproach.result
         : this.interactionApproachPoint(
             object,
-            retry ? this.interactionApproachAttempts : 0
+            retry ? this.interactionApproachAttempts : 0,
+            behaviorDistance
           );
       this.__cachedInteractionApproach = null;
       if (!approach?.point) {
@@ -4008,7 +4021,10 @@
       const verticalDistance = Math.abs(
         Number(this.character.root.position.y || 0) - Number(anchorPosition.y || 0)
       );
-      const interactionDistance = this.interactionValidationDistance(object);
+      const faunaTags = this.missionFaunaResultTags(object);
+      const calmStudy = faunaTags.some((tag) => ["calm_nearby", "temporal_contrast", "familiar_encounter"].includes(tag));
+      const distanceStudy = faunaTags.some((tag) => ["behavior_observed", "peaceful_group", "tool_use_cycle"].includes(tag));
+      const interactionDistance = calmStudy ? 3.18 : distanceStudy ? 5.4 : this.interactionValidationDistance(object);
       const distance = horizontalDistance;
 
       if (this.cautiousInteraction?.object === object) {
@@ -4103,7 +4119,10 @@
           profile.animationHints
         );
         const fatigueDuration = BF.getSurvivalState?.().fatigue?.actionDuration || 1;
-        this.interactionDuration = Math.max(900, duration * 1000 * fatigueDuration);
+        this.interactionDuration = Math.max(
+          calmStudy || distanceStudy ? 5500 : 900,
+          duration * 1000 * fatigueDuration
+        );
         this.callbacks.onAction(profile.actionText);
         if (this.speechVisible && now >= this.speechQuietUntil && now - this.lastSpeechAt > 3200) {
           this.callbacks.onSpeak(profile.speechText);

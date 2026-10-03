@@ -279,29 +279,22 @@
   const lower = (value) => String(value ?? "").trim().toLowerCase();
   const asArray = (value) => Array.isArray(value) ? value : value == null ? [] : [value];
 
-  const FAU_CAUTIOUS_EVENT_TAGS = new Set([
-    "fauna_behavior",
-    "cautious_approach",
-    "no_flee"
+  // Ces tags sont produits par FaunaRuntime après une approche/observation.
+  // Ils filtrent l'événement de résultat, jamais le CUO avant l'action.
+  const FAUNA_RESULT_TAGS = new Set([
+    "fauna_behavior", "cautious_approach", "no_flee", "calm_nearby",
+    "temporal_contrast", "flee", "intrusive_approach", "behavior_observed",
+    "peaceful_group", "multi_species", "parental_protect", "tool_use_cycle",
+    "familiar_encounter", "period_day", "period_night"
   ]);
 
-  // FAU-01 attend un résultat comportemental : ces trois tags décrivent
-  // l'événement à obtenir, pas des propriétés statiques que la créature doit
-  // posséder avant l'approche. Ils restent strictement vérifiés par
-  // eventMatchesNode() au moment du résultat.
   const studyTargetCriteria = (params = {}) => {
     const tagsAll = asArray(params.tagsAll);
-    const normalized = new Set(tagsAll.map(lower));
-    const cautiousFaunaStudy =
-      lower(params.subject) === "fauna" &&
-      [...FAU_CAUTIOUS_EVENT_TAGS].every((tag) => normalized.has(tag));
-    if (!cautiousFaunaStudy) return params;
-
+    if (!tagsAll.some((tag) => lower(tag) === "fauna_behavior")) return params;
     return {
       ...params,
-      tagsAll: tagsAll.filter((tag) =>
-        !FAU_CAUTIOUS_EVENT_TAGS.has(lower(tag))
-      )
+      subject: params.subject || "fauna",
+      tagsAll: tagsAll.filter((tag) => !FAUNA_RESULT_TAGS.has(lower(tag)))
     };
   };
 
@@ -531,7 +524,9 @@
   const missionEvidenceForAction = (engine, action) => {
     const contract = evidenceContractForAction(engine, action);
     if (!contract) return null;
-    const source = contract.tree?.find?.(`${contract.tree.id}:${contract.fromSlot}`);
+    const source = contract.tree?.findSequenceSlot
+      ? contract.tree.findSequenceSlot(contract.fromSlot)
+      : contract.tree?.find?.(`${contract.tree.id}:${contract.fromSlot}`);
     if (!source) return null;
     const complete = source.isComplete === true ||
       String(source.status || "").toLowerCase() === "completed" ||
@@ -617,7 +612,9 @@
     const relation = node?.params?.relation;
     if (!relation) return true;
     const fromSlot = String(relation.fromSlot || "").trim();
-    const source = tree?.find?.(`${tree.id}:${fromSlot}`);
+    const source = tree?.findSequenceSlot
+      ? tree.findSequenceSlot(fromSlot)
+      : tree?.find?.(`${tree.id}:${fromSlot}`);
     if (!source) return false;
     const sameBy = asArray(relation.sameBy).filter((field) => STEP_RELATION_FIELDS.has(field));
     const differentBy = asArray(relation.differentBy).filter((field) => STEP_RELATION_FIELDS.has(field));
