@@ -5910,7 +5910,12 @@
     }),
     mapGeneration: Object.freeze({
       size: "random",
-      biome: "random",
+      compatibleBiomes: Object.freeze([
+        "crystalline",
+        "desert",
+        "magnetic",
+        "electrical"
+      ]),
       requiredMicroScenes: Object.freeze([
         Object.freeze({
           id: "MSC-CHARGED-CRYSTALS-001",

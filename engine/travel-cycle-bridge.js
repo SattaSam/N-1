@@ -133,6 +133,38 @@
     return progressCount(node, detail);
   };
 
+  const generatedTargetContract = (manager, missionId, node) => {
+    const definition = manager?.definition?.(missionId);
+    const sequence = Array.isArray(definition?.sequence)
+      ? definition.sequence
+      : [];
+    const slot = sequence.find((step) =>
+      String(node?.id || "") === `${missionId}:${step?.slot || ""}`
+    )?.slot || null;
+    if (!slot) return null;
+
+    const factKey = `tutorialExcursion:${missionId}`;
+    const dependent = sequence.find((step) =>
+      Array.isArray(step?.requires) &&
+      step.requires.includes(slot) &&
+      String(step?.params?.requiredMapFact || "") === factKey &&
+      String(step?.params?.requiredMapField || "") === "generatedTargetMapId"
+    );
+    return dependent ? { factKey } : null;
+  };
+
+  const generatedTargetMatchesTravel = (manager, missionId, node, detail) => {
+    const contract = generatedTargetContract(manager, missionId, node);
+    if (!contract) return true;
+    const excursion = manager?.memory?.getFact?.(contract.factKey, null);
+    const targetMapId = String(excursion?.generatedTargetMapId || "");
+    const toMapId = String(detail?.toMapId || detail?.mapId || "");
+    if (!targetMapId || !toMapId || targetMapId !== toMapId) return false;
+    const travelNodeId = String(excursion?.travelNodeId || "");
+    if (travelNodeId && travelNodeId !== String(node?.id || "")) return false;
+    return true;
+  };
+
   const bindArrivalFacts = (manager, missionId, node, detail) => {
     const definition = manager?.definition?.(missionId);
     const sequence = Array.isArray(definition?.sequence)
@@ -260,6 +292,7 @@
     const eventDriven = node.params?.eventDriven === true;
     if (!eventDriven && node.params?.biblePattern !== "TRAVEL_CYCLE") return false;
     if (Missions.normalizeActionType(node.type) !== Missions.ActionType.TRAVEL) return false;
+    if (!generatedTargetMatchesTravel(manager, missionId, node, detail)) return false;
     if (!eventMatchesFilters(node, detail)) return false;
     if (!progressTravelNode(node, detail)) return false;
 
@@ -298,6 +331,7 @@
         const eventDriven = node.params?.eventDriven === true;
         if (!eventDriven && node.params?.biblePattern !== "TRAVEL_CYCLE") return;
         if (Missions.normalizeActionType(node.type) !== Missions.ActionType.TRAVEL) return;
+        if (!generatedTargetMatchesTravel(manager, missionId, node, detail)) return;
         if (!eventMatchesFilters(node, detail)) return;
 
         if (progressTravelNode(node, detail)) {

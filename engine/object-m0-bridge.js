@@ -874,13 +874,20 @@
     return true;
   };
 
-  const applyObjectEventProgress = (manager, event) => {
+  const applyObjectEventProgress = (manager, event, options = {}) => {
     if (!manager || manager.memory?.hasProcessedObjectEvent?.(event.id)) {
       return { changed: 0, currentMatched: false };
     }
     let changed = 0;
     let currentMatched = false;
     const current = manager.currentAction;
+    const ownerOnly = options.ownerOnly === true;
+    const ownerMissionId = String(
+      options.ownerMissionId ||
+      event?.detail?.missionId ||
+      current?.missionId ||
+      ""
+    );
     const trees = manager.trees?.size
       ? manager.trees
       : manager.tree
@@ -888,6 +895,7 @@
         : new Map();
     if (!trees.size) return 0;
     trees.forEach((tree, missionId) => {
+      if (ownerOnly && String(missionId || "") !== ownerMissionId) return;
       if (!eventMatchesBoundTarget(manager, missionId, event)) return;
 
       // L'acquittement de l'action physique est indépendant de la progression
@@ -1003,12 +1011,34 @@
         BF.bibleRuntime?.isActivationEvent?.(event.id) &&
         (!isAcquisition || localActivation)
       ) {
+        const current = this.currentAction || null;
+        const eventMissionId = String(event.detail?.missionId || "");
+        const eventNodeId = String(event.detail?.missionNodeId || "");
+        const eventInstanceId = String(
+          event.instanceId || event.detail?.instanceId || ""
+        );
+        const currentInstanceId = String(current?.instanceId || "");
+        const explicitCurrentOwner = Boolean(
+          current &&
+          eventMissionId &&
+          eventNodeId &&
+          eventMissionId === String(current.missionId || "") &&
+          eventNodeId === String(current.nodeId || "") &&
+          (!currentInstanceId ||
+            (Boolean(eventInstanceId) && eventInstanceId === currentInstanceId))
+        );
+        const result = explicitCurrentOwner
+          ? applyObjectEventProgress(this, event, {
+              ownerOnly: true,
+              ownerMissionId: eventMissionId
+            })
+          : { changed: 0, currentMatched: false };
         this.memory.remember(event.type, {
           ...(event.detail || {}),
           activationOnly: true,
           eventId: event.id
         });
-        return false;
+        return result.currentMatched || result.changed > 0;
       }
       const result = applyObjectEventProgress(this, event);
       return result.currentMatched || result.changed > 0;
