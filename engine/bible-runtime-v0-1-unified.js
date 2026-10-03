@@ -2622,14 +2622,16 @@
       ) || null;
     }
 
-    reconcilePersistentWorldScenes() {
+    reconcilePersistentWorldScenes(options = {}) {
       if (this.persistentWorldSceneReconciling || !BF.PersistentMicroScenes?.ensure) return false;
       const manager = this.manager();
       if (!manager?.memory) return false;
       this.persistentWorldSceneReconciling = true;
       try {
         let changed = false;
+        const missionIds = new Set(asArray(options.missionIds).map(String).filter(Boolean));
         for (const mission of this.allMissions()) {
+          if (missionIds.size && !missionIds.has(String(mission?.id || ""))) continue;
           const specs = asArray(mission?.persistentWorldScenes);
           if (!specs.length || !this.missionLifecycle(mission.id).active) continue;
           const tree = manager.trees?.get?.(mission.id);
@@ -2766,14 +2768,16 @@
       return requiredSlots.every((slot) => tree?.find?.(`${mission.id}:${slot}`)?.isComplete);
     }
 
-    reconcileWorldTopologyLinks() {
+    reconcileWorldTopologyLinks(options = {}) {
       const engine = BF.currentEngine;
       const topology = engine?.worldTopology;
       const manager = this.manager();
       if (!topology || !manager?.memory) return false;
       let changed = false;
 
+      const missionIds = new Set(asArray(options.missionIds).map(String).filter(Boolean));
       for (const mission of this.allMissions()) {
+        if (missionIds.size && !missionIds.has(String(mission?.id || ""))) continue;
         const specs = asArray(mission?.worldTopologyLinks);
         if (!specs.length || !this.missionLifecycle(mission.id).active) continue;
         const tree = manager.trees?.get?.(mission.id);
@@ -2868,11 +2872,13 @@
       return changed;
     }
 
-    reconcileSlotInventoryGrantEffects() {
+    reconcileSlotInventoryGrantEffects(options = {}) {
       const manager = this.manager();
       if (!manager?.memory) return false;
       let changed = false;
+      const missionIds = new Set(asArray(options.missionIds).map(String).filter(Boolean));
       for (const mission of this.allMissions()) {
+        if (missionIds.size && !missionIds.has(String(mission?.id || ""))) continue;
         const effects = asArray(mission?.slotInventoryGrantEffects);
         if (!effects.length) continue;
         const lifecycle = this.missionLifecycle(mission.id);
@@ -2914,11 +2920,13 @@
       return changed;
     }
 
-    reconcileSlotFactEffects() {
+    reconcileSlotFactEffects(options = {}) {
       const manager = this.manager();
       if (!manager?.memory) return false;
       let changed = false;
+      const missionIds = new Set(asArray(options.missionIds).map(String).filter(Boolean));
       for (const mission of this.allMissions()) {
+        if (missionIds.size && !missionIds.has(String(mission?.id || ""))) continue;
         const effects = asArray(mission?.slotFactEffects);
         if (!effects.length) continue;
         const lifecycle = this.missionLifecycle(mission.id);
@@ -5758,6 +5766,21 @@
     }
 
     missionTargetMapId(mission) {
+      const missionId = String(mission?.id || "").trim();
+      const manager = this.manager();
+      const lifecycle = missionId
+        ? manager?.memory?.state?.missionLifecycle?.[missionId]
+        : null;
+      const cheatTarget = missionId && lifecycle?.status === "active"
+        ? manager?.memory?.getFact?.(`debugCheatPlacementTarget:${missionId}`, null)
+        : null;
+      if (
+        cheatTarget?.mapId &&
+        Number(cheatTarget.repeatCount || 0) === Number(lifecycle?.repeatCount || 0)
+      ) {
+        return String(cheatTarget.mapId);
+      }
+
       const direct = mission?.targetMapId || mission?.completionGate?.mapId;
       if (direct) return String(direct);
       const factKey = String(mission?.targetMapFact || "").trim();
@@ -5833,6 +5856,408 @@
         manager.publish?.();
       }
       return changed;
+    }
+
+    runtimeMissionForCheat(missionId) {
+      const id = String(missionId || "").trim();
+      if (!id) return null;
+      return (
+        this.byId.get(id) ||
+        this.dynamicMissions.get(id) ||
+        this.localExplorationMission(id) ||
+        this.localMissionInstance(id) ||
+        this.environmentLocalMission(id) ||
+        null
+      );
+    }
+
+    cheatPlacementNearBlueFox(mission) {
+      const engine = BF.currentEngine;
+      const effect = this.constructionPlacementEffect(mission);
+      const position = engine?.character?.root?.position;
+      if (!effect || !position) return null;
+
+      const baseAngle = ((String(mission.id).length * 47) % 360) * Math.PI / 180;
+      for (const radius of [7, 10, 13]) {
+        for (let index = 0; index < 8; index += 1) {
+          const angle = baseAngle + index * Math.PI / 4;
+          const placement = {
+            anchor: {
+              x: Number(position.x) + Math.cos(angle) * radius,
+              y: 0,
+              z: Number(position.z) + Math.sin(angle) * radius
+            },
+            rotation: [0, angle + Math.PI, 0]
+          };
+          if (this.sitePlacementValid(mission, placement, engine)) return placement;
+        }
+      }
+      return null;
+    }
+
+    rebindCheatPlayerPlacementMap(mission, mapId) {
+      const id = String(mission?.id || "").trim();
+      const targetMapId = String(mapId || "").trim();
+      const manager = this.manager();
+      if (!id || !targetMapId || !manager?.memory) return false;
+
+      const lifecycle = manager.memory.state?.missionLifecycle?.[id] || null;
+      manager.memory.setFact?.(`debugCheatPlacementTarget:${id}`, {
+        missionId: id,
+        mapId: targetMapId,
+        repeatCount: Number(lifecycle?.repeatCount || 0),
+        reboundAt: Date.now()
+      });
+
+      // Si la mission porte déjà une identité de map historique, on la rebinde
+      // elle aussi afin que les consommateurs qui lisent directement ce fait
+      // voient la même map que completionGateState().
+      const factKey = String(mission?.targetMapFact || "").trim();
+      if (factKey) {
+        const field = String(mission?.targetMapField || "mapId").trim() || "mapId";
+        const previous = manager.memory.getFact?.(factKey, null);
+        const base = previous && typeof previous === "object" && !Array.isArray(previous)
+          ? previous
+          : {};
+        manager.memory.setFact?.(factKey, {
+          ...base,
+          [field]: targetMapId,
+          mapId: targetMapId,
+          cheatReboundAt: Date.now()
+        });
+      }
+
+      const instance = this.state.constructionInstances?.[id];
+      if (instance) instance.mapId = targetMapId;
+      delete this.state.gatesSatisfied[id];
+      this.saveState();
+      manager.memory.save?.();
+      return true;
+    }
+
+    cheatMissionCompletionPreflight(missionId) {
+      const id = String(missionId || "").trim();
+      const mission = this.runtimeMissionForCheat(id);
+      const manager = this.manager();
+      if (!id || !manager) {
+        return {
+          ok: false,
+          reason: "runtime-unavailable",
+          message: "TRICHE : runtime missionnel indisponible."
+        };
+      }
+      if (!mission) return { ok: true, missionId: id };
+
+      const choice = this.missionChoiceState(id);
+      if (choice && !choice.resolved) {
+        return {
+          ok: false,
+          missionId: id,
+          reason: "player-choice-required",
+          message: "TRICHE : cette mission attend d'abord un choix explicite du joueur."
+        };
+      }
+
+      const establish = this.constructionPlacementEffect(mission);
+      if (establish) {
+        const playerSpatialChoice =
+          mission.activationSource === "player" ||
+          establish?.placement?.mode === "player";
+        if (playerSpatialChoice && !String(BF.currentEngine?.currentMapId || "")) {
+          return {
+            ok: false,
+            missionId: id,
+            reason: "current-map-missing",
+            message: "TRICHE : aucune map courante pour matérialiser la construction."
+          };
+        }
+      }
+      return { ok: true, missionId: id };
+    }
+
+    cheatLiveEstablishedSiteIds(engine = BF.currentEngine) {
+      const ids = new Set();
+      engine?.currentMap?.group?.traverse?.((object) => {
+        const id = String(object?.userData?.establishedSite || "");
+        if (id) ids.add(id);
+      });
+      return ids;
+    }
+
+    captureCheatWorldTransaction() {
+      const manager = this.manager();
+      const topology = BF.currentEngine?.worldTopology || null;
+      const definitions = new Set([
+        ...Object.values(BF.maps || {}),
+        ...(Array.isArray(global.BlueFoxCustomMaps) ? global.BlueFoxCustomMaps : [])
+      ].filter(Boolean));
+      return {
+        runtimeState: clone(this.state),
+        memoryState: manager?.memory?.state ? clone(manager.memory.state) : null,
+        progressionState: BF.progression?.state ? clone(BF.progression.state) : null,
+        lifecycleStatuses: new Map(this.missionLifecycleStatuses || []),
+        mapDefinitions: [...definitions].map((definition) => ({
+          definition,
+          hadExits: Object.prototype.hasOwnProperty.call(definition, "exits"),
+          exits: clone(definition.exits),
+          hadPersistentMicroScenes: Object.prototype.hasOwnProperty.call(definition, "persistentMicroScenes"),
+          persistentMicroScenes: clone(definition.persistentMicroScenes)
+        })),
+        topology: topology ? {
+          instance: topology,
+          coordinates: [...topology.coordinates?.entries?.() || []].map(([key, value]) => [key, clone(value)]),
+          occupancy: [...topology.occupancy?.entries?.() || []],
+          conflicts: clone(topology.conflicts || []),
+          repairs: clone(topology.repairs || [])
+        } : null,
+        liveEstablishedSiteIds: this.cheatLiveEstablishedSiteIds()
+      };
+    }
+
+    restoreCheatObject(target, snapshot) {
+      if (!target || !snapshot || typeof target !== "object" || typeof snapshot !== "object") return;
+      Object.keys(target).forEach((key) => delete target[key]);
+      Object.assign(target, clone(snapshot));
+    }
+
+    rollbackCheatWorldTransaction(snapshot) {
+      if (!snapshot) return false;
+      const manager = this.manager();
+      const engine = BF.currentEngine;
+      const map = engine?.currentMap;
+      const beforeIds = snapshot.liveEstablishedSiteIds || new Set();
+      const addedIds = [...this.cheatLiveEstablishedSiteIds(engine)].filter((id) => !beforeIds.has(id));
+
+      addedIds.forEach((id) => {
+        const root = map?.group?.getObjectByProperty?.("name", `BlueFoxSite:${id}`) || null;
+        if (!root) return;
+        if (typeof BF.disposeObject === "function") BF.disposeObject(root);
+        else root.parent?.remove?.(root);
+      });
+      if (addedIds.length && Array.isArray(map?.interactables)) {
+        const added = new Set(addedIds);
+        map.interactables = map.interactables.filter((object) =>
+          !added.has(String(object?.userData?.establishedSite || object?.parent?.userData?.establishedSite || ""))
+        );
+      }
+      if (addedIds.length && Array.isArray(map?.colliders)) {
+        const added = new Set(addedIds);
+        map.colliders = map.colliders.filter((collider) =>
+          !added.has(String(collider?.owner?.userData?.establishedSite || ""))
+        );
+        engine?.character?.setColliders?.(map.colliders);
+      }
+
+      this.restoreCheatObject(this.state, snapshot.runtimeState || {});
+      if (manager?.memory?.state && snapshot.memoryState) {
+        this.restoreCheatObject(manager.memory.state, snapshot.memoryState);
+      }
+      if (BF.progression?.state && snapshot.progressionState) {
+        this.restoreCheatObject(BF.progression.state, snapshot.progressionState);
+      }
+      if (this.missionLifecycleStatuses instanceof Map) {
+        this.missionLifecycleStatuses.clear();
+        snapshot.lifecycleStatuses?.forEach?.((value, key) => this.missionLifecycleStatuses.set(key, value));
+      }
+
+      snapshot.mapDefinitions?.forEach?.((entry) => {
+        const definition = entry?.definition;
+        if (!definition) return;
+        if (entry.hadExits) definition.exits = clone(entry.exits) || {};
+        else delete definition.exits;
+        if (entry.hadPersistentMicroScenes) definition.persistentMicroScenes = clone(entry.persistentMicroScenes) || [];
+        else delete definition.persistentMicroScenes;
+        BF.MapIntegrity?.persistGeneratedDefinition?.(definition);
+      });
+
+      const topology = snapshot.topology?.instance;
+      if (topology) {
+        topology.coordinates?.clear?.();
+        snapshot.topology.coordinates.forEach(([key, value]) => topology.coordinates?.set?.(key, Object.freeze(clone(value))));
+        topology.occupancy?.clear?.();
+        snapshot.topology.occupancy.forEach(([key, value]) => topology.occupancy?.set?.(key, value));
+        if (Array.isArray(topology.conflicts)) topology.conflicts.splice(0, topology.conflicts.length, ...clone(snapshot.topology.conflicts || []));
+        if (Array.isArray(topology.repairs)) topology.repairs.splice(0, topology.repairs.length, ...clone(snapshot.topology.repairs || []));
+        topology.persist?.();
+      }
+
+      this.saveState?.();
+      manager?.memory?.save?.();
+      BF.progression?.save?.();
+      this.renderCurrentSite?.(engine);
+      return true;
+    }
+
+    cheatActiveWorldEffectsReady(mission) {
+      const manager = this.manager();
+      const tree = manager?.trees?.get?.(mission?.id);
+      if (!manager?.memory || !tree) return true;
+      const scope = { missionIds: [mission.id] };
+
+      for (const rawSpec of asArray(mission?.persistentWorldScenes)) {
+        const requiredSlots = asArray(rawSpec?.requiresSlotsComplete || rawSpec?.requiresSlotComplete)
+          .map(String)
+          .filter(Boolean);
+        if (requiredSlots.some((slot) => !tree.find?.(`${mission.id}:${slot}`)?.isComplete)) continue;
+        const requiredMapFact = String(rawSpec?.requiredMapFact || "").trim();
+        const requiredMapField = String(rawSpec?.requiredMapField || "mapId").trim();
+        const requiredMap = requiredMapFact ? manager.memory.getFact?.(requiredMapFact, null) : null;
+        const targetMapId = String(rawSpec?.mapId || requiredMap?.[requiredMapField] || requiredMap?.mapId || "");
+        const definition = this.persistentWorldSceneMap(targetMapId);
+        if (!definition || !rawSpec?.microSceneId) continue;
+        const spec = { ...rawSpec, mapId: targetMapId, missionId: mission.id, persistent: rawSpec.persistent !== false, spawnOnce: rawSpec.spawnOnce !== false };
+        const before = this.persistentWorldSceneRecord(definition, spec);
+        if (!before && String(rawSpec?.placement?.mode || "") === "player") {
+          return { ok: false, reason: "player-world-placement-required", message: "TRICHE : cette mission attend encore un placement explicite du joueur." };
+        }
+      }
+
+      this.reconcilePersistentWorldScenes?.(scope);
+      this.reconcileWorldTopologyLinks?.(scope);
+
+      for (const rawSpec of asArray(mission?.persistentWorldScenes)) {
+        const requiredSlots = asArray(rawSpec?.requiresSlotsComplete || rawSpec?.requiresSlotComplete).map(String).filter(Boolean);
+        if (requiredSlots.some((slot) => !tree.find?.(`${mission.id}:${slot}`)?.isComplete)) continue;
+        const requiredMapFact = String(rawSpec?.requiredMapFact || "").trim();
+        const requiredMapField = String(rawSpec?.requiredMapField || "mapId").trim();
+        const requiredMap = requiredMapFact ? manager.memory.getFact?.(requiredMapFact, null) : null;
+        const targetMapId = String(rawSpec?.mapId || requiredMap?.[requiredMapField] || requiredMap?.mapId || "");
+        const definition = this.persistentWorldSceneMap(targetMapId);
+        if (!definition || !rawSpec?.microSceneId) continue;
+        const spec = { ...rawSpec, mapId: targetMapId, missionId: mission.id, persistent: rawSpec.persistent !== false, spawnOnce: rawSpec.spawnOnce !== false };
+        if (!this.persistentWorldSceneRecord(definition, spec)) {
+          return { ok: false, reason: "persistent-world-scene-pending", message: "TRICHE : un effet monde persistant n'a pas pu être matérialisé." };
+        }
+      }
+      for (const spec of asArray(mission?.worldTopologyLinks)) {
+        if (!spec?.mapId || !this.topologyLinkSlotsSatisfied(mission, spec, tree)) continue;
+        const receipt = manager.memory.getFact?.(`worldTopologyLink:${mission.id}:${spec.id || String(spec.mapId)}`, null);
+        if (!receipt) {
+          return { ok: false, reason: "world-topology-link-pending", message: "TRICHE : un raccord de topologie requis n'a pas pu être appliqué." };
+        }
+      }
+
+      // Ces effets sont déterministes une fois les effets monde faillibles validés.
+      this.reconcileSlotInventoryGrantEffects?.(scope);
+      this.reconcileSlotFactEffects?.(scope);
+      return { ok: true, missionId: mission.id };
+    }
+
+    prepareCheatMissionCompletion(missionId) {
+      const id = String(missionId || "").trim();
+      const mission = this.runtimeMissionForCheat(id);
+      const manager = this.manager();
+      if (!id || !manager) {
+        return {
+          ok: false,
+          reason: "runtime-unavailable",
+          message: "TRICHE : runtime missionnel indisponible."
+        };
+      }
+      if (!mission) return { ok: true, missionId: id };
+
+      const choice = this.missionChoiceState(id);
+      if (choice && !choice.resolved) {
+        return {
+          ok: false,
+          missionId: id,
+          reason: "player-choice-required",
+          message: "TRICHE : cette mission attend d'abord un choix explicite du joueur."
+        };
+      }
+
+      const effects = asArray(mission.effects);
+      const establish = this.constructionPlacementEffect(mission);
+      const standaloneConsumes = this.standaloneInventoryConsumeMission(mission);
+      let placement = null;
+      let targetMapId = this.missionTargetMapId(mission) || String(BF.currentEngine?.currentMapId || "");
+      let playerSpatialChoice = false;
+
+      // Tout ce qui peut être refusé sans écrire est résolu avant la transaction.
+      if (establish) {
+        playerSpatialChoice = mission.activationSource === "player" || establish?.placement?.mode === "player";
+        if (playerSpatialChoice) {
+          targetMapId = String(BF.currentEngine?.currentMapId || "");
+          if (!targetMapId) {
+            return { ok: false, missionId: id, reason: "current-map-missing", message: "TRICHE : aucune map courante pour matérialiser la construction." };
+          }
+          placement = this.cheatPlacementNearBlueFox(mission);
+        } else {
+          if (targetMapId !== String(BF.currentEngine?.currentMapId || "")) {
+            return { ok: false, missionId: id, reason: "remote-world-effect", message: "TRICHE : l'effet monde doit être matérialisé sur une autre map." };
+          }
+          placement = this.resolveSitePlacement(establish) || this.autonomousPlacement(mission);
+        }
+        if (!placement?.anchor) {
+          return { ok: false, missionId: id, reason: "no-safe-placement", message: "TRICHE : aucun emplacement sûr trouvé près de BlueFox." };
+        }
+      } else if (!standaloneConsumes && effects.length) {
+        return { ok: false, missionId: id, reason: "unsupported-terminal-effect", message: "TRICHE : cette mission possède un effet terminal non pris en charge par son runtime." };
+      }
+
+      const transaction = this.captureCheatWorldTransaction();
+      const fail = (reason, message) => {
+        this.rollbackCheatWorldTransaction(transaction);
+        return { ok: false, missionId: id, reason, message };
+      };
+
+      if (!this.missionLifecycleStatuses.has(id)) {
+        this.missionLifecycleStatuses.set(
+          id,
+          String(manager.memory?.state?.missionLifecycle?.[id]?.status || "active")
+        );
+      }
+
+      if (establish) {
+        if (!this.applyEffects(mission, {
+          placement,
+          targetMapId,
+          source: "debug-cheat",
+          cheatInventoryBypass: true,
+          bypassPlayerConfirmation: true,
+          deferSiteReplacementCleanup: true,
+          deferObsoleteReconcile: true
+        })) {
+          return fail("world-effect-failed", "TRICHE : impossible de matérialiser l'effet monde de la mission.");
+        }
+        if (playerSpatialChoice && !this.rebindCheatPlayerPlacementMap(mission, targetMapId)) {
+          return fail("player-placement-map-rebind-failed", "TRICHE : impossible de réconcilier la map de placement de cette mission.");
+        }
+      } else if (standaloneConsumes) {
+        if (!this.applyEffects(mission, {
+          source: "debug-cheat",
+          cheatInventoryBypass: true,
+          deferObsoleteReconcile: true
+        })) {
+          return fail("inventory-effect-failed", "TRICHE : impossible d'appliquer les effets d'inventaire.");
+        }
+      }
+
+      const activeWorld = this.cheatActiveWorldEffectsReady(mission);
+      if (activeWorld?.ok === false) {
+        return fail(
+          activeWorld.reason || "active-world-effect-failed",
+          activeWorld.message || "TRICHE : un effet monde requis n'a pas pu être appliqué."
+        );
+      }
+
+      if (mission.completionGate && !establish) {
+        this.state.gatesSatisfied[id] = Date.now();
+        this.saveState();
+      }
+
+      // Nettoyages différés : ils ne sont exécutés qu'après la dernière étape
+      // susceptible de provoquer le rollback de la transaction cheat.
+      if (establish?.kind === "base") {
+        const replacedRefuge = this.siteBucket(targetMapId)?.refuge || null;
+        if (replacedRefuge) this.removeEstablishedSite(replacedRefuge, manager.memory, BF.currentEngine);
+      }
+      if (establish) {
+        const schedule = global.queueMicrotask || ((callback) => Promise.resolve().then(callback));
+        schedule(() => this.reconcileObsoleteConstructionMissions({ mapId: targetMapId }));
+      }
+
+      return { ok: true, missionId: id };
     }
 
     canFinalizeMission(missionId) {
@@ -6946,27 +7371,38 @@
       }
       const consumes = effects.filter((effect) => effect.type === "inventory.consume");
       const establish = effects.find((effect) => effect.type === "site.establish");
-      if (!this.inventoryConsumptionPlan(consumes).ready) return false;
+      const cheatInventoryBypass =
+        options.source === "debug-cheat" && options.cheatInventoryBypass === true;
+      if (!cheatInventoryBypass && !this.inventoryConsumptionPlan(consumes).ready) return false;
 
       if (!establish) {
         if (effects.some((effect) => effect.type !== "inventory.consume")) return false;
-        for (const [index, consume] of consumes.entries()) {
-          const quantity = Math.max(0, Number(consume.quantity) || 0);
-          const inventoryKeys = this.inventoryKeysForRequirement(consume);
-          const removed = BF.consumeInventoryPoolOnce?.(
-            `${receiptId}:consume:${index}`,
-            inventoryKeys,
-            quantity
-          );
-          if (removed !== quantity) return false;
+        if (!cheatInventoryBypass) {
+          for (const [index, consume] of consumes.entries()) {
+            const quantity = Math.max(0, Number(consume.quantity) || 0);
+            const inventoryKeys = this.inventoryKeysForRequirement(consume);
+            const removed = BF.consumeInventoryPoolOnce?.(
+              `${receiptId}:consume:${index}`,
+              inventoryKeys,
+              quantity
+            );
+            if (removed !== quantity) return false;
+          }
         }
-        memory.recordEffectReceipt?.(receiptId, { missionId: mission.id });
+        memory.recordEffectReceipt?.(receiptId, {
+          missionId: mission.id,
+          inventoryBypassed: cheatInventoryBypass === true,
+          source: options.source || "mission-completion"
+        });
         memory.save?.();
         return true;
       }
 
       if (!BF.MicroScenes?.get?.(establish.microSceneId)) return false;
-      const targetMapId = this.missionTargetMapId(mission) || String(BF.currentEngine?.currentMapId || "");
+      const targetMapId =
+        String(options.targetMapId || "") ||
+        this.missionTargetMapId(mission) ||
+        String(BF.currentEngine?.currentMapId || "");
       if (!targetMapId || targetMapId !== BF.currentEngine?.currentMapId) return false;
 
       const activationSource =
@@ -6980,8 +7416,13 @@
       // Une construction répétable déclenchée par le joueur ne peut jamais
       // tomber sur resolveSitePlacement()/un preset implicite. Seul le callback
       // Installer de la popup peut fournir le jeton de confirmation courant.
+      const debugPlayerPlacement =
+        options.source === "debug-cheat" &&
+        options.bypassPlayerConfirmation === true &&
+        Boolean(options.placement?.anchor);
       if (
         playerConstruction &&
+        !debugPlayerPlacement &&
         (
           options.source !== "player" ||
           options.confirmationToken !== this.activePlacement?.confirmationToken ||
@@ -7017,23 +7458,30 @@
       // jamais détruire des ressources ni valider la mission.
       if (!this.renderSite(site)) return false;
 
-      for (const [index, consume] of consumes.entries()) {
-        const quantity = Math.max(0, Number(consume.quantity) || 0);
-        if (!quantity) continue;
-        const inventoryKeys = this.inventoryKeysForRequirement(consume);
-        const removed = BF.consumeInventoryPoolOnce?.(
-          `${receiptId}:consume:${index}`,
-          inventoryKeys,
-          quantity
-        );
-        if (removed !== quantity) return false;
+      if (!cheatInventoryBypass) {
+        for (const [index, consume] of consumes.entries()) {
+          const quantity = Math.max(0, Number(consume.quantity) || 0);
+          if (!quantity) continue;
+          const inventoryKeys = this.inventoryKeysForRequirement(consume);
+          const removed = BF.consumeInventoryPoolOnce?.(
+            `${receiptId}:consume:${index}`,
+            inventoryKeys,
+            quantity
+          );
+          if (removed !== quantity) return false;
+        }
       }
 
       if (!this.storeSite(site, memory)) return false;
-      if (replacedRefuge) {
+      if (replacedRefuge && options.deferSiteReplacementCleanup !== true) {
         this.removeEstablishedSite(replacedRefuge, memory, BF.currentEngine);
       }
-      memory.recordEffectReceipt?.(receiptId, { missionId: mission.id, siteId: site.id });
+      memory.recordEffectReceipt?.(receiptId, {
+        missionId: mission.id,
+        siteId: site.id,
+        inventoryBypassed: cheatInventoryBypass === true,
+        source: options.source || "mission-completion"
+      });
       memory.save?.();
       this.state.gatesSatisfied[mission.id] = Date.now();
       this.state.effectsApplied[mission.id] = Date.now();
@@ -7043,8 +7491,10 @@
       // cette même map peut désormais être obsolète (notamment CAMP@crystal
       // après T03). On attend la fin de la transaction courante avant de faire
       // arbitrer le lifecycle par MissionManager.
-      const schedule = global.queueMicrotask || ((callback) => Promise.resolve().then(callback));
-      schedule(() => this.reconcileObsoleteConstructionMissions({ mapId: targetMapId }));
+      if (options.deferObsoleteReconcile !== true) {
+        const schedule = global.queueMicrotask || ((callback) => Promise.resolve().then(callback));
+        schedule(() => this.reconcileObsoleteConstructionMissions({ mapId: targetMapId }));
+      }
       return true;
     }
 

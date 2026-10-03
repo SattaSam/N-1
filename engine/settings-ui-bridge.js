@@ -65,6 +65,8 @@ let settingsObserver = null;
 let observedSettings = null;
 let scheduled = false;
 let scheduledAxis = null;
+let cheatFullClickCount = 0;
+let cheatDialog = null;
 
 const norm = (value) =>
   String(value || "")
@@ -547,6 +549,119 @@ function findPriorityHeading(settings, firstPriorityRow) {
   return null;
 }
 
+
+function closeCheatDialog() {
+  if (!cheatDialog) return;
+  try {
+    if (cheatDialog.open && typeof cheatDialog.close === "function") cheatDialog.close();
+    else cheatDialog.removeAttribute("open");
+  } catch {}
+}
+
+function ensureCheatDialog() {
+  if (cheatDialog?.isConnected) return cheatDialog;
+
+  const dialog = document.createElement("dialog");
+  dialog.className = "bluefox-cheat-confirm";
+  dialog.setAttribute("aria-label", "Confirmation triche");
+  Object.assign(dialog.style, {
+    border: "1px solid rgba(126, 214, 255, 0.8)",
+    borderRadius: "12px",
+    padding: "18px",
+    color: "#eef9ff",
+    background: "rgba(4, 17, 34, 0.97)",
+    boxShadow: "0 18px 60px rgba(0,0,0,0.55)",
+    maxWidth: "min(92vw, 440px)",
+    zIndex: "2147483647"
+  });
+
+  const message = document.createElement("div");
+  message.textContent = "TRICHE : valider la mission prioritaire";
+  Object.assign(message.style, {
+    fontWeight: "700",
+    marginBottom: "16px",
+    textAlign: "center"
+  });
+
+  const actions = document.createElement("div");
+  Object.assign(actions.style, {
+    display: "flex",
+    justifyContent: "center",
+    gap: "12px"
+  });
+
+  const yes = document.createElement("button");
+  yes.type = "button";
+  yes.textContent = "OUI";
+  const no = document.createElement("button");
+  no.type = "button";
+  no.textContent = "NON";
+
+  [yes, no].forEach((button) => {
+    Object.assign(button.style, {
+      minWidth: "90px",
+      padding: "9px 14px",
+      borderRadius: "8px",
+      border: "1px solid rgba(126,214,255,0.55)",
+      background: "rgba(15,48,72,0.95)",
+      color: "#eef9ff",
+      cursor: "pointer",
+      fontWeight: "700"
+    });
+  });
+
+  no.addEventListener("click", () => {
+    cheatFullClickCount = 0;
+    closeCheatDialog();
+  });
+
+  yes.addEventListener("click", () => {
+    cheatFullClickCount = 0;
+    closeCheatDialog();
+    const manager = BF.currentEngine?.missionManager;
+    const result = manager?.cheatCompletePrimaryMission?.() || {
+      ok: false,
+      reason: "mission-manager-unavailable",
+      message: "TRICHE : mission prioritaire indisponible."
+    };
+    const messageText = result.message ||
+      (result.ok
+        ? `TRICHE : mission ${result.missionId || ""} validée.`
+        : "TRICHE : validation impossible.");
+    BF.currentEngine?.callbacks?.onStatus?.(messageText);
+    if (!result.ok) console.warn("[BF-CHEAT]", result);
+  });
+
+  actions.append(yes, no);
+  dialog.append(message, actions);
+  document.body.append(dialog);
+  cheatDialog = dialog;
+  return dialog;
+}
+
+function showCheatConfirmation() {
+  const dialog = ensureCheatDialog();
+  if (dialog.open) return true;
+  try {
+    if (typeof dialog.showModal === "function") dialog.showModal();
+    else dialog.setAttribute("open", "");
+  } catch {
+    dialog.setAttribute("open", "");
+  }
+  return true;
+}
+
+function registerFullCheatClick(mode) {
+  if (mode !== "full") {
+    cheatFullClickCount = 0;
+    return false;
+  }
+  cheatFullClickCount += 1;
+  if (cheatFullClickCount < 7) return false;
+  cheatFullClickCount = 0;
+  return showCheatConfirmation();
+}
+
 function createAutonomyHeader(settings) {
   const priorityItems = entries(settings);
   const firstPriorityRow = priorityItems[0]?.row;
@@ -598,7 +713,8 @@ function createAutonomyHeader(settings) {
     button.dataset.mode = mode;
     button.textContent = AUTONOMY_LABELS[mode];
     button.addEventListener("click", () => {
-      setAutonomyMode(mode, { source: "user" });
+      const accepted = setAutonomyMode(mode, { source: "user" });
+      if (accepted !== false) registerFullCheatClick(mode);
     });
     panel.append(button);
   });

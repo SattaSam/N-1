@@ -4010,6 +4010,132 @@
       return changed;
     }
 
+    cheatCompletePrimaryMission() {
+      const missionId = String(this.primaryMissionId || "");
+      const tree = missionId ? this.trees.get(missionId) : null;
+      const lifecycle = missionId
+        ? this.memory.state.missionLifecycle?.[missionId]
+        : null;
+
+      if (!missionId || !tree || lifecycle?.status !== "active") {
+        return {
+          ok: false,
+          reason: "no-active-primary",
+          message: "TRICHE : aucune mission prioritaire active."
+        };
+      }
+
+      const preflight = BF.bibleRuntime?.cheatMissionCompletionPreflight?.(missionId) || {
+        ok: true,
+        missionId
+      };
+      if (preflight.ok === false) {
+        return {
+          ok: false,
+          missionId,
+          reason: preflight.reason || "runtime-preflight-failed",
+          message: preflight.message || "TRICHE : validation impossible."
+        };
+      }
+
+      // Transaction cheat : l'arbre est modifié temporairement en mémoire pour
+      // permettre à BibleRuntime de vérifier/matérialiser les effets qui
+      // dépendent de slots completed, mais rien n'est persisté avant succès.
+      const treeSnapshot = [];
+      tree.root.walk((node) => {
+        treeSnapshot.push({
+          node,
+          progress: node.progress,
+          status: node.status,
+          startedAt: node.startedAt,
+          completedAt: node.completedAt
+        });
+      });
+      const restoreTreeSnapshot = () => {
+        treeSnapshot.forEach((entry) => {
+          entry.node.progress = entry.progress;
+          entry.node.status = entry.status;
+          entry.node.startedAt = entry.startedAt;
+          entry.node.completedAt = entry.completedAt;
+        });
+        tree.refresh();
+      };
+
+      const now = Date.now();
+      tree.root.walk((node) => {
+        if (!node?.isLeaf || node.isComplete) return;
+        let cursor = node;
+        let required = true;
+        while (cursor && cursor !== tree.root) {
+          if (cursor.optional === true) {
+            required = false;
+            break;
+          }
+          cursor = cursor.parent;
+        }
+        if (!required) return;
+        node.progress = node.target;
+        node.status = Missions.MissionStatus.COMPLETED;
+        node.startedAt ||= now;
+        node.completedAt ||= now;
+      });
+      tree.refresh();
+
+      if (!tree.root.isComplete) {
+        restoreTreeSnapshot();
+        return {
+          ok: false,
+          missionId,
+          reason: "tree-not-complete",
+          message: `TRICHE : « ${tree.title} » ne peut pas être validée automatiquement.`
+        };
+      }
+
+      // Les effets/gates qui ne sont réconciliables que tant que la mission est
+      // active doivent être matérialisés après la complétion de l'arbre, mais
+      // avant que MissionManager ne fasse basculer le lifecycle à completed.
+      const preparation = BF.bibleRuntime?.prepareCheatMissionCompletion?.(missionId) || {
+        ok: true,
+        missionId
+      };
+      if (preparation.ok === false) {
+        restoreTreeSnapshot();
+        this.publish();
+        return {
+          ok: false,
+          missionId,
+          reason: preparation.reason || "runtime-preparation-failed",
+          message: preparation.message || "TRICHE : validation impossible."
+        };
+      }
+
+      // Le monde est prêt : seulement maintenant l'action missionnelle courante
+      // est annulée et l'arbre completed devient durable. Un refus de la phase
+      // BibleRuntime ne laisse donc ni arbre sauvegardé ni action annulée.
+      if (this.currentAction) {
+        this.cancelCurrentAction("debug-cheat");
+      }
+      this.memory.saveTree(tree);
+
+      this.syncLifecycleFromTrees();
+      this.ensureMissionTransitionIntent();
+      this.reevaluatePendingActivations();
+      this.catalogController?.schedule();
+      this.memory.save?.();
+      this.publish();
+
+      const completed =
+        this.memory.state.missionLifecycle?.[missionId]?.status === "completed";
+      return {
+        ok: completed,
+        missionId,
+        reason: completed ? "completed" : "completion-gate-pending",
+        message: completed
+          ? `TRICHE : « ${tree.title} » validée.`
+          : `TRICHE : « ${tree.title} » reste en attente d'un effet monde.`
+      };
+    }
+
     cancelCurrentAction(reason = "cancelled", options = {}) {
       if (!this.currentAction) return;
       const cancelledAction = this.currentAction;
