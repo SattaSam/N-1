@@ -23,8 +23,16 @@
     }
 
     lineIsClear(from, to, colliders, characterRadius, padding = 0.12) {
+      const minX = Math.min(from.x, to.x);
+      const maxX = Math.max(from.x, to.x);
+      const minZ = Math.min(from.z, to.z);
+      const maxZ = Math.max(from.z, to.z);
       return !colliders.some((collider) => {
         const clearance = characterRadius + collider.radius + padding;
+        if (collider.position.x < minX - clearance ||
+          collider.position.x > maxX + clearance ||
+          collider.position.z < minZ - clearance ||
+          collider.position.z > maxZ + clearance) return false;
         return segmentDistanceSquared(
           from.x,
           from.z,
@@ -121,14 +129,21 @@
       const goalCell = toCell(finalGoal);
       const startKey = key(startCell);
       const goalKey = key(goalCell);
+      // Une cellule garde le même état physique pendant ce calcul de chemin.
+      const blockedCells = new Map();
       const blocked = (cell) => {
         const cellKey = key(cell);
         if (cellKey === startKey) return false;
+        if (blockedCells.has(cellKey)) return blockedCells.get(cellKey);
         const point = toWorld(cell);
-        return colliders.some((collider) => {
+        const result = colliders.some((collider) => {
           const clearance = characterRadius + collider.radius + padding;
-          return point.distanceToSquared(collider.position) < clearance * clearance;
+          const dx = point.x - collider.position.x;
+          const dz = point.z - collider.position.z;
+          return dx * dx + dz * dz < clearance * clearance;
         });
+        blockedCells.set(cellKey, result);
+        return result;
       };
       const heuristic = (cell) => Math.hypot(
         cell.x - goalCell.x,

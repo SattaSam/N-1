@@ -818,7 +818,12 @@
     collection: "Collecte",
     research: "Recherche",
     relations: "Relations",
-    survival: "Survie"
+    survival: "Survie",
+    natural_decor: "Décors naturels", decors_nature: "Décors naturels",
+    flora: "Flore", fauna: "Faune", ruins: "Ruines",
+    phenomena: "Phénomènes", resources: "Ressources", components: "Composants",
+    equipment: "Équipement", geology: "Géologie", energy: "Énergie",
+    technology: "Technologie", mineral: "Minéraux", plant: "Plantes"
   });
 
   const JOURNAL_EVOLUTION_EVENT_AXES = Object.freeze({
@@ -838,19 +843,16 @@
     "category"
   ]);
 
-  const journalEvolutionThemeId = (value) =>
-    String(value ?? "")
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, "-");
+  const journalEvolutionThemeId = (value) => {
+    const id = String(value ?? "").trim().toLowerCase().replace(/\s+/g, "-");
+    return id === "decors_nature" ? "natural_decor" : id;
+  };
 
   const journalEvolutionLabel = (value) => {
     const raw = String(value ?? "").trim();
     if (!raw) return "";
     const id = journalEvolutionThemeId(raw);
-    return JOURNAL_EVOLUTION_AXIS_LABELS[id] ||
-      raw.replace(/[-_]+/g, " ")
-        .replace(/\b\p{L}/gu, (letter) => letter.toLocaleUpperCase("fr"));
+    return JOURNAL_EVOLUTION_AXIS_LABELS[id] || "Autres découvertes";
   };
 
   const journalEvolutionMissionDefinitions = () => {
@@ -954,7 +956,8 @@
       return "Décors naturels";
     }
     const definition = global.BlueFox3D?.ObjectLibrary?.getById?.(raw);
-    const human = definition?.label || definition?.name || definition?.title;
+    const typedDefinition = definition || global.BlueFox3D?.ObjectLibrary?.get?.(raw);
+    const human = typedDefinition?.label || typedDefinition?.name || typedDefinition?.title;
     if (human) return String(human);
 
     const normalized = raw
@@ -971,6 +974,9 @@
       observation: "mes observations",
       resource: "les ressources étudiées",
       wood: "le bois",
+      fiber: "les fibres",
+      parts: "les composants",
+      data: "les données",
       crystal: "les cristaux",
       bush: "les buissons",
       adap: "les plantes adaptatives",
@@ -991,9 +997,7 @@
     if (!label || /^(?:observation|resource)$/i.test(label)) {
       return aliases[label.toLowerCase()] || "";
     }
-    return label
-      .toLocaleLowerCase("fr")
-      .replace(/\b\p{L}/u, (letter) => letter.toLocaleUpperCase("fr"));
+    return "mes découvertes";
   };
 
   function buildJournalEvolutionThemes() {
@@ -1078,7 +1082,7 @@
           .sort((left, right) => right[1] - left[1])
           .slice(0, 3)
           .map(([subject]) => journalEvolutionSubjectLabel(subject))
-          .filter(Boolean);
+          .filter((label, index, labels) => label && labels.indexOf(label) === index);
         const axisPriority = Number(priorities?.[bucket.id]);
         const text = journalEvolutionNarrative(
           bucket,
@@ -1087,12 +1091,19 @@
           Number.isFinite(axisPriority) ? axisPriority : null
         );
         const psychology = BF?.getMultiProgressionState?.()?.psychology || {};
+        const relatedMission = (id, memory = {}) => {
+          if (bucket.missionIds.has(id)) return true;
+          const mission = missions.get(id) || missions.get(String(id).split("@")[0]);
+          if (journalEvolutionMissionTheme(mission)?.id === bucket.id) return true;
+          return Boolean(memory.narrativeAxis && [...bucket.missionIds].some((missionId) =>
+            missions.get(missionId)?.narrativeAxis === memory.narrativeAxis));
+        };
         const obsessions = Object.entries(psychology.missionObsessions || {})
-          .filter(([, value]) => Number(value?.pressure) > 0)
+          .filter(([id, value]) => Number(value?.pressure) > 0 && relatedMission(id, value))
           .map(([id, value]) => `${id}:${Math.round(Number(value.pressure) || 0)}`)
           .sort();
         const memories = Object.values(psychology.missionMemories || {})
-          .filter((memory) => memory?.missionId)
+          .filter((memory) => memory?.missionId && relatedMission(memory.missionId, memory))
           .map((memory) => `${memory.missionId}:${memory.valence || "neutral"}:${Number(memory.scoreTrauma) || 0}`)
           .sort();
         let enrichedText = text;
@@ -1213,7 +1224,15 @@
         "Au début je répondais surtout à l'urgence. Maintenant, j'essaie de garder une longueur d'avance sur mes besoins."
       ]));
     } else {
-      sentences.push(pick([
+      const openings = {
+        flora: "Les formes végétales commencent à me raconter comment la vie s’adapte ici.",
+        fauna: "Je reconnais mieux les créatures, mais surtout leurs habitudes et leurs réactions.",
+        ruins: "Les vestiges cessent d’être des fragments isolés : j’y cherche les traces d’une histoire.",
+        phenomena: "Je compare les phénomènes pour distinguer leurs rythmes et leurs relations.",
+        natural_decor: "Les détails du paysage deviennent des repères : ils m’aident à lire le terrain.",
+        resources: "Je distingue mieux les ressources qui peuvent soutenir mes prochaines excursions."
+      };
+      sentences.push(openings[bucket.id] || pick([
         `Avec le temps, mes expériences liées à ${bucket.label.toLocaleLowerCase("fr")} commencent à former une évolution identifiable.`,
         `Je remarque que ${bucket.label.toLocaleLowerCase("fr")} prend progressivement une place plus nette dans ce que j'apprends et dans la manière dont j'agis.`,
         `Ce thème revient assez souvent pour que je commence à sentir une véritable continuité dans mon expérience de ${bucket.label.toLocaleLowerCase("fr")}.`
@@ -1296,15 +1315,14 @@
     const host = report?.querySelector(".living-notes");
     if (!host) return;
 
-    const entries = (global.BlueFox3D?.getJournalState?.()?.entries || [])
-      .filter((entry) => entry?.type === "bible" && entry?.text);
-    const dayStart = new Date();
-    dayStart.setHours(0, 0, 0, 0);
-    const daily = entries
-      .filter((entry) => Number(entry.at) >= dayStart.getTime())
-      .slice(0, 8);
     const narrativeState = global.BlueFox3D?.getJournalNarrativeState?.() || {};
-    const evolutionThemes = Object.values(narrativeState.themes || {})
+    // Dernières pensées dédiées : elles survivent aux actions et au rechargement.
+    const daily = (narrativeState.missionThoughts || []).filter((entry) => entry?.text)
+      .slice(-8).reverse();
+    const evolutionThemes = [...new Map(Object.values(narrativeState.themes || {})
+      .sort((a, b) => Number(a.updatedAt || 0) - Number(b.updatedAt || 0))
+      .map((theme) => [journalEvolutionThemeId(theme.id), { ...theme,
+        id: journalEvolutionThemeId(theme.id), label: journalEvolutionLabel(theme.id) }])).values()]
       .sort((left, right) =>
         Number(right?.metrics?.score || 0) - Number(left?.metrics?.score || 0) ||
         Number(right?.updatedAt || 0) - Number(left?.updatedAt || 0)
@@ -1431,6 +1449,12 @@
       }
     }
 
+    if (!daily.length && evolutionThemes.length && meta) {
+      const thoughts = meta.querySelector(".journal-current-state-row .journal-current-thoughts");
+      thoughts?.replaceWith(makeCard("PENSÉES DU JOUR", evolutionThemes.slice(0, 2)
+        .map((theme) => ({ text: theme.text.split(/(?<=[.!?])\s+/)[0] })), "",
+        "journal-current-thoughts"));
+    }
     host.append(makeEvolutionCard(evolutionThemes));
     if (pastThoughts.length) {
       host.append(makeCard(

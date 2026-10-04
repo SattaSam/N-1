@@ -6,6 +6,17 @@
   class WorldEngine {
     constructor(options) {
       Object.assign(this, options);
+      // Une bulle effectivement publiée est une action du Journal ; les
+      // pensées documentaires sont routées séparément par BibleRuntime.
+      const speak = this.callbacks.onSpeak;
+      this.callbacks = { ...this.callbacks, onSpeak: (text) => {
+        speak?.(text);
+        if (text) BF.addJournalEntry?.({
+          id: `dialogue:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`,
+          type: "dialogue", title: "Paroles de BlueFox", text,
+          mapId: this.currentMapId, zoneId: this.currentZoneIndex
+        });
+      } };
       this.disposed = false;
       this.frame = 0;
       this.currentMap = null;
@@ -2640,7 +2651,7 @@
       return character.root.position.distanceTo(character.target) > 0.2;
     }
 
-    interactionApproachPoint(object, attempt = 0, preferredDistance = null) {
+    interactionApproachPoint(object, attempt = 0, preferredDistance = null, pathBudget = null) {
       const anchor = object.userData.worldAnchor || object;
       const anchorPosition = this.interactionWorldPosition(object) || anchor.position;
       const colliderRadius = Number(object.userData.interactionRadius);
@@ -2656,7 +2667,10 @@
       const preferredTolerance = preferred === 3 && this.missionFaunaResultTags(object).some((tag) =>
         ["calm_nearby", "temporal_contrast", "familiar_encounter"].includes(tag)
       ) ? 0.18 : 0.8;
-      const interactionDistance = normalApproachDistance + 0.48;
+      // Le point final reste dans la portée même lorsque le contrôleur
+      // s'arrête à stopRadius du but. La portée fonctionnelle ne change pas.
+      const interactionDistance = normalApproachDistance + 0.48 -
+        Math.max(0.04, Number(this.character.stopRadius) || 0.12) - 0.03;
       const fromResource = this.character.root.position.clone()
         .sub(anchorPosition);
       fromResource.y = 0;
@@ -2698,7 +2712,7 @@
         ? preferred + 0.8
         : interactionDistance;
       const blockerPadding = 0.12;
-      const maxPathPlans = 12;
+      const maxPathPlans = Math.min(12, pathBudget ? Math.max(0, Number(pathBudget.remaining) || 0) : 12);
       let pathPlans = 0;
 
       const horizontalDistanceToAnchor = (point) => Math.hypot(
@@ -2757,6 +2771,7 @@
         if (!pointIsClear(point)) return null;
 
         pathPlans += 1;
+        if (pathBudget) pathBudget.remaining = Math.max(0, pathBudget.remaining - 1);
         const path = this.character.pathPlanner.plan(
           this.character.root.position,
           point,

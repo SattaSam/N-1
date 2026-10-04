@@ -63,6 +63,7 @@
     },
     journalNarrative: {
       themes: {},
+      missionThoughts: [],
       mood: null,
       pastThoughts: []
     },
@@ -96,12 +97,17 @@
         ...base.journalNarrative,
         ...(saved.journalNarrative || {}),
         themes: { ...(saved.journalNarrative?.themes || {}) },
+        missionThoughts: [...new Map([
+          ...(saved.journalNarrative?.missionThoughts || []),
+          ...(saved.journal || []).filter((entry) => entry?.type === "bible")
+        ].map((entry) => [entry.id, entry])).values()].slice(-64),
         pastThoughts: Array.isArray(saved.journalNarrative?.pastThoughts)
           ? saved.journalNarrative.pastThoughts.slice(-6)
           : []
       },
       journal: Array.isArray(saved.journal)
-        ? saved.journal.slice(-MAX_JOURNAL_ENTRIES)
+        ? saved.journal.filter((entry) => entry?.type !== "bible" &&
+          entry?.text !== "mission-interaction-refused").slice(-MAX_JOURNAL_ENTRIES)
         : [],
       processedEventIds: Array.isArray(saved.processedEventIds)
         ? saved.processedEventIds.slice(-MAX_PROCESSED_IDS)
@@ -459,7 +465,9 @@
     }
 
     applyJournal(event) {
-      const label = event.detail?.label || event.detail?.name || event.objectId || event.family || "objet inconnu";
+      const definition = BF.ObjectLibrary?.getById?.(event.objectId) ||
+        BF.ObjectLibrary?.get?.(event.detail?.cuoType || event.family);
+      const label = definition?.label || event.detail?.label || event.detail?.name || "un élément du terrain";
       const verbs = {
         RESOURCE_COLLECTED: "Ressource collectée",
         RESOURCE_EXTRACTED: "Ressource extraite",
@@ -484,7 +492,9 @@
     }
 
     addJournalEntry(entry) {
-      if (!entry?.id || this.state.journal.some((item) => item.id === entry.id)) {
+      if (!entry?.id || !entry.text || entry.text === "mission-interaction-refused" ||
+          this.state.journal.some((item) => item.id === entry.id) ||
+          this.state.journalNarrative?.missionThoughts?.some((item) => item.id === entry.id)) {
         return false;
       }
       const normalized = {
@@ -497,8 +507,17 @@
         zoneId: entry.zoneId ?? null,
         important: Boolean(entry.important)
       };
-      this.state.journal.push(normalized);
-      this.state.journal = this.state.journal.slice(-MAX_JOURNAL_ENTRIES);
+      if (normalized.type === "bible") {
+        const narrative = this.state.journalNarrative;
+        narrative.missionThoughts = [...(narrative.missionThoughts || []), normalized].slice(-64);
+      } else {
+        // Une bulle Bible passe aussi par onAction : une seule trace lisible.
+        const previous = this.state.journal.at(-1);
+        if (previous?.text === normalized.text && normalized.at - previous.at < 1000 &&
+            (previous.type === "dialogue" || normalized.type === "dialogue")) return false;
+        this.state.journal.push(normalized);
+        this.state.journal = this.state.journal.slice(-MAX_JOURNAL_ENTRIES);
+      }
       this.save();
       global.dispatchEvent(new CustomEvent("bluefox:journal-entry", {
         detail: clone(normalized)
@@ -531,7 +550,7 @@
         const missionDelta = Math.max(0, Number(metrics.missions) - Number(previousMetrics.missions || 0));
         const psychologicalChanged = String(theme.psychologySignature || "") !==
           String(previous?.psychologySignature || "");
-        const significant = !previous || eventDelta >= 3 || scoreDelta >= 3 ||
+        const significant = !previous || previous.label !== theme.label || eventDelta >= 3 || scoreDelta >= 3 ||
           subjectDelta >= 2 || missionDelta >= 1 || psychologicalChanged;
         if (!significant) return;
         narrative.themes[id] = {

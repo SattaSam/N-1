@@ -1206,9 +1206,13 @@
                     : null;
                 })
                 .filter(Boolean)
-            : index > 0
-              ? [nodeIds[index - 1]]
-              : [];
+            : (() => {
+                // Une étape facultative ne verrouille jamais implicitement la suite.
+                // Les dépendances explicites restent intégralement souveraines.
+                let previous = index - 1;
+                while (previous >= 0 && steps[previous].optional === true) previous -= 1;
+                return previous >= 0 ? [nodeIds[previous]] : [];
+              })();
 
           return {
             id: nodeIds[index],

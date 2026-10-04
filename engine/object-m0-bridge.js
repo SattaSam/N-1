@@ -1474,7 +1474,9 @@
     candidates.sort((left, right) =>
       right.priority - left.priority || distance(left.object) - distance(right.object)
     );
-    const selected = candidates[0]?.object || null;
+    const selected = options.activatePassive === false
+      ? candidates[0]?.object || null
+      : physicallyApproachableTarget(engine, candidates.map((entry) => entry.object));
     if (selected && passiveSet.has(selected) && options.activatePassive !== false) {
       if (engine.__objectM0PassiveStudy !== selected) {
         releasePassiveMissionStudy(engine.__objectM0PassiveStudy);
@@ -1490,8 +1492,36 @@
   };
 
 
-  const selectAcquisitionTarget = (engine, action) =>
-    (engine.currentMap?.interactables || [])
+  const physicallyApproachableTarget = (engine, objects) => {
+    if (typeof engine.interactionApproachPoint !== "function") return objects[0] || null;
+    // Budget partagé pour la décision, jamais douze plans par objet ni par tick.
+    const budget = { remaining: 12 };
+    for (const [index, object] of objects.entries()) {
+      const cached = engine.__cachedInteractionApproach;
+      if (cached?.object === object && cached.mapId === engine.currentMapId &&
+          performance.now() - cached.at <= 1200 && Math.hypot(
+            engine.character.root.position.x - cached.originX,
+            engine.character.root.position.z - cached.originZ) <= 0.5) return object;
+      const tags = engine.missionFaunaResultTags?.(object) || [];
+      // Les paliers faune sont établis après la directive par WorldEngine.
+      const fauna = BF.FaunaRuntime?.isFaunaType?.(object.userData?.libraryType) === true ||
+        object.userData?.functional?.category === "fauna";
+      if (fauna || tags.length) return object;
+      // Réserver une part aux autres cibles conformes : la première ne peut
+      // pas consommer tout le budget lorsqu'elle est physiquement enfermée.
+      const share = { remaining: Math.max(1, Math.floor(
+        budget.remaining / (objects.length - index))) };
+      const allowance = share.remaining;
+      const approach = engine.interactionApproachPoint(object, 0, null, share);
+      budget.remaining -= allowance - share.remaining;
+      if (approach?.point) return object;
+      if (budget.remaining <= 0) break;
+    }
+    return null;
+  };
+
+  const selectAcquisitionTarget = (engine, action, options = {}) => {
+    const candidates = (engine.currentMap?.interactables || [])
       .filter((object) => {
         if (!object.userData.active) return false;
         const resolved = resolveMissionCandidate(object);
@@ -1523,7 +1553,10 @@
             engine.interactionWorldPosition(object)
           );
         return distance(left) - distance(right);
-      })[0] || null;
+      });
+    return options.probe === true ? candidates[0] || null
+      : physicallyApproachableTarget(engine, candidates);
+  };
 
   const probeMissionActionTarget = (engine, action) => {
     if (!engine || !action?.missionId || !action?.nodeId) return null;
@@ -1535,7 +1568,7 @@
     }
     const type = Missions.normalizeActionType(action.type);
     if ([Missions.ActionType.COLLECT, Missions.ActionType.EXTRACT].includes(type)) {
-      return selectAcquisitionTarget(engine, { ...action, type });
+      return selectAcquisitionTarget(engine, { ...action, type }, { probe: true });
     }
     if ([
       Missions.ActionType.OBSERVE,
@@ -1662,7 +1695,7 @@
           target.userData.missionId = null;
           clearAcquisitionTransaction(this.engine, target);
           target.userData.lastInteractionAt = performance.now();
-          this.engine.callbacks?.onAction?.("mission-interaction-refused");
+          this.engine.callbacks?.onStatus?.("BlueFox ne peut pas encore interagir avec cette cible.");
           return false;
         }
         return true;
@@ -1692,7 +1725,7 @@
             target.userData.missionNodeId = null;
             target.userData.missionId = null;
             target.userData.lastInteractionAt = performance.now();
-            this.engine.callbacks?.onAction?.("mission-interaction-refused");
+            this.engine.callbacks?.onStatus?.("BlueFox ne peut pas encore interagir avec cette cible.");
             return false;
           }
           return true;
@@ -2204,12 +2237,12 @@
       }
       object.userData.requestedInteraction = mode;
       const anchorPosition = this.interactionWorldPosition(object);
-      // Un décor passif n'a pas de hitbox d'interaction au pied : sa racine
-      // visuelle peut être élevée par la MSC. L'approche WorldEngine est au sol.
-      const distance = object.userData.missionPassiveStudy === true
-        ? Math.hypot(this.character.root.position.x - anchorPosition.x,
-          this.character.root.position.z - anchorPosition.z)
-        : this.character.root.position.distanceTo(anchorPosition);
+      // Même contrat terrestre que WorldEngine : la hauteur du pivot MSC
+      // n'augmente pas la distance au sol ni la portée fonctionnelle.
+      const distance = Math.hypot(
+        this.character.root.position.x - anchorPosition.x,
+        this.character.root.position.z - anchorPosition.z
+      );
       const interactionDistance = this.interactionValidationDistance(object);
       if (!this.interactionStartedAt && distance > interactionDistance) {
         if (this.interactionApproachNavigationActive?.()) {

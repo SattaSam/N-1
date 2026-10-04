@@ -844,7 +844,17 @@
         }
       }
       hitbox = makeHitbox(THREE, root, 1.85, 1.9, type);
-      colliders = [{ offset: new THREE.Vector3(), radius: 1.7 }];
+      // Conserver la portée fonctionnelle historique, indépendamment du
+      // découpage physique du mur en briques.
+      hitbox.userData.interactionRadius = 1.7;
+      // Volumes des briques réelles, transformés par le Spawner comme les
+      // meshes. Un disque central bouchait les côtés vides tout en laissant
+      // traverser les extrémités du mur. Chaque sphère contient sa brique,
+      // quelle que soit la rotation canonique de la MSC.
+      const brickRadius = Math.hypot(0.72, 0.42, 0.5) / 2;
+      colliders = root.children.filter((child) => child !== hitbox).map((block) => ({
+        offset: block.position.clone(), radius: brickRadius
+      }));
     } else if (type === "base_fire") {
       const wood = material(THREE, { color: 0x65412c, roughness: 0.96 });
       const ember = material(THREE, { color: 0xffa340, emissive: 0xff4c16, emissiveIntensity: 1.8, roughness: 0.42 });

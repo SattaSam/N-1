@@ -627,7 +627,9 @@
       const delta = this.target.clone().sub(this.root.position);
       delta.y = 0;
       let distance = delta.length();
-      while (distance < 0.42 && this.waypoints.length) {
+      while (distance < 0.42 && this.waypoints.length &&
+        this.pathPlanner.lineIsClear(this.root.position, this.waypoints[0],
+          this.colliders, this.radius, 0)) {
         this.target.copy(this.waypoints.shift());
         this.lastDistance = Infinity;
         delta.copy(this.target).sub(this.root.position);
@@ -653,7 +655,13 @@
 
       if (moving) {
         this.desiredDirection.copy(delta).normalize();
-        for (const collider of this.colliders) {
+        // Un segment du chemin déjà libre n'a pas à être dévié par les
+        // répulsions locales : plusieurs briques d'un même mur s'additionnaient
+        // jusqu'à repousser BlueFox hors d'une approche pourtant valide.
+        const clearSegment = this.pathPlanner.lineIsClear(
+          this.root.position, this.target, this.colliders, this.radius, 0
+        );
+        for (const collider of clearSegment ? [] : this.colliders) {
           const relative = collider.position.clone().sub(this.root.position);
           relative.y = 0;
           const forwardDistance = relative.dot(this.desiredDirection);
@@ -694,7 +702,11 @@
           movementSpeed * (playerSprint ? 1.3 : 1) * arrival;
         const lambda = desiredSpeed > this.speed ? this.acceleration : this.deceleration;
         this.speed = BF.damp(this.speed, desiredSpeed, lambda, dt);
-        this.velocity.lerp(this.desiredDirection, 1 - Math.exp(-7 * dt)).normalize();
+        this.velocity.lerp(this.desiredDirection, 1 - Math.exp(-7 * dt));
+        // À cadence normale, normaliser chaque mélange de deux directions
+        // opposées annulait le demi-tour. Laisser le vecteur ralentir et
+        // franchir zéro permet aussi au retrait physique de changer de sens.
+        if (this.velocity.dot(this.desiredDirection) >= 0) this.velocity.normalize();
 
         const previous = this.root.position.clone();
         const proposed = previous.clone().addScaledVector(
@@ -712,18 +724,22 @@
         }
         this.root.position.copy(proposed);
         const remainingDistance = this.root.position.distanceTo(this.target);
+        // La décélération d'arrivée réduit volontairement le déplacement ;
+        // le seuil de blocage suit le pas demandé au lieu d'exiger 2 mm/tick.
+        const progressThreshold = Math.max(0.000001,
+          Math.min(distance, this.speed * dt, this.maxFrameTravel) * 0.1);
         const madeProgress =
-          actualTravel > 0.003 &&
+          actualTravel > 0.000001 &&
           (
             !Number.isFinite(this.lastDistance) ||
-            remainingDistance < this.lastDistance - 0.002
+            remainingDistance < this.lastDistance - progressThreshold
           );
         let replanned = false;
         if (madeProgress) {
           this.lastSafePosition.copy(this.root.position);
           this.stuckTime = 0;
           if (actualTravel > 0.025) this.failedReplans = 0;
-        } else if (distance > 0.7) {
+        } else if (distance > this.stopRadius + 0.02) {
           this.stuckTime += dt;
           if (this.stuckTime > 1.2) {
             this.failedReplans += 1;
