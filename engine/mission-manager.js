@@ -1129,13 +1129,21 @@
         ? this.engine.discoveredMaps
         : new Set([currentMapId]);
       if (discovered.has(target)) return null;
-      const exits = BF.maps?.[currentMapId]?.exits || {};
-      for (const direction of ["north", "east", "south", "west"]) {
-        if (String(exits?.[direction]?.targetMap || "") === target) {
-          return { targetMapId: target, direction, frontierMapId: currentMapId };
+      let nearest = null;
+      for (const frontierMapId of [currentMapId, ...discovered]) {
+        const route = frontierMapId === currentMapId
+          ? [currentMapId]
+          : this.engine?.findKnownRoute?.(currentMapId, frontierMapId);
+        if (!Array.isArray(route) || !route.length) continue;
+        const exits = BF.maps?.[frontierMapId]?.exits || {};
+        for (const direction of ["north", "east", "south", "west"]) {
+          if (String(exits?.[direction]?.targetMap || "") !== target) continue;
+          if (!nearest || route.length < nearest.route.length) {
+            nearest = { targetMapId: target, direction, frontierMapId, route };
+          }
         }
       }
-      return null;
+      return nearest;
     }
 
     generatedMissionTargetProvenance(missionId, targetMapId) {
@@ -2681,12 +2689,21 @@
       const undiscoveredAdjacent = this.missionUndiscoveredAdjacentTarget(targetMapId);
       if (undiscoveredAdjacent) {
         if (typeof this.engine?.handleNavigationSuggestion !== "function") return false;
-        this.engine.handleNavigationSuggestion({
-          discoverUnknown: true,
-          direction: undiscoveredAdjacent.direction,
-          source: "mission",
-          missionId: travel.missionId
-        });
+        // L'intention conserve la destination causale ; seul le trajet immédiat
+        // vise sa frontière connue, avant de franchir la sortie déjà générée.
+        this.engine.handleNavigationSuggestion(undiscoveredAdjacent.frontierMapId === currentMapId
+          ? {
+            discoverUnknown: true,
+            direction: undiscoveredAdjacent.direction,
+            source: "mission",
+            missionId: travel.missionId
+          }
+          : {
+            mapId: undiscoveredAdjacent.frontierMapId,
+            source: "mission",
+            missionId: travel.missionId,
+            allowTeleportOptimization: false
+          });
         return true;
       }
 

@@ -3091,6 +3091,8 @@
 
     canInteractWith(object, now = performance.now()) {
       if (!object?.userData?.active) return false;
+      const autonomousInteraction = BF.resolveObjectInteraction?.(object, { source: "autonomy" });
+      if (autonomousInteraction && !autonomousInteraction.action) return false;
       const last = Number(object.userData.lastInteractionAt || 0);
       const profile = this.interactionProfile(object);
       if (!profile.action) return false;

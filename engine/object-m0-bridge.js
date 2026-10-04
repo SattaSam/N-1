@@ -99,7 +99,17 @@
     return state.acquisitionObservationSatisfied !== true;
   };
 
-  const resolveManualAction = (resolved) => {
+  const autonomouslyKnown = (resolved) => {
+    const state = interactionState(resolved);
+    const discoveries = BF.progression?.state?.discoveries;
+    return Boolean(state.observed || state.inspected || state.analyzed || state.identified ||
+      Number(state.observationCount || 0) || Number(state.inspectionCount || 0) ||
+      Number(state.analysisCount || 0) ||
+      discoveries?.objects?.[resolved.definition?.id] ||
+      discoveries?.instances?.[resolved.data?.instanceId || resolved.rootData?.instanceId]);
+  };
+
+  const resolveManualAction = (resolved, source = "manual") => {
     const { definition } = resolved;
     if (!definition) return null;
     const state = interactionState(resolved);
@@ -109,6 +119,11 @@
       Number(state.observationCount || 0) === 0 &&
       Number(state.inspectionCount || 0) === 0 &&
       Number(state.analysisCount || 0) === 0;
+    if (source === "autonomy" && autonomouslyKnown(resolved)) {
+      if (!caps.collectable) return null;
+      if (caps.requiresInspection && !state.inspected && !state.identified) return "inspect";
+      return acquisitionAction(definition);
+    }
     // La première rencontre d'un objet étudiable est toujours une observation
     // physique. Le geste d'acquisition CUO ne devient disponible qu'ensuite.
     if (
@@ -222,7 +237,7 @@
       null;
   };
 
-  const validateAction = (resolved, requested, missionRequested = false) => {
+  const validateAction = (resolved, requested, missionRequested = false, source = "manual") => {
     const caps = capabilities(resolved.definition);
     const state = interactionState(resolved);
     const allowed = new Set(resolved.definition?.interaction?.actions || []);
@@ -234,6 +249,7 @@
         Number(state.inspectionCount || 0) === 0 &&
         Number(state.analysisCount || 0) === 0;
       if (
+        !(source === "autonomy" && !missionRequested && autonomouslyKnown(resolved)) &&
         (neverStudied || acquisitionObservationDue(resolved.definition, state)) &&
         canStudy(resolved.definition)
       ) return "observe";
@@ -253,6 +269,11 @@
     if (missionRequested && ["observe", "inspect", "analyze"].includes(requested)) {
       const passiveMissionStudy = resolved?.object?.userData?.missionPassiveStudy === true;
       return canStudy(resolved.definition) || passiveMissionStudy ? requested : null;
+    }
+    if (source === "autonomy" && !missionRequested && autonomouslyKnown(resolved)) {
+      // Une inspection imposée par le contrat d'acquisition reste nécessaire.
+      return requested === "inspect" && caps.collectable && caps.requiresInspection
+        ? "inspect" : null;
     }
     if (requested === "analyze") return caps.analyzable ? "analyze" : null;
     if (requested === "inspect") return caps.inspectable ? "inspect" : null;
@@ -1372,6 +1393,9 @@
     const missionNode = engine?.missionManager?.trees
       ?.get?.(action?.missionId)
       ?.find?.(action?.nodeId) || null;
+    if (missionNode?.params?.biblePattern === "CONTEXT_MSC") {
+      return BF.selectContextMissionTarget?.(engine, action) || null;
+    }
     if (!isGenericObjectStudyNode(missionNode)) return null;
 
     const passiveObjects = passiveMissionSceneObjects(engine, action, {
@@ -1991,18 +2015,20 @@
       const missionRequested =
         object.userData.requestedInteractionSource === "mission";
 
+      const interactionSource = object.userData.requestedInteractionSource || "manual";
       const requestedStep = directive
         ? "observe"
         : missionRequested
-          ? (incomingRequested || resolveManualAction(resolved))
+          ? (incomingRequested || resolveManualAction(resolved, interactionSource))
           : hasAcquisitionIntent
-            ? resolveManualAction(resolved)
-            : (incomingRequested || resolveManualAction(resolved));
+            ? resolveManualAction(resolved, interactionSource)
+            : (incomingRequested || resolveManualAction(resolved, interactionSource));
 
       const mode = validateAction(
         resolved,
         requestedStep,
-        missionRequested
+        missionRequested,
+        interactionSource
       );
 
       if (hasAcquisitionIntent && mode) {
@@ -2111,7 +2137,8 @@
       const mode = validateAction(
         resolved,
         object.userData.requestedInteraction,
-        object.userData.requestedInteractionSource === "mission"
+        object.userData.requestedInteractionSource === "mission",
+        object.userData.requestedInteractionSource || "manual"
       );
       if (!mode) {
         this.callbacks.onStatus("Cette interaction n'est pas autorisée par le catalogue d'objets.");
@@ -2450,13 +2477,13 @@
     return { ...installed };
   };
 
-  BF.resolveObjectInteraction = (object) => {
+  BF.resolveObjectInteraction = (object, options = {}) => {
     const resolved = resolveObject(object);
     return {
       definitionId: resolved.definition?.id || null,
       type: resolved.definition?.type || null,
       label: resolved.definition?.label || null,
-      action: resolveManualAction(resolved),
+      action: resolveManualAction(resolved, options.source || "manual"),
       capabilities: capabilities(resolved.definition),
       state: resolved.definition ? { ...interactionState(resolved) } : null
     };

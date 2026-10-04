@@ -57,6 +57,22 @@
     return true;
   };
 
+  const contextIdentity = (node, detail) => {
+    const distinctBy = String(node.params?.distinctBy || "microSceneInstance").trim();
+    let identity = null;
+    if (distinctBy === "microSceneId") {
+      identity = String(detail.microSceneId);
+    } else if (distinctBy === "mapId") {
+      identity = `${detail.mapId || ""}:${detail.microSceneId}`;
+    } else {
+      identity =
+        String(detail.microSceneInstanceId || detail.instanceRootId || "") ||
+        `${detail.mapId || ""}:${detail.microSceneId}`;
+    }
+
+    return identity;
+  };
+
   const progressContextMissions = (detail = {}, options = {}) => {
     const manager = BF.currentEngine?.missionManager;
     if (!manager?.trees?.size || !detail.microSceneId) return 0;
@@ -76,17 +92,7 @@
         if (node.params?.biblePattern !== "CONTEXT_MSC") return;
         if (!contextMatches(node, detail)) return;
 
-        const distinctBy = String(node.params?.distinctBy || "microSceneInstance").trim();
-        let identity = null;
-        if (distinctBy === "microSceneId") {
-          identity = String(detail.microSceneId);
-        } else if (distinctBy === "mapId") {
-          identity = `${detail.mapId || ""}:${detail.microSceneId}`;
-        } else {
-          identity =
-            String(detail.microSceneInstanceId || detail.instanceRootId || "") ||
-            `${detail.mapId || ""}:${detail.microSceneId}`;
-        }
+        const identity = contextIdentity(node, detail);
 
         const progressed = identity
           ? node.incrementDistinct?.(identity, 1)
@@ -271,6 +277,40 @@
     return true;
   };
 
+  const selectContextMissionTarget = (engine, action) => {
+    const manager = engine?.missionManager;
+    const tree = manager?.trees?.get?.(action?.missionId);
+    const node = tree?.find?.(action?.nodeId);
+    if (!node || node.isComplete || node.params?.biblePattern !== "CONTEXT_MSC" ||
+        node.params?.eventDriven === true || node.params?.catalogManaged === true ||
+        !tree.availableLeaves().includes(node)) return null;
+    const mapId = String(engine.currentMapId || "");
+    if (node.params?.mapId && String(node.params.mapId) !== mapId) return null;
+    const factKey = String(node.params?.requiredMapFact || "");
+    if (factKey) {
+      const fact = manager.memory?.getFact?.(factKey, null);
+      const expected = fact?.[node.params.requiredMapField || "mapId"];
+      if (!expected || String(expected) !== mapId) return null;
+    }
+    const candidates = (engine.currentMap?.interactables || []).filter((object) => {
+      if (!object?.userData?.active) return false;
+      const interaction = BF.resolveObjectInteraction?.(object);
+      const caps = interaction?.capabilities;
+      if (!caps || !(caps.observable || caps.inspectable || caps.analyzable)) return false;
+      const context = BF.ObjectEvents?.siteContext?.(object, { mapId });
+      const detail = describeMSCEvent({ ...context, mapId, detail: context }) ||
+        describeMSCObject(object, { mapId });
+      return detail && contextMatches(node, detail) &&
+        !node.hasDistinctValue?.(contextIdentity(node, detail));
+    });
+    const origin = engine.character?.root?.position;
+    if (origin) candidates.sort((a, b) =>
+      engine.interactionWorldPosition(a).distanceToSquared(origin) -
+      engine.interactionWorldPosition(b).distanceToSquared(origin));
+    return candidates[0] || null;
+  };
+
+  BF.selectContextMissionTarget = selectContextMissionTarget;
   BF.progressContextMSCMissions = progressContextMissions;
   BF.scanContextMSC = scanCurrentMap;
   BF.installContextMSCBridge = install;
