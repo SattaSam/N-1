@@ -114,18 +114,22 @@
   const regionForPoint = (built, point) =>
     (built?.walkableRegions || []).find((region) => pointInside(region, point, 0)) || null;
 
-  const occupiedMicroSceneRegionKeys = (built) => {
-    const used = new Set();
+  const microSceneRegionOccupancy = (built) => {
+    const counts = new Map();
     const scenes = built?.group?.userData?.microScenes || [];
     scenes.forEach((scene) => {
-      const root = scene?.instanceRoot;
-      const point = root?.position || scene?.anchor || null;
-      const region = point ? regionForPoint(built, point) : null;
-      const key = regionKey(region);
-      if (key) used.add(key);
+      const root = scene?.instanceRoot || scene?.records?.[0]?.root || null;
+      const point = root?.getWorldPosition && root.position?.clone
+        ? root.getWorldPosition(root.position.clone())
+        : scene?.anchor || root?.position || null;
+      const key = regionKey(point ? regionForPoint(built, point) : null);
+      if (key) counts.set(key, (counts.get(key) || 0) + 1);
     });
-    return used;
+    return counts;
   };
+
+  const occupiedMicroSceneRegionKeys = (built) =>
+    new Set(microSceneRegionOccupancy(built).keys());
 
   const clearOfColliders = (built, point, clearance) =>
     (built.colliders || []).every((collider) => {
@@ -152,6 +156,7 @@
   const candidatePoints = (built, definition, radius = 7) => {
     const entry = definition.entry || { x: 0, z: 0 };
     const margin = Math.max(2, radius + 1.5);
+    const occupancy = microSceneRegionOccupancy(built);
 
     const regions = (built.walkableRegions || [])
       .filter((region) =>
@@ -164,6 +169,8 @@
         cz: (Number(region.minZ) + Number(region.maxZ)) / 2
       }))
       .sort((a, b) =>
+        (occupancy.get(regionKey(a.region)) || 0) -
+        (occupancy.get(regionKey(b.region)) || 0) ||
         Math.hypot(b.cx - (entry.x || 0), b.cz - (entry.z || 0)) -
         Math.hypot(a.cx - (entry.x || 0), a.cz - (entry.z || 0))
       );
@@ -191,19 +198,20 @@
   ) => {
     const margin = Math.max(2, radius + 1.5);
     const regions = built.walkableRegions || [];
+    const excluded = excludedRegionKeys instanceof Set
+      ? excludedRegionKeys
+      : new Set(excludedRegionKeys || []);
 
     if (
       preferred &&
-      regions.some((region) => pointInside(region, preferred, margin)) &&
+      regions.some((region) => pointInside(region, preferred, margin) &&
+        (!requireUnusedRegion || !excluded.has(regionKey(region)))) &&
       clearOfColliders(built, preferred, margin) &&
       clearOfReserved(definition, preferred, margin)
     ) {
       return { x: preferred.x, y: Number(preferred.y) || 0, z: preferred.z };
     }
 
-    const excluded = excludedRegionKeys instanceof Set
-      ? excludedRegionKeys
-      : new Set(excludedRegionKeys || []);
     const candidate = candidatePoints(built, definition, radius).find(({ region, point }) =>
       (!requireUnusedRegion || !excluded.has(regionKey(region))) &&
       pointInside(region, point, margin) &&
@@ -224,11 +232,14 @@
     const excluded = excludedRegionKeys instanceof Set
       ? excludedRegionKeys
       : new Set(excludedRegionKeys || []);
+    const occupancy = microSceneRegionOccupancy(built);
     const regions = (built.walkableRegions || []).filter((region) =>
       Number(region.maxX) - Number(region.minX) >= 4 &&
       Number(region.maxZ) - Number(region.minZ) >= 4 &&
       (!requireUnusedRegion || !excluded.has(regionKey(region)))
-    );
+    ).sort((a, b) =>
+      (occupancy.get(regionKey(a)) || 0) -
+      (occupancy.get(regionKey(b)) || 0));
     const candidates = [];
     if (preferred) candidates.push({ point: preferred, preferred: true });
     regions.forEach((region) => {
@@ -312,6 +323,7 @@
       Number(region.maxZ) > Number(region.minZ) &&
       (!requireUnusedRegion || !excluded.has(regionKey(region)))
     );
+    if (requireUnusedRegion && !regions.length) return null;
     const candidates = missionFallbackCandidates(
       built,
       definition,
@@ -412,68 +424,33 @@
 
     const radius = Math.max(1, Number(template.radius) || Number(record.radius) || 7);
     const preferred = record.anchor || null;
-    const occupiedRegions = preferred || record.fixedAnchor === true
-      ? new Set()
-      : occupiedMicroSceneRegionKeys(built);
-    let anchor = record.fixedAnchor === true
-      ? preferred && {
-          x: Number(preferred.x) || 0,
-          y: Number(preferred.y) || 0,
-          z: Number(preferred.z) || 0
+    const pinnedAnchor = record.fixedAnchor === true || Boolean(record.resolvedAt);
+    const occupiedRegions = pinnedAnchor ? new Set() : occupiedMicroSceneRegionKeys(built);
+    // Une occurrence résolue ou explicitement ancrée garde sa destination.
+    // Pour une nouvelle MSC, épuiser les placements sur plateaux libres avant
+    // de revenir aux plateaux occupés, y compris dans les secours missionnels.
+    let anchor = pinnedAnchor && preferred ? normalizePoint(preferred) : null;
+    if (!anchor && record.fixedAnchor !== true) {
+      const passes = occupiedRegions.size ? [true, false] : [false];
+      for (const requireUnused of passes) {
+        anchor = findSafeAnchor(built, definition, radius, preferred,
+          occupiedRegions, requireUnused);
+        if (!anchor && record.missionId) {
+          anchor = findMissionFallbackAnchor(built, definition, null,
+            occupiedRegions, requireUnused);
+          if (anchor) console.warn("[BlueFox] Placement de secours utilisé pour une micro-scène missionnelle persistante.", {
+            mapId: definition.id, missionId: record.missionId, microSceneId: record.microSceneId
+          });
         }
-      : findSafeAnchor(
-          built,
-          definition,
-          radius,
-          preferred,
-          occupiedRegions,
-          occupiedRegions.size > 0
-        );
-
-    // Répartition d'abord : si plusieurs plateaux sont disponibles, une MSC
-    // nouvelle évite ceux déjà occupés. Si aucun placement sûr n'existe sur un
-    // plateau libre, on conserve ensuite le comportement historique.
-    if (!anchor && record.fixedAnchor !== true && occupiedRegions.size) {
-      anchor = findSafeAnchor(built, definition, radius, preferred);
-    }
-
-    if (!anchor && record.missionId && record.fixedAnchor !== true) {
-      anchor = findMissionFallbackAnchor(
-        built,
-        definition,
-        preferred,
-        occupiedRegions,
-        occupiedRegions.size > 0
-      );
-      if (!anchor && occupiedRegions.size) {
-        anchor = findMissionFallbackAnchor(built, definition, preferred);
+        if (!anchor && record.missionId) {
+          anchor = findMissionTerminalAnchor(built, definition, null,
+            occupiedRegions, requireUnused);
+          if (anchor) console.warn("[BlueFox] Placement terminal utilisé pour garantir une micro-scène missionnelle persistante.", {
+            mapId: definition.id, missionId: record.missionId, microSceneId: record.microSceneId, anchor
+          });
+        }
+        if (anchor) break;
       }
-      if (anchor) {
-        console.warn("[BlueFox] Placement de secours utilisé pour une micro-scène missionnelle persistante.", {
-          mapId: definition.id,
-          missionId: record.missionId,
-          microSceneId: record.microSceneId
-        });
-      }
-    }
-
-    if (!anchor && record.missionId && record.fixedAnchor !== true) {
-      anchor = findMissionTerminalAnchor(
-        built,
-        definition,
-        preferred,
-        occupiedRegions,
-        occupiedRegions.size > 0
-      );
-      if (!anchor && occupiedRegions.size) {
-        anchor = findMissionTerminalAnchor(built, definition, preferred);
-      }
-      console.warn("[BlueFox] Placement terminal utilisé pour garantir une micro-scène missionnelle persistante.", {
-        mapId: definition.id,
-        missionId: record.missionId,
-        microSceneId: record.microSceneId,
-        anchor
-      });
     }
 
     if (!anchor) {
@@ -603,6 +580,13 @@
       record = normalized;
       records.push(record);
     } else {
+      // Une prescription réaffirmée sans nouvel ancrage ne déplace pas une
+      // occurrence déjà résolue lors de la génération ou du placement joueur.
+      if (record.resolvedAt && record.anchor && !normalized.anchor) {
+        normalized.anchor = clone(record.anchor);
+        normalized.rotation = Number(record.rotation) || 0;
+        normalized.fixedAnchor = record.fixedAnchor === true;
+      }
       Object.assign(record, normalized, {
         createdAt: record.createdAt || normalized.createdAt
       });

@@ -724,7 +724,7 @@
     object?.userData?.worldAnchor?.position || object?.position || null;
 
   const directDistance = (engine, object) => {
-    const point = targetPosition(object);
+    const point = engine?.interactionWorldPosition?.(object) || targetPosition(object);
     return point && engine?.character?.root?.position
       ? engine.character.root.position.distanceTo(point)
       : Infinity;
@@ -834,11 +834,11 @@
     };
   };
 
-  const routeCost = (engine, object) => {
+  const routeCost = (engine, object, requireApproach = false) => {
     try {
       const approach = engine.interactionApproachPoint?.(object);
       const point = approach?.point || approach?.position || null;
-      if (!point) return directDistance(engine, object);
+      if (!point) return requireApproach ? Infinity : directDistance(engine, object);
       if (Number.isFinite(Number(approach?.pathLength))) {
         return Number(approach.pathLength);
       }
@@ -846,7 +846,7 @@
         ? engine.character.root.position.distanceTo(point)
         : directDistance(engine, object);
     } catch (_) {
-      return directDistance(engine, object);
+      return requireApproach ? Infinity : directDistance(engine, object);
     }
   };
 
@@ -893,8 +893,9 @@
       .slice(0, TARGET_CANDIDATES)
       .map((entry) => ({
         ...entry,
-        cost: routeCost(engine, entry.object)
+        cost: routeCost(engine, entry.object, axis === "collection")
       }))
+      .filter((entry) => Number.isFinite(entry.cost))
       .sort((left, right) =>
         right.interestBand - left.interestBand ||
         left.cost - right.cost ||

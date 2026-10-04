@@ -207,16 +207,19 @@
             options.palette || this.palette,
             entry.variant || 0
           );
-          // ASTROLOGY est la chambre de téléportation : ses arches doivent être
-          // visuellement présentes mais traversables. L'exception reste locale
-          // à cette MSC ; ObjectLibrary conserve le contrat collider des arches
-          // partout ailleurs.
+          // Les arches d'ASTROLOGY restent traversables. Seuls les rôles
+          // d'observatoire déclarés conservent leur volume interactif ; le hub
+          // TP, les aperçus et les occurrences non qualifiées restent visuels.
+          const contextRole = String(options.contextRole ||
+            targetScene?.userData?.contextRole || "");
+          const observatory = ["archAncientObservatory", "archAncientSkyMap"]
+            .includes(contextRole);
           if (
             template.id === "MSC-CUSTOM-ASTROLOGY" &&
             entry.type === "arch"
           ) {
             if (Array.isArray(instance.colliders)) instance.colliders.length = 0;
-            if (instance.hitbox) {
+            if (instance.hitbox && !observatory) {
               instance.hitbox.removeFromParent?.();
               instance.hitbox = null;
             }

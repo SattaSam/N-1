@@ -1236,6 +1236,7 @@
       }
       return String(event?.instanceId || "");
     }
+    if (mode === "cuoType") return lower(eventMissionMetadata(event).cuoType);
     if (mode === "objectId") return String(event?.objectId || "").toLowerCase();
     if (mode === "mapId") return String(event?.mapId || "");
     if (mode === "family") {
@@ -1257,6 +1258,7 @@
       }
       return identity.instanceId;
     }
+    if (mode === "cuoType") return identity.cuoType;
     if (mode === "objectId") return identity.objectId;
     if (mode === "mapId") return String(mapId || "");
     if (mode === "family") {
@@ -2583,6 +2585,22 @@
       capabilities: capabilities(resolved.definition),
       state: resolved.definition ? { ...interactionState(resolved) } : null
     };
+  };
+  // La mémoire géographique réutilise le matching du propriétaire CUO. Une
+  // destination connue n'est pas une interaction ni un crédit missionnel.
+  BF.matchesKnownMissionObject = (tree, node, known) => {
+    const definition = BF.ObjectLibrary?.getById?.(known?.objectId) ||
+      BF.ObjectLibrary?.getById?.(String(known?.objectId || "").toUpperCase());
+    if (!definition || !tree || !node) return false;
+    const metadata = {
+      ...definitionMissionMetadata(definition),
+      microSceneId: known.microSceneId || null,
+      persistentMicroSceneId: known.persistentMicroSceneId || null
+    };
+    return metadataMatchesMissionCriteria(metadata, studyTargetCriteria(node.params || {}),
+      { skipSubject: true }) && matchesStudySubject(definition, node.params?.subject) &&
+      relationMatches(tree, node, relationEvidence(metadata, known.mapId,
+        known.instanceId, known.persistentMicroSceneId));
   };
   BF.probeMissionActionTarget = probeMissionActionTarget;
   BF.isScoutMissionTarget = isScoutMissionTarget;

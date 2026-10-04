@@ -206,14 +206,30 @@
     const targetScenes = existingConfigured > zones.length * 3
       ? existingConfigured
       : Math.max(existingConfigured, regularLimit);
+    const sceneCountsByZone = () => {
+      const counts = zones.map(() => 0);
+      const indexed = new Set();
+      (this.microSceneInstances || []).forEach((scene) => {
+        const root = scene.instanceRoot || scene.records?.[0]?.root;
+        const point = root?.getWorldPosition?.(new this.THREE.Vector3()) || scene.anchor;
+        if (!point) return;
+        counts[nearestZoneIndex(zones, point)] += 1;
+        if (scene.instanceId) indexed.add(String(scene.instanceId));
+      });
+      // Les ancrages persistants sont déjà réservés même avant leur instanciation.
+      (options.definition?.persistentMicroScenes || []).forEach((scene) => {
+        if (scene.persistent === false || !scene.anchor || indexed.has(String(scene.instanceId))) return;
+        counts[nearestZoneIndex(zones, scene.anchor)] += 1;
+      });
+      return counts;
+    };
     const sceneQuota = zones.map(() => 0);
-    for (let i = 0; i < targetScenes; i += 1) sceneQuota[i % zones.length] += 1;
 
-    const occupied = this.instances.map((record) => ({
-      x: record.root?.position.x ?? record.position.x,
-      z: record.root?.position.z ?? record.position.z,
-      radius: BF.ObjectLibrary.getMapPlacement(record.type)?.radius || 1
-    }));
+    const occupied = this.instances.map((record) => {
+      const point = record.root?.getWorldPosition?.(new this.THREE.Vector3()) || record.position;
+      return { x: point.x, z: point.z,
+        radius: BF.ObjectLibrary.getMapPlacement(record.type)?.radius || 1 };
+    });
     const protectedPoints = [
       options.definition?.entry,
       ...Object.values(options.resolvedExits || {})
@@ -241,7 +257,9 @@
 
     const findDeterministicOrigin = (radius, ignoreOccupied = false) => {
       const distances = [18, 20, 22, Math.max(12, 24 - radius)];
-      for (let zoneIndex = 0; zoneIndex < zones.length; zoneIndex += 1) {
+      const counts = sceneCountsByZone();
+      const ordered = zones.map((_, index) => index).sort((a, b) => counts[a] - counts[b] || a - b);
+      for (const zoneIndex of ordered) {
         const zone = zones[zoneIndex];
         for (const distance of distances) {
           for (let step = 0; step < 48; step += 1) {
@@ -266,9 +284,14 @@
       const scene = BF.MicroScenes?.get?.(sceneId);
       if (!scene) return false;
       const radius = Math.min(Math.max(1, Number(scene.radius) || 6), 11);
-      const preferredZone = zones[preferredZoneIndex % zones.length];
+      const counts = sceneCountsByZone();
+      const preferred = preferredZoneIndex % zones.length;
+      const ordered = zones.map((_, index) => index).sort((a, b) =>
+        counts[a] - counts[b] || (a === preferred ? -1 : b === preferred ? 1 : a - b));
+      const resolvedPreferred = ordered[0];
+      const preferredZone = zones[resolvedPreferred];
       let origin = preferredZone ? findZoneEdgeOrigin(preferredZone, radius) : null;
-      let resolvedZoneIndex = preferredZoneIndex % zones.length;
+      let resolvedZoneIndex = resolvedPreferred;
       if (!origin) {
         const deterministic = findDeterministicOrigin(radius, false);
         origin = deterministic?.origin || null;
@@ -365,6 +388,13 @@
       spawnGuaranteedScene("MSC-SUSPENDED-ISLAND-001", 0, "biome-signature", true);
     }
 
+    const initialScenes = sceneCountsByZone();
+    for (let i = 0; i < targetScenes; i += 1) {
+      const index = zones.map((_, index) => index).sort((a, b) =>
+        initialScenes[a] + sceneQuota[a] - initialScenes[b] - sceneQuota[b] || a - b)[0];
+      sceneQuota[index] += 1;
+    }
+
     zones.forEach((zone, zoneIndex) => {
       let previousSceneId = "";
       for (let sceneIndex = 0; sceneIndex < sceneQuota[zoneIndex]; sceneIndex += 1) {
@@ -375,6 +405,7 @@
         if (!origin) continue;
         const rotation = random() * Math.PI * 2;
         const cos = Math.cos(rotation), sin = Math.sin(rotation);
+        const decorativeRecords = [];
         scene.objects.forEach(([type, ox, oz, variant]) => {
           if (!BF.ObjectLibrary.get(type)) return;
           const x = origin.x + ox * cos - oz * sin;
@@ -388,6 +419,7 @@
             source: `decorative-microscene:${scene.id}`
           });
           if (!record) return;
+          decorativeRecords.push(record);
           record.root.userData.microScene = scene.id;
           record.root.userData.outsideObjectBudget = true;
           occupied.push({ x, z, radius });
@@ -403,6 +435,11 @@
             options.animatedObjects?.push({ root: record.root, type, phase: animationPhase });
           }
         });
+        if (decorativeRecords.length) {
+          this.registerMicroSceneInstance(scene, decorativeRecords, {
+            instanceId: `${options.definition.id}:decorative:${zoneIndex}:${sceneIndex}`
+          });
+        }
         previousSceneId = scene.id;
         zoneStats[zoneIndex].scenes += 1;
       }

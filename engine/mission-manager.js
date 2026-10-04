@@ -1249,6 +1249,9 @@
             .filter(Boolean)
         )];
       }
+      if (derivedFromMissionWork && merged.sourceNodeId) {
+        criteria.sourceNodeId = String(merged.sourceNodeId);
+      }
       const minKnownInstances = Number(merged.minKnownInstances);
       if (Number.isFinite(minKnownInstances) && minKnownInstances > 0) {
         criteria.minKnownInstances = Math.max(1, Math.floor(minKnownInstances));
@@ -1262,7 +1265,8 @@
       const sameBy = Array.isArray(relation?.sameBy)
         ? relation.sameBy.map(String)
         : [];
-      if (!tree || !fromSlot || !sameBy.includes("instanceId")) return null;
+      if (!tree || !fromSlot ||
+        !sameBy.some((field) => ["instanceId", "mapId"].includes(field))) return null;
 
       const source = tree.findSequenceSlot
         ? tree.findSequenceSlot(fromSlot)
@@ -1279,7 +1283,7 @@
 
       const reference = [...evidences].reverse().find((evidence) =>
         String(evidence?.mapId || "").trim() &&
-        String(evidence?.instanceId || "").trim()
+        (!sameBy.includes("instanceId") || String(evidence?.instanceId || "").trim())
       );
       return reference
         ? { mapId: String(reference.mapId).trim() }
@@ -1339,6 +1343,14 @@
 
       const relationCriteria = this.missionRelationKnownMapCriteria(tree, node);
       if (relationCriteria?.mapId) criteria.mapId = relationCriteria.mapId;
+
+      const differentMaps = Array.isArray(params.relation?.differentBy) &&
+        params.relation.differentBy.includes("mapId");
+      if (differentMaps && tree) {
+        // L'identité du nœud permet au consommateur géographique de relire le
+        // contrat canonique et ses preuves ; aucune copie des règles relationnelles.
+        criteria.sourceNodeId = node.id;
+      }
 
       const subject = String(params.subject || "").trim();
       const distinctByObjectId =
@@ -1794,6 +1806,47 @@
             resourceCount: 0,
             familyCount: 0
           }));
+      }
+
+      const sourceNodeId = String(criteria.sourceNodeId || "");
+      const sourceTree = this.trees.get(String(travel?.missionId || ""));
+      const sourceNode = sourceTree?.find?.(sourceNodeId);
+      if (sourceNodeId) {
+        if (!sourceNode || typeof BF.matchesKnownMissionObject !== "function") return [];
+        const matchesKnownObject = (mapId, objectId, detail = {}) =>
+          BF.matchesKnownMissionObject(sourceTree, sourceNode, {
+            ...detail, mapId, objectId
+          });
+        // Une MSC connue apporte ses instances/contexte. Les objets de population
+        // viennent du même mapIndicators canonique déjà consommé pour les familles.
+        const matchingMaps = new Set();
+        const sites = typeof BF.getKnownSites === "function" ? BF.getKnownSites({}) : [];
+        sites.forEach((site) => {
+          if (!discovered.has(String(site.mapId))) return;
+          Object.entries(site.instances || {}).forEach(([instanceId, detail]) => {
+            if (matchesKnownObject(String(site.mapId), detail?.objectId, {
+              instanceId, microSceneId: site.microSceneId,
+              persistentMicroSceneId: site.siteId
+            })) matchingMaps.add(String(site.mapId));
+          });
+        });
+        [...discovered].map(String).forEach((mapId) => {
+          const bucket = BF.getMapProgressionIndicators?.(mapId);
+          Object.entries(bucket?.uniqueObjects || {}).forEach(([objectId]) => {
+            if (matchesKnownObject(mapId, objectId)) matchingMaps.add(mapId);
+          });
+        });
+        rawCandidates = rawCandidates.filter((entry) => matchingMaps.has(entry.mapId));
+        matchingMaps.forEach((mapId) => {
+          // Une preuve d'objet ne remplace pas un site/une MSC explicitement requis.
+          if (hasSemanticSiteCriteria) return;
+          if (criteria.mapId && criteria.mapId !== mapId) return;
+          if (criteria.biome && !this.mapMatchesKnownBiome(mapId, criteria.biome)) return;
+          if (!rawCandidates.some((entry) => entry.mapId === mapId)) {
+            rawCandidates.push({ mapId, siteId: null, microSceneId: null,
+              anchor: null, knownInstanceCount: 0, resourceCount: 0, familyCount: 0 });
+          }
+        });
       }
 
       const candidates = [];
