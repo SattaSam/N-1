@@ -91,6 +91,22 @@
 
     required.forEach((entry) => {
       if (!entry || typeof entry !== "object") return;
+      if (entry.selectionFact && entry.choices) {
+        const fact = engine?.missionManager?.memory?.getFact?.(
+          String(entry.selectionFact), null
+        );
+        const field = String(entry.selectionField || "value");
+        const selected = String(fact?.[field] ?? fact ?? "");
+        if (!Object.prototype.hasOwnProperty.call(entry.choices, selected) ||
+            !entry.choices[selected]) {
+          unresolved = true;
+          return;
+        }
+        // Le choix est disponible. Son application reste au consommateur
+        // existant de map-generator-bible-overrides-v19, sans sourceSlot fictif.
+        resolved.push(JSON.parse(JSON.stringify(entry)));
+        return;
+      }
       if (entry.objectId || entry.type) {
         resolved.push(JSON.parse(JSON.stringify(entry)));
         return;
