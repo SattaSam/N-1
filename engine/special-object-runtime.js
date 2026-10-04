@@ -373,21 +373,42 @@
       : [0];
     droneState.scannedZones = droneState.scannedZones || {};
     const mapScans = droneState.scannedZones[mapId] || {};
-    const zoneId = zoneIds.find((id) => !mapScans[id]);
+    const engine = BF.currentEngine;
+    const missionTargets = entries.filter(({ root: candidate }) =>
+      candidate !== root && candidate.visible !== false &&
+      BF.isScoutMissionTarget?.(engine, hitboxOf(candidate) || candidate));
+    // Les racines passives ne participent qu'à une demande missionnelle explicite.
+    const passiveRoots = [
+      ...(engine.currentMap?.group?.children || []),
+      ...(engine.currentMap?.group?.userData?.microScenes || []).flatMap((scene) =>
+        (scene.records || []).map((record) => record.root || record.pivot || record.objectRoot))
+    ];
+    [...new Set(passiveRoots)].forEach((candidate) => {
+      if (!candidate) return;
+      if (candidate.userData?.functional?.gameplay?.interactive === false &&
+        candidate.userData?.instanceId && !candidate.userData?.worldAnchor &&
+        candidate.visible !== false && BF.isScoutMissionTarget?.(engine, candidate)) {
+        missionTargets.push({ root: candidate, type: candidate.userData.libraryType });
+      }
+    });
+    const zoneId = missionTargets.length ? zoneIndexOf(missionTargets[0].root)
+      : zoneIds.find((id) => !mapScans[id]);
     if (zoneId == null) return false;
-
     const known = BF.getProgressionState?.().discoveries?.instances || {};
-    const targets = entries.filter(({ root: candidate, type }) =>
-      candidate !== root &&
-      observableByScout(candidate, type) &&
-      zoneIndexOf(candidate) === zoneId &&
-      !known[candidate.userData?.instanceId]
+    const due = new Set(missionTargets.map(({ root: candidate }) => candidate));
+    const targets = [...new Map([...entries, ...missionTargets].map((entry) =>
+      [entry.root, entry])).values()].filter(({ root: candidate, type }) =>
+      candidate !== root && zoneIndexOf(candidate) === zoneId &&
+      (due.has(candidate) || observableByScout(candidate, type) &&
+        !mapScans[zoneId] && !known[candidate.userData?.instanceId])
     );
 
     const allowed = workAllowanceBeforeFailure(droneState, "scout_drone", targets.length);
     const observedTargets = targets.slice(0, allowed);
     observedTargets.forEach((target) => {
       emitDroneEvent(BF.ObjectEvents.types.OBJECT_SEEN, target.root, {
+        droneType: "scout_drone",
+        studyGeneration: Math.max(0, Number(target.root.userData?.interactionState?.studyGeneration) || 0),
         state: "scouted",
         tags: ["drone-scouted"],
         zoneId,
@@ -1247,6 +1268,7 @@
         instanceId:
           root.userData?.instanceId || instanceKey(root),
         zoneId: zoneIndexOf(root),
+        studyGeneration: Math.max(0, Number(root.userData?.interactionState?.studyGeneration) || 0),
         type
       }))
       .filter((item) => item.objectId);
@@ -1274,13 +1296,21 @@
     const zones = [...new Set(
       manifest.map((item) => Number(item.zoneId) || 0)
     )].sort((left, right) => left - right);
-    const zoneId = zones.find((id) => !mapScans[id]);
+    const missionDue = (item) => {
+      const definition = BF.ObjectLibrary?.getById?.(item.objectId);
+      return definition && BF.isScoutMissionTarget?.(BF.currentEngine, {
+        userData: { catalogId: item.objectId, instanceId: item.instanceId, functional: definition,
+          interactionState: { studyGeneration: Math.max(0, Number(item.studyGeneration) || 0) } }
+      }, { mapId: drone.deployedMapId, remote: true });
+    };
+    const due = new Set(manifest.filter(missionDue));
+    const zoneId = due.size ? Number([...due][0].zoneId) || 0
+      : zones.find((id) => !mapScans[id]);
     if (zoneId == null) return false;
     const known = BF.getProgressionState?.().discoveries?.instances || {};
-    const targets = manifest.filter(
-      (item) =>
-        (Number(item.zoneId) || 0) === zoneId &&
-        !known[item.instanceId]
+    const targets = manifest.filter((item) =>
+      (Number(item.zoneId) || 0) === zoneId &&
+      (due.has(item) || !mapScans[zoneId] && !known[item.instanceId])
     );
     const allowed = workAllowanceBeforeFailure(drone, "scout_drone", targets.length);
     const observedTargets = targets.slice(0, allowed);
@@ -1300,6 +1330,7 @@
           droneType: "scout_drone",
           mapId: drone.deployedMapId,
           zoneId,
+          studyGeneration: Math.max(0, Number(item.studyGeneration) || 0),
           state: "scouted",
           tags: ["drone-scouted", "remote"],
           quantity: 1,

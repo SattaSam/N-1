@@ -36,6 +36,24 @@
       });
     }
 
+    // Une marge de départ peut être quittée, jamais un volume physique traversé.
+    segmentIsTraversable(from, to, colliders, characterRadius, padding, departure = false) {
+      if (this.lineIsClear(from, to, colliders, characterRadius, padding)) return true;
+      if (!departure || !this.lineIsClear(from, to, colliders, characterRadius, 0)) return false;
+      return colliders.every((collider) => {
+        const clearance = characterRadius + collider.radius + padding;
+        const dx = from.x - collider.position.x;
+        const dz = from.z - collider.position.z;
+        if (dx * dx + dz * dz >= clearance * clearance) {
+          return segmentDistanceSquared(from.x, from.z, to.x, to.z,
+            collider.position.x, collider.position.z) >= clearance * clearance;
+        }
+        // Sortie monotone de la seule marge déjà occupée au départ.
+        return dx * (to.x - from.x) + dz * (to.z - from.z) >= 0 &&
+          Math.hypot(to.x - collider.position.x, to.z - collider.position.z) >= clearance;
+      });
+    }
+
     nearestClearGoal(goal, colliders, characterRadius, padding) {
       const adjusted = goal.clone();
       for (let pass = 0; pass < 10; pass += 1) {
@@ -83,7 +101,7 @@
         characterRadius,
         padding
       );
-      if (this.lineIsClear(start, finalGoal, colliders, characterRadius, padding)) {
+      if (this.segmentIsTraversable(start, finalGoal, colliders, characterRadius, padding, true)) {
         return [finalGoal];
       }
 
@@ -92,19 +110,20 @@
         x: BF.clamp(Math.round((point.x + this.bounds) / this.step), 0, size - 1),
         z: BF.clamp(Math.round((point.z + this.bounds) / this.step), 0, size - 1)
       });
-      const toWorld = (cell) => new this.THREE.Vector3(
-        -this.bounds + cell.x * this.step,
-        0,
-        -this.bounds + cell.z * this.step
-      );
-      const key = (cell) => `${cell.x}:${cell.z}`;
-      const startCell = toCell(start);
+      const toWorld = (cell) => {
+        if (cell.departure === true) return start;
+        if (cell.x === goalCell.x && cell.z === goalCell.z) return finalGoal;
+        return new this.THREE.Vector3(-this.bounds + cell.x * this.step, 0,
+          -this.bounds + cell.z * this.step);
+      };
+      const key = (cell) => cell.departure === true ? "start" : `${cell.x}:${cell.z}`;
+      const startCell = { ...toCell(start), departure: true };
       const goalCell = toCell(finalGoal);
       const startKey = key(startCell);
       const goalKey = key(goalCell);
       const blocked = (cell) => {
         const cellKey = key(cell);
-        if (cellKey === startKey || cellKey === goalKey) return false;
+        if (cellKey === startKey) return false;
         const point = toWorld(cell);
         return colliders.some((collider) => {
           const clearance = characterRadius + collider.radius + padding;
@@ -160,6 +179,8 @@
           ) {
             continue;
           }
+          if (!this.segmentIsTraversable(toWorld(current), toWorld(next), colliders,
+            characterRadius, padding, currentKey === startKey)) continue;
           const candidateCost = currentCost + moveCost;
           if (candidateCost >= (costs.get(nextKey) ?? Infinity)) continue;
           costs.set(nextKey, candidateCost);
@@ -175,19 +196,17 @@
       let anchor = start;
       let index = 0;
       while (index < points.length) {
-        let furthest = index;
-        for (let candidate = points.length - 1; candidate > index; candidate -= 1) {
-          if (this.lineIsClear(
-            anchor,
-            points[candidate],
-            colliders,
-            characterRadius,
-            padding
+        let furthest = -1;
+        for (let candidate = points.length - 1; candidate >= index; candidate -= 1) {
+          if (this.segmentIsTraversable(
+            anchor, points[candidate], colliders, characterRadius, padding,
+            anchor === start
           )) {
             furthest = candidate;
             break;
           }
         }
+        if (furthest < 0) return null;
         smoothed.push(points[furthest]);
         anchor = points[furthest];
         index = furthest + 1;

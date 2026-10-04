@@ -176,6 +176,10 @@
         ? target.clone()
         : new this.THREE.Vector3(target.x, 0, target.z);
       this.constrainToWalkable(safeTarget);
+      // Un rappel du même trajet n'est pas une nouvelle intention de déplacement.
+      if (this.navigationRecovery && this.navigationRequestedTarget &&
+        safeTarget.distanceToSquared(this.navigationRequestedTarget) < 0.0001) return true;
+      this.navigationRequestedTarget = safeTarget.clone();
       const directDistance = this.root.position.distanceTo(safeTarget);
       this.movementMode = movementMode === "auto"
         ? (directDistance > this.autonomousRunThreshold ? "run" : "walk")
@@ -364,6 +368,7 @@
           });
         }
         const failedTarget = this.finalTarget.clone();
+        if (options.recoverOnFailure === true) return this.beginNavigationRecovery();
         this.stop();
         if (options.suppressFailure !== true) {
           global.dispatchEvent(new CustomEvent("bluefox:navigation-failed", {
@@ -727,7 +732,9 @@
               this.beginNavigationRecovery();
               replanned = true;
             } else {
-              this.rebuildPath(0.24 + this.failedReplans * 0.14);
+              this.rebuildPath(0.24 + this.failedReplans * 0.14, {
+                recoverOnFailure: true
+              });
               replanned = true;
             }
           }

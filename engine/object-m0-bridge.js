@@ -1344,37 +1344,68 @@
     return 100;
   };
 
-  const passiveMissionSceneObjects = (engine, action, options = {}) => {
-    if (action?.params?.allowPassiveMSCObject !== true) return [];
-    const activate = options.activate !== false;
-    const sceneIds = new Set([
-      ...asArray(action?.params?.microSceneIds),
-      action?.params?.microSceneId
-    ].filter(Boolean).map(String));
-    const scenes = Array.isArray(engine.currentMap?.group?.userData?.microScenes)
-      ? engine.currentMap.group.userData.microScenes
-      : [];
-    const objects = [];
-    scenes.forEach((scene) => {
-      if (sceneIds.size && !sceneIds.has(String(scene?.id || ""))) return;
-      asArray(scene?.records).forEach((record) => {
-        const object = record?.root || record?.pivot || record?.objectRoot || null;
-        if (!object?.userData) return;
-        const resolved = resolveMissionCandidate(object);
-        if (!resolved?.definition) return;
-        if (!metadataMatchesMissionCriteria(
+  const releasePassiveMissionStudy = (object) => {
+    if (!object?.userData || !Object.prototype.hasOwnProperty.call(
+      object.userData, "missionPassivePreviousActive")) return;
+    object.userData.active = object.userData.missionPassivePreviousActive;
+    delete object.userData.missionPassivePreviousActive;
+    delete object.userData.missionPassiveStudy;
+  };
+
+  const passiveMissionSceneObjects = (engine, action) => {
+    if (!isStudyAction(action?.type)) return [];
+    const params = action?.params || {};
+    // L'accès implicite passif exige une cible CUO explicite du nœud courant.
+    const explicitTarget = params.objectId || params.cuoType || asArray(params.cuoTypes).length;
+    const passiveDefinitionRequested = [
+      params.objectId ? BF.ObjectLibrary?.getById?.(params.objectId) : null,
+      ...[params.cuoType, ...asArray(params.cuoTypes)].filter(Boolean)
+        .map((type) => BF.ObjectLibrary?.get?.(type))
+    ].some((definition) => definition?.gameplay?.interactive === false);
+    if (params.allowPassiveMSCObject !== true && !passiveDefinitionRequested) return [];
+    const objects = new Set();
+    const scenes = engine.currentMap?.group?.userData?.microScenes || [];
+    scenes.forEach((scene) => asArray(scene?.records).forEach((record) => {
+      const object = record?.root || record?.pivot || record?.objectRoot;
+      if (object) objects.add(object);
+    }));
+    // Les CUO ordinaires ont déjà une racine et une identité dans le groupe map.
+    if (explicitTarget) asArray(engine.currentMap?.group?.children).forEach((object) => {
+      if (object.userData?.functional && object.userData?.instanceId &&
+        !object.userData?.worldAnchor) objects.add(object);
+    });
+    return [...objects].filter((object) => {
+      const resolved = resolveMissionCandidate(object);
+      return resolved?.definition?.gameplay?.interactive === false &&
+        object.visible !== false && metadataMatchesMissionCriteria(
           definitionMissionMetadata(resolved.definition, resolved),
-          action.params || {},
-          { skipSubject: true }
-        )) return;
-        if (activate) {
-          object.userData.active = true;
-          object.userData.missionPassiveStudy = true;
-        }
-        objects.push(object);
+          studyTargetCriteria(params), { skipSubject: true });
+    });
+  };
+
+  // Le Scout interroge le matching existant ; aucune progression n'est simulée.
+  const isScoutMissionTarget = (engine, object, options = {}) => {
+    const manager = engine?.missionManager;
+    const resolved = resolveMissionCandidate(object);
+    if (!manager || !resolved?.definition) return false;
+    const mapId = options.mapId || engine.currentMapId;
+    const metadata = { ...definitionMissionMetadata(resolved.definition, resolved),
+      actor: "scout", remote: options.remote === true };
+    return [...(manager.activeMissionIds || [])].some((missionId) => {
+      const tree = manager.trees?.get?.(missionId);
+      if (!tree || manager.ensureLifecycle?.(missionId)?.status !== "active") return false;
+      return tree.availableLeaves().some((node) => {
+        if (!isGenericObjectStudyNode(node) || !isStudyAction(node.type) ||
+          !acceptsScoutObservation(node) || !requiredMapMatches(manager, node, mapId) ||
+          !requiredSiteMatchesResolved(manager, node, resolved, mapId) ||
+          !metadataMatchesMissionCriteria(metadata, studyTargetCriteria(node.params), { skipSubject: true }) ||
+          !matchesStudySubject(resolved.definition, node.params?.subject) ||
+          !relationMatches(tree, node, relationEvidenceFromResolved(resolved, mapId)) ||
+          !matchesBoundTarget({ ...engine, currentMapId: mapId }, missionId, resolved)) return false;
+        const distinct = distinctValueFromResolved(node, resolved, mapId);
+        return distinct == null || !node.hasDistinctValue?.(distinct);
       });
     });
-    return objects;
   };
 
   // Une étude CUO générique ne doit être lancée que pour une feuille dont
@@ -1408,8 +1439,7 @@
     ];
     const candidates = [...new Set(sourceObjects)]
       .map((object) => {
-        const passiveMissionStudy = passiveSet.has(object) &&
-          action?.params?.allowPassiveMSCObject === true;
+        const passiveMissionStudy = passiveSet.has(object);
         if (!object.userData.active && !passiveMissionStudy) return null;
         const resolved = resolveMissionCandidate(object);
         const definition = resolved.definition;
@@ -1444,7 +1474,19 @@
     candidates.sort((left, right) =>
       right.priority - left.priority || distance(left.object) - distance(right.object)
     );
-    return candidates[0]?.object || null;
+    const selected = candidates[0]?.object || null;
+    if (selected && passiveSet.has(selected) && options.activatePassive !== false) {
+      if (engine.__objectM0PassiveStudy !== selected) {
+        releasePassiveMissionStudy(engine.__objectM0PassiveStudy);
+      }
+      engine.__objectM0PassiveStudy = selected;
+      if (!Object.prototype.hasOwnProperty.call(selected.userData, "missionPassivePreviousActive")) {
+        selected.userData.missionPassivePreviousActive = selected.userData.active;
+      }
+      selected.userData.active = true;
+      selected.userData.missionPassiveStudy = true;
+    }
+    return selected;
   };
 
 
@@ -1885,7 +1927,7 @@
       action = null,
       reason = "cancelled"
     ) {
-      const object = this.pendingInteraction;
+      const object = this.pendingInteraction || this.__objectM0PassiveStudy;
       if (!object?.userData) return false;
 
       const resolved = resolveObject(object);
@@ -1924,6 +1966,8 @@
       object.userData.missionNodeId = null;
       object.userData.missionId = null;
       clearAcquisitionTransaction(this, object);
+      releasePassiveMissionStudy(object);
+      this.__objectM0PassiveStudy = null;
 
       this.pendingInteraction = null;
       this.interactionStartedAt = 0;
@@ -2078,6 +2122,7 @@
       object.userData.requestedInteractionSource = directive ? "mission" : (source || "manual");
       const accepted = originalTarget(object, retry);
       if (accepted === false) {
+        releasePassiveMissionStudy(object);
         object.userData.requestedInteraction = null;
         object.userData.requestedInteractionSource = null;
         object.userData.requestedMovementMode = null;
@@ -2103,7 +2148,15 @@
 
     engine.updateInteraction = function updateObjectInteraction(now) {
       updateStudyPose(this.character, now);
-      if (!this.pendingInteraction) return;
+      if (!this.pendingInteraction) {
+        releasePassiveMissionStudy(this.__objectM0PassiveStudy);
+        this.__objectM0PassiveStudy = null;
+        return;
+      }
+      if (this.__objectM0PassiveStudy && this.__objectM0PassiveStudy !== this.pendingInteraction) {
+        releasePassiveMissionStudy(this.__objectM0PassiveStudy);
+        this.__objectM0PassiveStudy = null;
+      }
       if (!this.pendingInteraction.userData.active) {
         const failedTarget = this.pendingInteraction;
         const source = failedTarget.userData.requestedInteractionSource;
@@ -2151,9 +2204,18 @@
       }
       object.userData.requestedInteraction = mode;
       const anchorPosition = this.interactionWorldPosition(object);
-      const distance = this.character.root.position.distanceTo(anchorPosition);
+      // Un décor passif n'a pas de hitbox d'interaction au pied : sa racine
+      // visuelle peut être élevée par la MSC. L'approche WorldEngine est au sol.
+      const distance = object.userData.missionPassiveStudy === true
+        ? Math.hypot(this.character.root.position.x - anchorPosition.x,
+          this.character.root.position.z - anchorPosition.z)
+        : this.character.root.position.distanceTo(anchorPosition);
       const interactionDistance = this.interactionValidationDistance(object);
       if (!this.interactionStartedAt && distance > interactionDistance) {
+        if (this.interactionApproachNavigationActive?.()) {
+          this.interactionApproachStartedAt = now;
+          return;
+        }
         if (now - this.interactionApproachStartedAt > 6500) {
           this.interactionApproachAttempts += 1;
           if (this.interactionApproachAttempts <= 3) this.targetInteraction(object, true);
@@ -2397,6 +2459,7 @@
       }
       this.completedInteractions += 1;
       this.lastCompletedAction = `${mode}:${definition.type}`;
+      releasePassiveMissionStudy(object);
       this.pendingInteraction = null;
       this.interactionStartedAt = 0;
       this.interactionApproachStartedAt = 0;
@@ -2489,6 +2552,7 @@
     };
   };
   BF.probeMissionActionTarget = probeMissionActionTarget;
+  BF.isScoutMissionTarget = isScoutMissionTarget;
   BF.installObjectM0Bridge = install;
   BF.getObjectM0BridgeState = () => ({ ...installed });
   install();
