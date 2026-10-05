@@ -320,7 +320,7 @@
       return true;
     }
 
-    nextUnexploredTarget(mapId, origin = {}) {
+    unexploredTargets(mapId, origin = {}) {
       const map = this.ensureMap(mapId);
       const geometry = this.syncPlayableGeometry(map);
       const bounds = geometry.bounds;
@@ -339,7 +339,11 @@
         }
       }
       candidates.sort((left, right) => left.distance - right.distance);
-      return candidates[0] || null;
+      return candidates;
+    }
+
+    nextUnexploredTarget(mapId, origin = {}) {
+      return this.unexploredTargets(mapId, origin)[0] || null;
     }
 
     reach(type, map, threshold) {
@@ -523,5 +527,6 @@
   BF.getMapExplorationState = (mapId) => tracker.getMap(mapId);
   BF.getExplorationSummary = () => tracker.getSummary();
   BF.getNextUnexploredMapTarget = (mapId, origin) => tracker.nextUnexploredTarget(mapId, origin);
+  BF.getUnexploredMapTargets = (mapId, origin) => tracker.unexploredTargets(mapId, origin);
   BF.resetMapExploration = (mapId) => tracker.reset(mapId);
 })(window);

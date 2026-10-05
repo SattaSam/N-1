@@ -335,16 +335,46 @@
               return true;
             }
           }
-          const target = BF.getNextUnexploredMapTarget?.(
-            engine.currentMapId,
-            engine.character.root.position
-          );
-          if (!target) return false;
-          const position = new engine.THREE.Vector3(target.x, 0, target.z);
-          if (engine.character.setTarget(position) === false) return false;
-          engine.showWorldMarker(position);
-          engine.callbacks.onStatus("Mission : BlueFox cartographie un secteur encore incomplet.");
-          return true;
+          const origin = engine.character.root.position;
+          const targets = BF.getUnexploredMapTargets?.(engine.currentMapId, origin) ||
+            [BF.getNextUnexploredMapTarget?.(engine.currentMapId, origin)].filter(Boolean);
+          if (!targets.length) {
+            this.explorationSearch = null;
+            return false;
+          }
+          const previous = this.explorationSearch;
+          const continuing = previous?.map === engine.currentMap &&
+            previous.mapId === engine.currentMapId &&
+            previous.missionId === action.missionId && previous.nodeId === action.nodeId &&
+            Math.hypot(origin.x - previous.x, origin.z - previous.z) < 0.2;
+          const previousIndex = continuing
+            ? targets.findIndex((target) => target.key === previous.afterKey) : -1;
+          const start = previousIndex + 1;
+          // Douze sondes au plus par décision, aucune au tick. Le curseur ne
+          // crédite ni n'exclut un secteur ; il évite de reprendre toujours les
+          // mêmes refus lorsqu'un lot entier est inaccessible depuis ce point.
+          for (let index = start; index < Math.min(targets.length, start + 12); index += 1) {
+            const target = targets[index];
+            this.explorationSearch = {
+              map: engine.currentMap, mapId: engine.currentMapId,
+              missionId: action.missionId, nodeId: action.nodeId,
+              x: origin.x, z: origin.z, afterKey: target.key
+            };
+            const position = new engine.THREE.Vector3(target.x, 0, target.z);
+            const planner = engine.character.pathPlanner;
+            if (typeof planner?.plan === "function") {
+              const path = planner.plan(origin, position, engine.character.colliders,
+                engine.character.radius);
+              if (!Array.isArray(path) || !path.length) continue;
+            }
+            if (engine.character.setTarget(position) === false) return false;
+            this.explorationSearch = null;
+            engine.showWorldMarker(position);
+            engine.callbacks.onStatus("Mission : BlueFox cartographie un secteur encore incomplet.");
+            return true;
+          }
+          if (start + 12 >= targets.length) this.explorationSearch = null;
+          return false;
         }
         case Missions.ActionType.RESEARCH: {
           if (action.params?.requiresShelter === true && BF.canAccessCampInventory?.() !== true) {

@@ -2297,6 +2297,38 @@
       return this.previewTriggerCount(mission, event) >= required;
     }
 
+    boundMissionScenesPresent(mission, mapId) {
+      const required = mission?.bindActivationMap === true
+        ? asArray(mission.mapGeneration?.requiredMicroScenes)
+            .filter((scene) => scene?.id && scene.persistent !== false)
+        : [];
+      if (!required.length) return true;
+      const targetMapId = String(mapId || "");
+      if (!targetMapId) return false;
+      const definition = BF.maps?.[targetMapId];
+      const currentMap = String(BF.currentEngine?.currentMapId || "") === targetMapId
+        ? BF.currentEngine?.currentMap : null;
+      const scenes = [
+        ...asArray(BF.PersistentMicroScenes?.list?.(definition) || definition?.persistentMicroScenes),
+        ...asArray(currentMap?.group?.userData?.microScenes)
+      ];
+      return required.every((requiredScene) => scenes.some((scene) =>
+        String(scene?.microSceneId || scene?.id || "") === String(requiredScene.id) &&
+        (!requiredScene.contextRole || String(scene?.contextRole ||
+          scene?.instanceRoot?.userData?.contextRole || "") === String(requiredScene.contextRole))
+      ));
+    }
+
+    pendingActivationMapContractSatisfied(missionId) {
+      // Le contrat spatial appartient au catalogue Bible, pas à sa définition
+      // compilée (dont bible ne porte que version/pattern).
+      const mission = this.byId.get(String(missionId));
+      if (mission?.bindActivationMap !== true ||
+          mission.trigger?.type !== "exploration.map_discovered") return true;
+      const binding = this.manager()?.memory?.getFact?.(`bibleActivation:${mission.id}`, null);
+      return this.boundMissionScenesPresent(mission, binding?.mapId);
+    }
+
     reconcileBoundMissionMicroScenes(mission, mapId, options = {}) {
       if (mission?.bindActivationMap !== true) return false;
       const required = asArray(mission?.mapGeneration?.requiredMicroScenes)
@@ -4326,30 +4358,10 @@
 
         const prerequisitesReady = this.prerequisitesSatisfied(mission);
         if (!prerequisitesReady) {
-          const boundScenes = mission.bindActivationMap === true &&
-              event.type === "exploration.map_discovered"
-            ? asArray(mission.mapGeneration?.requiredMicroScenes)
-                .filter((scene) => scene?.id && scene.persistent !== false)
-            : [];
-          if (boundScenes.length) {
-            const mapId = String(event.mapId || event.toMapId || "");
-            const definition = BF.maps?.[mapId];
-            const currentMap = String(BF.currentEngine?.currentMapId || "") === mapId
-              ? BF.currentEngine?.currentMap : null;
-            const scenes = [
-              ...asArray(BF.PersistentMicroScenes?.list?.(definition) || definition?.persistentMicroScenes),
-              ...asArray(currentMap?.group?.userData?.microScenes)
-            ];
-            // Une vraie scène déjà présente peut révéler une mission avant ses
-            // prérequis. Une promesse de génération seule ne lie pas une ancienne
-            // map : la prochaine découverte admissible portera cette destination.
-            const physicallyPresent = boundScenes.every((required) => scenes.some((scene) =>
-              String(scene?.microSceneId || scene?.id || "") === String(required.id) &&
-              (!required.contextRole || String(scene?.contextRole ||
-                scene?.instanceRoot?.userData?.contextRole || "") === String(required.contextRole))
-            ));
-            if (!physicallyPresent) continue;
-          }
+          // Une vraie scène peut révéler la mission avant ses prérequis ; une
+          // promesse seule doit attendre une découverte causale admissible.
+          if (event.type === "exploration.map_discovered" &&
+              !this.boundMissionScenesPresent(mission, event.mapId || event.toMapId)) continue;
           const missionPrerequisites = asArray(mission.prerequisites);
           const missingMissionPrerequisites = missionPrerequisites.filter((missionId) =>
             !this.missionLifecycle(missionId).completed

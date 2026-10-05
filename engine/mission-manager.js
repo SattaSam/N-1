@@ -3550,7 +3550,8 @@
           ) &&
           (request.experimentalPrerequisites || []).every((id) =>
             BF.bibleRuntime?.isResearchRewardUnlocked?.(id) === true
-          )
+          ) &&
+          BF.bibleRuntime?.pendingActivationMapContractSatisfied?.(request.missionId) !== false
         )
         .sort((left, right) => {
           const leftOptions = left.options || {};
