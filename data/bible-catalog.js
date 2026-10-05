@@ -7078,6 +7078,7 @@
           params: Object.freeze({
             eventDriven: true,
             envHistoricalFamily: family.key,
+            backgroundProgressOnly: true,
             catalogManaged: true
           })
         })
@@ -7123,6 +7124,7 @@
         params: Object.freeze({
           eventDriven: true,
           envLocalFamily: family.key,
+            backgroundProgressOnly: true,
           targetPercent: percent,
           catalogManaged: true
         })
@@ -7130,8 +7132,8 @@
     }),
     narrative: Object.freeze({
       revealed: Object.freeze([percent === 50
-        ? `Je ne veux pas traverser ce territoire en ne regardant que ce qui se ramasse. Je vais lire au moins la moitié de ses ${family.label}.`
-        : `La moitié donne une tendance ; pour prétendre connaître ce territoire, il faut aller jusqu’au bout des ${family.label} observables.`]),
+        ? `Ces ${family.label} mériteraient un relevé plus complet de ce territoire.`
+        : `Un relevé de tous les ${family.label} observables pourrait compléter ce portrait du territoire.`]),
       progress: Object.freeze([Object.freeze({
         text: "La carte se remplit autrement : chaque observation ajoute une pièce au portrait environnemental de cette zone.",
         at: 0.5
@@ -7175,6 +7177,7 @@
         params: Object.freeze({
           eventDriven: true,
           envWorldMastery: true,
+            backgroundProgressOnly: true,
           distinctBy: "biomeId",
           historicalBackfill: true,
           catalogManaged: true

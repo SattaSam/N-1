@@ -1874,6 +1874,19 @@
       this.onPathPlanned = (event) => this.updatePathVisual(event.detail);
       this.onNavigationFailed = () => {
         this.navigationFailures += 1;
+        // Un trajet local de finalisation utilise la récupération existante du
+        // controller ; son échec rejoint la même mémoire de retries missionnels.
+        if (!this.pendingInteraction && !this.pendingGate && !this.pendingTeleport) {
+          const manager = this.missionManager;
+          const ids = [...new Set([manager?.primaryMissionId, ...(manager?.getPrioritizedMissionIds?.() || [])].filter(Boolean))].slice(0, 4);
+          const requested = this.character.navigationRequestedTarget;
+          for (const missionId of ids) {
+            const site = manager?.localCompletionGateFor?.(missionId)?.shelterTarget;
+            if (!site || !requested || Math.hypot(requested.x - site.anchor.x, requested.z - site.anchor.z) > site.radius) continue;
+            manager.recordExecutionFailure({ missionId, nodeId: `${missionId}:completion-gate-local` }, "completion-gate-navigation-failed", performance.now());
+            break;
+          }
+        }
         const wasResource = Boolean(this.pendingInteraction);
         const failedInteractionSource =
           this.pendingInteraction?.userData?.requestedInteractionSource || null;
@@ -4215,6 +4228,44 @@
         }, respawnMs);
         this.resourceCooldowns.set(object, cooldown);
       }
+    }
+
+    approachMissionCompletionGate(missionId, gateState) {
+      const site = gateState?.shelterTarget;
+      const runtime = BF.bibleRuntime;
+      const mission = this.missionManager?.definition?.(missionId);
+      if (!site || site.mapId !== this.currentMapId ||
+          mission?.completionGate?.autonomousTravel === false ||
+          this.transitioning || this.pendingInteraction || this.pendingGate || this.currentRoutine) return false;
+      if (gateState.canFinalize === true) {
+        this.missionManager.syncLifecycleFromTrees?.();
+        this.missionManager.publish?.();
+        return true;
+      }
+      const point = new this.THREE.Vector3(Number(site.anchor.x), 0, Number(site.anchor.z));
+      if (this.character.root.position.distanceTo(point) <= site.radius) {
+        if (site.requireDeposit) return runtime?.depositCompletionSamples?.(missionId) === true;
+        this.missionManager.syncLifecycleFromTrees?.();
+        this.missionManager.publish?.();
+        return true;
+      }
+      if (this.character.root.position.distanceTo(this.character.target) > 0.2) return true;
+      // Approche bornée dans la portée du site, sans entrer dans son collider.
+      const distance = Math.max(0.1, site.radius - 0.4);
+      const from = this.character.root.position;
+      const angle = Math.atan2(from.z - point.z, from.x - point.x);
+      for (let index = 0; index < 12; index += 1) {
+        const direction = angle + index * Math.PI / 6;
+        const candidate = point.clone().add(new this.THREE.Vector3(Math.cos(direction) * distance, 0, Math.sin(direction) * distance));
+        this.character.constrainToWalkable(candidate);
+        if (candidate.distanceTo(point) > site.radius || this.character.positionOverlapsCollider(candidate)) continue;
+        const route = this.character.pathPlanner.plan(from, candidate, this.character.colliders, this.character.radius);
+        if (!Array.isArray(route) || !route.length) continue;
+        if (this.character.setTarget(candidate, "auto") === false) continue;
+        this.showWorldMarker?.(candidate);
+        return true;
+      }
+      return false;
     }
 
     updateAutonomy(now) {

@@ -3211,6 +3211,9 @@
         this.selectionReason = "Priorité suggérée par le joueur.";
         return false;
       }
+      // Un arbre fini reste une intention active tant que sa validation locale
+      // réelle (approche ou dépôt) peut encore être exécutée.
+      if (!force && this.localCompletionGateFor(this.primaryMissionId, now)) return false;
       const backgroundOnlyPrimary = Boolean(
         replacingActivePrimary &&
         this.missionIsBackgroundProgressOnly(this.primaryMissionId)
@@ -3273,6 +3276,7 @@
         !this.missionAllowsAutomaticExecution(this.primaryMissionId)
       ) return false;
       const context = this.bridge.context();
+      if (this.localCompletionGateFor(this.primaryMissionId)) return true;
       if (this.causalArrivalWork(context)?.missionId === this.primaryMissionId) {
         return true;
       }
@@ -3287,6 +3291,17 @@
       if (!this.hasActivePrimaryMission()) return false;
       if (this.delegatedRuntimeAction(this.primaryMissionId)) return true;
       return this.hasRunnablePrimaryMission();
+    }
+
+    localCompletionGateFor(missionId, now = performance.now()) {
+      if (!missionId || !this.missionAllowsAutomaticExecution(missionId) ||
+          this.ensureLifecycle(missionId).status !== "active" ||
+          !this.trees.get(missionId)?.root?.isComplete ||
+          this.definition(missionId)?.completionGate?.autonomousTravel === false ||
+          this.isExecutionNodeSuppressed(missionId, `${missionId}:completion-gate-local`, this.bridge.context(), now)) return null;
+      const gate = BF.bibleRuntime?.completionGateState?.(missionId);
+      return gate?.managed && gate.shelterTarget?.mapId === this.engine.currentMapId
+        ? gate : null;
     }
 
     primaryActionAssessment() {
@@ -3543,6 +3558,8 @@
       const causalArrival = this.causalArrivalWork(context);
 
       for (const missionId of prioritizedMissionIds) {
+        const gate = this.localCompletionGateFor(missionId);
+        if (gate) return { kind: "completion-gate", missionId, gate };
         const assessment = this.assessMission(missionId, context);
         if (assessment?.action) {
           return {
@@ -3870,6 +3887,7 @@
       const hasExecutableMissionWork = (missionId) =>
         this.missionAllowsAutomaticExecution(missionId) &&
         Boolean(
+          this.localCompletionGateFor(missionId) ||
           this.delegatedRuntimeAction(missionId) ||
           this.assessMission(missionId, context)?.action
         );
@@ -3978,6 +3996,17 @@
           excludedMissionIds: refusedMissionIds
         });
         if (!work) break;
+
+        if (work.kind === "completion-gate") {
+          if (this.engine.approachMissionCompletionGate?.(work.missionId, work.gate)) {
+            this.retryAfter = now + 1200;
+            this.idleRetryUntil = 0;
+            return true;
+          }
+          this.recordExecutionFailure({ missionId: work.missionId, nodeId: `${work.missionId}:completion-gate-local` }, "completion-gate-approach-failed", now);
+          refusedMissionIds.add(work.missionId);
+          continue;
+        }
 
         if (work.kind === "action") {
           if (this.executeSelectedMissionAction(work.selected, now)) {

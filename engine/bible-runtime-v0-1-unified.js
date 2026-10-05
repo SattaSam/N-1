@@ -3815,7 +3815,10 @@
       if (this.narrativeTimer) return;
 
       const playNext = () => {
-        const next = this.narrativeQueue.shift();
+        let next = this.narrativeQueue.shift();
+        while (next?.localProposal && String(next.mapId || "") !== String(BF.currentEngine?.currentMapId || "")) {
+          next = this.narrativeQueue.shift();
+        }
         if (!next) {
           this.narrativeTimer = null;
           return;
@@ -3861,6 +3864,7 @@
           text,
           mapId: context.mapId ?? BF.currentEngine?.currentMapId ?? null,
           zoneId: context.zoneId ?? BF.currentEngine?.currentZoneIndex ?? null,
+          localProposal: Boolean(mission?.envLocal && moment === "revealed"),
           important: moment === "revealed" || moment === "completed"
         };
 
@@ -5186,6 +5190,7 @@
       this.bridgeMissionProgress(rawEvent);
       this.reconcileEnvironmentLocalMap(rawEvent?.mapId || BF.currentEngine?.currentMapId);
       this.reconcileEnvironmentWorld();
+      this.emitEnvironmentInteractionProposal(rawEvent);
     }
 
     onExplorationChanged(detail) {
@@ -5680,6 +5685,12 @@
     }
 
     emitRevealedOnce(mission, context = {}) {
+      // La disponibilité locale ne promet pas une initiative du BAC. Seule une
+      // interaction physique de cette famille sur cette map autorise la proposition.
+      if (mission?.envLocal && (
+        String(context.envInteractionFamily || "") !== String(mission.envLocal.family || "") ||
+        String(context.mapId || "") !== String(mission.scopeId || mission.targetMapId || "")
+      )) return false;
       const key = mission.repeatable
         ? `${mission.id}:revealed:${Math.max(0, Number(this.manager()?.memory?.state?.missionLifecycle?.[mission.id]?.repeatCount) || 0)}`
         : `${mission.id}:revealed`;
@@ -6364,6 +6375,77 @@
       return changed;
     }
 
+    completionShelterTarget(mission) {
+      const gate = mission?.completionGate;
+      const engine = BF.currentEngine;
+      if (gate?.type !== "proximity.shelter" || !engine?.currentMapId) return null;
+      const declaredMapId = this.missionTargetMapId(mission);
+      const currentMapId = String(engine.currentMapId);
+      const mapId = declaredMapId || (gate.scope === "current-map" ? currentMapId : "");
+      if (!mapId && gate.scope !== "any-established") return null;
+      const allowed = new Set(gate.shelterKinds || ["camp", "refuge", "base"]);
+      const buckets = this.manager()?.memory?.state?.siteProgression || {};
+      const candidates = [];
+      for (const candidateMapId of Object.keys(buckets)) {
+        if (mapId && candidateMapId !== mapId) continue;
+        const sites = this.siteBucket(candidateMapId);
+        for (const [kind, site] of Object.entries(sites)) {
+          if (!site || !allowed.has(kind) || !site.anchor || !(Number(site.stage) >= 1) ||
+              String(site.mapId || candidateMapId) !== candidateMapId ||
+              (gate.siteId != null && String(site.id || "") !== String(gate.siteId))) continue;
+          if (!Number.isFinite(Number(site.anchor.x)) || !Number.isFinite(Number(site.anchor.z))) continue;
+          const route = candidateMapId === currentMapId ? [] : engine.findKnownRoute?.(currentMapId, candidateMapId);
+          if (!Array.isArray(route)) continue;
+          candidates.push({ mapId: candidateMapId, siteId: site.id || null, kind,
+            anchor: clone(site.anchor), radius: Math.max(0.5, Number(gate.radius) || 8),
+            requireDeposit: gate.requireDeposit === true, cost: route.length });
+        }
+      }
+      const player = engine.character?.root?.position;
+      candidates.sort((a, b) => a.cost - b.cost ||
+        (a.mapId === currentMapId && player
+          ? Math.hypot(player.x - a.anchor.x, player.z - a.anchor.z) - Math.hypot(player.x - b.anchor.x, player.z - b.anchor.z)
+          : 0) || a.mapId.localeCompare(b.mapId) || String(a.siteId).localeCompare(String(b.siteId)));
+      return candidates[0] || null;
+    }
+
+    depositCompletionSamples(missionId) {
+      const mission = this.byId.get(missionId);
+      const manager = this.manager();
+      if (mission?.completionGate?.requireDeposit !== true ||
+          !manager?.trees?.get(missionId)?.root?.isComplete ||
+          manager.memory?.state?.missionLifecycle?.[missionId]?.status !== "active" ||
+          !this.shelterProximitySatisfied(mission.completionGate, this.missionTargetMapId(mission) || null) ||
+          !this.inventoryEffectsReady(mission) || !this.bagCounterSatisfied(mission.completionGate)) return false;
+      // Le dépôt ne vide pas arbitrairement le sac : seules les quantités
+      // du contrat missionnel utilisent le propriétaire canonique du stock.
+      const consumes = asArray(mission.effects).filter(effect => effect.type === "inventory.consume");
+      // Un contrat de collecte sans consommation demande le dépôt du panier,
+      // déjà pris en charge atomiquement par ProgressionRegistry.
+      if (!consumes.length) {
+        const inventory = BF.getProgressionState?.()?.inventory || {};
+        if (!Object.keys(inventory).some(key => Number(BF.getUnallocatedInventoryQuantity?.(key)) > 0)) return false;
+        return Number(BF.depositAllInventory?.()) > 0;
+      }
+      const plan = this.inventoryConsumptionPlan(consumes);
+      if (!plan.ready) return false;
+      const moves = [];
+      for (const [key, remaining] of Object.entries(plan.balances)) {
+        const before = Math.max(0, Number(BF.progression?.availableInventory?.([key])) || 0);
+        const personal = Math.max(0, Number(BF.getUnallocatedInventoryQuantity?.(key)) || 0);
+        const amount = Math.min(personal, Math.max(0, before - remaining));
+        if (amount > 0) moves.push({ key, amount });
+      }
+      // Aucun reçu synthétique si aucun échantillon ne peut être déposé.
+      if (!moves.length) return false;
+      let deposited = 0;
+      for (const move of moves) {
+        if (manager.memory.state.missionLifecycle[missionId]?.status !== "active") break;
+        deposited += Number(BF.depositInventory?.(move.key, move.amount)) || 0;
+      }
+      return deposited > 0;
+    }
+
     completionGateState(missionId) {
       const mission = this.byId.get(missionId);
       const standaloneConsumes = this.standaloneInventoryConsumeMission(mission);
@@ -6373,7 +6455,8 @@
       }
       const canFinalize = this.canFinalizeMission(missionId);
       const kind = this.constructionPlacementEffect(mission)?.kind;
-      const targetMapId = this.missionTargetMapId(mission);
+      const shelterTarget = this.completionShelterTarget(mission);
+      const targetMapId = this.missionTargetMapId(mission) || shelterTarget?.mapId;
       const message = kind === "refuge"
         ? `Rendez-vous sur ${targetMapId} pour installer le refuge.`
         : kind === "camp"
@@ -6381,7 +6464,7 @@
           : standaloneConsumes && !this.inventoryEffectsReady(mission)
             ? "Les ressources missionnelles requises doivent encore être réunies."
             : "Une validation dans le monde est encore requise.";
-      return { managed: true, canFinalize, message, targetMapId: targetMapId || null };
+      return { managed: true, canFinalize, message, targetMapId: targetMapId || null, shelterTarget };
     }
 
     resolveSpawnOrigin(effect) {
@@ -6853,6 +6936,28 @@
         manager.catalogController?.schedule?.();
       }
       return changed;
+    }
+
+    emitEnvironmentInteractionProposal(event) {
+      const engine = BF.currentEngine;
+      const mapId = String(event?.mapId || "");
+      if (!mapId || mapId !== String(engine?.currentMapId || "") ||
+          String(event?.detail?.interactionSource || "") === "drone") return false;
+      if (!OBJECT_TYPE_TO_TRIGGER[event?.type]) return false;
+      const instanceId = String(event?.instanceId || "");
+      const resolver = this.buildObservationResolver(engine);
+      let emitted = false;
+      for (const missionId of this.manager()?.activeMissionIds || []) {
+        const mission = this.environmentLocalMission(missionId);
+        const family = String(mission?.envLocal?.family || "");
+        if (!family || !asArray(resolver?.envEligible?.[family]).includes(instanceId)) continue;
+        const lifecycle = this.missionLifecycle(mission.id);
+        // Si l'interaction clôt le palier, l'annonce de résultat suffit.
+        if (!lifecycle.active || lifecycle.tree?.root?.isComplete ||
+            this.environmentMapCoverage(mapId, family).percent >= Number(mission.envLocal.targetPercent)) continue;
+        emitted = this.emitRevealedOnce(mission, { mapId, envInteractionFamily: family }) || emitted;
+      }
+      return emitted;
     }
 
     environmentMapBiome(mapId, mapState = null) {
