@@ -1478,7 +1478,7 @@
     );
     const selected = options.activatePassive === false
       ? candidates[0]?.object || null
-      : physicallyApproachableTarget(engine, candidates.map((entry) => entry.object));
+      : physicallyApproachableTarget(engine, candidates.map((entry) => entry.object), "observe");
     if (selected && passiveSet.has(selected) && options.activatePassive !== false) {
       if (engine.__objectM0PassiveStudy !== selected) {
         releasePassiveMissionStudy(engine.__objectM0PassiveStudy);
@@ -1494,13 +1494,14 @@
   };
 
 
-  const physicallyApproachableTarget = (engine, objects) => {
+  const physicallyApproachableTarget = (engine, objects, interactionMode) => {
     if (typeof engine.interactionApproachPoint !== "function") return objects[0] || null;
     // Budget partagé pour la décision, jamais douze plans par objet ni par tick.
     const budget = { remaining: 12 };
     for (const [index, object] of objects.entries()) {
       const cached = engine.__cachedInteractionApproach;
       if (cached?.object === object && cached.mapId === engine.currentMapId &&
+          cached.validationDistance === engine.interactionValidationDistance?.(object, interactionMode) &&
           performance.now() - cached.at <= 1200 && Math.hypot(
             engine.character.root.position.x - cached.originX,
             engine.character.root.position.z - cached.originZ) <= 0.5) return object;
@@ -1514,7 +1515,7 @@
       const share = { remaining: Math.max(1, Math.floor(
         budget.remaining / (objects.length - index))) };
       const allowance = share.remaining;
-      const approach = engine.interactionApproachPoint(object, 0, null, share);
+      const approach = engine.interactionApproachPoint(object, 0, null, share, interactionMode);
       budget.remaining -= allowance - share.remaining;
       if (approach?.point) return object;
       if (budget.remaining <= 0) break;
@@ -1557,7 +1558,7 @@
         return distance(left) - distance(right);
       });
     return options.probe === true ? candidates[0] || null
-      : physicallyApproachableTarget(engine, candidates);
+      : physicallyApproachableTarget(engine, candidates, action.type);
   };
 
   const probeMissionActionTarget = (engine, action) => {

@@ -422,55 +422,16 @@
       record.fixedAnchor = true;
     }
 
-    const radius = Math.max(1, Number(template.radius) || Number(record.radius) || 7);
     const preferred = record.anchor || null;
     const pinnedAnchor = record.fixedAnchor === true || Boolean(record.resolvedAt);
-    const occupiedRegions = pinnedAnchor ? new Set() : occupiedMicroSceneRegionKeys(built);
-    // Une occurrence résolue ou explicitement ancrée garde sa destination.
-    // Pour une nouvelle MSC, épuiser les placements sur plateaux libres avant
-    // de revenir aux plateaux occupés, y compris dans les secours missionnels.
-    let anchor = pinnedAnchor && preferred ? normalizePoint(preferred) : null;
-    if (!anchor && record.fixedAnchor !== true) {
-      const passes = occupiedRegions.size ? [true, false] : [false];
-      for (const requireUnused of passes) {
-        anchor = findSafeAnchor(built, definition, radius, preferred,
-          occupiedRegions, requireUnused);
-        if (!anchor && record.missionId) {
-          anchor = findMissionFallbackAnchor(built, definition, null,
-            occupiedRegions, requireUnused);
-          if (anchor) console.warn("[BlueFox] Placement de secours utilisé pour une micro-scène missionnelle persistante.", {
-            mapId: definition.id, missionId: record.missionId, microSceneId: record.microSceneId
-          });
-        }
-        if (!anchor && record.missionId) {
-          anchor = findMissionTerminalAnchor(built, definition, null,
-            occupiedRegions, requireUnused);
-          if (anchor) console.warn("[BlueFox] Placement terminal utilisé pour garantir une micro-scène missionnelle persistante.", {
-            mapId: definition.id, missionId: record.missionId, microSceneId: record.microSceneId, anchor
-          });
-        }
-        if (anchor) break;
-      }
-    }
-
-    if (!anchor) {
-      console.warn("[BlueFox] Aucun emplacement sûr pour la micro-scène persistante.", {
-        mapId: definition.id,
-        microSceneId: record.microSceneId
-      });
-      return false;
-    }
-
     const root = new THREE.Group();
     root.name = `PersistentMicroScene:${id}`;
-    root.position.set(anchor.x, anchor.y || 0, anchor.z);
     root.rotation.y = Number(record.rotation) || 0;
     root.userData.persistentMicroSceneId = id;
     root.userData.microSceneId = record.microSceneId;
     root.userData.missionId = record.missionId || null;
     root.userData.contextRole = record.contextRole || null;
     root.userData.persistent = true;
-    built.group.add(root);
 
     const spawner = new BF.ObjectSpawner({
       THREE,
@@ -488,6 +449,75 @@
       instanceId: id
     });
 
+    const footprint = pinnedAnchor ? null : BF.ObjectSpawner.microSceneFootprint(THREE, { instanceRoot: root, records });
+    const footprintCandidates = BF.ObjectSpawner.microScenePlacementCandidates(
+      footprint, built.walkableRegions || []);
+    const occupiedFootprints = pinnedAnchor ? [] : (built.group.userData.microScenes || []).map(scene => {
+      const f = BF.ObjectSpawner.microSceneFootprint(THREE, scene);
+      const origin = scene.instanceRoot?.getWorldPosition(new THREE.Vector3()) || scene.anchor || { x: 0, z: 0 };
+      return f && { minX: f.minX + origin.x, maxX: f.maxX + origin.x,
+        minZ: f.minZ + origin.z, maxZ: f.maxZ + origin.z };
+    }).filter(Boolean);
+    const overlapArea = point => occupiedFootprints.reduce((total, box) => total +
+      Math.max(0, Math.min(point.x + footprint.maxX + 0.55, box.maxX) -
+        Math.max(point.x + footprint.minX - 0.55, box.minX)) *
+      Math.max(0, Math.min(point.z + footprint.maxZ + 0.55, box.maxZ) -
+        Math.max(point.z + footprint.minZ - 0.55, box.minZ)), 0);
+    const clearsReserved = point => footprint.colliders.every(collider =>
+      clearOfReserved(definition, { x: point.x + collider.x, z: point.z + collider.z }, collider.radius));
+    const clearsColliders = point => footprint.colliders.every(collider =>
+      clearOfColliders(built, { x: point.x + collider.x, z: point.z + collider.z }, collider.radius + 0.55));
+    const radius = Math.max(1, Number(template.radius) || Number(record.radius) || 7);
+    const occupiedRegions = pinnedAnchor ? new Set() : occupiedMicroSceneRegionKeys(built);
+    // Une occurrence résolue ou explicitement ancrée garde sa destination.
+    // Pour une nouvelle MSC, épuiser les placements sur plateaux libres avant
+    // de revenir aux plateaux occupés, y compris dans les secours missionnels.
+    let anchor = pinnedAnchor && preferred ? normalizePoint(preferred) : null;
+    if (!anchor && record.fixedAnchor !== true) {
+      const passes = occupiedRegions.size ? [true, false] : [false];
+      for (const requireUnused of passes) {
+        const candidates = footprintCandidates.filter(({ region, point }) =>
+          (!requireUnused || !occupiedRegions.has(regionKey(region))) && clearsReserved(point));
+        anchor = candidates.find(({ point }) => overlapArea(point) === 0 && clearsColliders(point))?.point || null;
+        if (!anchor && record.missionId) anchor = candidates.find(({ point }) => overlapArea(point) === 0)?.point || null;
+        if (!anchor && record.missionId && !requireUnused) {
+          anchor = [...candidates].sort((a, b) => overlapArea(a.point) - overlapArea(b.point) ||
+            a.distance - b.distance)[0]?.point || null;
+        }
+        // Les anciens secours restent réservés aux volumes qui n'ont aucun
+        // candidat complet sur cette topologie ; jamais un raccourci vers un
+        // plateau chargé avant d'avoir épuisé les plateaux libres.
+        if (!anchor && !footprintCandidates.length) anchor = findSafeAnchor(built, definition, radius, preferred,
+          occupiedRegions, requireUnused);
+        if (!anchor && record.missionId && !footprintCandidates.length) {
+          anchor = findMissionFallbackAnchor(built, definition, null,
+            occupiedRegions, requireUnused);
+          if (anchor) console.warn("[BlueFox] Placement de secours utilisé pour une micro-scène missionnelle persistante.", {
+            mapId: definition.id, missionId: record.missionId, microSceneId: record.microSceneId
+          });
+        }
+        if (!anchor && record.missionId && !footprintCandidates.length) {
+          anchor = findMissionTerminalAnchor(built, definition, null,
+            occupiedRegions, requireUnused);
+          if (anchor) console.warn("[BlueFox] Placement terminal utilisé pour garantir une micro-scène missionnelle persistante.", {
+            mapId: definition.id, missionId: record.missionId, microSceneId: record.microSceneId, anchor
+          });
+        }
+        if (anchor) break;
+      }
+    }
+
+    if (!anchor) {
+      console.warn("[BlueFox] Aucun emplacement sûr pour la micro-scène persistante.", {
+        mapId: definition.id,
+        microSceneId: record.microSceneId
+      });
+      BF.disposeObject?.(root);
+      return false;
+    }
+
+    root.position.set(anchor.x, anchor.y || 0, anchor.z);
+    built.group.add(root);
     records.forEach((spawned) => {
       spawned.root.userData.persistentMicroSceneId = id;
       spawned.root.userData.bibleMissionId = record.missionId || null;

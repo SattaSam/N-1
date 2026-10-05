@@ -154,7 +154,8 @@
       const regions = options.zoneRegions || [];
       if (!regions.length) return result;
       const insideAnyRegion = (record) => {
-        const x = Number(record?.position?.x); const z = Number(record?.position?.z);
+        const point = record?.root?.getWorldPosition?.(new this.THREE.Vector3()) || record?.position;
+        const x = Number(point?.x); const z = Number(point?.z);
         if (!Number.isFinite(x) || !Number.isFinite(z)) return true;
         const radius = Math.max(
           0.1,
@@ -170,7 +171,12 @@
         });
       };
       const created = this.instances.slice(before);
-      const invalid = created.filter((record) => !insideAnyRegion(record));
+      // Une MSC est une composition atomique. Son propriétaire de placement
+      // valide son volume ; le garde des objets isolés ne peut pas la découper.
+      const sceneMembers = new Set((this.microSceneInstances || [])
+        .flatMap((scene) => scene.records || []));
+      const invalid = created.filter((record) =>
+        !sceneMembers.has(record) && !record.instanceRoot && !insideAnyRegion(record));
       invalid.forEach((record) => {
         record.root?.removeFromParent?.();
         if (Array.isArray(options.interactables) && record.instance?.hitbox) {

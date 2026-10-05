@@ -107,17 +107,251 @@
       return originalSpawn.call(this, resolvedType, spawnOptions);
     };
 
+    if (!zones.length) {
+      try { return originalPopulateMap.call(this, options); }
+      finally { this.spawn = originalSpawn; }
+    }
     let result;
+    const zoneStats = zones.map(() => ({ objects: 0, rocks: [], scenes: 0 }));
+    const corridors = [
+      ...Object.values(options.resolvedExits || {}).map((exit) => ({ start: options.definition.entry, end: exit })),
+      ...(options.internalZonePaths || [])
+    ];
+    const biome = options.definition?.generator?.biomeId ||
+      options.definition?.profile || options.definition?.biome ||
+      options.definition?.id || "alien";
+    const compatibleScenes = DECORATIVE_SCENES.filter((scene) =>
+      scene.biomes.includes(biome) || scene.biomes.includes("alien")
+    );
+    const existingConfigured = configuredMicroSceneCount(options.definition);
+    const regularLimit = zones.length * defaultPerPlateau(zones.length);
+    const targetScenes = existingConfigured > zones.length * 3
+      ? existingConfigured
+      : Math.max(existingConfigured, regularLimit);
+    const sceneCountsByZone = () => {
+      const counts = zones.map(() => 0);
+      const indexed = new Set();
+      (this.microSceneInstances || []).forEach((scene) => {
+        const root = scene.instanceRoot || scene.records?.[0]?.root;
+        const point = root?.getWorldPosition?.(new this.THREE.Vector3()) || scene.anchor;
+        if (!point) return;
+        counts[nearestZoneIndex(zones, point)] += 1;
+        if (scene.instanceId) indexed.add(String(scene.instanceId));
+      });
+      // Les ancrages persistants sont déjà réservés même avant leur instanciation.
+      (options.definition?.persistentMicroScenes || []).forEach((scene) => {
+        if (scene.persistent === false || !scene.anchor || indexed.has(String(scene.instanceId))) return;
+        counts[nearestZoneIndex(zones, scene.anchor)] += 1;
+      });
+      return counts;
+    };
+    const sceneQuota = zones.map(() => 0);
+
+    const occupied = this.instances.map((record) => {
+      const point = record.root?.getWorldPosition?.(new this.THREE.Vector3()) || record.position;
+      return { x: point.x, z: point.z,
+        radius: BF.ObjectLibrary.getMapPlacement(record.type)?.radius || 1 };
+    });
+    const reservations = [];
+    const reserveScene = (scene) => {
+      const footprint = BF.ObjectSpawner.microSceneFootprint(this.THREE, scene);
+      const root = scene.instanceRoot;
+      if (!footprint) return;
+      const p = root?.getWorldPosition(new this.THREE.Vector3()) || scene.anchor || { x: 0, z: 0 };
+      reservations.push({ minX: p.x + footprint.minX, maxX: p.x + footprint.maxX,
+        minZ: p.z + footprint.minZ, maxZ: p.z + footprint.maxZ });
+    };
+    (this.microSceneInstances || []).forEach(reserveScene);
+    // Les occurrences résolues seront matérialisées après la population.
+    // Réserver leurs offsets conservés dès maintenant, sans déplacer l'ancrage.
+    const anchoredScenes = [
+      ...(options.definition?.persistentMicroScenes || []),
+      ...(options.definition?.customMicroScenes || []).map(scene => ({
+        microSceneId: scene.id,
+        anchor: { x: Number(scene.position?.[0]) || 0, z: Number(scene.position?.[2]) || 0 },
+        rotation: Number(scene.rotation?.[1]) || 0
+      }))
+    ];
+    anchoredScenes.forEach((scene) => {
+      if (scene.persistent === false || !scene.anchor) return;
+      const template = BF.MicroScenes?.get?.(scene.microSceneId);
+      if (!template?.objects?.length) return;
+      const angle = Number(scene.rotation) || 0;
+      const cos = Math.cos(angle), sin = Math.sin(angle) * (template.custom ? 1 : -1);
+      const box = { minX: Infinity, maxX: -Infinity, minZ: Infinity, maxZ: -Infinity };
+      template.objects.forEach((entry) => {
+        const [ox, , oz] = entry.offset || [0, 0, 0];
+        const x = scene.anchor.x + ox * cos + oz * sin;
+        const z = scene.anchor.z - ox * sin + oz * cos;
+        const r = Math.max(0.5, BF.ObjectLibrary.getMapPlacement(entry.type)?.radius || 1);
+        box.minX = Math.min(box.minX, x - r); box.maxX = Math.max(box.maxX, x + r);
+        box.minZ = Math.min(box.minZ, z - r); box.maxZ = Math.max(box.maxZ, z + r);
+      });
+      reservations.push(box);
+    });
+    const overlapsReservation = (x, z, radius) => reservations.some(box =>
+      x + radius + 0.55 > box.minX && x - radius - 0.55 < box.maxX &&
+      z + radius + 0.55 > box.minZ && z - radius - 0.55 < box.maxZ);
+    const protectedPoints = [
+      options.definition?.entry,
+      ...Object.values(options.resolvedExits || {})
+    ].filter(Boolean);
+    const isProtected = (x, z, radius) => protectedPoints.some((point) =>
+      Math.hypot(x - point.x, z - point.z) < radius + 4.2
+    ) || corridors.some(({ start, end }) =>
+      pointToSegmentSquared(start, end, x, z) < (radius + 1.8) ** 2
+    );
+    const isFree = (x, z, radius, ignoreOccupied = false) =>
+      !overlapsReservation(x, z, radius) && (ignoreOccupied || !occupied.some((item) =>
+        Math.hypot(x - item.x, z - item.z) < radius + item.radius + 0.55
+      )) && !isProtected(x, z, radius);
+
+    const findZoneEdgeOrigin = (zone, radius) => {
+      for (let attempt = 0; attempt < 80; attempt += 1) {
+        const angle = random() * Math.PI * 2;
+        const distance = 18 + random() * Math.max(1, 25 - radius - 18);
+        const x = zone.center.x + Math.cos(angle) * distance;
+        const z = zone.center.z + Math.sin(angle) * distance;
+        if (isFree(x, z, radius)) return { x, y: 0, z };
+      }
+      return null;
+    };
+
+    const findDeterministicOrigin = (radius, ignoreOccupied = false) => {
+      const distances = [18, 20, 22, Math.max(12, 24 - radius)];
+      const counts = sceneCountsByZone();
+      const ordered = zones.map((_, index) => index).sort((a, b) => counts[a] - counts[b] || a - b);
+      for (const zoneIndex of ordered) {
+        const zone = zones[zoneIndex];
+        for (const distance of distances) {
+          for (let step = 0; step < 48; step += 1) {
+            const angle = (step / 48) * Math.PI * 2;
+            const x = zone.center.x + Math.cos(angle) * distance;
+            const z = zone.center.z + Math.sin(angle) * distance;
+            if (isFree(x, z, radius, ignoreOccupied)) {
+              return { origin: { x, y: 0, z }, zoneIndex };
+            }
+          }
+        }
+      }
+      return null;
+    };
+
+    const alreadyRegistered = (sceneId) =>
+      (options.group?.userData?.microScenes || this.microSceneInstances || [])
+        .some((entry) => String(entry?.id || "") === String(sceneId));
+
+    const spawnGuaranteedScene = (sceneId, preferredZoneIndex = 0, source = "featured", terminal = true) => {
+      if (!sceneId || alreadyRegistered(sceneId)) return true;
+      const scene = BF.MicroScenes?.get?.(sceneId);
+      if (!scene) return false;
+      const rotation = random() * Math.PI * 2;
+      // Construire une seule fois, puis choisir uniquement l'ancrage global.
+      // Le volume mesuré conserve chaque pose interne issue de CUO Lab.
+      let records;
+      try {
+        records = this.spawnMicroScene(scene.id, {
+          origin: { x: 0, y: 0, z: 0 }, rotation, force: true,
+          scene: options.group || this.scene, palette: options.definition.palette,
+          source: `${source}-microscene:${scene.id}`
+        }) || [];
+        const indexed = this.microSceneInstances.find(entry => entry.records === records);
+        const footprint = BF.ObjectSpawner.microSceneFootprint(this.THREE, indexed);
+        const regions = options.walkableRegions || zones.map(zone => ({
+          minX: zone.center.x - zone.halfSize, maxX: zone.center.x + zone.halfSize,
+          minZ: zone.center.z - zone.halfSize, maxZ: zone.center.z + zone.halfSize
+        }));
+        const counts = sceneCountsByZone();
+        // Ne pas compter la composition provisoire à l'origine parmi les occupants.
+        const provisionalRoot = indexed?.instanceRoot || indexed?.records?.[0]?.root;
+        if (provisionalRoot) counts[nearestZoneIndex(zones,
+          provisionalRoot.getWorldPosition(new this.THREE.Vector3()))] -= 1;
+        const candidates = BF.ObjectSpawner.microScenePlacementCandidates(footprint, regions, options.bounds);
+        const overlapArea = point => reservations.reduce((total, box) => total +
+          Math.max(0, Math.min(point.x + footprint.maxX + 0.55, box.maxX) -
+            Math.max(point.x + footprint.minX - 0.55, box.minX)) *
+          Math.max(0, Math.min(point.z + footprint.maxZ + 0.55, box.maxZ) -
+            Math.max(point.z + footprint.minZ - 0.55, box.minZ)), 0);
+        const blocksPassage = point => footprint.colliders.some(collider =>
+          isProtected(point.x + collider.x, point.z + collider.z, collider.radius));
+        const clearOfObjects = point => !occupied.some(item =>
+          item.x + item.radius > point.x + footprint.minX &&
+          item.x - item.radius < point.x + footprint.maxX &&
+          item.z + item.radius > point.z + footprint.minZ &&
+          item.z - item.radius < point.z + footprint.maxZ);
+        candidates.sort((a, b) => counts[a.zoneIndex] - counts[b.zoneIndex] ||
+          a.distance - b.distance);
+        const safe = candidates.filter(({ point }) => !blocksPassage(point));
+        let selected = safe.find(({ point }) => overlapArea(point) === 0 && clearOfObjects(point));
+        if (!selected && terminal) selected = safe.find(({ point }) => overlapArea(point) === 0);
+        // Une signature garantie reste entière sur un plateau réel. Si les
+        // ancrages conservés saturent la map, minimiser explicitement le recouvrement.
+        if (!selected && terminal) selected = [...safe].sort((a, b) =>
+          overlapArea(a.point) - overlapArea(b.point) || a.distance - b.distance)[0];
+        if (!selected) {
+          // Ne jamais conserver une composition provisoire à l'origine.
+          records.forEach(record => { record.root?.removeFromParent?.();
+            const at = this.instances.indexOf(record); if (at >= 0) this.instances.splice(at, 1); });
+          indexed?.instanceRoot?.removeFromParent?.();
+          const at = this.microSceneInstances.indexOf(indexed);
+          if (at >= 0) this.microSceneInstances.splice(at, 1);
+          console.warn(`[BlueFox] Aucun plateau compatible avec le volume entier de ${scene.id}.`);
+          return false;
+        }
+        const origin = selected.point;
+        const resolvedZoneIndex = selected.zoneIndex;
+        indexed.anchor = { ...origin };
+        if (indexed.instanceRoot) {
+          indexed.instanceRoot.position.set(origin.x, origin.y, origin.z);
+          indexed.instanceRoot.updateWorldMatrix(true, true);
+        } else records.forEach(record => {
+          record.root.position.add(new this.THREE.Vector3(origin.x, origin.y, origin.z));
+          record.position = { x: record.root.position.x, y: record.root.position.y, z: record.root.position.z };
+        });
+        if (overlapArea(origin) > 0) console.warn(`[BlueFox] Recouvrement MSC minimal imposé par les ancrages conservés: ${scene.id}.`);
+        reserveScene(indexed);
+        records.forEach((record) => {
+          const root = record.instanceRoot || record.root;
+          if (root?.userData) {
+            root.userData.microScene = scene.id;
+            root.userData.outsideObjectBudget = true;
+          }
+          const hitbox = record.instance?.hitbox;
+          if (hitbox && !options.interactables?.includes(hitbox)) options.interactables?.push(hitbox);
+          (record.instance?.colliders || []).forEach((collider) => {
+            const owner = record.objectRoot || record.root;
+            const world = new this.THREE.Vector3();
+            owner?.updateWorldMatrix?.(true, false);
+            const position = collider.offset && owner?.localToWorld
+              ? owner.localToWorld(collider.offset.clone())
+              : owner?.getWorldPosition?.(world) || world;
+            if (!protectedPoints.some((point) =>
+              Math.hypot(position.x - point.x, position.z - point.z) < collider.radius + 4.2
+            )) options.colliders?.push({ position, radius: collider.radius, owner });
+          });
+        });
+        zoneStats[resolvedZoneIndex].scenes += 1;
+        return true;
+      } catch (error) {
+        console.warn(`MSC garantie impossible: ${scene.id}`, error);
+        return false;
+      }
+    };
+
+    const featuredSceneIds = Array.isArray(options.definition?.generator?.featuredMicroSceneIds)
+      ? options.definition.generator.featuredMicroSceneIds.filter(Boolean)
+      : [options.definition?.generator?.featuredMicroSceneId].filter(Boolean);
+    if (!isTutorialProtected(options.definition)) featuredSceneIds.forEach((sceneId, index) => {
+      spawnGuaranteedScene(sceneId, index, "featured", true);
+    });
+    // Le volume des compositions remarquables précède le décor ordinaire.
+    // Le budget ordinaire et les garanties tutoriel restent ceux du moteur.
     try {
-      result = originalPopulateMap.call(this, options);
+      result = originalPopulateMap.call(this, { ...options, microSceneReservations: reservations });
     } finally {
       this.spawn = originalSpawn;
     }
-
-    if (!zones.length) return result;
-
     const generated = this.instances.slice(startIndex);
-    const zoneStats = zones.map(() => ({ objects: 0, rocks: [], scenes: 0 }));
     generated.forEach((record) => {
       const index = nearestZoneIndex(zones, record.position || record.root?.position || { x: 0, z: 0 });
       zoneStats[index].objects += 1;
@@ -128,10 +362,6 @@
 
     // Réduction du poids visuel des rochers : on conserve en priorité ceux de
     // la couronne historique située en bord de plateau, jamais les corridors.
-    const corridors = [
-      ...Object.values(options.resolvedExits || {}).map((exit) => ({ start: options.definition.entry, end: exit })),
-      ...(options.internalZonePaths || [])
-    ];
     zoneStats.forEach((stat, zoneIndex) => {
       const center = zones[zoneIndex].center;
       // Les gros blocs placés en lisière servent aussi de cache-couture.
@@ -181,169 +411,16 @@
       });
     });
 
-    // Les cartes tutoriels conservent la variation et l'allègement des
-    // rochers ci-dessus, mais aucune seconde passe décorative ne peut y
-    // réinjecter faune, phénomène, ressource rare ou MSC spéciale.
-    if (isTutorialProtected(options.definition)) {
-      return {
-        ...result,
-        microSceneBudgetSeparate: true,
-        decorativeMicroScenes: 0,
-        decorativeMicroScenesByZone: zoneStats.map(() => 0),
-        populationHierarchyVersion: VERSION,
-        tutorialPopulationProtected: true
-      };
-    }
 
-    const biome = options.definition?.generator?.biomeId ||
-      options.definition?.profile || options.definition?.biome ||
-      options.definition?.id || "alien";
-    const compatibleScenes = DECORATIVE_SCENES.filter((scene) =>
-      scene.biomes.includes(biome) || scene.biomes.includes("alien")
-    );
-    const existingConfigured = configuredMicroSceneCount(options.definition);
-    const regularLimit = zones.length * defaultPerPlateau(zones.length);
-    const targetScenes = existingConfigured > zones.length * 3
-      ? existingConfigured
-      : Math.max(existingConfigured, regularLimit);
-    const sceneCountsByZone = () => {
-      const counts = zones.map(() => 0);
-      const indexed = new Set();
-      (this.microSceneInstances || []).forEach((scene) => {
-        const root = scene.instanceRoot || scene.records?.[0]?.root;
-        const point = root?.getWorldPosition?.(new this.THREE.Vector3()) || scene.anchor;
-        if (!point) return;
-        counts[nearestZoneIndex(zones, point)] += 1;
-        if (scene.instanceId) indexed.add(String(scene.instanceId));
-      });
-      // Les ancrages persistants sont déjà réservés même avant leur instanciation.
-      (options.definition?.persistentMicroScenes || []).forEach((scene) => {
-        if (scene.persistent === false || !scene.anchor || indexed.has(String(scene.instanceId))) return;
-        counts[nearestZoneIndex(zones, scene.anchor)] += 1;
-      });
-      return counts;
+    if (isTutorialProtected(options.definition)) return {
+      ...result, microSceneBudgetSeparate: true, decorativeMicroScenes: 0,
+      decorativeMicroScenesByZone: zoneStats.map(() => 0),
+      populationHierarchyVersion: VERSION, tutorialPopulationProtected: true
     };
-    const sceneQuota = zones.map(() => 0);
-
-    const occupied = this.instances.map((record) => {
+    this.instances.slice(startIndex).forEach(record => {
       const point = record.root?.getWorldPosition?.(new this.THREE.Vector3()) || record.position;
-      return { x: point.x, z: point.z,
-        radius: BF.ObjectLibrary.getMapPlacement(record.type)?.radius || 1 };
-    });
-    const protectedPoints = [
-      options.definition?.entry,
-      ...Object.values(options.resolvedExits || {})
-    ].filter(Boolean);
-    const isProtected = (x, z, radius) => protectedPoints.some((point) =>
-      Math.hypot(x - point.x, z - point.z) < radius + 4.2
-    ) || corridors.some(({ start, end }) =>
-      pointToSegmentSquared(start, end, x, z) < (radius + 1.8) ** 2
-    );
-    const isFree = (x, z, radius, ignoreOccupied = false) =>
-      (ignoreOccupied || !occupied.some((item) =>
-        Math.hypot(x - item.x, z - item.z) < radius + item.radius + 0.55
-      )) && !isProtected(x, z, radius);
-
-    const findZoneEdgeOrigin = (zone, radius) => {
-      for (let attempt = 0; attempt < 80; attempt += 1) {
-        const angle = random() * Math.PI * 2;
-        const distance = 18 + random() * Math.max(1, 25 - radius - 18);
-        const x = zone.center.x + Math.cos(angle) * distance;
-        const z = zone.center.z + Math.sin(angle) * distance;
-        if (isFree(x, z, radius)) return { x, y: 0, z };
-      }
-      return null;
-    };
-
-    const findDeterministicOrigin = (radius, ignoreOccupied = false) => {
-      const distances = [18, 20, 22, Math.max(12, 24 - radius)];
-      const counts = sceneCountsByZone();
-      const ordered = zones.map((_, index) => index).sort((a, b) => counts[a] - counts[b] || a - b);
-      for (const zoneIndex of ordered) {
-        const zone = zones[zoneIndex];
-        for (const distance of distances) {
-          for (let step = 0; step < 48; step += 1) {
-            const angle = (step / 48) * Math.PI * 2;
-            const x = zone.center.x + Math.cos(angle) * distance;
-            const z = zone.center.z + Math.sin(angle) * distance;
-            if (isFree(x, z, radius, ignoreOccupied)) {
-              return { origin: { x, y: 0, z }, zoneIndex };
-            }
-          }
-        }
-      }
-      return null;
-    };
-
-    const alreadyRegistered = (sceneId) =>
-      (options.group?.userData?.microScenes || this.microSceneInstances || [])
-        .some((entry) => String(entry?.id || "") === String(sceneId));
-
-    const spawnGuaranteedScene = (sceneId, preferredZoneIndex = 0, source = "featured", terminal = true) => {
-      if (!sceneId || alreadyRegistered(sceneId)) return true;
-      const scene = BF.MicroScenes?.get?.(sceneId);
-      if (!scene) return false;
-      const radius = Math.min(Math.max(1, Number(scene.radius) || 6), 11);
-      const counts = sceneCountsByZone();
-      const preferred = preferredZoneIndex % zones.length;
-      const ordered = zones.map((_, index) => index).sort((a, b) =>
-        counts[a] - counts[b] || (a === preferred ? -1 : b === preferred ? 1 : a - b));
-      const resolvedPreferred = ordered[0];
-      const preferredZone = zones[resolvedPreferred];
-      let origin = preferredZone ? findZoneEdgeOrigin(preferredZone, radius) : null;
-      let resolvedZoneIndex = resolvedPreferred;
-      if (!origin) {
-        const deterministic = findDeterministicOrigin(radius, false);
-        origin = deterministic?.origin || null;
-        if (deterministic) resolvedZoneIndex = deterministic.zoneIndex;
-      }
-      if (!origin && terminal) {
-        const relaxed = findDeterministicOrigin(radius, true);
-        origin = relaxed?.origin || null;
-        if (relaxed) resolvedZoneIndex = relaxed.zoneIndex;
-      }
-      if (!origin) return false;
-      try {
-        const records = this.spawnMicroScene(scene.id, {
-          origin,
-          rotation: random() * Math.PI * 2,
-          force: true,
-          scene: options.group || this.scene,
-          palette: options.definition.palette,
-          source: `${source}-microscene:${scene.id}`
-        }) || [];
-        records.forEach((record) => {
-          const root = record.instanceRoot || record.root;
-          if (root?.userData) {
-            root.userData.microScene = scene.id;
-            root.userData.outsideObjectBudget = true;
-          }
-          const hitbox = record.instance?.hitbox;
-          if (hitbox && !options.interactables?.includes(hitbox)) options.interactables?.push(hitbox);
-          (record.instance?.colliders || []).forEach((collider) => {
-            const owner = record.objectRoot || record.root;
-            const world = new this.THREE.Vector3();
-            owner?.getWorldPosition?.(world);
-            const position = collider.offset?.clone?.().add(world) || world;
-            if (!protectedPoints.some((point) =>
-              Math.hypot(position.x - point.x, position.z - point.z) < collider.radius + 4.2
-            )) options.colliders?.push({ position, radius: collider.radius, owner });
-          });
-        });
-        occupied.push({ x: origin.x, z: origin.z, radius });
-        zoneStats[resolvedZoneIndex].scenes += 1;
-        return true;
-      } catch (error) {
-        console.warn(`MSC garantie impossible: ${scene.id}`, error);
-        return false;
-      }
-    };
-
-    const featuredSceneIds = Array.isArray(options.definition?.generator?.featuredMicroSceneIds)
-      ? options.definition.generator.featuredMicroSceneIds.filter(Boolean)
-      : [options.definition?.generator?.featuredMicroSceneId].filter(Boolean);
-    featuredSceneIds.forEach((sceneId, index) => {
-      spawnGuaranteedScene(sceneId, index, "featured", true);
+      occupied.push({ x: point.x, z: point.z,
+        radius: BF.ObjectLibrary.getMapPlacement(record.type)?.radius || 1 });
     });
 
     const biomeId = options.definition?.generator?.biomeId || options.definition?.profile || null;

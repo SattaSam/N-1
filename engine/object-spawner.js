@@ -389,6 +389,9 @@
         x: (minX + maxX) / 2,
         z: (minZ + maxZ) / 2
       };
+      // Les compositions prioritaires déjà placées réservent leur volume
+      // complet avant la population ordinaire, sans gonfler son budget.
+      const sceneReservations = options.microSceneReservations || [];
       const occupied = [];
       const placementPreferences = {
         // Les volumes rouges structurent les lisières et masquent les raccords
@@ -428,7 +431,10 @@
         );
       };
       const isOccupied = (x, z, radius) =>
-        occupied.some((item) =>
+        sceneReservations.some((box) =>
+          x + radius + 0.28 > box.minX && x - radius - 0.28 < box.maxX &&
+          z + radius + 0.28 > box.minZ && z - radius - 0.28 < box.maxZ
+        ) || occupied.some((item) =>
           Math.hypot(x - item.x, z - item.z) < radius + item.radius + 0.28
         );
       const randomPosition = (minimumDistance, maximumDistance, radius, type = "frond", mustPlace = false) => {
@@ -1203,5 +1209,66 @@
   }
 
   ObjectSpawner.mapObjectBudgets = MAP_OBJECT_BUDGETS;
+  // Mesure ponctuelle d'une composition construite : transforms CUO Lab et
+  // volumes fonctionnels réels, jamais une estimation par nombre d'objets.
+  ObjectSpawner.microSceneFootprint = (THREE, scene) => {
+    const records = scene?.records || [];
+    const root = scene?.instanceRoot || null;
+    const origin = root?.getWorldPosition(new THREE.Vector3()) ||
+      new THREE.Vector3(Number(scene?.anchor?.x) || 0, 0, Number(scene?.anchor?.z) || 0);
+    const box = new THREE.Box3();
+    const colliders = [];
+    if (root && !records.length) {
+      root.updateWorldMatrix(true, true);
+      box.setFromObject(root);
+    }
+    records.forEach((record) => {
+      if (!record.root?.parent) return;
+      record.root.updateWorldMatrix(true, true);
+      box.union(new THREE.Box3().setFromObject(record.root));
+      (record.instance?.colliders || []).forEach((collider) => {
+        const owner = record.objectRoot || record.root;
+        const p = owner.localToWorld(collider.offset.clone());
+        const radius = Math.max(0, Number(collider.radius) || 0);
+        box.expandByPoint(new THREE.Vector3(p.x - radius, p.y, p.z - radius));
+        box.expandByPoint(new THREE.Vector3(p.x + radius, p.y, p.z + radius));
+        colliders.push({ x: p.x - origin.x, z: p.z - origin.z, radius });
+      });
+    });
+    if (box.isEmpty()) return null;
+    return {
+      minX: box.min.x - origin.x, maxX: box.max.x - origin.x,
+      minZ: box.min.z - origin.z, maxZ: box.max.z - origin.z,
+      colliders
+    };
+  };
+
+  ObjectSpawner.microScenePlacementCandidates = (footprint, regions, bounds) => {
+    if (!footprint || !regions?.length) return [];
+    // Chaque candidat reste dans un plateau physique : une enveloppe globale
+    // ne prouve pas que le contrôleur peut franchir la jointure entre plateaux.
+    const center = bounds
+      ? { x: (bounds.minX + bounds.maxX) / 2, z: (bounds.minZ + bounds.maxZ) / 2 }
+      : { x: (Math.min(...regions.map(r => r.minX)) + Math.max(...regions.map(r => r.maxX))) / 2,
+          z: (Math.min(...regions.map(r => r.minZ)) + Math.max(...regions.map(r => r.maxZ))) / 2 };
+    return regions.flatMap((region, zoneIndex) => {
+      const minX = region.minX - footprint.minX + 0.2;
+      const maxX = region.maxX - footprint.maxX - 0.2;
+      const minZ = region.minZ - footprint.minZ + 0.2;
+      const maxZ = region.maxZ - footprint.maxZ - 0.2;
+      if (minX > maxX || minZ > maxZ) return [];
+      const xs = new Set([BF.clamp(center.x - (footprint.minX + footprint.maxX) / 2, minX, maxX)]);
+      const zs = new Set([BF.clamp(center.z - (footprint.minZ + footprint.maxZ) / 2, minZ, maxZ)]);
+      for (let i = 0; i <= 6; i += 1) {
+        xs.add(minX + (maxX - minX) * i / 6);
+        zs.add(minZ + (maxZ - minZ) * i / 6);
+      }
+      return [...xs].flatMap(x => [...zs].map(z => ({
+        zoneIndex, region, point: { x, y: 0, z },
+        distance: Math.hypot(x + (footprint.minX + footprint.maxX) / 2 - center.x,
+          z + (footprint.minZ + footprint.maxZ) / 2 - center.z)
+      })));
+    }).sort((a, b) => a.distance - b.distance || a.zoneIndex - b.zoneIndex);
+  };
   BF.ObjectSpawner = ObjectSpawner;
 })(window);

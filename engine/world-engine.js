@@ -2628,7 +2628,7 @@
         : anchor.position?.clone?.() || null;
     }
 
-    interactionValidationDistance(object) {
+    interactionValidationDistance(object, interactionMode = null) {
       const interactionRadius = Number(object?.userData?.interactionRadius);
       const targetRadius = Number.isFinite(interactionRadius)
         ? Math.max(0, interactionRadius)
@@ -2637,9 +2637,17 @@
         0.1,
         Number(this.character?.radius) || 0.64
       );
-      // Portée fonctionnelle fixe : elle ne dépend jamais d'un fallback
-      // physique ou d'un collider rencontré pendant l'approche.
-      return targetRadius + characterRadius + 0.7;
+      const data = object?.userData || {};
+      const mode = interactionMode || data.requestedInteraction ||
+        data.functional?.interaction?.defaultAction || data.interaction?.defaultAction;
+      const fauna = data.functional?.category === "fauna" ||
+        BF.FaunaRuntime?.isFaunaType?.(data.libraryType) === true;
+      // Étudier n'exige pas le contact de collecte. Cette marge fixe et bornée
+      // appartient au contrat d'action, jamais à un fallback d'obstacles.
+      // Rayons explicites et paliers faune restent conservés.
+      const studyReach = !fauna && ["observe", "inspect", "analyze", "identify"].includes(mode)
+        ? 0.5 : 0;
+      return targetRadius + characterRadius + 0.7 + studyReach;
     }
 
     interactionApproachNavigationActive() {
@@ -2651,7 +2659,7 @@
       return character.root.position.distanceTo(character.target) > 0.2;
     }
 
-    interactionApproachPoint(object, attempt = 0, preferredDistance = null, pathBudget = null) {
+    interactionApproachPoint(object, attempt = 0, preferredDistance = null, pathBudget = null, interactionMode = null) {
       const anchor = object.userData.worldAnchor || object;
       const anchorPosition = this.interactionWorldPosition(object) || anchor.position;
       const colliderRadius = Number(object.userData.interactionRadius);
@@ -2669,7 +2677,8 @@
       ) ? 0.18 : 0.8;
       // Le point final reste dans la portée même lorsque le contrôleur
       // s'arrête à stopRadius du but. La portée fonctionnelle ne change pas.
-      const interactionDistance = normalApproachDistance + 0.48 -
+      const validationDistance = this.interactionValidationDistance(object, interactionMode);
+      const interactionDistance = validationDistance -
         Math.max(0.04, Number(this.character.stopRadius) || 0.12) - 0.03;
       const fromResource = this.character.root.position.clone()
         .sub(anchorPosition);
@@ -2792,7 +2801,7 @@
           return null;
         }
         if (!pointIsClear(finalPoint, -0.005)) return null;
-        if (preferred == null && finalRadius > this.interactionValidationDistance(object)) return null;
+        if (preferred == null && finalRadius > validationDistance) return null;
 
         const pathLength = path.reduce((total, waypoint, pathIndex) => {
           const previous = pathIndex
@@ -2824,6 +2833,7 @@
           this.__cachedInteractionApproach = {
             object,
             mapId: this.currentMapId,
+            validationDistance,
             at: performance.now(),
             originX: this.character.root.position.x,
             originZ: this.character.root.position.z,
@@ -3000,6 +3010,7 @@
         this.__cachedInteractionApproach = {
           object,
           mapId: this.currentMapId,
+          validationDistance,
           at: performance.now(),
           originX: this.character.root.position.x,
           originZ: this.character.root.position.z,
@@ -3168,6 +3179,7 @@
         !retry &&
         cachedApproach?.object === object &&
         cachedApproach.mapId === this.currentMapId &&
+        cachedApproach.validationDistance === this.interactionValidationDistance(object) &&
         performance.now() - cachedApproach.at <= 1200 &&
         Math.hypot(
           this.character.root.position.x - cachedApproach.originX,
