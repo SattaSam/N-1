@@ -353,8 +353,10 @@
           // Douze sondes au plus par décision, aucune au tick. Le curseur ne
           // crédite ni n'exclut un secteur ; il évite de reprendre toujours les
           // mêmes refus lorsqu'un lot entier est inaccessible depuis ce point.
-          for (let index = start; index < Math.min(targets.length, start + 12); index += 1) {
-            const target = targets[index];
+          let pathAttempts = 0;
+          let nextIndex = start;
+          for (; nextIndex < targets.length && pathAttempts < 12; nextIndex += 1) {
+            const target = targets[nextIndex];
             this.explorationSearch = {
               map: engine.currentMap, mapId: engine.currentMapId,
               missionId: action.missionId, nodeId: action.nodeId,
@@ -363,8 +365,15 @@
             const position = new engine.THREE.Vector3(target.x, 0, target.z);
             const planner = engine.character.pathPlanner;
             if (typeof planner?.plan === "function") {
+              pathAttempts += 1;
               const path = planner.plan(origin, position, engine.character.colliders,
-                engine.character.radius);
+                engine.character.radius, 0.12, {
+                  maxAttempts: Math.min(2, 13 - pathAttempts),
+                  onRetry: () => {
+                    if (pathAttempts >= 12) return false;
+                    pathAttempts += 1;
+                  }
+                });
               if (!Array.isArray(path) || !path.length) continue;
             }
             if (engine.character.setTarget(position) === false) return false;
@@ -373,7 +382,7 @@
             engine.callbacks.onStatus("Mission : BlueFox cartographie un secteur encore incomplet.");
             return true;
           }
-          if (start + 12 >= targets.length) this.explorationSearch = null;
+          if (nextIndex >= targets.length) this.explorationSearch = null;
           return false;
         }
         case Missions.ActionType.RESEARCH: {

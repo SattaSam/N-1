@@ -2799,7 +2799,15 @@
           point,
           allColliders,
           this.character.radius,
-          blockerPadding
+          blockerPadding,
+          {
+            maxAttempts: Math.min(2, maxPathPlans - pathPlans + 1),
+            onRetry: () => {
+              if (pathPlans >= maxPathPlans) return false;
+              pathPlans += 1;
+              if (pathBudget) pathBudget.remaining = Math.max(0, pathBudget.remaining - 1);
+            }
+          }
         );
         if (!Array.isArray(path) || !path.length) return null;
         const finalPoint = path[path.length - 1] || point;
@@ -4265,12 +4273,21 @@
       const distance = Math.max(0.1, site.radius - 0.4);
       const from = this.character.root.position;
       const angle = Math.atan2(from.z - point.z, from.x - point.x);
-      for (let index = 0; index < 12; index += 1) {
+      let pathAttempts = 0;
+      for (let index = 0; index < 12 && pathAttempts < 12; index += 1) {
         const direction = angle + index * Math.PI / 6;
         const candidate = point.clone().add(new this.THREE.Vector3(Math.cos(direction) * distance, 0, Math.sin(direction) * distance));
         this.character.constrainToWalkable(candidate);
         if (candidate.distanceTo(point) > site.radius || this.character.positionOverlapsCollider(candidate)) continue;
-        const route = this.character.pathPlanner.plan(from, candidate, this.character.colliders, this.character.radius);
+        pathAttempts += 1;
+        const route = this.character.pathPlanner.plan(from, candidate, this.character.colliders,
+          this.character.radius, 0.12, {
+            maxAttempts: Math.min(2, 13 - pathAttempts),
+            onRetry: () => {
+              if (pathAttempts >= 12) return false;
+              pathAttempts += 1;
+            }
+          });
         if (!Array.isArray(route) || !route.length) continue;
         if (this.character.setTarget(candidate, "auto") === false) continue;
         this.showWorldMarker?.(candidate);

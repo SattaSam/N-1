@@ -98,7 +98,18 @@
       return adjusted;
     }
 
-    plan(start, goal, colliders, characterRadius, padding = 0.12) {
+    plan(start, goal, colliders, characterRadius, padding = 0.12, options = {}) {
+      const path = this.planOnGrid(start, goal, colliders, characterRadius, padding);
+      if (path?.length) return path;
+      if (Number(options?.maxAttempts ?? 2) < 2) return null;
+      if (options?.onRetry?.() === false) return null;
+      // Un passage physique peut tomber entre les centres de la grille. Une
+      // seule reprise décalée conserve sa densité et tous ses tests de collision.
+      return this.planOnGrid(start, goal, colliders, characterRadius, padding,
+        this.step / 2, this.step / 2);
+    }
+
+    planOnGrid(start, goal, colliders, characterRadius, padding, offsetX = 0, offsetZ = 0) {
       let finalGoal = goal.clone();
       finalGoal.x = BF.clamp(finalGoal.x, -this.bounds, this.bounds);
       finalGoal.y = 0;
@@ -115,14 +126,14 @@
 
       const size = Math.floor((this.bounds * 2) / this.step) + 1;
       const toCell = (point) => ({
-        x: BF.clamp(Math.round((point.x + this.bounds) / this.step), 0, size - 1),
-        z: BF.clamp(Math.round((point.z + this.bounds) / this.step), 0, size - 1)
+        x: BF.clamp(Math.round((point.x + this.bounds - offsetX) / this.step), 0, size - 1),
+        z: BF.clamp(Math.round((point.z + this.bounds - offsetZ) / this.step), 0, size - 1)
       });
       const toWorld = (cell) => {
         if (cell.departure === true) return start;
         if (cell.x === goalCell.x && cell.z === goalCell.z) return finalGoal;
-        return new this.THREE.Vector3(-this.bounds + cell.x * this.step, 0,
-          -this.bounds + cell.z * this.step);
+        return new this.THREE.Vector3(-this.bounds + offsetX + cell.x * this.step, 0,
+          -this.bounds + offsetZ + cell.z * this.step);
       };
       const key = (cell) => cell.departure === true ? "start" : `${cell.x}:${cell.z}`;
       const startCell = { ...toCell(start), departure: true };
@@ -136,6 +147,11 @@
         if (cellKey === startKey) return false;
         if (blockedCells.has(cellKey)) return blockedCells.get(cellKey);
         const point = toWorld(cell);
+        if ((offsetX || offsetZ) &&
+            (Math.abs(point.x) > this.bounds || Math.abs(point.z) > this.bounds)) {
+          blockedCells.set(cellKey, true);
+          return true;
+        }
         const result = colliders.some((collider) => {
           const clearance = characterRadius + collider.radius + padding;
           const dx = point.x - collider.position.x;
