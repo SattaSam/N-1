@@ -3130,6 +3130,7 @@
 
     canInteractWith(object, now = performance.now()) {
       if (!object?.userData?.active) return false;
+      if (this.resourceCooldowns?.has(object)) return false;
       const autonomousInteraction = BF.resolveObjectInteraction?.(object, { source: "autonomy" });
       if (autonomousInteraction && !autonomousInteraction.action) return false;
       const last = Number(object.userData.lastInteractionAt || 0);
@@ -4212,7 +4213,7 @@
       this.lastAutonomyAt = now - 5600;
       object.userData.requestedMovementMode = null;
       object.userData.requestedInteractionSource = null;
-      if (profile.removeFromWorld) {
+      if (profile.collectable) {
         if (!Number.isFinite(profile.respawnMs) || profile.respawnMs <= 0) {
           console.error(
             `[BlueFox3D] Métadonnée CUO interaction.respawnSeconds absente ou invalide pour ${profile.kind}.`
@@ -4222,8 +4223,10 @@
         const respawnMs = profile.respawnMs;
         const cooldown = setTimeout(() => {
           if (this.disposed) return;
-          anchor.visible = true;
-          object.userData.active = true;
+          if (profile.removeFromWorld) {
+            anchor.visible = true;
+            object.userData.active = true;
+          }
           this.resourceCooldowns.delete(object);
         }, respawnMs);
         this.resourceCooldowns.set(object, cooldown);
@@ -4237,6 +4240,13 @@
       if (!site || site.mapId !== this.currentMapId ||
           mission?.completionGate?.autonomousTravel === false ||
           this.transitioning || this.pendingInteraction || this.pendingGate || this.currentRoutine) return false;
+      if (gateState.prerequisiteOnly === true) {
+        const tree = this.missionManager.trees.get(missionId);
+        const node = tree?.find?.(gateState.requiredNodeId);
+        if (!node || node.params?.requiresShelter !== true ||
+            node.isComplete || !node.prerequisitesMet(tree.root)) return false;
+        if (BF.canAccessCampInventory?.() === true) return true;
+      }
       if (gateState.canFinalize === true) {
         this.missionManager.syncLifecycleFromTrees?.();
         this.missionManager.publish?.();
@@ -4244,6 +4254,7 @@
       }
       const point = new this.THREE.Vector3(Number(site.anchor.x), 0, Number(site.anchor.z));
       if (this.character.root.position.distanceTo(point) <= site.radius) {
+        if (gateState.prerequisiteOnly === true) return BF.canAccessCampInventory?.() === true;
         if (site.requireDeposit) return runtime?.depositCompletionSamples?.(missionId) === true;
         this.missionManager.syncLifecycleFromTrees?.();
         this.missionManager.publish?.();

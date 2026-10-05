@@ -107,10 +107,11 @@
       : null;
     if (!counter?.slot) return null;
 
-    const node = manager?.trees?.get?.(missionId)?.find?.(
+    const tree = manager?.trees?.get?.(missionId);
+    const node = tree?.find?.(
       `${missionId}:${counter.slot}`
     );
-    if (!node || node.isComplete) return null;
+    if (!node || node.isComplete || !node.prerequisitesMet(tree.root)) return null;
 
     const sequenceEntry = Array.isArray(mission?.sequence)
       ? mission.sequence.find((entry) => entry?.slot === counter.slot)

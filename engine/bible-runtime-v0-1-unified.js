@@ -1802,6 +1802,36 @@
       };
     }
 
+    environmentPlayerStudyMatches(node, mapId, instanceId, qualifiedBiomes = null) {
+      const params = node?.params || {};
+      const family = params.envHistoricalFamily || params.envLocalFamily;
+      if (!family && !params.envWorldMastery) return false;
+      if (params.envWorldMastery &&
+          (qualifiedBiomes || this.environmentQualifiedBiomeTypes()).has(this.environmentMapBiome(mapId))) return false;
+      const entry = this.observationMemory().maps?.[mapId];
+      return (family ? [family] : ["RELIC", "ROCK", "PLANT"]).some((key) => {
+        const coverage = entry?.envFamilies?.[String(key).toUpperCase()];
+        return asArray(coverage?.eligibleInstanceIds).includes(String(instanceId)) &&
+          !asArray(coverage?.observedInstanceIds).includes(String(instanceId));
+      });
+    }
+
+    environmentPlayerDestinationMaps(node) {
+      const params = node?.params || {};
+      if (!params.envHistoricalFamily && !params.envLocalFamily && !params.envWorldMastery) return [];
+      const qualified = params.envWorldMastery ? this.environmentQualifiedBiomeTypes() : null;
+      return Object.entries(this.observationMemory().maps || {}).filter(([mapId, entry]) => {
+        if (qualified?.has(this.environmentMapBiome(mapId))) return false;
+        if (params.envWorldMastery && Number(BF.getMapExplorationState?.(mapId)?.surfacePercent) < 100) return true;
+        const family = params.envHistoricalFamily || params.envLocalFamily;
+        return (family ? [family] : ["RELIC", "ROCK", "PLANT"]).some((key) => {
+          const coverage = entry.envFamilies?.[String(key).toUpperCase()];
+          const observed = new Set(asArray(coverage?.observedInstanceIds));
+          return asArray(coverage?.eligibleInstanceIds).some((instanceId) => !observed.has(instanceId));
+        });
+      }).map(([mapId]) => mapId);
+    }
+
     environmentMapCoverage(mapId, familyName, source = null) {
       const coverage = source || this.observationMemory();
       const family = String(familyName || "").toUpperCase();
@@ -1863,13 +1893,16 @@
       const coverage = this.observationMemory();
       const mapCoverage = coverage.maps?.[mapId];
       if (!mapCoverage?.frozen) return false;
-      if (entityId && !mapCoverage.observableEntityIds?.includes(entityId)) return false;
+      const frozenEntity = entityId && mapCoverage.observableEntityIds?.includes(entityId);
+      // Une variante graphique peut changer la clé spatiale générale, mais
+      // pas l'identité physique déjà figée dans le protocole ENV.
+      if (entityId && !frozenEntity && !environmentEligible) return false;
 
       const next = clone(coverage);
       const entry = next.maps[mapId];
       entry.observedEntityIds = asArray(entry.observedEntityIds);
       let changed = false;
-      if (entityId && !entry.observedEntityIds.includes(entityId)) {
+      if (frozenEntity && !entry.observedEntityIds.includes(entityId)) {
         entry.observedEntityIds.push(entityId);
         changed = true;
 
@@ -2412,13 +2445,37 @@
       asArray(mission?.runtimeCounters).forEach((counter) => {
         if (!counter?.slot || !counter?.source) return;
         const key = this.runtimeCounterBaselineKey(mission.id, counter.slot);
-        if (manager.memory.getFact?.(key, null) != null) return;
+        const previous = manager.memory.getFact?.(key, null);
+        const tree = manager.trees?.get?.(mission.id);
+        const node = tree?.find?.(`${mission.id}:${counter.slot}`);
+        if (!node) return;
+        const requirements = [];
+        for (let owner = node; owner; owner = owner.parent) {
+          requirements.push(...(owner.requires || []));
+        }
+        const staged = counter.baselineOnActivation !== false && requirements.length > 0;
+        const ready = node.prerequisitesMet(tree.root);
+        const prerequisiteAt = Math.max(0, ...requirements.map(id =>
+          Number(tree.find(id)?.completedAt) || 0));
+        // Un compteur historique conserve sa référence zéro. Pour un travail
+        // demandé après un prérequis, la référence appartient à cette étape,
+        // jamais à l'activation de la mission entière.
+        const needsOpeningBaseline = staged && ready && (
+          previous?.pendingPrerequisites === true ||
+          (previous && !previous.availableAt && Number(previous.capturedAt || 0) < prerequisiteAt)
+        );
+        if (previous != null && !needsOpeningBaseline &&
+            !(staged && !ready && previous.pendingPrerequisites !== true)) return;
         const current = this.runtimeCounterValue(counter.source, counter);
         if (current == null) return;
         manager.memory.setFact?.(key, {
           source: counter.source,
           value: counter.baselineOnActivation === false ? 0 : current,
-          capturedAt: Date.now()
+          capturedAt: Date.now(),
+          ...(staged ? {
+            pendingPrerequisites: !ready,
+            availableAt: ready ? Date.now() : 0
+          } : {})
         });
         changed = true;
       });
@@ -2435,13 +2492,38 @@
         const counters = asArray(mission?.runtimeCounters);
         if (!counters.length) return;
         if (!this.missionLifecycle(mission.id).active) return;
-        this.initializeRuntimeCounters(mission);
         const tree = manager.trees?.get?.(mission.id);
         if (!tree) return;
         let treeChanged = false;
+        // Réconciliation ciblée d'une preuve impossible dans une mission active.
+        // Aucun stock ni accomplissement d'une mission achevée n'est réinitialisé.
+        counters.forEach((counter) => {
+          if (counter.baselineOnActivation === false) return;
+          const node = tree.find?.(`${mission.id}:${counter.slot}`);
+          if (!node || !(Number(node.progress) > 0)) return;
+          const requirements = [];
+          for (let owner = node; owner; owner = owner.parent) {
+            requirements.push(...(owner.requires || []));
+          }
+          const outOfOrder = !node.prerequisitesMet(tree.root) ||
+            (node.isComplete && Number(node.completedAt) > 0 && requirements.some(id =>
+              Number(tree.find(id)?.completedAt) > Number(node.completedAt)));
+          if (!outOfOrder) return;
+          node.progress = 0;
+          node.completedAt = 0;
+          node.startedAt = 0;
+          node.status = Missions.MissionStatus.LOCKED;
+          manager.memory.remember?.("runtime-counter-order-repaired", {
+            missionId: mission.id, nodeId: node.id, source: counter.source
+          });
+          treeChanged = true;
+          changed += 1;
+        });
+        if (treeChanged) tree.refresh?.();
+        this.initializeRuntimeCounters(mission);
         counters.forEach((counter) => {
           const node = tree.find?.(`${mission.id}:${counter.slot}`);
-          if (!node || node.isComplete) return;
+          if (!node || node.isComplete || !node.prerequisitesMet(tree.root)) return;
           const current = this.runtimeCounterValue(counter.source, counter);
           if (current == null) return;
           const baselineRecord = manager.memory.getFact?.(
@@ -6375,11 +6457,10 @@
       return changed;
     }
 
-    completionShelterTarget(mission) {
-      const gate = mission?.completionGate;
+    completionShelterTarget(mission, gate = mission?.completionGate) {
       const engine = BF.currentEngine;
       if (gate?.type !== "proximity.shelter" || !engine?.currentMapId) return null;
-      const declaredMapId = this.missionTargetMapId(mission);
+      const declaredMapId = gate?.mapId || this.missionTargetMapId(mission);
       const currentMapId = String(engine.currentMapId);
       const mapId = declaredMapId || (gate.scope === "current-map" ? currentMapId : "");
       if (!mapId && gate.scope !== "any-established") return null;
@@ -6393,11 +6474,17 @@
           if (!site || !allowed.has(kind) || !site.anchor || !(Number(site.stage) >= 1) ||
               String(site.mapId || candidateMapId) !== candidateMapId ||
               (gate.siteId != null && String(site.id || "") !== String(gate.siteId))) continue;
+          // Le transport UI donne accès au site primaire mémorisé sur cette map.
+          // Une étape de recherche ne peut pas choisir un autre abri local dont
+          // la proximité ne rendrait pas réellement l'inventaire accessible.
+          if (gate.inventoryAccess === true &&
+              String(site.id || "") !== String(buckets[candidateMapId]?.id || "")) continue;
           if (!Number.isFinite(Number(site.anchor.x)) || !Number.isFinite(Number(site.anchor.z))) continue;
           const route = candidateMapId === currentMapId ? [] : engine.findKnownRoute?.(currentMapId, candidateMapId);
           if (!Array.isArray(route)) continue;
           candidates.push({ mapId: candidateMapId, siteId: site.id || null, kind,
-            anchor: clone(site.anchor), radius: Math.max(0.5, Number(gate.radius) || 8),
+            anchor: clone(site.anchor), radius: Math.max(gate.inventoryAccess === true ? 4 : 0.5, Number(gate.radius) ||
+              (gate.useSiteInteractionRadius === true ? Number(site.interactionRadius) : 0) || 8),
             requireDeposit: gate.requireDeposit === true, cost: route.length });
         }
       }

@@ -550,8 +550,10 @@
         const missionDelta = Math.max(0, Number(metrics.missions) - Number(previousMetrics.missions || 0));
         const psychologicalChanged = String(theme.psychologySignature || "") !==
           String(previous?.psychologySignature || "");
+        const factsChanged = String(theme.factSignature || "") !== String(previous?.factSignature || "");
+        const milestonesChanged = String(theme.milestoneSignature || "") !== String(previous?.milestoneSignature || "");
         const significant = !previous || previous.label !== theme.label || eventDelta >= 3 || scoreDelta >= 3 ||
-          subjectDelta >= 2 || missionDelta >= 1 || psychologicalChanged;
+          subjectDelta >= 2 || missionDelta >= 1 || psychologicalChanged || factsChanged || milestonesChanged;
         if (!significant) return;
         narrative.themes[id] = {
           id,
@@ -559,6 +561,8 @@
           text: theme.text,
           metrics: clone(metrics),
           psychologySignature: String(theme.psychologySignature || ""),
+          factSignature: String(theme.factSignature || ""),
+          milestoneSignature: String(theme.milestoneSignature || ""),
           updatedAt: Date.now()
         };
       });

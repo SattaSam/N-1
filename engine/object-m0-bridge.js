@@ -79,6 +79,35 @@
     };
     const state = owner.userData.interactionState;
     state.studyGeneration = Math.max(0, Number(state.studyGeneration) || 0);
+    if (state.acquisitionAvailableAt == null) {
+      const instanceId = resolved.data?.instanceId || resolved.rootData?.instanceId;
+      const progression = BF.progression?.state;
+      const record = progression?.discoveries?.instances?.[instanceId];
+      const historicalAcquisition = record?.acquisitionAvailableAt == null && instanceId
+        ? (progression?.history || []).findLast((event) => event.instanceId === instanceId &&
+            ["RESOURCE_COLLECTED", "RESOURCE_EXTRACTED"].includes(event.type)) : null;
+      const seconds = historicalAcquisition
+        ? BF.resolveObjectRespawnSeconds?.(resolved.definition) : 0;
+      state.acquisitionAvailableAt = Number(record?.acquisitionAvailableAt) ||
+        (Number(historicalAcquisition?.at) || 0) + (Number(seconds) || 0) * 1000;
+      const remaining = state.acquisitionAvailableAt - Date.now();
+      const engine = BF.currentEngine;
+      const remove = resolved.definition?.interaction?.removeFromWorld ??
+        resolved.definition?.gameplay?.collectable === true;
+      if (remaining > 0 && remove && engine?.resourceCooldowns) {
+        resolved.object.userData.active = false;
+        owner.visible = false;
+        const cooldown = setTimeout(() => {
+          if (engine.disposed) return;
+          resolved.object.userData.active = true;
+          owner.visible = true;
+          state.acquisitionAvailableAt = 0;
+          state.collected = false;
+          engine.resourceCooldowns.delete(resolved.object);
+        }, remaining);
+        engine.resourceCooldowns.set(resolved.object, cooldown);
+      }
+    }
     return state;
   };
 
@@ -114,6 +143,7 @@
     if (!definition) return null;
     const state = interactionState(resolved);
     const caps = capabilities(definition);
+    if (caps.collectable && Number(state.acquisitionAvailableAt || 0) > Date.now()) return null;
     const neverStudied =
       !state.observed && !state.inspected && !state.analyzed && !state.identified &&
       Number(state.observationCount || 0) === 0 &&
@@ -242,6 +272,7 @@
     const state = interactionState(resolved);
     const allowed = new Set(resolved.definition?.interaction?.actions || []);
     if (requested === "collect" || requested === "extract") {
+      if (Number(state.acquisitionAvailableAt || 0) > Date.now()) return null;
       if (!caps.collectable) return caps.inspectable ? "inspect" : null;
       const neverStudied =
         !state.observed && !state.inspected && !state.analyzed && !state.identified &&
@@ -927,7 +958,10 @@
           currentNode &&
           requiredMapMatches(manager, currentNode, event.mapId) &&
           requiredSiteMatchesEvent(manager, currentNode, event) &&
-          eventMatchesNode(event, currentNode, missionId, tree)
+          (eventMatchesNode(event, currentNode, missionId, tree) ||
+            (current.backgroundEnvironment === true && currentNode.params?.backgroundProgressOnly === true &&
+              (currentNode.params.envHistoricalFamily || currentNode.params.envLocalFamily || currentNode.params.envWorldMastery) &&
+              event.type === BF.ObjectEvents.types.PHENOMENON_OBSERVED))
         ) {
           const eventMissionId = String(event.detail?.missionId || "");
           const eventNodeId = String(event.detail?.missionNodeId || "");
@@ -1429,8 +1463,15 @@
     if (missionNode?.params?.biblePattern === "CONTEXT_MSC") {
       return BF.selectContextMissionTarget?.(engine, action) || null;
     }
-    if (!isGenericObjectStudyNode(missionNode)) return null;
+    const manager = engine?.missionManager;
+    const environmentStudy = action.backgroundEnvironment === true &&
+      action.missionId === manager?.primaryMissionId && manager?.isPlayerSelectedPrimary?.() &&
+      missionNode?.params?.backgroundProgressOnly === true &&
+      (missionNode.params.envHistoricalFamily || missionNode.params.envLocalFamily || missionNode.params.envWorldMastery);
+    if (!isGenericObjectStudyNode(missionNode) && !environmentStudy) return null;
 
+    const qualifiedBiomes = environmentStudy && missionNode.params.envWorldMastery
+      ? BF.bibleRuntime?.environmentQualifiedBiomeTypes?.() : null;
     const passiveObjects = passiveMissionSceneObjects(engine, action, {
       activate: options.activatePassive !== false
     });
@@ -1448,12 +1489,14 @@
         const tree = engine?.missionManager?.trees?.get?.(action.missionId);
         const node = tree?.find?.(action.nodeId);
         if (!tree || !node) return null;
+        if (environmentStudy && !BF.bibleRuntime?.environmentPlayerStudyMatches?.(
+            node, engine.currentMapId, resolved.data.instanceId || resolved.rootData.instanceId, qualifiedBiomes)) return null;
         if (node?.params?.siteProgressionKind) return null;
         if (!requiredMapMatches(engine?.missionManager, node, engine?.currentMapId)) return null;
         if (!requiredSiteMatchesResolved(engine?.missionManager, node, resolved, engine?.currentMapId)) return null;
         if (!relationMatches(tree, node, relationEvidenceFromResolved(resolved, engine?.currentMapId))) return null;
         const distinctValue = distinctValueFromResolved(node, resolved, engine?.currentMapId);
-        if (distinctValue != null && node?.hasDistinctValue?.(distinctValue)) return null;
+        if (!environmentStudy && distinctValue != null && node?.hasDistinctValue?.(distinctValue)) return null;
         if (!(definition && (canStudy(definition) || passiveMissionStudy))) return null;
         if (!metadataMatchesMissionCriteria(
           definitionMissionMetadata(definition, resolved),
@@ -1529,6 +1572,7 @@
         if (!object.userData.active) return false;
         const resolved = resolveMissionCandidate(object);
         const definition = resolved.definition;
+        if (Number(interactionState(resolved).acquisitionAvailableAt || 0) > Date.now()) return false;
         const caps = capabilities(definition);
         const tree = engine?.missionManager?.trees?.get?.(action.missionId);
         const node = tree?.find?.(action.nodeId);
@@ -2376,6 +2420,10 @@
       if (acquisition) {
         state.collected = true;
         state.collectionCount += 1;
+        const respawnSeconds = BF.resolveObjectRespawnSeconds?.(definition) ??
+          Number(definition.interaction?.respawnSeconds);
+        state.acquisitionAvailableAt = Number.isFinite(respawnSeconds) && respawnSeconds > 0
+          ? Date.now() + respawnSeconds * 1000 : 0;
         const removeFromWorld =
           definition.interaction?.removeFromWorld ??
           definition.gameplay?.collectable === true;
@@ -2393,13 +2441,12 @@
         BF.ObjectEvents.emit(eventType, object, {
           ...detail,
           label: definition.resource?.inventoryLabel || definition.label,
-          inventoryKey
+          inventoryKey,
+          acquisitionAvailableAt: state.acquisitionAvailableAt
         });
         rememberMissionCommit();
         clearAcquisitionTransaction(this, object);
-        if (removeFromWorld) {
-          const respawnSeconds = BF.resolveObjectRespawnSeconds?.(definition) ??
-            Number(definition.interaction?.respawnSeconds);
+        {
           if (!Number.isFinite(respawnSeconds) || respawnSeconds <= 0) {
             console.error(
               `[BlueFox3D] Métadonnée CUO interaction.respawnSeconds absente ou invalide pour ${definition.id || definition.type}.`
@@ -2408,16 +2455,20 @@
             const respawnMs = respawnSeconds * 1000;
             const cooldown = setTimeout(() => {
               if (this.disposed) return;
-              anchor.visible = true;
-              state.studyGeneration =
-                Math.max(0, Number(state.studyGeneration) || 0) + 1;
-              object.userData.active = true;
+              if (removeFromWorld) {
+                anchor.visible = true;
+                state.studyGeneration = Math.max(0, Number(state.studyGeneration) || 0) + 1;
+                object.userData.active = true;
+              }
+              state.acquisitionAvailableAt = 0;
               state.collected = false;
-              if (definition.interaction?.observeBeforeAcquire === true) {
+              if (removeFromWorld && definition.interaction?.observeBeforeAcquire === true) {
                 state.acquisitionObservationSatisfied = false;
               }
-              object.userData.requestedInteraction = null;
-              object.userData.requestedInteractionSource = null;
+              if (removeFromWorld) {
+                object.userData.requestedInteraction = null;
+                object.userData.requestedInteractionSource = null;
+              }
               this.resourceCooldowns.delete(object);
             }, respawnMs);
             this.resourceCooldowns.set(object, cooldown);

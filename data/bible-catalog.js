@@ -12737,6 +12737,15 @@
   });
 
 
+  // Thèmes narratifs des arcs ; distincts des axes de priorité comportementale.
+  const JOURNAL_MISSION_THEMES = Object.freeze({
+    ENE: "energy", GEO: "geology", ARCH: "archaeology",
+    FLO: "flora", FAU: "fauna", EXP: "exploration"
+  });
+  const JOURNAL_NARRATIVE_THEMES = Object.freeze({
+    NATURALISTE: "flora", ARCHEOLOGUE: "archaeology",
+    EXPLORATEUR: "exploration", SCIENTIFIQUE: "research", LOGISTICIEN: "technology"
+  });
   BF.BibleCatalog = Object.freeze([
     T01,
     T02,
@@ -12936,7 +12945,11 @@
     ...ENV_GLOBAL_MISSIONS,
     ...ENV_MAP_MISSIONS,
     ...ENV_WORLD_MISSIONS
-  ]);
+  ].map((mission) => {
+    const theme = mission.theme || JOURNAL_MISSION_THEMES[String(mission.id).split("-")[0]] ||
+      JOURNAL_NARRATIVE_THEMES[mission.narrativeAxis];
+    return theme && !mission.theme ? Object.freeze({ ...mission, theme }) : mission;
+  }));
 
   BF.BibleExperiments = SCIENTIFIC_EXPERIMENTS;
 

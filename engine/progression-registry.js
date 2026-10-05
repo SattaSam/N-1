@@ -798,6 +798,15 @@
         this.addInventory(event.inventoryKey || event.detail?.inventoryKey || event.detail?.kind || event.family, quantity || 1);
       }
 
+      // Le délai de disponibilité appartient à la même instance canonique,
+      // et survit au rechargement/reconstruction de sa map.
+      if ([BF.ObjectEvents?.types.RESOURCE_COLLECTED, BF.ObjectEvents?.types.RESOURCE_EXTRACTED].includes(event.type) &&
+          event.instanceId && Number(event.detail?.acquisitionAvailableAt) > 0) {
+        this.rememberDiscovery(this.state.discoveries.instances, event.instanceId, event);
+        this.state.discoveries.instances[cleanKey(event.instanceId)].acquisitionAvailableAt =
+          Number(event.detail.acquisitionAvailableAt);
+      }
+
       const discoveryEvent = [
         BF.ObjectEvents?.types.OBJECT_SEEN,
         BF.ObjectEvents?.types.OBJECT_INSPECTED,

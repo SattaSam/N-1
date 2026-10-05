@@ -822,7 +822,7 @@
     natural_decor: "Décors naturels", decors_nature: "Décors naturels",
     flora: "Flore", fauna: "Faune", ruins: "Ruines",
     phenomena: "Phénomènes", resources: "Ressources", components: "Composants",
-    equipment: "Équipement", geology: "Géologie", energy: "Énergie",
+    equipment: "Équipement", geology: "Géologie", energy: "Énergie", archaeology: "Archéologie",
     technology: "Technologie", mineral: "Minéraux", plant: "Plantes"
   });
 
@@ -845,7 +845,10 @@
 
   const journalEvolutionThemeId = (value) => {
     const id = String(value ?? "").trim().toLowerCase().replace(/\s+/g, "-");
-    return id === "decors_nature" ? "natural_decor" : id;
+    const aliases = { decors_nature: "natural_decor", flore: "flora", faune: "fauna",
+      énergie: "energy", géologie: "geology", archéologie: "archaeology",
+      phenomenon: "phenomena", habitation: "survival" };
+    return aliases[id] || id;
   };
 
   const journalEvolutionLabel = (value) => {
@@ -1006,25 +1009,26 @@
     const history = Array.isArray(progression?.history)
       ? progression.history
       : [];
-    if (!history.length) return [];
-
     const missions = journalEvolutionMissionDefinitions();
+    // Une seule lecture immuable pour cette ouverture, aucune cache inter-pages.
+    const multi = BF?.getMultiProgressionState?.() || {};
+    const psychology = multi.psychology || {};
+    const lifecycle = BF?.currentEngine?.missionManager?.memory?.state?.missionLifecycle || {};
     const grouped = new Map();
+    const bucketFor = (theme) => {
+      if (!grouped.has(theme.id)) grouped.set(theme.id, {
+        id: theme.id, label: theme.label || journalEvolutionLabel(theme.id),
+        events: [], score: 0, subjects: new Map(), missionIds: new Set(),
+        firstAt: 0, lastAt: 0, lifetime: [], completed: []
+      });
+      return grouped.get(theme.id);
+    };
 
     history.forEach((event) => {
       const theme = journalEvolutionEventTheme(event, missions);
       if (!theme?.id) return;
 
-      const bucket = grouped.get(theme.id) || {
-        id: theme.id,
-        label: theme.label || journalEvolutionLabel(theme.id),
-        events: [],
-        score: 0,
-        subjects: new Map(),
-        missionIds: new Set(),
-        firstAt: 0,
-        lastAt: 0
-      };
+      const bucket = bucketFor(theme);
 
       const weight = journalEvolutionEventWeight(event, missions);
       const at = journalEvolutionEventTime(event);
@@ -1064,6 +1068,48 @@
       grouped.set(theme.id, bucket);
     });
 
+    // Les totaux canoniques sont indépendants de la fenêtre des 500 événements.
+    // Ils comptent des actions/quantités, jamais des instances distinctes.
+    const objectTotals = new Map();
+    Object.entries(progression?.counters?.global || {}).forEach(([key, amount]) => {
+      const match = /^(OBJECT_SEEN|PHENOMENON_OBSERVED|OBJECT_INSPECTED|OBJECT_ANALYZED|RESOURCE_COLLECTED|RESOURCE_EXTRACTED):object:(.+)$/.exec(key);
+      const value = Math.max(0, Number(amount) || 0);
+      if (!match || !value) return;
+      const definition = BF?.ObjectLibrary?.getById?.(match[2]);
+      if (!definition?.label) return;
+      const totals = objectTotals.get(match[2]) || { definition, counts: {} };
+      totals.counts[match[1]] = value;
+      objectTotals.set(match[2], totals);
+    });
+    objectTotals.forEach(({ definition, counts }, objectId) => {
+      const domains = definition.research?.domains || [];
+      const domain = domains.includes("energy") ? "energy"
+        : domains.includes("geology") ? "geology"
+        : domains.includes("archaeology") ? "archaeology"
+        : definition.knowledge?.family || definition.category || "research";
+      const theme = { id: journalEvolutionThemeId(domain), label: journalEvolutionLabel(domain) };
+      const bucket = bucketFor(theme);
+      bucket.lifetime.push({ objectId, label: definition.label,
+        observations: (counts.OBJECT_SEEN || 0) + (counts.PHENOMENON_OBSERVED || 0),
+        inspections: counts.OBJECT_INSPECTED || 0, analyses: counts.OBJECT_ANALYZED || 0,
+        harvested: (counts.RESOURCE_COLLECTED || 0) + (counts.RESOURCE_EXTRACTED || 0) });
+    });
+    missions.forEach((mission, id) => {
+      const state = lifecycle[id];
+      const receipt = psychology.completedMissionPsychology?.[id];
+      if (state?.status !== "completed" && !(receipt && !state)) return;
+      const theme = journalEvolutionMissionTheme(mission);
+      if (!theme?.id || !mission.title) return;
+      const bucket = bucketFor(theme);
+      bucket.missionIds.add(id);
+      const completedAt = Number(state?.completedAt || receipt) || 0;
+      const importance = Math.max(0, Number(mission.ponderation) || 0);
+      bucket.completed.push({ id, title: mission.title, completedAt, importance,
+        memorable: mission.souvenir === true,
+        narrative: Array.isArray(mission.narrative?.completed) ? mission.narrative.completed[0] || "" : "" });
+      bucket.lastAt = Math.max(bucket.lastAt, completedAt);
+    });
+
     const bac =
       BF?.getBACDiagnostics?.() ||
       BF?.BAC?.getDiagnostics?.() ||
@@ -1071,7 +1117,8 @@
     const priorities = bac?.profile?.priorities || bac?.priorities || {};
 
     return [...grouped.values()]
-      .filter((bucket) => bucket.events.length >= 2 || bucket.score >= 2)
+      .filter((bucket) => bucket.events.length >= 2 || bucket.score >= 2 ||
+        bucket.lifetime.length || bucket.completed.length)
       .map((bucket) => {
         const eventCounts = bucket.events.reduce((counts, event) => {
           const type = String(event?.type || "").toUpperCase();
@@ -1090,7 +1137,6 @@
           topSubjects,
           Number.isFinite(axisPriority) ? axisPriority : null
         );
-        const psychology = BF?.getMultiProgressionState?.()?.psychology || {};
         const relatedMission = (id, memory = {}) => {
           if (bucket.missionIds.has(id)) return true;
           const mission = missions.get(id) || missions.get(String(id).split("@")[0]);
@@ -1107,6 +1153,26 @@
           .map((memory) => `${memory.missionId}:${memory.valence || "neutral"}:${Number(memory.scoreTrauma) || 0}`)
           .sort();
         let enrichedText = text;
+        const facts = [...bucket.lifetime].sort((a, b) =>
+          (b.observations + b.inspections + b.analyses) - (a.observations + a.inspections + a.analyses) ||
+          b.harvested - a.harvested || a.label.localeCompare(b.label, "fr")).slice(0, 5);
+        const quantitative = facts.map((fact) => {
+          const actions = [];
+          if (fact.observations) actions.push(`${fact.observations} observations`);
+          if (fact.inspections) actions.push(`${fact.inspections} inspections`);
+          if (fact.analyses) actions.push(`${fact.analyses} analyses`);
+          if (fact.harvested) actions.push(`${fact.harvested} unités récoltées`);
+          return `« ${fact.label} » : ${actions.join(", ")}.`;
+        });
+        if (quantitative.length) enrichedText += ` Mes repères depuis mon arrivée : ${quantitative.join(" ")}`;
+        const milestones = bucket.completed.filter(item => item.memorable || item.importance >= 0.75)
+          .sort((a, b) => b.importance - a.importance || b.completedAt - a.completedAt || a.id.localeCompare(b.id))
+          .slice(0, 3);
+        if (bucket.completed.length) enrichedText += ` J’ai achevé ${bucket.completed.length} mission${bucket.completed.length > 1 ? "s" : ""} dans ce domaine.`;
+        milestones.forEach((item) => {
+          enrichedText += ` En achevant « ${item.title} », j’ai franchi une étape importante en ${bucket.label.toLowerCase()}.`;
+          if (item.narrative) enrichedText += ` ${item.narrative}`;
+        });
         if (obsessions.length) {
           enrichedText += " Certaines pistes reviennent avec insistance dans mes pensées, même lorsque je tente de les laisser de côté.";
         }
@@ -1124,9 +1190,15 @@
             score: Math.round(bucket.score * 10) / 10,
             subjects: bucket.subjects.size,
             missions: bucket.missionIds.size,
-            lastAt: bucket.lastAt
+            lastAt: bucket.lastAt,
+            cumulativeObservations: bucket.lifetime.reduce((sum, fact) => sum + fact.observations, 0),
+            cumulativeStudies: bucket.lifetime.reduce((sum, fact) => sum + fact.inspections + fact.analyses, 0),
+            completedMissions: bucket.completed.length
           },
-          psychologySignature: [...obsessions, ...memories].join("|")
+          factSignature: facts.map(fact => `${fact.objectId}:${fact.observations}:${fact.inspections}:${fact.analyses}:${fact.harvested}`).join("|"),
+          milestoneSignature: milestones.map(item => `${item.id}:${item.completedAt}`).join("|"),
+          psychologySignature: [...obsessions, ...memories,
+            ...(Number.isFinite(axisPriority) ? [`interest:${Math.round(axisPriority)}`] : [])].join("|")
         };
       })
       .filter((theme) => theme.text)
@@ -1167,7 +1239,16 @@
       variants[(variantSeed + offset) % variants.length];
 
     const sentences = [];
-    if (bucket.id === "exploration") {
+    const domainIntroductions = {
+      energy: "Je rapproche mes mesures et les sources d’énergie rencontrées pour mieux préparer mes prochaines expériences.",
+      geology: "Les reliefs et les minéraux me donnent des repères pour relire les terrains déjà parcourus.",
+      archaeology: "Je relie les vestiges étudiés aux découvertes qui ont marqué mes recherches sur les civilisations.",
+      flora: "Mes observations des plantes et des champignons nourrissent mes recherches et ma préparation des excursions.",
+      fauna: "Les créatures rencontrées me laissent des repères sur leurs comportements et les conditions de mes approches."
+    };
+    if (domainIntroductions[bucket.id]) {
+      sentences.push(domainIntroductions[bucket.id]);
+    } else if (bucket.id === "exploration") {
       sentences.push(pick(total < 6 ? [
         "Je commence à distinguer ce qui mérite vraiment mon attention dans les territoires que je parcours.",
         "Chaque nouveau terrain m'oblige encore à ralentir, regarder, comparer. Peu à peu, certains signes deviennent familiers.",
@@ -1336,9 +1417,8 @@
         .map((theme) => `${theme.id}:${theme.updatedAt || 0}`)
         .join("|") + "||" + pastThoughts.map((item) => `${item.key}:${item.at}`).join("|");
     const meta = report.querySelector(".journal-temporal-meta");
-    const thoughtsPresent = Boolean(
-      meta?.querySelector(".journal-current-state-row .journal-current-thoughts")
-    );
+    const thoughtCard = meta?.querySelector(".journal-current-state-row .journal-current-thoughts");
+    const thoughtsPresent = thoughtCard?.dataset.journalNarrativeSignature === signature;
     if (
       host.dataset.journalNarrativeSignature === signature &&
       thoughtsPresent
@@ -1455,6 +1535,8 @@
         .map((theme) => ({ text: theme.text.split(/(?<=[.!?])\s+/)[0] })), "",
         "journal-current-thoughts"));
     }
+    const renderedThoughts = meta?.querySelector(".journal-current-state-row .journal-current-thoughts");
+    if (renderedThoughts) renderedThoughts.dataset.journalNarrativeSignature = signature;
     host.append(makeEvolutionCard(evolutionThemes));
     if (pastThoughts.length) {
       host.append(makeCard(
