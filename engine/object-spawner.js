@@ -271,6 +271,9 @@
             microSceneId: template.id,
             microScenePivot: objectPivot
           };
+          // Le bassin appartient à la composition MSC, pas au placement libre
+          // guidé par la texture de la map. Ses deux racines partagent l'ancre CUO.
+          if (entry.type === "pool" && objectRoot) metadata.worldAnchor = objectRoot;
           Object.assign(objectPivot.userData, metadata);
           if (objectRoot) {
             Object.assign(objectRoot.userData, metadata, {
@@ -328,6 +331,9 @@
         source: id
       })).filter(Boolean);
       records.forEach((record) => {
+        if (record?.type === "pool" && record.root) {
+          record.root.userData.worldAnchor = record.root;
+        }
         if (record?.root?.userData) record.root.userData.microSceneId = template?.id || id;
         if (record?.instance?.hitbox?.userData) {
           record.instance.hitbox.userData.microSceneId = template?.id || id;

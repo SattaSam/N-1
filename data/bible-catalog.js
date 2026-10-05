@@ -2096,7 +2096,7 @@
     sequence: Object.freeze([
       Object.freeze({ slot: "architecture", title: "Observer l’architecture du Giant Tree", action: "observe", target: 1, requires: Object.freeze([]), params: Object.freeze({ cuoType: "crystalline_tree", microSceneId: "MSC-CUSTOM-GIANTCRISTAL-TREE" }) }),
       Object.freeze({ slot: "livingComponent", title: "Analyser la composante végétale", action: "analyze", target: 1, requires: Object.freeze(["architecture"]), params: Object.freeze({ cuoType: "crystalline_tree", microSceneId: "MSC-CUSTOM-GIANTCRISTAL-TREE" }) }),
-      Object.freeze({ slot: "mineralComponent", title: "Analyser une composante minérale du site", action: "analyze", target: 1, requires: Object.freeze(["livingComponent"]), params: Object.freeze({ subject: "mineral", microSceneId: "MSC-CUSTOM-GIANTCRISTAL-TREE", relation: Object.freeze({ fromSlot: "livingComponent", sameBy: Object.freeze(["persistentMicroSceneId", "mapId"]) }) }) }),
+      Object.freeze({ slot: "mineralComponent", title: "Analyser une composante minérale du site", action: "analyze", target: 1, requires: Object.freeze(["livingComponent"]), params: Object.freeze({ subject: "geology", microSceneId: "MSC-CUSTOM-GIANTCRISTAL-TREE", relation: Object.freeze({ fromSlot: "livingComponent", sameBy: Object.freeze(["persistentMicroSceneId", "mapId"]) }) }) }),
       Object.freeze({ slot: "synthesis", title: "Comparer le Giant Tree aux indices antérieurs", action: "research", target: 1, requires: Object.freeze(["mineralComponent"]), params: Object.freeze({}) })
     ]),
     narrative: Object.freeze({
@@ -2136,7 +2136,7 @@
     ]),
     sequence: Object.freeze([
       Object.freeze({ slot: "plantReference", title: "Établir la référence du Giant Tree par proximité", action: "observe", target: 1, requires: Object.freeze([]), params: Object.freeze({ eventDriven: true, catalogManaged: true }) }),
-      Object.freeze({ slot: "mineralReference", title: "Établir la référence minérale du site", action: "analyze", target: 1, requires: Object.freeze(["plantReference"]), params: Object.freeze({ subject: "mineral", microSceneId: "MSC-CUSTOM-GIANTCRISTAL-TREE", requiredMapFact: "ene08:giant-tree-reference", requiredMapField: "mapId" }) }),
+      Object.freeze({ slot: "mineralReference", title: "Établir la référence minérale du site", action: "analyze", target: 1, requires: Object.freeze(["plantReference"]), params: Object.freeze({ subject: "geology", microSceneId: "MSC-CUSTOM-GIANTCRISTAL-TREE", requiredMapFact: "ene08:giant-tree-reference", requiredMapField: "mapId" }) }),
       Object.freeze({ slot: "leaveReference", title: "Quitter le site pour préparer un contrôle", action: "travel", target: 1, requires: Object.freeze(["mineralReference"]), params: Object.freeze({ eventDriven: true, newOnly: true, distinctBy: "mapId" }) }),
       Object.freeze({ slot: "returnToReference", title: "Revenir sur la map de référence du Giant Tree", action: "travel", target: 1, requires: Object.freeze(["leaveReference"]), params: Object.freeze({ eventDriven: true, targetMapFact: "ene08:giant-tree-reference", targetMapField: "mapId", distinctBy: "transition" }) }),
       Object.freeze({ slot: "returnValidation", title: "Revenir à proximité du même Giant Tree", action: "observe", target: 1, requires: Object.freeze(["returnToReference"]), params: Object.freeze({ eventDriven: true, catalogManaged: true }) })
@@ -6976,6 +6976,17 @@
         500: "Certaines absences deviennent aussi parlantes que les présences. La végétation dessine l’architecture des biomes.",
         1000: "Mille observations végétales : mon journal ressemble enfin à l’atlas d’un naturaliste plutôt qu’à une liste de trouvailles."
       })
+    }),
+    MINERAL: Object.freeze({
+      key: "MINERAL", label: "minerais",
+      titles: Object.freeze({
+        20: "Premiers indices minéraux", 50: "Veines récurrentes",
+        100: "Lecture des gisements", 250: "Variations minérales",
+        500: "Structure des ressources", 1000: "Atlas minéralogique"
+      }),
+      revealed: Object.freeze(Object.fromEntries(ENV_THRESHOLDS.map((threshold) => [
+        threshold, `Un relevé de ${threshold} instances de minerais pourrait préciser ma connaissance des gisements.`
+      ])))
     })
   });
 
@@ -7066,6 +7077,7 @@
       triggerOnly: true,
       prerequisites: Object.freeze([sourceId]),
       priority: 130 - familyIndex,
+      navigation: Object.freeze({ autonomousUnknownTravel: true, autonomousKnownReturn: true }),
       autoPrimaryEligible: false,
       primaryOnActivation: false,
       passivePriorityAxis: "research",
@@ -7103,8 +7115,8 @@
   const createEnvMapMission = (family, percent, familyIndex) => Object.freeze({
     id: `ENV-MAP-${family.key}-${percent}`,
     title: percent === 50
-      ? `Lecture locale — ${family.label === "vestiges" ? "Vestiges" : family.label === "roches" ? "Roches" : "Végétation"} 50 %`
-      : `Inventaire local complet — ${family.label === "vestiges" ? "Vestiges" : family.label === "roches" ? "Roches" : "Végétation"} 100 %`,
+      ? `Lecture locale — ${family.label === "vestiges" ? "Vestiges" : family.label === "roches" ? "Roches" : family.label === "minerais" ? "Minerais" : "Végétation"} 50 %`
+      : `Inventaire local complet — ${family.label === "vestiges" ? "Vestiges" : family.label === "roches" ? "Roches" : family.label === "minerais" ? "Minerais" : "Végétation"} 100 %`,
     description: "La couverture est calculée sur les instances ENV éligibles réellement présentes sur la map, par identités physiques distinctes.",
     pattern: "OBSERVE_TARGET",
     trigger: Object.freeze({ type: "manual" }),
@@ -7149,12 +7161,14 @@
     ])
   );
 
-  const createEnvWorldMission = (threshold) => Object.freeze({
+  const createEnvWorldMission = (threshold) => {
+    const targetBiomeTypes = threshold === 20 ? 15 : threshold;
+    return Object.freeze({
     id: `ENV-WORLD-${threshold}`,
     title: threshold === 10
       ? "Première synthèse des biomes — 10 biomes"
-      : "Atlas naturaliste du monde — 20 biomes",
-    description: `Valider ${threshold} types de biomes distincts dont au moins une map est à 100 % d’exploration et à 100 % de couverture ENV RELIC, ROCK et PLANT.`,
+      : "Atlas naturaliste du monde — 15 biomes",
+    description: `Valider ${targetBiomeTypes} types de biomes distincts dont au moins une map est à 100 % d’exploration et à 100 % de couverture des vestiges, roches et végétation ENV réellement présents.`,
     pattern: "EXPLORE_SCOPE",
     trigger: Object.freeze({
       type: "progression.mission_completed",
@@ -7164,16 +7178,17 @@
     triggerOnly: true,
     prerequisites: Object.freeze([threshold === 10 ? "T13" : "ENV-WORLD-10"]),
     priority: threshold === 10 ? 118 : 116,
+    navigation: Object.freeze({ autonomousUnknownTravel: true, autonomousKnownReturn: true }),
     autoPrimaryEligible: false,
     primaryOnActivation: false,
     passivePriorityAxis: "research",
     backgroundHud: true,
-    envWorld: Object.freeze({ targetBiomeTypes: threshold }),
+    envWorld: Object.freeze({ targetBiomeTypes }),
     ...envPsychology(null, null, threshold),
     slots: Object.freeze({
       explore: Object.freeze({
-        title: `Valider ${threshold} types de biomes distincts totalement étudiés`,
-        target: threshold,
+        title: `Valider ${targetBiomeTypes} types de biomes distincts totalement étudiés`,
+        target: targetBiomeTypes,
         params: Object.freeze({
           eventDriven: true,
           envWorldMastery: true,
@@ -7187,14 +7202,15 @@
     narrative: Object.freeze({
       revealed: Object.freeze([threshold === 10
         ? "Explorer une map ne suffit plus. Je veux pouvoir dire que j’ai réellement lu dix milieux différents, jusque dans ce qu’ils montrent et pas seulement dans leurs chemins."
-        : "Dix biomes forment une première synthèse. Je veux maintenant étendre cette lecture à vingt milieux réellement qualifiés." ]),
+        : "Dix biomes forment une première synthèse. Je veux maintenant étendre cette lecture à quinze milieux réellement qualifiés." ]),
       progress: Object.freeze([Object.freeze({
         text: "Les biomes cessent d’être des cases sur une carte. Chacun devient un ensemble de formes, de vestiges, de roches et de végétation que je peux réellement comparer.",
         at: 0.5
       })]),
-      completed: Object.freeze([`${threshold} types de biomes distincts sont maintenant totalement étudiés selon le protocole ENV.`])
+      completed: Object.freeze([`${targetBiomeTypes} types de biomes distincts sont maintenant totalement étudiés selon le protocole ENV.`])
     })
   });
+  };
 
   const ENV_WORLD_MISSIONS = Object.freeze([
     createEnvWorldMission(10),
@@ -11842,10 +11858,10 @@
   });
 
   const OPPADR03 = Object.freeze({
-    id:"OPP-ADR-03", title:"Fin de service", description:"Clore l’étude du même site par une dernière inspection du drone ; toute récupération de débris reste facultative et non bloquante.", pattern:"SEQUENCE_ACTIONS",
+    id:"OPP-ADR-03", title:"Fin de service", description:"Clore l’étude du même site par une dernière inspection du drone ; les débris du décor ne constituent pas un butin.", pattern:"SEQUENCE_ACTIONS",
     trigger:Object.freeze({type:"progression.mission_completed",missionId:"OPP-ADR-02",count:1}), prerequisites:Object.freeze(["OPP-ADR-02"]), priority:209, passivePriorityAxis:"research", ponderation:0.5, obsessionEligible:false, souvenir:true, memoryValence:"positive", scoreTrauma:40,
     sequence:Object.freeze([
-      Object.freeze({slot:"optionalDebris",title:"Récupérer un débris si cela vaut réellement la peine",action:"collect",target:1,optional:true,params:Object.freeze({cuoType:"debris",microSceneId:"MSC-ABANDONED-DRONE-001",requiredMapFact:"bibleActivation:OPP-ADR-01",requiredMapField:"mapId"})}),
+      Object.freeze({slot:"optionalDebris",title:"Relire les débris du décor si cela reste utile",action:"inspect",target:1,optional:true,params:Object.freeze({cuoType:"debris",microSceneId:"MSC-ABANDONED-DRONE-001",requiredMapFact:"bibleActivation:OPP-ADR-01",requiredMapField:"mapId"})}),
       Object.freeze({slot:"lastLook",title:"Inspecter une dernière fois le drone",action:"inspect",target:1,params:Object.freeze({cuoType:"abandoned_drone",microSceneId:"MSC-ABANDONED-DRONE-001",requiredMapFact:"bibleActivation:OPP-ADR-01",requiredMapField:"mapId"})})
     ]), narrative:Object.freeze({completed:Object.freeze(["Fin de service. Je n’ai pas besoin de transformer cette épave en nouvelle branche de recherche pour que son histoire compte."])})
   });

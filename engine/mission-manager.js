@@ -673,6 +673,7 @@
         // les observations distinctes et la qualification réelle des biomes.
         const destinations = BF.bibleRuntime?.environmentPlayerDestinationMaps?.(environmentNode) || [];
         if (environmentNode.params?.envLocalFamily ||
+            Number(BF.getMapExplorationState?.(this.engine.currentMapId)?.surfacePercent) >= 100 ||
             (destinations.length && !destinations.includes(this.engine.currentMapId)) ||
             (environmentNode.params?.envWorldMastery &&
               BF.bibleRuntime?.environmentQualifiedBiomeTypes?.().has(
@@ -1035,6 +1036,31 @@
         currentMapId
       );
       if (knownDestinationTravel) return knownDestinationTravel;
+
+      // Le choix joueur peut transformer un relevé mondial passif en recherche
+      // active. Après épuisement du local et du connu, réutiliser le voyage
+      // inconnu canonique, uniquement si le catalogue l'autorise explicitement.
+      if (mission?.navigation?.autonomousUnknownTravel === true &&
+          this.missionIsBackgroundProgressOnly(missionId) &&
+          missionId === this.primaryMissionId && this.isPlayerSelectedPrimary() &&
+          availableMapStates.some(({ node, state }) =>
+            !state?.constrained &&
+            (node.params?.envHistoricalFamily || node.params?.envWorldMastery))) {
+        return {
+          missionId,
+          mission,
+          source: "mission-map-generation",
+          node: {
+            id: `${missionId}:map-generation`,
+            type: Missions.ActionType.TRAVEL,
+            params: {
+              eventDriven: true,
+              missionDirectedUnknownTravel: true,
+              transitionSource: "mission-map-generation"
+            }
+          }
+        };
+      }
 
       // Une mission déjà active peut dépendre d'un contenu que sa prescription
       // mapGeneration devait placer sur la map de découverte. Si ce contenu

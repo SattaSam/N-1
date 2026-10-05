@@ -1466,7 +1466,7 @@
     const manager = engine?.missionManager;
     const environmentStudy = action.backgroundEnvironment === true &&
       action.missionId === manager?.primaryMissionId && manager?.isPlayerSelectedPrimary?.() &&
-      missionNode?.params?.backgroundProgressOnly === true &&
+      manager?.missionIsBackgroundProgressOnly?.(action.missionId) === true &&
       (missionNode.params.envHistoricalFamily || missionNode.params.envLocalFamily || missionNode.params.envWorldMastery);
     if (!isGenericObjectStudyNode(missionNode) && !environmentStudy) return null;
 

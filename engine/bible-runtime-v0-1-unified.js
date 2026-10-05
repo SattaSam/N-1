@@ -12,6 +12,8 @@
   const asArray = (value) =>
     Array.isArray(value) ? value : value == null ? [] : [value];
 
+  const ENV_FAMILIES = Object.freeze(["RELIC", "ROCK", "PLANT", "MINERAL"]);
+
   const OBJECT_TYPE_TO_TRIGGER = Object.freeze({
     OBJECT_SEEN: "interaction.observe",
     PHENOMENON_OBSERVED: "interaction.observe",
@@ -1608,6 +1610,12 @@
         return metadata.type === "arch" && explicitAncientTrace;
       }
 
+      if (familyKey === "MINERAL") {
+        // Une étude crédite ENV ; le prélèvement crédite COL séparément.
+        return metadata.family === "mineral" || metadata.subject === "mineral" ||
+          lower(definition?.resource?.family) === "mineral";
+      }
+
       if (familyKey === "ROCK") {
         if (metadata.collectable) return false;
         return ["geology", "geological", "rock", "stone"].includes(metadata.family) ||
@@ -1649,7 +1657,7 @@
 
       const byInstance = new Map();
       const observable = new Set();
-      const envEligible = { RELIC: new Set(), ROCK: new Set(), PLANT: new Set() };
+      const envEligible = Object.fromEntries(ENV_FAMILIES.map((family) => [family, new Set()]));
       const initialMscInstances = Array.isArray(map.group?.userData?.microScenes)
         ? map.group.userData.microScenes
         : [];
@@ -1680,7 +1688,7 @@
           BF.ObjectLibrary?.getById?.(data.catalogId || rootData.catalogId) ||
           BF.ObjectLibrary?.get?.(data.libraryType || rootData.libraryType) ||
           null;
-        ["RELIC", "ROCK", "PLANT"].forEach((family) => {
+        ENV_FAMILIES.forEach((family) => {
           if (this.environmentFamilyMatches(family, definition)) {
             envEligible[family].add(instanceId);
           }
@@ -1726,7 +1734,7 @@
       const discoveredInstances = BF.progression?.snapshot?.()?.discoveries?.instances ||
         BF.progression?.state?.discoveries?.instances || {};
       return Object.fromEntries(
-        ["RELIC", "ROCK", "PLANT"].map((family) => {
+        ENV_FAMILIES.map((family) => {
           const eligibleInstanceIds = [...(resolver?.envEligible?.[family] || [])];
           const eligible = new Set(eligibleInstanceIds);
           const observedInstanceIds = Object.entries(discoveredInstances)
@@ -1750,10 +1758,13 @@
         if (!resolver) return false;
         const current = coverage.maps[mapId];
         const hasEnvCoverage = current?.envFamilies &&
-          ["RELIC", "ROCK", "PLANT"].every((family) => current.envFamilies[family]);
+          ENV_FAMILIES.every((family) => current.envFamilies[family]);
         if (hasEnvCoverage) return false;
         const next = clone(coverage);
-        next.maps[mapId].envFamilies = this.environmentFamilyCoverageSeed(mapId, resolver);
+        // Compléter seulement les familles absentes : les identités et observations
+        // déjà figées restent intactes, notamment lors d'un reload.
+        const seeded = this.environmentFamilyCoverageSeed(mapId, resolver);
+        next.maps[mapId].envFamilies = { ...seeded, ...current.envFamilies };
         manager.memory.setFact(this.observationMemoryKey(), next);
         return true;
       }
@@ -1809,7 +1820,7 @@
       if (params.envWorldMastery &&
           (qualifiedBiomes || this.environmentQualifiedBiomeTypes()).has(this.environmentMapBiome(mapId))) return false;
       const entry = this.observationMemory().maps?.[mapId];
-      return (family ? [family] : ["RELIC", "ROCK", "PLANT"]).some((key) => {
+      return (family ? [family] : ENV_FAMILIES).some((key) => {
         const coverage = entry?.envFamilies?.[String(key).toUpperCase()];
         return asArray(coverage?.eligibleInstanceIds).includes(String(instanceId)) &&
           !asArray(coverage?.observedInstanceIds).includes(String(instanceId));
@@ -1824,7 +1835,7 @@
         if (qualified?.has(this.environmentMapBiome(mapId))) return false;
         if (params.envWorldMastery && Number(BF.getMapExplorationState?.(mapId)?.surfacePercent) < 100) return true;
         const family = params.envHistoricalFamily || params.envLocalFamily;
-        return (family ? [family] : ["RELIC", "ROCK", "PLANT"]).some((key) => {
+        return (family ? [family] : ENV_FAMILIES).some((key) => {
           const coverage = entry.envFamilies?.[String(key).toUpperCase()];
           const observed = new Set(asArray(coverage?.observedInstanceIds));
           return asArray(coverage?.eligibleInstanceIds).some((instanceId) => !observed.has(instanceId));
@@ -1885,7 +1896,7 @@
       const entityId = instanceId
         ? resolver?.byInstance?.get(instanceId)
         : null;
-      const environmentEligible = instanceId && ["RELIC", "ROCK", "PLANT"].some((family) =>
+      const environmentEligible = instanceId && ENV_FAMILIES.some((family) =>
         asArray(resolver?.envEligible?.[family]).includes(instanceId)
       );
       if (!entityId && !environmentEligible) return false;
@@ -1922,7 +1933,7 @@
 
       const physicalInstanceId = String(rawEvent?.instanceId || "");
       if (physicalInstanceId) {
-        ["RELIC", "ROCK", "PLANT"].forEach((family) => {
+        ENV_FAMILIES.forEach((family) => {
           const familyEntry = next.maps?.[mapId]?.envFamilies?.[family];
           if (!familyEntry) return;
           if (!asArray(familyEntry.eligibleInstanceIds).includes(physicalInstanceId)) return;
@@ -2015,8 +2026,15 @@
     }
 
     normalizeObjectEvent(event) {
-      const type = OBJECT_TYPE_TO_TRIGGER[event?.type];
+      let type = OBJECT_TYPE_TO_TRIGGER[event?.type];
       if (!type) return null;
+      const narrativeVerb = lower(event?.detail?.missionNarrativeVerb);
+      if (event?.type === "PHENOMENON_OBSERVED" &&
+          event?.detail?.interactionSource === "mission" &&
+          event?.detail?.missionId && event?.detail?.missionNodeId &&
+          ["observe", "inspect", "analyze"].includes(narrativeVerb)) {
+        type = `interaction.${narrativeVerb}`;
+      }
 
       const definition =
         BF.ObjectLibrary?.getById?.(event?.objectId) ||
@@ -2068,6 +2086,7 @@
       return {
         eventId: event.id || null,
         type,
+        physicalType: OBJECT_TYPE_TO_TRIGGER[event.type],
         rawType: event.type,
         objectId: lower(event.objectId),
         cuoType: lower(event.detail?.cuoType || definition?.type),
@@ -4407,8 +4426,7 @@
       const concurrentGroup = String(
         selected.concurrentAvailabilityGroup || ""
       ).trim();
-      const completionFanout =
-        event.type === "progression.mission_completed";
+      const causalFanout = options.allowActivation !== false;
       if (concurrentGroup) {
         const concurrentCandidates = candidates.filter((mission) =>
           String(mission.concurrentAvailabilityGroup || "").trim() === concurrentGroup
@@ -4429,7 +4447,7 @@
           }
         });
 
-        if (completionFanout) {
+        if (causalFanout) {
           const alreadyHandled = new Set(
             concurrentCandidates.map((mission) => mission.id)
           );
@@ -4481,7 +4499,7 @@
         ? [activatedMissionId]
         : [];
 
-      if (completionFanout) {
+      if (causalFanout) {
         candidates.slice(1).forEach((mission) => {
           if (this.activateMission(mission, event, { primary: false })) {
             activatedMissionIds.push(mission.id);
@@ -5226,7 +5244,13 @@
       // 1) Evénement concret : collect/analyze/observe/etc.
       let result = this.consumeTriggerEvent(normalized);
       let activatedMissionId = result.activatedMissionId || null;
-      let allowActivation = !activatedMissionId;
+      const allowActivation = true;
+      // Une analyse reste aussi une observation physique : les consommateurs
+      // historiques de ce vocabulaire conservent leur événement, une seule fois.
+      if (normalized.physicalType !== normalized.type) {
+        result = this.consumeTriggerEvent({ ...normalized, type: normalized.physicalType });
+        activatedMissionId = activatedMissionId || result.activatedMissionId || null;
+      }
 
       // 2) Evénement narratif générique : toute interaction réelle avec
       // l'objet. Il est volontairement indépendant de l'état "connu" CUO.
@@ -5238,7 +5262,6 @@
         amount: 1
       }, { allowActivation });
       activatedMissionId = activatedMissionId || result.activatedMissionId || null;
-      allowActivation = allowActivation && !result.activatedMissionId;
 
       // 3) Première interaction d'étude : conservée comme vocabulaire
       // distinct pour les missions qui exigent explicitement une découverte.
@@ -6925,6 +6948,7 @@
     }
 
     activateEnvironmentGlobalFollowers() {
+      let activated = 0;
       for (const mission of this.catalog) {
         if (!mission?.slots?.study?.params?.envHistoricalFamily) continue;
         const sourceId = String(mission?.trigger?.missionId || "");
@@ -6936,9 +6960,9 @@
           type: "progression.mission_completed",
           missionId: sourceId,
           amount: 1
-        })) return 1;
+        })) activated += 1;
       }
-      return 0;
+      return activated;
     }
 
     environmentInstanceId(baseId, mapId) {
@@ -6955,11 +6979,18 @@
       const node = tree.find?.(`${missionId}:${slot}`) ||
         (scopeId ? tree.find?.(`${baseId}:${slot}@${scopeId}`) : null);
       if (!node) return false;
+      const mission = this.environmentLocalMission(missionId) || this.byId.get(baseId);
+      const currentTarget = Number(mission?.slots?.[slot]?.target);
+      const targetChanged = Number.isFinite(currentTarget) && currentTarget > 0 &&
+        Number(node.target) !== currentTarget;
+      // Le compteur ENV applique le contrat actuel, même à un arbre restauré.
+      // Les faits d'observation et les identités historiques ne sont pas modifiés.
+      if (targetChanged) node.target = currentTarget;
       const absolute = Math.min(
         Math.max(0, Number(node.target) || 0),
         Math.max(0, Number(value) || 0)
       );
-      if (Number(node.progress || 0) === absolute) return false;
+      if (!targetChanged && Number(node.progress || 0) === absolute) return false;
       node.progress = absolute;
       tree.refresh?.();
       manager.memory?.saveTree?.(tree);
@@ -6974,17 +7005,15 @@
         this.captureObservationMap(BF.currentEngine);
       }
       let changed = false;
-      let activationUsed = false;
-      for (const family of ["RELIC", "ROCK", "PLANT"]) {
+      for (const family of ENV_FAMILIES) {
         const coverage = this.environmentMapCoverage(targetMapId, family);
         if (!coverage.known || coverage.total === 0) continue;
         const id50 = this.environmentInstanceId(`ENV-MAP-${family}-50`, targetMapId);
         const mission50 = this.environmentLocalMission(id50);
         let lifecycle50 = manager.memory?.state?.missionLifecycle?.[id50];
-        if (!lifecycle50 && !activationUsed && mission50) {
+        if (!lifecycle50 && mission50) {
           if (this.activateMission(mission50, { type: "environment.map", mapId: targetMapId, amount: 1 })) {
             changed = true;
-            activationUsed = true;
           }
           lifecycle50 = manager.memory?.state?.missionLifecycle?.[id50];
         } else if (lifecycle50?.status === "paused" && String(BF.currentEngine?.currentMapId || "") === targetMapId) {
@@ -7001,12 +7030,11 @@
         const id100 = this.environmentInstanceId(`ENV-MAP-${family}-100`, targetMapId);
         const mission100 = this.environmentLocalMission(id100);
         let lifecycle100 = manager.memory?.state?.missionLifecycle?.[id100];
-        if (!lifecycle100 && !activationUsed && mission100) {
+        if (!lifecycle100 && mission100) {
           if (this.activateMission(mission100, {
             type: "progression.mission_completed", missionId: id50, mapId: targetMapId, amount: 1
           })) {
             changed = true;
-            activationUsed = true;
           }
           lifecycle100 = manager.memory?.state?.missionLifecycle?.[id100];
         } else if (lifecycle100?.status === "paused" && String(BF.currentEngine?.currentMapId || "") === targetMapId) {
@@ -7050,9 +7078,12 @@
     environmentMapBiome(mapId, mapState = null) {
       return lower(
         mapState?.biomeId || mapState?.biome ||
+        mapState?.generator?.biomeId ||
         BF.maps?.[mapId]?.biomeId || BF.maps?.[mapId]?.biome ||
+        BF.maps?.[mapId]?.generator?.biomeId ||
         (String(BF.currentEngine?.currentMapId || "") === String(mapId || "")
-          ? BF.currentEngine?.currentMap?.definition?.biomeId || BF.currentEngine?.currentMap?.definition?.biome
+          ? BF.currentEngine?.currentMap?.definition?.biomeId || BF.currentEngine?.currentMap?.definition?.biome ||
+            BF.currentEngine?.currentMap?.definition?.generator?.biomeId
           : null)
       );
     }
@@ -7073,7 +7104,7 @@
         if (!biome) return;
         const complete = ["RELIC", "ROCK", "PLANT"].every((family) => {
           const coverage = this.environmentMapCoverage(mapId, family);
-          return coverage.known && coverage.percent >= 100;
+          return coverage.known && (coverage.total === 0 || coverage.percent >= 100);
         });
         if (complete) qualified.add(biome);
       });
@@ -7122,9 +7153,7 @@
         changed = this.reconcileEnvironmentHistorical() || Boolean(activated) || changed;
         const localChanged = mapId ? this.reconcileEnvironmentLocalMap(mapId) : false;
         changed = localChanged || changed;
-        changed = this.reconcileEnvironmentWorld({
-          allowActivation: !activated && !localChanged
-        }) || changed;
+        changed = this.reconcileEnvironmentWorld() || changed;
         if (changed) this.manager()?.publish?.();
         return changed;
       } finally {
