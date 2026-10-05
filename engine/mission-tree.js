@@ -42,6 +42,46 @@
       return this.status === Missions.MissionStatus.COMPLETED;
     }
 
+    useRuntimeDefinition(definition) {
+      // Le contrat d'exécution vient de la définition compilée, pas de la
+      // copie historique dans la sauvegarde. Ne reconstruire aucun nœud et
+      // ne toucher ni aux preuves, ni à la progression, ni aux étapes finies.
+      if (!this.isLeaf || this.isComplete || !definition ||
+          definition.id !== this.id || (definition.children || []).length ||
+          this.params.biblePattern !== "SEQUENCE_ACTIONS" ||
+          definition.params?.biblePattern !== "SEQUENCE_ACTIONS" ||
+          this.params.sequenceSlot !== definition.params.sequenceSlot ||
+          this.target !== Math.max(1, Number(definition.target) || 1) ||
+          this.optional !== Boolean(definition.optional) ||
+          JSON.stringify(this.requires) !== JSON.stringify(definition.requires || [])) return;
+
+      const params = JSON.parse(JSON.stringify(definition.params || {}));
+      // Ces champs sont écrits par MissionManager après résolution du travel.
+      // Ils ne sont pas des critères du catalogue et doivent survivre au reload.
+      if (!params.toMapId && (this.params.targetMapResolvedFromKnownDestination === true ||
+          this.params.targetMapResolvedFromFact === true)) {
+        params.toMapId = this.params.toMapId;
+        for (const key of ["targetMapResolvedFromKnownDestination", "targetMapResolvedFromFact"]) {
+          if (this.params[key] === true) params[key] = true;
+        }
+      }
+      const type = definition.type || this.type;
+      const title = definition.title || this.title;
+      const description = definition.description || "";
+      if (this.type === type && this.title === title && this.description === description &&
+          JSON.stringify(this.params) === JSON.stringify(params)) return;
+      if (!this._savedContract) {
+        this._savedContract = {
+          type: this.type, title: this.title, description: this.description,
+          params: { ...this.params }
+        };
+      }
+      this.type = type;
+      this.title = title;
+      this.description = description;
+      this.params = params;
+    }
+
     walk(visitor) {
       visitor(this);
       this.children.forEach((child) => child.walk(visitor));
@@ -155,15 +195,25 @@
     }
 
     toJSON() {
+      // L'application du contrat courant est exclusivement runtime : aucune
+      // migration de la sauvegarde. Seules les résolutions de destination
+      // produites en jeu sont persistées, comme pour un arbre non restauré.
+      const params = { ...(this._savedContract?.params || this.params) };
+      if (this._savedContract && (this.params.targetMapResolvedFromKnownDestination === true ||
+          this.params.targetMapResolvedFromFact === true)) {
+        for (const key of ["toMapId", "targetMapResolvedFromKnownDestination", "targetMapResolvedFromFact"]) {
+          if (this.params[key] != null) params[key] = this.params[key];
+        }
+      }
       return {
         id: this.id,
-        title: this.title,
-        description: this.description,
-        type: this.type,
+        title: this._savedContract?.title ?? this.title,
+        description: this._savedContract?.description ?? this.description,
+        type: this._savedContract?.type || this.type,
         target: this.target,
         progress: this.progress,
         status: this.status,
-        params: { ...this.params },
+        params,
         distinctValues: [...this.distinctValues],
         historyValues: [...this.historyValues],
         requires: [...this.requires],
@@ -191,10 +241,31 @@
     }
 
     find(id) {
+      this.useCurrentDefinition();
       return this.root.find(id);
     }
 
+    useCurrentDefinition() {
+      if (!this._restoredFromSave) return;
+      const baseId = String(this.id).split("@")[0];
+      const source = Missions.definitions?.[this.id] || Missions.definitions?.[baseId];
+      // Les définitions peuvent arriver après la restauration. Une fois
+      // enregistrées, ne refaire le raccord que si leur référence change.
+      if (!source || source === this._definitionSource) return;
+      const definition = Missions.getDefinition?.(this.id) || source;
+      if (definition?.id !== this.id || !definition.root) return;
+      this._definitionSource = source;
+      const nodes = new Map();
+      const collect = (node) => {
+        nodes.set(node.id, node);
+        (node.children || []).forEach(collect);
+      };
+      collect(definition.root);
+      this.root.walk((node) => node.useRuntimeDefinition(nodes.get(node.id)));
+    }
+
     findSequenceSlot(slot) {
+      this.useCurrentDefinition();
       const key = String(slot || "").trim();
       if (!key) return null;
       const matches = [];
@@ -207,6 +278,7 @@
     }
 
     refresh() {
+      this.useCurrentDefinition();
       return this.root.refresh(this.root);
     }
 
@@ -226,7 +298,10 @@
     }
 
     static fromJSON(data) {
-      return new MissionTree(data);
+      const tree = new MissionTree(data);
+      tree._restoredFromSave = true;
+      tree.useCurrentDefinition();
+      return tree;
     }
   }
 

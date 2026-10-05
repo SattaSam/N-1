@@ -224,8 +224,13 @@
         redrawLinks(world, coordinates, discovered);
         world.dataset.topologyUi = VERSION;
 
-        if (changed) {
-          const viewport = world.closest(".planet-map-viewport");
+        const viewport = world.closest(".planet-map-viewport");
+        const initialLayout = viewport && !viewport.dataset.topologyViewApplied;
+        if (viewport) viewport.dataset.topologyViewApplied = "true";
+        // Le placement canonique peut terminer le centrage de l'ouverture.
+        // centeredMap n'est pas une autorisation de suivre BlueFox : une fois
+        // le menu installé, les actualisations ne doivent plus modifier la vue.
+        if (changed && initialLayout) {
           const currentId = BF.currentEngine?.currentMapId;
           if (
             viewport &&
@@ -233,7 +238,16 @@
             viewport.dataset.centeredMap === currentId &&
             typeof viewport._bluefoxCenterCurrent === "function"
           ) {
-            global.requestAnimationFrame(() => viewport._bluefoxCenterCurrent());
+            const view = viewport._bluefoxView;
+            const openingView = view && { x: view.x, y: view.y, zoom: view.zoom };
+            global.requestAnimationFrame(() => {
+              // Un geste entre le placement et cette frame reste souverain.
+              if (!viewport.isConnected || view?.dragging ||
+                  (openingView && (view.x !== openingView.x ||
+                    view.y !== openingView.y || view.zoom !== openingView.zoom))) return;
+              viewport._bluefoxCenterCurrent();
+              viewport._bluefoxSaveTransform?.();
+            });
           }
         }
       });

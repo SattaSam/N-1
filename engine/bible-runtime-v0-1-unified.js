@@ -2297,7 +2297,7 @@
       return this.previewTriggerCount(mission, event) >= required;
     }
 
-    reconcileBoundMissionMicroScenes(mission, mapId) {
+    reconcileBoundMissionMicroScenes(mission, mapId, options = {}) {
       if (mission?.bindActivationMap !== true) return false;
       const required = asArray(mission?.mapGeneration?.requiredMicroScenes)
         .filter((scene) => scene?.id && scene.persistent !== false);
@@ -2314,7 +2314,10 @@
           String(record?.missionId || "") === String(mission.id) &&
           String(record?.microSceneId || "") === String(scene.id)
         );
-        if (exists) return;
+        // Une reprise/arrivée sur une map connue restaure son contenu, elle
+        // n'y invente pas la scène d'un ancien déclencheur différé. La création
+        // reste réservée à l'arrivée causale sur une nouvelle destination.
+        if (exists || options.allowCreate !== true) return;
         BF.PersistentMicroScenes.ensure(definition, {
           missionId: mission.id,
           microSceneId: scene.id,
@@ -4077,7 +4080,9 @@
             toMapId: event.toMapId || event.mapId,
             activatedAt: Date.now()
           });
-          this.reconcileBoundMissionMicroScenes(mission, event.mapId);
+          this.reconcileBoundMissionMicroScenes(mission, event.mapId, {
+            allowCreate: event.type === "exploration.map_discovered" && event.isNew === true
+          });
         }
         if (mission.triggerOnly === true) {
           manager.memory?.setFact?.(`bibleTarget:${mission.id}`, null);
@@ -4321,6 +4326,30 @@
 
         const prerequisitesReady = this.prerequisitesSatisfied(mission);
         if (!prerequisitesReady) {
+          const boundScenes = mission.bindActivationMap === true &&
+              event.type === "exploration.map_discovered"
+            ? asArray(mission.mapGeneration?.requiredMicroScenes)
+                .filter((scene) => scene?.id && scene.persistent !== false)
+            : [];
+          if (boundScenes.length) {
+            const mapId = String(event.mapId || event.toMapId || "");
+            const definition = BF.maps?.[mapId];
+            const currentMap = String(BF.currentEngine?.currentMapId || "") === mapId
+              ? BF.currentEngine?.currentMap : null;
+            const scenes = [
+              ...asArray(BF.PersistentMicroScenes?.list?.(definition) || definition?.persistentMicroScenes),
+              ...asArray(currentMap?.group?.userData?.microScenes)
+            ];
+            // Une vraie scène déjà présente peut révéler une mission avant ses
+            // prérequis. Une promesse de génération seule ne lie pas une ancienne
+            // map : la prochaine découverte admissible portera cette destination.
+            const physicallyPresent = boundScenes.every((required) => scenes.some((scene) =>
+              String(scene?.microSceneId || scene?.id || "") === String(required.id) &&
+              (!required.contextRole || String(scene?.contextRole ||
+                scene?.instanceRoot?.userData?.contextRole || "") === String(required.contextRole))
+            ));
+            if (!physicallyPresent) continue;
+          }
           const missionPrerequisites = asArray(mission.prerequisites);
           const missingMissionPrerequisites = missionPrerequisites.filter((missionId) =>
             !this.missionLifecycle(missionId).completed
@@ -5683,6 +5712,7 @@
       const featuredMicroSceneIds = [...plannedFeaturedMicroSceneIds]
         .filter((id) => materializedMicroSceneIds.has(id));
       const event = {
+        isNew: detail.isNew === true,
         fromMapId: detail.fromMapId || null,
         toMapId: eventMapId,
         mapId: eventMapId,
