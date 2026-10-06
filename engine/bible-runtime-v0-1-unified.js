@@ -1648,8 +1648,8 @@
       return false;
     }
 
-    environmentHistoricalCount(familyName) {
-      const snapshot = BF.progression?.snapshot?.() || BF.progression?.state || {};
+    environmentHistoricalCount(familyName, source = null) {
+      const snapshot = source || BF.progression?.snapshot?.() || BF.progression?.state || {};
       const instances = snapshot?.discoveries?.instances || {};
       let total = 0;
       Object.entries(instances).forEach(([instanceId, record]) => {
@@ -7076,15 +7076,23 @@
       const manager = this.manager();
       if (!manager) return false;
       let changed = false;
+      // Une même passe lit les mêmes découvertes. Ne conserver ces lectures
+      // que jusqu'au retour : l'observation suivante doit relire le registre.
+      let snapshot = null;
+      const counts = new Map();
       this.catalog.forEach((mission) => {
         const family = mission?.slots?.study?.params?.envHistoricalFamily;
         if (!family || !this.missionLifecycle(mission.id).active) return;
         const tree = manager.trees?.get?.(mission.id);
         const node = tree?.find?.(`${mission.id}:study`);
         if (!node) return;
+        if (!counts.has(family)) {
+          snapshot ||= BF.progression?.snapshot?.() || BF.progression?.state || {};
+          counts.set(family, this.environmentHistoricalCount(family, snapshot));
+        }
         const absolute = Math.min(
           Math.max(0, Number(node.target) || 0),
-          this.environmentHistoricalCount(family)
+          counts.get(family)
         );
         if (Number(node.progress || 0) === absolute) return;
         node.progress = absolute;
