@@ -4268,9 +4268,25 @@
         this.missionManager.publish?.();
         return true;
       }
+      return this.approachMissionPoint(site);
+    }
+
+    approachMissionContext(work) {
+      if (!work || work.mapId !== this.currentMapId || !this.approachMissionPoint(work)) return false;
+      // BibleRuntime reste propriétaire de la preuve de proximité et du crédit.
+      BF.bibleRuntime?.reviewProximityContexts?.();
+      return true;
+    }
+
+    approachMissionPoint(target) {
+      if (!target?.anchor || String(target.mapId || "") !== String(this.currentMapId) ||
+          this.transitioning || this.pendingInteraction || this.pendingGate || this.currentRoutine) return false;
+      const point = new this.THREE.Vector3(Number(target.anchor.x), 0, Number(target.anchor.z));
+      if (!Number.isFinite(point.x) || !Number.isFinite(point.z) || !(Number(target.radius) > 0)) return false;
+      if (this.character.root.position.distanceTo(point) <= target.radius) return true;
       if (this.character.root.position.distanceTo(this.character.target) > 0.2) return true;
       // Approche bornée dans la portée du site, sans entrer dans son collider.
-      const distance = Math.max(0.1, site.radius - 0.4);
+      const distance = Math.max(0.1, target.radius - 0.4);
       const from = this.character.root.position;
       const angle = Math.atan2(from.z - point.z, from.x - point.x);
       let pathAttempts = 0;
@@ -4278,7 +4294,7 @@
         const direction = angle + index * Math.PI / 6;
         const candidate = point.clone().add(new this.THREE.Vector3(Math.cos(direction) * distance, 0, Math.sin(direction) * distance));
         this.character.constrainToWalkable(candidate);
-        if (candidate.distanceTo(point) > site.radius || this.character.positionOverlapsCollider(candidate)) continue;
+        if (candidate.distanceTo(point) > target.radius || this.character.positionOverlapsCollider(candidate)) continue;
         pathAttempts += 1;
         const route = this.character.pathPlanner.plan(from, candidate, this.character.colliders,
           this.character.radius, 0.12, {

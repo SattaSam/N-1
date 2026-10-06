@@ -818,7 +818,11 @@
       if (!tree || lifecycle?.status !== "active" || !currentMapId) return null;
 
       if (tree.root.isComplete) {
-        const gate = BF.bibleRuntime?.completionGateState?.(missionId) || null;
+        const runtime = BF.bibleRuntime;
+        const construction = runtime?.byId?.get?.(missionId);
+        if (runtime?.constructionPlacementEffect?.(construction) &&
+            runtime.constructionResourceStatus?.(construction)?.ready === false) return null;
+        const gate = runtime?.completionGateState?.(missionId) || null;
         const targetMapId = String(gate?.targetMapId || "");
         if (
           mission?.completionGate?.autonomousTravel !== false &&
@@ -2670,6 +2674,9 @@
             )
           : null;
         if (action) return { missionId, action, intent };
+        if (this.localProximityWork(missionId)) {
+          return { missionId, action: null, intent, awaitingTarget: true };
+        }
 
         // La map générée peut être chargée avant que sa cible physique soit
         // immédiatement runnable. La preuve canonique du travel synthétique est
@@ -3360,6 +3367,9 @@
         !this.missionAllowsAutomaticExecution(this.primaryMissionId)
       ) return false;
       const context = this.bridge.context();
+      if (this.localOpportunityWork(context) || this.localProximityWork(this.primaryMissionId)) return true;
+      if (this.memory.getFact?.("missionInventoryReturn:v1", null)?.active === true &&
+          String(BF.getAutonomyMode?.() || "").toLowerCase() === "full") return true;
       if (this.localCompletionGateFor(this.primaryMissionId)) return true;
       if (this.causalArrivalWork(context)?.missionId === this.primaryMissionId) {
         return true;
@@ -3386,7 +3396,11 @@
         const step = this.stepShelterRequirementFor(missionId);
         return step?.shelterTarget?.mapId === this.engine.currentMapId ? step : null;
       }
-      const gate = BF.bibleRuntime?.completionGateState?.(missionId);
+      const runtime = BF.bibleRuntime;
+      const construction = runtime?.byId?.get?.(missionId);
+      if (runtime?.constructionPlacementEffect?.(construction) &&
+          construction?.activationSource !== "autonomy") return null;
+      const gate = runtime?.completionGateState?.(missionId);
       return gate?.managed && gate.shelterTarget?.mapId === this.engine.currentMapId
         ? gate : null;
     }
@@ -3405,7 +3419,7 @@
       for (const node of nodes) {
         const mapState = this.planner.requiredMapState(node, context);
         if (mapState?.constrained && !mapState.targetMapId) continue;
-        const shelterTarget = BF.bibleRuntime?.completionShelterTarget?.(mission, {
+        const shelterTarget = BF.bibleRuntime?.completionShelterTarget?.({}, {
           type: "proximity.shelter", scope: "any-established",
           ...(mapState?.targetMapId ? { mapId: mapState.targetMapId } : {}),
           ...(node.params.siteId ? { siteId: node.params.siteId } : {}),
@@ -3636,6 +3650,125 @@
       return "exploration";
     }
 
+    localProximityWork(missionId, now = performance.now()) {
+      if (!missionId || !this.missionAllowsAutomaticExecution(missionId) ||
+          this.ensureLifecycle(missionId).status !== "active") return null;
+      const work = BF.bibleRuntime?.missionProximityWork?.(missionId);
+      return work && !this.isExecutionNodeSuppressed(missionId, work.nodeId, this.bridge.context(), now)
+        ? work : null;
+    }
+
+    localOpportunityWork(context = this.bridge.context()) {
+      if (String(BF.getAutonomyMode?.() || "").toLowerCase() !== "full" ||
+          this.isMissionGuidanceEnabled?.() === false) return null;
+      // Le relais physique ne remplace jamais Top1/Top4, ni leurs intentions.
+      // Seul du travail réellement local est autorisé, après l'action atomique.
+      for (const id of this.activeMissionIds || []) {
+        if (!/^OPP-/.test(String(id)) || this.ensureLifecycle(id).status !== "active") continue;
+        const tree = this.trees.get(id);
+        if (!tree || tree.root.isComplete || !this.missionAllowsAutomaticExecution(id)) continue;
+        const action = this.missionRunnableAction(id, tree, context, performance.now(), { reportUnresolved: false });
+        if (action) return { kind: "action", missionId: id,
+          selected: { missionId: id, action, primary: id === this.primaryMissionId } };
+        const proximity = this.localProximityWork(id);
+        if (proximity) return { kind: "proximity", missionId: id, proximity };
+      }
+      return null;
+    }
+
+    inventoryReturnWork(context = this.bridge.context()) {
+      if (String(BF.getAutonomyMode?.() || "").toLowerCase() !== "full" ||
+          this.isMissionGuidanceEnabled?.() === false) return false;
+      const key = "missionInventoryReturn:v1";
+      let intent = this.memory.getFact?.(key, null);
+      const currentMapId = String(this.engine.currentMapId || "");
+      if (!currentMapId) return false;
+      const saveIntent = value => { this.memory.setFact?.(key, value); this.memory.save?.(); };
+      if (intent?.active && intent.primaryMissionId !== this.primaryMissionId && this.isPlayerSelectedPrimary()) {
+        saveIntent(null);
+        return false;
+      }
+      if (!intent?.active) {
+        const capacity = BF.getInventoryCapacityState?.();
+        if (!capacity) return false;
+        const inventory = BF.getProgressionState?.()?.inventory || {};
+        const movable = Object.keys(inventory).reduce((sum, id) =>
+          sum + Math.max(0, Number(BF.getUnallocatedInventoryQuantity?.(id)) || 0), 0);
+        if (!movable) return false;
+        let sourceMissionId = this.localOpportunityWork(context)?.missionId || this.primaryMissionId;
+        let reserveFact = null;
+        let exhausted = false;
+        // Les réserves sont définies par leur contrat et leur dernière vraie
+        // transaction. Aucun loot n'est déduit des objets de décor d'une MSC.
+        for (const mission of BF.bibleRuntime?.allMissions?.() || []) {
+          for (const entry of mission.proximityContexts || []) {
+            if (!entry.reserve || !entry.fact) continue;
+            const fact = this.memory.getFact?.(entry.fact, null);
+            if (fact?.reserveVersion !== 1 || String(fact.mapId || "") !== currentMapId ||
+                !(Number(fact.lastWithdrawnAt) > Number(fact.lastDepositedAt || 0))) continue;
+            reserveFact = entry.fact;
+            sourceMissionId = mission.id;
+            exhausted = fact.exhausted === true;
+            break;
+          }
+          if (reserveFact) break;
+        }
+        const automatic = global.localStorage?.getItem?.("bluefox_auto_deposit_v1") === "true";
+        if (!reserveFact && !automatic && !/^OPP-/.test(String(sourceMissionId || ""))) return false;
+        if (!exhausted && Number(capacity.count) < Number(capacity.returnThreshold)) return false;
+        const shelter = BF.bibleRuntime?.completionShelterTarget?.({}, {
+          type: "proximity.shelter", scope: "any-established", inventoryAccess: true,
+          useSiteInteractionRadius: true
+        });
+        if (!shelter) return false;
+        intent = { active: true, phase: "deposit", missionId: sourceMissionId,
+          primaryMissionId: this.primaryMissionId, sourceMapId: currentMapId,
+          shelter, reserveFact, resume: !exhausted,
+          createdAt: Date.now() };
+        saveIntent(intent);
+      }
+      const targetMapId = intent.phase === "resume" ? intent.sourceMapId : intent.shelter?.mapId;
+      if (!targetMapId || !BF.maps?.[targetMapId]) { saveIntent(null); return false; }
+      if (currentMapId !== targetMapId) {
+        const route = this.engine.findKnownRoute?.(currentMapId, targetMapId);
+        if (!Array.isArray(route) || route.length < 2 || typeof this.engine.handleNavigationSuggestion !== "function") {
+          saveIntent(null);
+          return false;
+        }
+        this.engine.handleNavigationSuggestion({ mapId: targetMapId, source: "mission",
+          missionId: intent.missionId, allowTeleportOptimization: false });
+        return true;
+      }
+      if (intent.phase === "resume") { saveIntent(null); return false; }
+      const bucket = this.memory.state.siteProgression?.[targetMapId];
+      if (!bucket || String(bucket.id || "") !== String(intent.shelter.siteId || "")) {
+        saveIntent(null);
+        return false;
+      }
+      if (BF.canAccessCampInventory?.() !== true) {
+        if (this.engine.approachMissionPoint?.(intent.shelter)) return true;
+        saveIntent(null);
+        return false;
+      }
+      const inventory = BF.getProgressionState?.()?.inventory || {};
+      const movable = Object.keys(inventory).reduce((sum, id) =>
+        sum + Math.max(0, Number(BF.getUnallocatedInventoryQuantity?.(id)) || 0), 0);
+      // Le rendu UI peut avoir déjà déposé le panier ; ne jamais le recréditer.
+      if (movable > 0 && !(Number(BF.depositAllInventory?.()) > 0)) {
+        saveIntent(null);
+        return false;
+      }
+      if (intent.reserveFact) {
+        const reserve = this.memory.getFact?.(intent.reserveFact, null);
+        if (reserve) this.memory.setFact?.(intent.reserveFact,
+          { ...reserve, lastDepositedAt: Number(reserve.lastWithdrawnAt) || Date.now() });
+      }
+      const lifecycle = this.memory.state.missionLifecycle?.[intent.missionId];
+      if (!intent.resume || lifecycle?.status !== "active") { saveIntent(null); return true; }
+      saveIntent({ ...intent, phase: "resume", depositedAt: Date.now() });
+      return true;
+    }
+
     prioritizedMissionWork(context, selectionOptions = {}) {
       if (
         typeof this.isMissionGuidanceEnabled === "function" &&
@@ -3673,7 +3806,11 @@
         .slice(0, 4);
       const causalArrival = this.causalArrivalWork(context);
 
+      const opportunity = this.localOpportunityWork(context);
+      if (opportunity && !excludedMissionIds.has(opportunity.missionId)) return opportunity;
       for (const missionId of prioritizedMissionIds) {
+        const proximity = this.localProximityWork(missionId);
+        if (proximity) return { kind: "proximity", missionId, proximity };
         const gate = this.localCompletionGateFor(missionId);
         if (gate) return { kind: "completion-gate", missionId, gate };
         const assessment = this.assessMission(missionId, context);
@@ -4003,6 +4140,7 @@
       const hasExecutableMissionWork = (missionId) =>
         this.missionAllowsAutomaticExecution(missionId) &&
         Boolean(
+          this.localProximityWork(missionId) ||
           this.localCompletionGateFor(missionId) ||
           this.delegatedRuntimeAction(missionId) ||
           this.assessMission(missionId, context)?.action
@@ -4095,6 +4233,21 @@
       if (this.bridge.isEngineBusy()) return false;
 
       this.lastPlanAt = now;
+      if (this.inventoryReturnWork(this.bridge.context())) {
+        this.retryAfter = now + 1200;
+        this.idleRetryUntil = 0;
+        return true;
+      }
+      const opportunity = this.localOpportunityWork(this.bridge.context());
+      if (opportunity) {
+        const accepted = opportunity.kind === "action"
+          ? this.executeSelectedMissionAction(opportunity.selected, now)
+          : this.engine.approachMissionContext?.(opportunity.proximity);
+        if (accepted) { this.retryAfter = now + 1200; this.idleRetryUntil = 0; return true; }
+        if (opportunity.kind === "proximity") this.recordExecutionFailure({
+          missionId: opportunity.missionId, nodeId: opportunity.proximity.nodeId
+        }, "proximity-approach-failed", now);
+      }
       this.ensureMissionTransitionIntent();
       if (this.resumeMissionTransitionIntent()) {
         this.retryAfter = now + 1200;
@@ -4115,6 +4268,18 @@
           excludedMissionIds: refusedMissionIds
         });
         if (!work) break;
+
+        if (work.kind === "proximity") {
+          if (this.engine.approachMissionContext?.(work.proximity)) {
+            this.retryAfter = now + 1200;
+            this.idleRetryUntil = 0;
+            return true;
+          }
+          this.recordExecutionFailure({ missionId: work.missionId,
+            nodeId: work.proximity.nodeId }, "proximity-approach-failed", now);
+          refusedMissionIds.add(work.missionId);
+          continue;
+        }
 
         if (work.kind === "completion-gate") {
           if (this.engine.approachMissionCompletionGate?.(work.missionId, work.gate)) {

@@ -1104,7 +1104,20 @@
         reason = "Un établi est déjà implanté sur Crystal.";
       }
 
+      const mission = this.byId.get(missionId);
+      const tree = this.manager()?.trees?.get?.(missionId);
+      const resources = lifecycle.active && mission ? this.constructionResourceStatus(mission) : null;
+      const ready = Boolean(lifecycle.active && tree?.root?.isComplete && resources?.ready &&
+        String(BF.currentEngine?.currentMapId || "") === targetMapId && !this.gateSatisfied(mission));
+      if (lifecycle.active) {
+        reason = ready ? "Prêt à positionner." : resources && !resources.ready
+          ? resources.requirements.filter(item => item.missing > 0)
+            .map(item => `${item.missing} ${item.inventoryKey || item.subject || "ressources"} manquants`).join(" · ")
+          : "Projet en cours : réunir les ressources puis positionner la structure.";
+      }
       return {
+        ready,
+        resources,
         kind: normalizedKind,
         mapId: targetMapId,
         missionId,
@@ -2438,6 +2451,42 @@
       );
     }
 
+    historicalObservationEvidence() {
+      // Les index secondaires de ProgressionRegistry ne sont pas des familles.
+      // MultiSystem conserve la preuve d'observation + l'identité de l'objet,
+      // y compris pour les membres des MSC, sans reconstruire les maps.
+      const byObject = new Map();
+      const families = new Set();
+      const indicators = BF.getMultiProgressionState?.()?.mapIndicators || {};
+      Object.entries(indicators).forEach(([mapId, bucket]) => {
+        Object.keys(bucket?.phenomenaObserved || {}).forEach((instanceId) => {
+          const objectId = String(bucket?.uniqueInstances?.[instanceId]?.objectId || "");
+          const definition = BF.ObjectLibrary?.getById?.(objectId);
+          if (!definition) return;
+          if (!byObject.has(objectId)) byObject.set(objectId, new Set());
+          byObject.get(objectId).add(`${mapId}:${instanceId}`);
+          const family = lower(bucket?.uniqueObjects?.[objectId]?.family ||
+            definition.resource?.family || definition.knowledge?.family || definition.category);
+          if (family && family !== "unknown") families.add(family);
+        });
+      });
+      const spatialByObject = new Map();
+      const coverage = this.manager()?.memory?.getFact?.(this.observationMemoryKey(), null);
+      Object.values(coverage?.maps || {}).forEach((entry) => {
+        asArray(entry.observedEntityIds).forEach((key) => {
+          // Une MSC observée ne prouve pas l'observation de tous ses composants.
+          const objectId = String(key).match(/:obj:([^:]+):/)?.[1];
+          const definition = objectId && BF.ObjectLibrary?.getById?.(objectId);
+          if (!definition) return;
+          if (!spatialByObject.has(objectId)) spatialByObject.set(objectId, new Set());
+          spatialByObject.get(objectId).add(String(key));
+          const family = lower(definition.resource?.family || definition.knowledge?.family || definition.category);
+          if (family && family !== "unknown") families.add(family);
+        });
+      });
+      return { byObject, spatialByObject, families };
+    }
+
     runtimeCounterValue(source, counter = {}) {
       if (source === "rations.craftedTotal") {
         return Math.max(
@@ -2468,7 +2517,15 @@
         ids.forEach((objectId) => {
           total += Math.max(0, Number(globalCounters[`${eventType}:object:${objectId}`]) || 0);
         });
-        return total;
+        const evidence = this.historicalObservationEvidence();
+        let detailed = 0;
+        let spatial = 0;
+        ids.forEach((id) => {
+          detailed += evidence.byObject.get(id)?.size || 0;
+          spatial += evidence.spatialByObject.get(id)?.size || 0;
+        });
+        // Sources recouvrantes : une borne prouvée, jamais leur somme.
+        return Math.max(total, detailed, spatial);
       }
       if (source === "observations.distinctFamiliesHistorical") {
         const globalCounters = BF.getProgressionState?.().counters?.global || {};
@@ -2481,8 +2538,9 @@
           if (!String(key).startsWith(prefix)) return;
           if (Math.max(0, Number(amount) || 0) <= 0) return;
           const family = String(key).slice(prefix.length).trim().toLowerCase();
-          if (family && family !== "unknown") families.add(family);
+          if (family && family !== "unknown" && !family.includes(":")) families.add(family);
         });
+        this.historicalObservationEvidence().families.forEach((family) => families.add(family));
         return families.size;
       }
       return null;
@@ -3485,6 +3543,7 @@
       if (!moved) return false;
 
       state.updatedAt = Date.now();
+      state.lastWithdrawnAt = state.updatedAt;
       state.exhausted = this.reserveRemainingTotal(state) <= 0;
       manager.memory.setFact?.(context.fact, state);
       manager.memory.save?.();
@@ -3497,11 +3556,12 @@
       return true;
     }
 
-    proximityContextEntries() {
+    proximityContextEntries(missionId = null) {
       const manager = this.manager();
       if (!manager?.memory) return [];
       const entries = [];
-      this.catalog.forEach((mission) => {
+      const missions = missionId ? [this.byId.get(missionId)].filter(Boolean) : this.catalog;
+      missions.forEach((mission) => {
         const contexts = asArray(mission?.proximityContexts);
         if (!contexts.length) return;
         if (!this.missionLifecycle(mission.id).active) return;
@@ -3524,6 +3584,39 @@
         });
       });
       return entries;
+    }
+
+    missionProximityWork(missionId) {
+      const engine = BF.currentEngine;
+      const tree = this.manager()?.trees?.get?.(missionId);
+      if (!engine?.character?.root?.position || !tree || tree.root.isComplete) return null;
+      const available = new Set(tree.availableLeaves().map(node => node.id));
+      const player = engine.character.root.position;
+      const candidates = [];
+      this.proximityContextEntries(missionId).forEach(({ mission, context }) => {
+        if (mission.id !== missionId || !context.slot ||
+            !available.has(`${missionId}:${context.slot}`)) return;
+        const node = tree.find(`${missionId}:${context.slot}`);
+        if (node?.params?.catalogManaged !== true) return;
+        if (context.mapId && String(context.mapId) !== String(engine.currentMapId)) return;
+        if (context.requiredMapFact) {
+          const fact = this.manager()?.memory?.getFact?.(context.requiredMapFact, null);
+          const mapId = String(fact?.[context.requiredMapField || "mapId"] || fact?.mapId || "");
+          if (!mapId || mapId !== String(engine.currentMapId)) return;
+        }
+        const anchor = context.microSceneId ? this.microSceneProximityAnchor(context.microSceneId)
+          : this.objectProximityAnchor(context.cuoType);
+        if (!anchor) return;
+        const point = this.observationPoint(anchor, engine);
+        const radius = context.useSceneRadius === true
+          ? Math.max(1, Number(BF.MicroScenes?.get?.(context.microSceneId)?.radius) || 8)
+          : Math.max(1, Number(context.radius) || 8);
+        candidates.push({ missionId, nodeId: node.id, context,
+          mapId: engine.currentMapId, anchor: point, radius,
+          distance: Math.hypot(player.x - point.x, player.z - point.z) });
+      });
+      candidates.sort((a, b) => a.distance - b.distance);
+      return candidates[0] || null;
     }
 
     microSceneProximityAnchor(microSceneId) {
@@ -4325,7 +4418,7 @@
         asArray(mission?.trigger?.featuredMicroSceneIdsAny).length > 0
       );
 
-      for (const template of this.localMissionTemplates()) {
+      for (const template of options.physicalOpportunitiesOnly === true ? [] : this.localMissionTemplates()) {
         const mapId = String(event?.mapId || BF.currentEngine?.currentMapId || "");
         if (!this.localMissionEligibleOnMap(template, mapId)) continue;
         if (!this.localMissionActivationMatches(template.localMission.activation, event)) continue;
@@ -4339,6 +4432,7 @@
 
       for (const mission of this.catalog) {
         if (mission?.localMission) continue;
+        if (options.physicalOpportunitiesOnly === true && !isPhysicalOpportunity(mission)) continue;
         if (!this.eventMatchesTrigger(mission.trigger, event)) continue;
         // Une mission dont le premier travail dépend explicitement de la map
         // qu'elle a fait générer ne peut pas être activée par la découverte
@@ -5721,6 +5815,18 @@
           .map((entry) => String(entry?.id || ""))
           .filter(Boolean)
       );
+      const physicalOpportunityIds = new Set(this.catalog
+        .filter(mission => /^OPP-/.test(String(mission.id || "")))
+        .flatMap(mission => asArray(mission.trigger?.featuredMicroSceneIdsAny).map(String)));
+      asArray(currentMap?.group?.userData?.microScenes).forEach(entry => {
+        const id = String(entry?.id || "");
+        const owner = String(entry?.instanceRoot?.userData?.bibleMissionId || entry?.missionId || "");
+        const record = asArray(mapDefinition?.persistentMicroScenes).find(item =>
+          String(item.microSceneId || "") === id && item.missionId && !/^OPP-/.test(String(item.missionId)));
+        if (physicalOpportunityIds.has(id) && (!owner || /^OPP-/.test(owner)) && !record) {
+          plannedFeaturedMicroSceneIds.add(id);
+        }
+      });
       const featuredMicroSceneIds = [...plannedFeaturedMicroSceneIds]
         .filter((id) => materializedMicroSceneIds.has(id));
       const event = {
@@ -5756,6 +5862,11 @@
         // réellement matérialisées sur cette même map. Les missions locales
         // déclenchées par interaction restent hors de ce chemin.
         this.progressDiscoveredContextMissions(discoveryEvent);
+      }
+
+      if (detail.isNew !== true && featuredMicroSceneIds.length) {
+        this.consumeTriggerEvent({ ...event, type: "exploration.map_discovered" },
+          { physicalOpportunitiesOnly: true });
       }
 
       // FAU-01 devient active sur la découverte de cette map. À ce stade la
@@ -8296,7 +8407,8 @@
         !tree?.root?.isComplete ||
         !targetMapId ||
         String(BF.currentEngine?.currentMapId || "") !== targetMapId ||
-        this.gateSatisfied(mission)
+        this.gateSatisfied(mission) ||
+        !this.constructionResourceStatus(mission)?.ready
       ) {
         return false;
       }

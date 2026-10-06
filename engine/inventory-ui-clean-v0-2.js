@@ -92,11 +92,12 @@
     if (!group) return null;
     const site = currentSite();
     if (!site) return null;
+    let exact = null;
     let found = null;
     let fallback = null;
 
     group.traverse?.((node) => {
-      if (found || !node) return;
+      if (exact || !node) return;
       const data = node.userData || {};
       const name = String(node.name || "");
       const missionId = String(
@@ -119,12 +120,14 @@
         Boolean(site?.microSceneId) &&
         microSceneId === String(site.microSceneId);
 
-      if (
-        exactSiteRoot ||
-        (belongsToCurrentSite && matchesCurrentMicroScene)
-      ) {
-        found = node;
+      // La racine du site confirmé prime sur une ancienne MSC persistante
+      // portant le même ID missionnel, même si celle-ci est parcourue avant.
+      if (exactSiteRoot) {
+        exact = node;
         return;
+      }
+      if (!found && belongsToCurrentSite && matchesCurrentMicroScene) {
+        found = node;
       }
 
       const currentMicroSceneRoot =
@@ -151,7 +154,7 @@
         fallback = node;
       }
     });
-    return found || fallback;
+    return exact || found || fallback;
   };
 
   const campExistsInScene = () =>
@@ -159,13 +162,20 @@
 
   const siteAnchor = () => {
     const root = campSceneRoot();
+    const site = currentSite();
+    const anchor = site?.anchor || site?.position;
+    // BlueFoxSite nomme le premier composant de la MSC : sa position locale
+    // n'est pas l'origine du site. L'approche et la portée utilisent le même
+    // ancrage confirmé, seulement après preuve de sa présence physique.
+    if (root?.name === `BlueFoxSite:${String(site?.id || "")}` &&
+        Number.isFinite(Number(anchor?.x)) && Number.isFinite(Number(anchor?.z))) {
+      return { x: Number(anchor.x), z: Number(anchor.z) };
+    }
     if (root?.getWorldPosition && BF.currentEngine?.THREE) {
       const p = new BF.currentEngine.THREE.Vector3();
       root.getWorldPosition(p);
       return { x: p.x, z: p.z };
     }
-    const site = currentSite();
-    const anchor = site?.anchor || site?.position;
     if (
       campExistsInScene() &&
       Number.isFinite(Number(anchor?.x)) &&
@@ -961,7 +971,7 @@
       global.localStorage.getItem(
         "bluefox_auto_deposit_v1"
       ) === "true";
-    checkbox.disabled = !campExists;
+    checkbox.disabled = false;
     checkbox.addEventListener("change", () => {
       global.localStorage.setItem(
         "bluefox_auto_deposit_v1",
@@ -983,10 +993,9 @@
       sections.appendChild(expeditionKit);
     }
 
-    // Règle UI : le stockage d'un camp existant reste consultable partout
-    // sur sa map. Les transferts restent strictement propriétaires de la
-    // proximité et ne sont activés qu'à portée du site.
-    if (campExists) {
+    // Stock partagé consultable sur toute map ; les transferts gardent leur
+    // garde physique canAccessCampInventory, y compris pour le Kit.
+    {
       const campSection = createSection(
         "Stockage partagé des camps",
         stored,

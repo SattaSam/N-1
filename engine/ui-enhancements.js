@@ -2763,7 +2763,7 @@
     const signature = JSON.stringify({
       mapId,
       entries: entries.map((entry) => entry.id),
-      states: states.map(([id, state]) => [id, state?.allowed, state?.active, state?.completed, state?.reason]),
+      states: states.map(([id, state]) => [id, state?.allowed, state?.active, state?.completed, state?.ready, state?.reason]),
       craftStates,
       experiments: experimentStates.map((entry) => [
         entry.id, entry.count, entry.canRun, entry.locationReady, entry.resourcesReady,
@@ -2850,16 +2850,21 @@
         button.disabled = true;
       } else if (entry.type === "research.blueprint") {
         const state = research.constructionState?.(entry.constructionKind, mapId);
-        status.hidden = true;
-        button.textContent = entry.label || "Lancer le projet";
-        button.disabled = state?.allowed !== true;
+        status.hidden = false;
+        status.textContent = state?.resources?.ready === false
+          ? state.resources.requirements.filter(item => item.missing > 0)
+            .map(item => `${item.missing} ${researchRequirementLabel(item)} manquants`).join(" · ")
+          : state?.reason || "";
+        button.textContent = state?.ready ? "Positionner la structure"
+          : state?.active ? "Projet en cours" : entry.label || "Lancer le projet";
+        button.disabled = state?.allowed !== true && state?.ready !== true;
         button.addEventListener("click", () => {
-          const missionId = research.startConstruction?.(
-            entry.constructionKind,
-            { mapId, source: "player" }
-          );
+          const missionId = state?.active ? state.missionId : research.startConstruction?.(
+            entry.constructionKind, { mapId, source: "player" });
           if (!missionId) return;
           panel.querySelector(".drawer-close")?.click();
+          const updated = research.constructionState?.(entry.constructionKind, mapId);
+          if (updated?.ready) research.resumePlacement?.(missionId);
           requestResearchRefresh();
         });
       } else {
@@ -2925,21 +2930,15 @@
     const manager = engine?.missionManager;
     if (!manager || !card) return;
 
-    const titleText = card.querySelector("h3, h2, strong")?.textContent?.trim() || "";
-    const activeMissions = BF?.getMissionState?.()?.missions || [];
-    const mission = activeMissions.find((entry) => {
-      const id = entry.missionId || entry.id || "";
-      if (!/^(CAMP|REFUGE|WORKBENCH)@/.test(id)) return false;
-      return entry.title === titleText || card.textContent?.includes(entry.title || "");
-    });
-
+    const missionId = String(card.dataset?.missionId || "");
+    const mission = BF?.bibleRuntime?.byId?.get?.(missionId);
+    const effect = mission && BF.bibleRuntime.constructionPlacementEffect?.(mission);
     let button = card.querySelector(".construction-placement-action");
-    if (!mission) {
+    if (!mission || !effect || mission.activationSource === "autonomy") {
       button?.remove();
       return;
     }
 
-    const missionId = mission.missionId || mission.id;
     const tree = manager.trees?.get?.(missionId);
     const lifecycle = manager.memory?.state?.missionLifecycle?.[missionId];
     const targetMapId = String(
@@ -2951,6 +2950,7 @@
     const ready =
       lifecycle?.status === "active" &&
       tree?.root?.isComplete === true &&
+      BF?.bibleRuntime?.constructionResourceStatus?.(mission)?.ready === true &&
       targetMapId &&
       String(engine.currentMapId || "") === targetMapId &&
       !BF?.bibleRuntime?.gateSatisfied?.(
@@ -3014,8 +3014,9 @@
     });
     document.querySelectorAll(".mission-card").forEach((card) => {
       enhanceMission(card);
-      enhanceConstructionMissionAction(card);
     });
+    document.querySelectorAll(".mission-card-entry[data-mission-id], .mission-browser-card[data-mission-id]")
+      .forEach(enhanceConstructionMissionAction);
     document.querySelectorAll(".full-screen-panel").forEach((panel) => {
       if (panel.querySelector(".planet-layout")) enhancePlanet(panel);
       if (panel.querySelector(".journal-layout")) enhanceJournal(panel);
