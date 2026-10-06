@@ -2182,6 +2182,14 @@
     resumePersistentNavigation() {
       const intent = this.persistentNavigationIntent;
       if (!intent || this.transitioning) return false;
+      if (intent.source === "mission-player-action") {
+        if (!BF.bibleRuntime?.missionPlayerActionNode?.(intent.missionId)) {
+          this.missionManager?.cancelPlayerActionReturn?.();
+          this.clearPersistentNavigationIntent();
+          return false;
+        }
+        if (this.missionManager?.shouldDeferPlayerActionReturn?.()) return false;
+      }
       if (Date.now() < Math.max(0, Number(intent.retryAfter) || 0)) return false;
       if (this.pendingInteraction || this.currentRoutine || this.missionManager?.currentAction) {
         return false;
@@ -2226,6 +2234,11 @@
 
     handleNavigationSuggestion(detail) {
       if (!detail) return;
+      // Une nouvelle destination explicite du joueur remplace sa demande
+      // précédente. Les navettes missionnelles ne l’effacent pas.
+      if (!detail.source || detail.source === "player") {
+        this.missionManager?.cancelPlayerActionReturn?.();
+      }
       this.setPersistentNavigationIntent(detail);
       if (this.transitioning) return;
       if (this.pendingInteraction || this.currentRoutine || this.missionManager?.currentAction) {
@@ -2409,6 +2422,12 @@
       // doit jamais relancer la locomotion pendant un repos. La route et
       // l'intention restent intactes et seront reprises à la fin de la routine.
       if (["rest", "micro-rest", "critical-rest"].includes(this.currentRoutine?.type)) {
+        return false;
+      }
+      if (this.persistentNavigationIntent?.source === "mission-player-action" &&
+          this.missionManager?.shouldDeferPlayerActionReturn?.()) {
+        this.navigationRoute = [];
+        this.pendingGate = null;
         return false;
       }
       const nextMapId = this.navigationRoute[0];
@@ -4245,7 +4264,8 @@
 
       // Une mission principale active conserve l'autorité, même lorsqu'elle
       // attend temporairement une cible, une direction ou une action joueur.
-      if (this.missionManager?.hasPrimaryMissionAuthority?.()) return;
+      if (this.missionManager?.hasPrimaryMissionAuthority?.() ||
+          this.missionManager?.pendingPlayerActionReturn?.()) return;
 
       this.lastAutonomyAt = now;
       if (survival.needs?.criticalRest) {
@@ -4414,7 +4434,8 @@
 
     ensureActivity(now) {
       if (!this.autonomyAllowed(now)) return;
-      if (this.missionManager?.hasPrimaryMissionAuthority?.()) return;
+      if (this.missionManager?.hasPrimaryMissionAuthority?.() ||
+          this.missionManager?.pendingPlayerActionReturn?.()) return;
       if (this.pendingTeleport) {
         if (this.character.speed > 0.08 || this.pendingTeleport.inFlight) {
           this.lastActivityAt = now;

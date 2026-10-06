@@ -651,6 +651,24 @@
         !(node.params?.requiresShelter === true && BF.canAccessCampInventory?.() !== true)
       );
       if (!this.missionAllowsAutomaticExecution(missionId)) return null;
+      // Une construction locale délègue au propriétaire natif des sites.
+      // Ce n’est ni une observation CUO, ni une preuve de construction acquise.
+      const constructionNode = availableLeaves().find(node => {
+        const mapState = this.planner.requiredMapState(node, context);
+        return node.params?.siteProgressionKind &&
+          (!node.params.mapId || String(node.params.mapId) === String(this.engine.currentMapId)) &&
+          (!mapState.constrained || mapState.runnable);
+      });
+      if (constructionNode) {
+        const kind = constructionNode.params.siteProgressionKind;
+        const state = BF.bibleRuntime?.constructionAvailability?.(kind, this.engine.currentMapId);
+        if (String(BF.getAutonomyMode?.() || "").toLowerCase() === "full" &&
+            state?.allowed === true && !state.active) return {
+          missionId, nodeId: constructionNode.id, type: Missions.ActionType.BUILD,
+          title: constructionNode.title, params: { ...constructionNode.params },
+          siteProgressionKind: kind, issuedAt: Date.now()
+        };
+      }
       const environmentNode = this.missionIsBackgroundProgressOnly(missionId)
         ? availableLeaves().find((node) => {
             const params = node.params || {};
@@ -1263,6 +1281,92 @@
 
     missionReturnIntentKey(missionId) {
       return `missionReturnIntent:${missionId}`;
+    }
+
+    pendingPlayerActionReturn() {
+      const ids = new Set([this.primaryMissionId, ...(this.activeMissionIds || []),
+        this.engine.persistentNavigationIntent?.missionId]);
+      let pending = null;
+      for (const id of ids) {
+        const intent = this.memory.getFact?.(this.missionReturnIntentKey(id), null);
+        if (intent?.active === true && intent.transitionSource === "player-action-return" &&
+            (!pending || Number(intent.requestedAt) > Number(pending.requestedAt))) pending = intent;
+      }
+      return pending;
+    }
+
+    cancelPlayerActionReturn() {
+      const ids = new Set(Object.entries(this.memory.state.facts || {})
+        .filter(([key, value]) => key.startsWith("missionReturnIntent:") &&
+          value?.transitionSource === "player-action-return")
+        .map(([, value]) => value.missionId));
+      for (const id of ids) {
+        const key = this.missionReturnIntentKey(id);
+        const intent = this.memory.getFact?.(key, null);
+        if (intent?.active && intent.transitionSource === "player-action-return") {
+          this.memory.setFact?.(key, { ...intent, active: false, completedAt: Date.now() });
+        }
+      }
+      this.memory.save?.();
+    }
+
+    requestMissionPlayerActionReturn(missionId, mapId) {
+      const destination = BF.bibleRuntime?.missionPlayerActionDestinations?.(missionId)
+        .find(entry => entry.mapId === mapId);
+      if (!destination) return false;
+      const currentMapId = String(this.engine.currentMapId || "");
+      if (currentMapId !== mapId) {
+        const route = this.engine.findKnownRoute?.(currentMapId, mapId);
+        if (!Array.isArray(route) || route.length < 2) return false;
+      }
+      this.cancelPlayerActionReturn();
+      this.memory.setFact?.(this.missionReturnIntentKey(missionId), {
+        active: currentMapId !== mapId, missionId, nodeId: destination.nodeId,
+        mapId, targetMapId: mapId, kind: "map-travel",
+        transitionSource: "player-action-return", requestedAt: Date.now()
+      });
+      this.memory.save?.();
+      this.wakeIdleRetry?.();
+      if (currentMapId !== mapId && !this.shouldDeferPlayerActionReturn()) {
+        this.engine.handleNavigationSuggestion?.({ mapId,
+          source: "mission-player-action", missionId,
+          allowTeleportOptimization: false });
+      }
+      return true;
+    }
+
+    shouldDeferPlayerActionReturn() {
+      return Boolean(this.memory.getFact?.("missionInventoryReturn:v1", null)?.active ||
+        this.localOpportunityWork(this.bridge.context()));
+    }
+
+    playerActionReturnWork() {
+      const intent = this.pendingPlayerActionReturn();
+      if (!intent) return false;
+      const nodeId = BF.bibleRuntime?.missionPlayerActionNode?.(intent.missionId);
+      if (nodeId !== intent.nodeId || !BF.maps?.[intent.targetMapId] ||
+          String(this.engine.currentMapId) === intent.targetMapId) {
+        this.cancelPlayerActionReturn();
+        if (this.engine.persistentNavigationIntent?.source === "mission-player-action") {
+          this.engine.navigationRoute = [];
+          this.engine.pendingGate = null;
+          this.engine.clearPersistentNavigationIntent?.();
+        }
+        return false;
+      }
+      if (this.shouldDeferPlayerActionReturn()) return false;
+      const navigation = this.engine.persistentNavigationIntent;
+      if (navigation?.source === "mission-player-action" &&
+          navigation.mapId === intent.targetMapId &&
+          (this.engine.pendingGate || this.engine.navigationRoute?.length)) return true;
+      // Sans chemin connu, conserver l’intention mais ne pas créer de voyage
+      // fictif. La prochaine passe pourra relire les liens effectivement découverts.
+      const route = this.engine.findKnownRoute?.(this.engine.currentMapId, intent.targetMapId);
+      if (!Array.isArray(route) || route.length < 2) return false;
+      this.engine.handleNavigationSuggestion?.({ mapId: intent.targetMapId,
+        source: "mission-player-action", missionId: intent.missionId,
+        allowTeleportOptimization: false });
+      return true;
     }
 
     travelMissionDefinition(travel) {
@@ -2316,6 +2420,8 @@
 
     ensureMissionTransitionIntent(context = null, travelOverride = null) {
       const decisionContext = context || this.bridge.context();
+      const playerReturn = this.memory.getFact?.(this.missionReturnIntentKey(this.primaryMissionId), null);
+      if (playerReturn?.active && playerReturn.transitionSource === "player-action-return") return playerReturn;
       const travel = travelOverride || this.primaryMissionTransition(decisionContext);
       if (travel && !this.missionAllowsAutomaticExecution(travel.missionId)) {
         const key = this.missionReturnIntentKey(travel.missionId);
@@ -3717,6 +3823,8 @@
           }
           if (reserveFact) break;
         }
+        if (this.pendingPlayerActionReturn() && !reserveFact &&
+            !/^OPP-/.test(String(sourceMissionId || ""))) return false;
         const automatic = global.localStorage?.getItem?.("bluefox_auto_deposit_v1") === "true";
         if (!reserveFact && !automatic && !/^OPP-/.test(String(sourceMissionId || ""))) return false;
         if (!exhausted && Number(capacity.count) < Number(capacity.returnThreshold)) return false;
@@ -4072,6 +4180,18 @@
         isSecondary: !selected.primary
       };
       const tree = this.trees.get(selected.missionId);
+      if (action.siteProgressionKind) {
+        const node = tree?.availableLeaves?.().find(candidate => candidate.id === action.nodeId);
+        const mapId = String(this.engine.currentMapId || "");
+        const mapState = this.planner.requiredMapState(node, this.bridge.context());
+        if (!node || node.params?.siteProgressionKind !== action.siteProgressionKind ||
+            (mapState.constrained && !mapState.runnable) ||
+            (node.params.mapId && String(node.params.mapId) !== mapId) ||
+            String(BF.getAutonomyMode?.() || "").toLowerCase() !== "full") return false;
+        return Boolean(BF.bibleRuntime?.startConstruction?.(action.siteProgressionKind, {
+          mapId, source: "autonomy"
+        }));
+      }
       if (!tree || !this.bridge.execute(action, now)) {
         if (tree) this.recordExecutionFailure(action, "execute-false", now);
         return false;
@@ -4117,6 +4237,9 @@
     }
 
     hasMissionExecutionAuthority() {
+      // Les consommateurs BAC lisent cette autorité du manager : une demande
+      // explicite de retour n’est pas une nouvelle initiative d’autonomie libre.
+      if (this.pendingPlayerActionReturn()) return true;
       if (this.isMissionGuidanceEnabled?.() === false) return false;
       if (this.hasPrimaryMissionAuthority()) return true;
 
@@ -4237,6 +4360,11 @@
       if (this.bridge.isEngineBusy()) return false;
 
       this.lastPlanAt = now;
+      if (this.playerActionReturnWork()) {
+        this.retryAfter = now + 1200;
+        this.idleRetryUntil = 0;
+        return true;
+      }
       if (this.inventoryReturnWork(this.bridge.context())) {
         this.retryAfter = now + 1200;
         this.idleRetryUntil = 0;

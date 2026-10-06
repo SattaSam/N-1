@@ -515,6 +515,36 @@
     return container;
   }
 
+  function renderMissionReturnControls(mission) {
+    if (mission.status !== "active") return null;
+    const missionId = String(mission.missionId || mission.id || "");
+    const destinations = BF.getMissionPlayerActionDestinations?.(missionId) || [];
+    if (!destinations.length) return null;
+    const container = document.createElement("div");
+    container.className = "mission-browser-actions";
+    const select = document.createElement("select");
+    select.setAttribute("aria-label", "Lieu de l’action joueur");
+    destinations.forEach(destination => {
+      const option = document.createElement("option");
+      option.value = destination.mapId;
+      option.textContent = destination.label;
+      select.appendChild(option);
+    });
+    select.value = destinations[0].mapId;
+    if (destinations.length > 1) container.appendChild(select);
+    const button = createTextElement("button", "", "Retourner vers la map de cette mission");
+    button.type = "button";
+    const feedback = createTextElement("small", "", "");
+    button.addEventListener("click", () => {
+      const accepted = BF.requestMissionPlayerActionReturn?.(missionId, select.value) === true;
+      feedback.textContent = accepted
+        ? "Destination mémorisée. L’action sur place reste à votre choix."
+        : "Cette destination n’est plus disponible ou aucun chemin connu n’y mène.";
+    });
+    container.append(button, feedback);
+    return container;
+  }
+
   function missionHudLeafNodes(mission) {
     const root = mission?.tree?.root;
     if (!root) return [];
@@ -876,6 +906,8 @@
         }
         const choiceControls = renderMissionChoiceControls(mission);
         if (choiceControls) body.appendChild(choiceControls);
+        const returnControls = renderMissionReturnControls(mission);
+        if (returnControls) body.appendChild(returnControls);
         const actions = document.createElement("div");
         actions.className = "mission-browser-actions";
         const contextVisible = mission.contextVisible !== false;

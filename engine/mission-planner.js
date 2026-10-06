@@ -59,7 +59,7 @@
     score(node, context) {
       // Une étape événementielle décrit une condition de progression ; elle
       // ne doit jamais être proposée comme action exécutable au bridge.
-      if (node?.params?.eventDriven === true) return -100;
+      if (node?.params?.eventDriven === true || node?.params?.siteProgressionKind) return -100;
 
       // Une feuille liée à une autre map reste active dans son lifecycle, mais
       // elle n'est pas exécutable localement. MissionManager peut alors produire

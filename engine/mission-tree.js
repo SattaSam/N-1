@@ -48,8 +48,8 @@
       // ne toucher ni aux preuves, ni à la progression, ni aux étapes finies.
       if (!this.isLeaf || this.isComplete || !definition ||
           definition.id !== this.id || (definition.children || []).length ||
-          this.params.biblePattern !== "SEQUENCE_ACTIONS" ||
-          definition.params?.biblePattern !== "SEQUENCE_ACTIONS" ||
+          !["SEQUENCE_ACTIONS", "OBSERVE_TARGET"].includes(this.params.biblePattern) ||
+          definition.params?.biblePattern !== this.params.biblePattern ||
           this.params.sequenceSlot !== definition.params.sequenceSlot ||
           this.target !== Math.max(1, Number(definition.target) || 1) ||
           this.optional !== Boolean(definition.optional) ||

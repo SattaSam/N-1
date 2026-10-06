@@ -4775,8 +4775,8 @@
     scoreTrauma: 32,
     narrativeAxis: "SCIENTIFIQUE",
     reinforcesNarrativeAxis: Object.freeze({ axis: "SCIENTIFIQUE", weight: 1 }),
-    localMission: Object.freeze({ activation: Object.freeze({ type: "interaction.any", tagsAny: Object.freeze(["phenomenon", "resonant"]) }) }),
-    slots: Object.freeze({ study: Object.freeze({ title: "Étudier le phénomène", target: 1, params: Object.freeze({ tagsAny: Object.freeze(["phenomenon", "resonant"]) }) }) })
+    localMission: Object.freeze({ activation: Object.freeze({ type: "interaction.any", category: "phenomena" }) }),
+    slots: Object.freeze({ study: Object.freeze({ title: "Étudier le phénomène", target: 1, params: Object.freeze({ category: "phenomena" }) }) })
   });
 
   const T11 = Object.freeze({

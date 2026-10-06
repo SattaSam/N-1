@@ -233,7 +233,7 @@
     localMissionActivationMatches(activation, event) {
       if (!activation || !event || activation.type !== event.type) return false;
       const exactKeys = [
-        "objectId", "kind", "family", "subject", "persistentMicroSceneId"
+        "objectId", "kind", "family", "subject", "category", "persistentMicroSceneId"
       ];
       for (const key of exactKeys) {
         if (activation[key] != null && lower(activation[key]) !== lower(event[key])) {
@@ -326,7 +326,12 @@
         // Ces instances scoped restent dérivées de leur template : on ne crée
         // ni registre parallèle ni nouvelle source de vérité runtime. On réutilise
         // uniquement le compilateur et le registre de définitions canoniques.
-        const compiled = this.compileMission(mission);
+        // Enregistrer le template avant de demander son instance scoped.
+        // Compiler directement « base@map » produit « base@map:slot », alors
+        // que MissionTypes et les preuves sauvegardées portent « base:slot@map ».
+        // Le propriétaire canonique du scope reste MissionTypes.getDefinition().
+        const template = this.byId.get(mission.baseMissionId);
+        const compiled = template ? this.compileMission(template) : null;
         if (!compiled || typeof BF.registerMissionDefinitions !== "function") continue;
         BF.registerMissionDefinitions([compiled]);
         if (!Missions.getDefinition?.(mission.id)) continue;
@@ -1648,13 +1653,20 @@
       return false;
     }
 
-    environmentHistoricalCount(familyName, source = null) {
+    environmentHistoricalCount(familyName, source = null, definitions = null) {
       const snapshot = source || BF.progression?.snapshot?.() || BF.progression?.state || {};
       const instances = snapshot?.discoveries?.instances || {};
       let total = 0;
       Object.entries(instances).forEach(([instanceId, record]) => {
         if (!instanceId) return;
-        const definition = this.environmentDefinition(record?.objectId);
+        const objectId = String(record?.objectId || "");
+        // Un miss est aussi stable pendant cette passe synchrone. Rien n’est
+        // conservé entre deux observations ou après un chargement du catalogue.
+        if (definitions && !definitions.has(objectId)) {
+          definitions.set(objectId, this.environmentDefinition(objectId));
+        }
+        const definition = definitions
+          ? definitions.get(objectId) : this.environmentDefinition(objectId);
         if (this.environmentFamilyMatches(familyName, definition)) total += 1;
       });
       return total;
@@ -6041,6 +6053,52 @@
       return result;
     }
 
+    missionPlayerActionNode(missionId) {
+      const mission = this.byId.get(missionId);
+      const manager = this.manager();
+      const tree = manager?.trees?.get?.(missionId);
+      if (!mission || !tree || !this.missionLifecycle(missionId).active) return null;
+      if (mission.runtimeValidation?.type === "arch38-civilization-choice") {
+        const node = tree.findSequenceSlot?.(mission.runtimeValidation.contactSlot || "firstContact");
+        return node && !node.isComplete &&
+          ["available", "active"].includes(node.status) ? node.id : null;
+      }
+      const placement = this.constructionPlacementEffect(mission);
+      const source = mission.activationSource || this.state.constructionInstances?.[missionId]?.source || "player";
+      if (placement && source !== "autonomy" && tree.root.isComplete &&
+          !this.canFinalizeMission(missionId)) return `${missionId}:completion-gate`;
+      return null;
+    }
+
+    missionPlayerActionDestinations(missionId) {
+      const nodeId = this.missionPlayerActionNode(missionId);
+      if (!nodeId) return [];
+      const mission = this.byId.get(missionId);
+      const tree = this.manager().trees.get(missionId);
+      const result = new Map();
+      const add = (mapId) => {
+        if (!mapId || !BF.maps?.[mapId]) return;
+        result.set(mapId, { mapId, nodeId, label: BF.currentEngine?.narrativeMapName?.(mapId) ||
+          BF.maps[mapId].name || "Territoire découvert" });
+      };
+      if (this.constructionPlacementEffect(mission)) {
+        add(this.missionTargetMapId(mission));
+      } else {
+        // Relire les preuves d’approche : l’identité de la map est celle de la
+        // découverte réelle, jamais un numéro présumé de nouvelle partie.
+        const types = new Set(asArray(mission.npcEncounters).map(entry => entry.cuoType));
+        const knownIds = Object.keys(BF.maps || {}).sort((a, b) => b.length - a.length);
+        tree.root.walk(node => {
+          if (!node.isLeaf || !node.isComplete || !types.has(node.params?.cuoType)) return;
+          for (const value of node.distinctValues || []) {
+            const mapId = knownIds.find(id => String(value).startsWith(`${id}:`));
+            add(mapId);
+          }
+        });
+      }
+      return [...result.values()];
+    }
+
     missionTargetMapId(mission) {
       const missionId = String(mission?.id || "").trim();
       const manager = this.manager();
@@ -7080,6 +7138,7 @@
       // que jusqu'au retour : l'observation suivante doit relire le registre.
       let snapshot = null;
       const counts = new Map();
+      const definitions = new Map();
       this.catalog.forEach((mission) => {
         const family = mission?.slots?.study?.params?.envHistoricalFamily;
         if (!family || !this.missionLifecycle(mission.id).active) return;
@@ -7088,7 +7147,7 @@
         if (!node) return;
         if (!counts.has(family)) {
           snapshot ||= BF.progression?.snapshot?.() || BF.progression?.state || {};
-          counts.set(family, this.environmentHistoricalCount(family, snapshot));
+          counts.set(family, this.environmentHistoricalCount(family, snapshot, definitions));
         }
         const absolute = Math.min(
           Math.max(0, Number(node.target) || 0),
@@ -9271,6 +9330,10 @@
     runtime.survivalCapabilityUnlocked(capability);
   BF.getMissionChoiceState = (missionId) =>
     clone(runtime.missionChoiceState(missionId));
+  BF.getMissionPlayerActionDestinations = (missionId) =>
+    clone(runtime.missionPlayerActionDestinations(missionId));
+  BF.requestMissionPlayerActionReturn = (missionId, mapId) =>
+    runtime.manager()?.requestMissionPlayerActionReturn?.(missionId, mapId) === true;
   BF.submitMissionChoice = (missionId, choiceId) =>
     runtime.submitMissionChoice(missionId, choiceId);
 
