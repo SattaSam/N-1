@@ -821,7 +821,8 @@
         const runtime = BF.bibleRuntime;
         const construction = runtime?.byId?.get?.(missionId);
         if (runtime?.constructionPlacementEffect?.(construction) &&
-            runtime.constructionResourceStatus?.(construction)?.ready === false) return null;
+            (construction?.activationSource !== "autonomy" ||
+             runtime.constructionResourceStatus?.(construction)?.ready === false)) return null;
         const gate = runtime?.completionGateState?.(missionId) || null;
         const targetMapId = String(gate?.targetMapId || "");
         if (
@@ -2348,7 +2349,10 @@
           const targetMapId = String(previous.targetMapId || previous.mapId || "");
           const completionGateTravelDisabled = Boolean(
             String(previous.transitionSource || "") === "completion-gate" &&
-            this.definition(this.primaryMissionId)?.completionGate?.autonomousTravel === false
+            (this.definition(this.primaryMissionId)?.completionGate?.autonomousTravel === false ||
+             (BF.bibleRuntime?.constructionPlacementEffect?.(
+                BF.bibleRuntime?.byId?.get?.(this.primaryMissionId)) &&
+              BF.bibleRuntime?.byId?.get?.(this.primaryMissionId)?.activationSource !== "autonomy"))
           );
           if (completionGateTravelDisabled || !targetMapId || targetMapId === currentMapId) {
             this.memory.setFact?.(key, {

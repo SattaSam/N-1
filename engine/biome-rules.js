@@ -139,6 +139,7 @@
       return Object.freeze({ valid: errors.length === 0, errors: Object.freeze(errors) });
     },
     getMapPopulation(definition) {
+      definition = BF.MapGenerator?.populationDefinition?.(definition) || definition;
       const requestedProfile = definition.profile || "alien";
       const profileId = inferProfile(definition, requestedProfile);
       const mapProfile = this.getMapProfile(profileId);
@@ -576,7 +577,7 @@
    return {...pop,rockCount:rocks,decorations:dec,resourceWeights,policyVersion:"canonical"};
   };
   const orig=base.getMapPopulation.bind(base);
-  BF.BiomeRules=Object.freeze({...base,getMapPopulation(def){return patch(def,orig(def));}});
+  BF.BiomeRules=Object.freeze({...base,getMapPopulation(def){def=BF.MapGenerator?.populationDefinition?.(def)||def;return patch(def,orig(def));}});
   BF.BiomePopulationPolicy=Object.freeze({version:"canonical"});
 
 })(window);

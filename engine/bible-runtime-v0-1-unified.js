@@ -7564,7 +7564,7 @@
 
     progressionChangeAffectsInventory(detail = {}) {
       const reason = String(detail.reason || "");
-      if (["inventory-consumed", "inventory-pool-consumed", "inventory-granted", "inventory-deposited", "inventory-withdrawn", "inventory-reset"].includes(reason)) {
+      if (["inventory-consumed", "inventory-pool-consumed", "inventory-granted", "camp-storage-granted", "research-crafted", "inventory-deposited", "inventory-withdrawn", "inventory-reset"].includes(reason)) {
         return true;
       }
       if (reason !== "event-consumed") return false;
@@ -7597,19 +7597,31 @@
         changed = this.markDepositCompletionGates() || changed;
       }
       if (!this.progressionChangeAffectsInventory(detail)) return changed;
-      if (!this.pendingConstructionResourceMissions.size) return changed;
-      for (const missionId of [...this.pendingConstructionResourceMissions]) {
+      const manager = this.manager();
+      const missionIds = new Set([
+        ...this.pendingConstructionResourceMissions,
+        ...Object.entries(manager?.memory?.state?.missionLifecycle || {})
+          .filter(([, lifecycle]) => lifecycle?.status === "active").map(([id]) => id)
+      ]);
+      for (const missionId of missionIds) {
         const mission = this.byId.get(missionId);
-        const manager = this.manager();
         const tree = manager?.trees?.get?.(missionId);
         const lifecycle = manager?.memory?.state?.missionLifecycle?.[missionId];
-        if (!mission || lifecycle?.status !== "active" || !tree?.root?.isComplete) {
+        if (!mission || lifecycle?.status !== "active") {
           this.pendingConstructionResourceMissions.delete(missionId);
           this.constructionResourceSignatures.delete(missionId);
           continue;
         }
+        if (!this.constructionPlacementEffect(mission) && !this.pendingConstructionResourceMissions.has(missionId)) continue;
         const status = this.constructionResourceStatus(mission);
         changed = this.publishConstructionResourceStatus(mission, status) || changed;
+        // Le rafraîchissement UI ne crée pas une nouvelle demande d'autonomie.
+        // Seuls les projets déjà en attente conservent leur reprise existante.
+        if (!this.pendingConstructionResourceMissions.has(missionId)) continue;
+        if (!tree?.root?.isComplete) {
+          this.pendingConstructionResourceMissions.delete(missionId);
+          continue;
+        }
         if (!status?.ready) continue;
         this.pendingConstructionResourceMissions.delete(missionId);
         this.handleConstructionReady(mission);

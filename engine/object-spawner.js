@@ -366,6 +366,7 @@
     }
 
     populateMap(options = {}) {
+      options = { ...options, definition: BF.MapGenerator?.populationDefinition?.(options.definition) || options.definition };
       if (!BF.BiomeRules) throw new Error("ObjectSpawner nécessite BiomeRules.");
       if (!BF.MicroScenes) throw new Error("ObjectSpawner nécessite MicroScenes.");
 

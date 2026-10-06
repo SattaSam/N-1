@@ -154,7 +154,7 @@
           `Image locale introuvable : ${filename}. Vérifiez le dossier Images puis relancez GENERER_CATALOGUE_IMAGES.bat.`
         );
         this.callbacks.onAction(
-          `Asset manquant pour ${event.detail?.mapName || "la map actuelle"} : ${filename}.`
+          `Asset manquant pour ${BF.maps[event.detail?.mapId]?.name || event.detail?.mapName || "la map actuelle"} : ${filename}.`
         );
       };
     }
@@ -954,7 +954,7 @@
         if (!saved || typeof saved !== "object" || Array.isArray(saved)) return;
         Object.entries(saved).forEach(([mapId, name]) => {
           if (!BF.maps[mapId] || typeof name !== "string" || !name.trim()) return;
-          const resolvedName = name.trim();
+          const resolvedName = BF.MapGenerator?.resolveName?.(BF.maps[mapId]) || name.trim();
           BF.maps[mapId].name = resolvedName;
           this.mapNames.set(mapId, resolvedName);
         });
@@ -992,99 +992,11 @@
     ensureUniqueMapName(mapId) {
       const definition = BF.maps[mapId];
       if (!definition) return "";
-      const savedName = this.mapNames.get(mapId);
-      if (savedName) {
-        definition.name = savedName;
-        return savedName;
-      }
-
-      const normalize = (value) => String(value || "")
-        .toLocaleLowerCase("fr")
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .trim();
-      const discoveredDefinitions = [...this.discoveredMaps]
-        .filter((id) => id !== mapId && BF.maps[id])
-        .map((id) => BF.maps[id]);
-      const sceneKey = this.sceneIdentity(definition);
-      const duplicateScene = Boolean(sceneKey) && discoveredDefinitions.some(
-        (map) => this.sceneIdentity(map) === sceneKey
-      );
-      const duplicateName = discoveredDefinitions.some(
-        (map) => normalize(map.name) === normalize(definition.name)
-      );
-      if (!duplicateScene && !duplicateName) return definition.name;
-
-      const namesByProfile = {
-        volcanic: [
-          "La Cicatrice d’Aube", "Les Forges Rouges", "Le Seuil de Braise",
-          "La Caldeira Murmurante"
-        ],
-        frozen: [
-          "Le Silence Boréal", "Les Éclats de Givre", "La Veille Blanche",
-          "Le Miroir des Brumes"
-        ],
-        forest: [
-          "La Canopée des Veilleurs", "Le Jardin des Échos", "Les Racines Célestes",
-          "La Clairière Patiente"
-        ],
-        ruins: [
-          "Les Vestiges Endormis", "La Cité des Silences", "Le Passage des Anciens",
-          "Les Arches Oubliées"
-        ],
-        aquatic: [
-          "Le Lagon des Lueurs", "Les Profondeurs Calmes", "La Mer des Murmures",
-          "L’Archipel Opalin"
-        ],
-        desert: [
-          "La Mer de Sable", "Les Dunes du Veilleur", "Le Désert des Deux Lunes",
-          "La Vallée Sèche"
-        ],
-        crystalline: [
-          "Le Champ des Résonances", "Les Flèches d’Azur", "La Plaine Prismatique",
-          "Le Sanctuaire de Verre"
-        ],
-        alien: [
-          "L’Horizon Inconnu", "La Terre des Signes", "Le Domaine des Échos",
-          "La Frontière Silencieuse"
-        ]
-      };
-      const candidates = namesByProfile[definition.profile] || namesByProfile.alien;
-      let hash = 2166136261;
-      for (const character of `${mapId}:${definition.seed}:${definition.name}`) {
-        hash ^= character.charCodeAt(0);
-        hash = Math.imul(hash, 16777619);
-      }
-      const usedNames = new Set(
-        Object.values(BF.maps).map((map) => normalize(map.name))
-      );
-      let chosen = "";
-      for (let offset = 0; offset < candidates.length; offset += 1) {
-        const candidate = candidates[((hash >>> 0) + offset) % candidates.length];
-        if (!usedNames.has(normalize(candidate))) {
-          chosen = candidate;
-          break;
-        }
-      }
-      if (!chosen) {
-        const base = candidates[(hash >>> 0) % candidates.length];
-        let suffix = 2;
-        chosen = `${base} ${suffix}`;
-        while (usedNames.has(normalize(chosen))) {
-          suffix += 1;
-          chosen = `${base} ${suffix}`;
-        }
-      }
-
-      definition.name = chosen;
+      const before = definition.name;
+      const chosen = BF.MapGenerator?.resolveName?.(definition) || definition.name;
       this.mapNames.set(mapId, chosen);
-      localStorage.setItem(
-        "bluefox_map_names_v1",
-        JSON.stringify(Object.fromEntries(this.mapNames))
-      );
-      this.callbacks.onAction(
-        `BlueFox baptise ce nouveau territoire « ${chosen} ».`
-      );
+      localStorage.setItem("bluefox_map_names_v1", JSON.stringify(Object.fromEntries(this.mapNames)));
+      if (chosen !== before) this.callbacks.onAction?.(`BlueFox baptise ce territoire « ${chosen} ».`);
       return chosen;
     }
 
@@ -3390,10 +3302,11 @@
       const previousMap = this.currentMap;
       const nextMap = BF.buildMap(
         this.THREE,
-        definition,
+        BF.MapGenerator?.populationDefinition?.(definition) || definition,
         this.assets,
         this.renderer
       );
+      nextMap.definition = definition;
       await this.addCrashCapsule(nextMap, definition);
       this.scene.add(nextMap.group);
       this.currentMap = nextMap;

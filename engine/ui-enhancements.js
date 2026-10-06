@@ -165,88 +165,17 @@
       : "ZONE INCONNUE";
   };
 
-  const uniqueNameStorageKey = "bluefox_map_names_v1";
-  const blueFoxPlaceNames = Object.freeze([
-    "Lisière des Murmures",
-    "Veines du Ciel Calme",
-    "Refuge des Éclats Patients",
-    "Jardin des Signaux Doux",
-    "Crête des Curiosités",
-    "Passage des Lumières Timides",
-    "Bassin des Traces Bleues",
-    "Terrasse du Vent Complice",
-    "Clairière des Questions",
-    "Horizon des Pierres Sages",
-    "Détour des Lucioles Astrales",
-    "Vallée du Petit Pas"
-  ]);
-
-  const readUniqueNames = () => {
-    try {
-      const names = JSON.parse(localStorage.getItem(uniqueNameStorageKey) || "{}");
-      return names && typeof names === "object" ? names : {};
-    } catch {
-      return {};
-    }
-  };
-
-  const normalizedSceneIdentity = (mapId) => {
-    const definition = global.BlueFox3D?.maps?.[mapId];
-    return String(
-      sceneImageCandidates(mapId)[0] ||
-      definition?.sceneUrl ||
-      definition?.backgroundUrl ||
-      definition?.sceneImage ||
-      ""
-    ).split(/[?#]/)[0].toLocaleLowerCase();
-  };
-
   function ensureUniqueDiscoveredMapNames(panel) {
-    const ids = discoveredMapIds(panel);
-    if (!ids.length) return;
-    const storedNames = readUniqueNames();
-    const sceneOwners = new Map();
-    const usedNames = new Set();
+    const BF = global.BlueFox3D;
     let changed = false;
-
-    ids.forEach((mapId) => {
-      const definition = global.BlueFox3D?.maps?.[mapId];
+    discoveredMapIds(panel).forEach(mapId => {
+      const definition = BF?.maps?.[mapId];
       if (!definition) return;
-      const sceneIdentity = normalizedSceneIdentity(mapId);
-      const duplicateScene = Boolean(
-        sceneIdentity && sceneOwners.has(sceneIdentity)
-      );
-      const storedName = storedNames[mapId];
-      let displayName = storedName || definition.name || "Territoire inconnu";
-
-      if (duplicateScene && !storedName) {
-        const order = Math.max(1, discoveryNumber(mapId) || ids.indexOf(mapId) + 1);
-        const start = (order * 5 + mapId.length * 3) % blueFoxPlaceNames.length;
-        for (let offset = 0; offset < blueFoxPlaceNames.length; offset += 1) {
-          const candidate =
-            blueFoxPlaceNames[(start + offset) % blueFoxPlaceNames.length];
-          if (!usedNames.has(candidate)) {
-            displayName = candidate;
-            break;
-          }
-        }
-        storedNames[mapId] = displayName;
-        changed = true;
-      }
-
-      definition.name = displayName;
-      usedNames.add(displayName);
-      if (sceneIdentity && !sceneOwners.has(sceneIdentity)) {
-        sceneOwners.set(sceneIdentity, mapId);
-      }
+      const before = definition.name;
+      BF.MapGenerator?.resolveName?.(definition);
+      changed = changed || before !== definition.name;
     });
-
-    if (changed) {
-      localStorage.setItem(uniqueNameStorageKey, JSON.stringify(storedNames));
-      global.dispatchEvent(new CustomEvent("bluefox:map-names-changed", {
-        detail: { names: storedNames }
-      }));
-    }
+    if (changed) global.dispatchEvent(new CustomEvent("bluefox:map-names-changed"));
   }
 
   const sceneImageCandidates = (mapId) => {
@@ -2942,6 +2871,7 @@
     const tree = manager.trees?.get?.(missionId);
     const lifecycle = manager.memory?.state?.missionLifecycle?.[missionId];
     const targetMapId = String(
+      BF.bibleRuntime.missionTargetMapId?.(mission) ||
       tree?.targetMapId ||
       BF?.bibleRuntime?.byId?.get?.(missionId)?.targetMapId ||
       missionId.split("@")[1] ||
@@ -2971,11 +2901,7 @@
       card.appendChild(button);
     }
 
-    const kind = missionId.startsWith("REFUGE@")
-      ? "refuge"
-      : missionId.startsWith("WORKBENCH@")
-        ? "workbench"
-        : "camp";
+    const kind = effect.kind;
     button.textContent = kind === "refuge"
       ? "Positionner le refuge"
       : kind === "workbench"

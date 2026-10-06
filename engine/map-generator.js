@@ -21,48 +21,52 @@
     alien: Object.freeze({ ground: 0x5b526f, accent: 0xc795ff })
   });
 
-  const BLUEFOX_DUPLICATE_NAMES = Object.freeze({
-    forest: Object.freeze([
-      "Le Sous-Bois des Murmures", "La Clairière Patiente",
-      "Les Racines du Souvenir", "Le Jardin des Silences",
-      "La Canopée qui Respire", "Le Bois des Lueurs Douces"
-    ]),
-    aquatic: Object.freeze([
-      "Les Eaux qui Écoutent", "Le Miroir des Roseaux",
-      "La Lagune des Reflets", "Les Rives du Calme",
-      "Le Marais des Lumières Lentes", "La Nappe aux Échos"
-    ]),
-    desert: Object.freeze([
-      "La Plaine du Souffle Chaud", "Les Dunes de l'Attente",
-      "Le Désert des Traces Fines", "La Ligne des Mirages",
-      "Les Pierres du Grand Silence", "L'Horizon Pâle"
-    ]),
-    crystalline: Object.freeze([
-      "Le Champ des Éclats", "La Vallée qui Résonne",
-      "Les Cristaux du Lointain", "Le Jardin des Reflets",
-      "La Plaine aux Mille Lueurs", "Le Seuil de Verre"
-    ]),
-    ruins: Object.freeze([
-      "Les Murs qui se Souviennent", "Le Quartier Endormi",
-      "Les Vestiges du Passage", "La Place Sans Voix",
-      "Les Pierres de l'Avant", "Le Chemin des Absents"
-    ]),
-    frozen: Object.freeze([
-      "Le Silence Blanc", "La Plaine du Souffle Froid",
-      "Les Glaces Immobiles", "Le Bord du Ciel Pâle",
-      "La Neige des Échos", "Le Plateau du Givre Bleu"
-    ]),
-    volcanic: Object.freeze([
-      "La Terre qui Gronde", "Les Braises du Lointain",
-      "Le Sol au Cœur Rouge", "La Plaine des Cendres",
-      "Le Bord du Feu", "Les Roches de la Chaleur Sourde"
-    ]),
-    alien: Object.freeze([
-      "L'Endroit qui Intrigue", "La Plaine de l'Étrange",
-      "Le Pays des Signes", "L'Horizon Inattendu",
-      "Le Jardin Inconnu", "La Terre qui me Regarde"
-    ])
+  // Articles et accords sont attachés aux termes : aucun assemblage aléatoire
+  // ne peut produire « Le Clairière » ou un pluriel avec un adjectif singulier.
+  const BLUEFOX_BIOME_LEXICONS = Object.freeze({
+    grassland: Object.freeze({ subjects: [["La Prairie", "f"], ["Le Vallon", "m"], ["Les Prés", "mp"], ["La Savane", "f"], ["Le Pâturage", "m"], ["Les Sillons", "mp"], ["La Lande", "f"], ["Le Coteau", "m"]], nouns: [["des Herbes", "fp"], ["des Graminées", "fp"], ["des Semences", "fp"], ["des Pousses", "fp"], ["du Foin", "m"], ["des Bourgeons", "mp"], ["des Tiges", "fp"], ["des Horizons", "mp"]] }),
+    forest: Object.freeze({ subjects: [["La Clairière", "f"], ["Le Bois", "m"], ["La Canopée", "f"], ["Les Racines", "fp"], ["Le Sous-Bois", "m"], ["La Lisière", "f"], ["Le Bosquet", "m"], ["Les Ramures", "fp"]], nouns: [["des Mousses", "fp"], ["de la Sève", "f"], ["des Fougères", "fp"], ["des Brumes", "fp"], ["des Écorces", "fp"], ["des Lueurs", "fp"], ["des Feuillages", "mp"], ["des Frondaisons", "fp"]] }),
+    rocky: Object.freeze({ subjects: [["La Crête", "f"], ["Le Défilé", "m"], ["Les Strates", "fp"], ["La Faille", "f"], ["Le Massif", "m"], ["Les Éboulis", "mp"], ["La Corniche", "f"], ["Le Promontoire", "m"]], nouns: [["des Schistes", "mp"], ["du Granit", "m"], ["des Roches", "fp"], ["des Galets", "mp"], ["des Fractures", "fp"], ["du Basalte", "m"], ["des Sédiments", "mp"], ["des Escarpements", "mp"]] }),
+    aquatic: Object.freeze({ subjects: [["La Lagune", "f"], ["Le Marais", "m"], ["Les Rives", "fp"], ["Le Bassin", "m"], ["Le Delta", "m"], ["La Baie", "f"], ["Les Eaux", "fp"], ["Le Lagon", "m"]], nouns: [["des Roseaux", "mp"], ["des Reflets", "mp"], ["des Courants", "mp"], ["des Ondes", "fp"], ["des Algues", "fp"], ["des Remous", "mp"], ["des Sources", "fp"], ["des Marées", "fp"]] }),
+    desert: Object.freeze({ subjects: [["La Dune", "f"], ["Le Désert", "m"], ["Les Sables", "mp"], ["Le Reg", "m"], ["Le Plateau", "m"], ["La Combe", "f"], ["Les Horizons", "mp"], ["Le Couloir", "m"]], nouns: [["des Mirages", "mp"], ["des Vents", "mp"], ["de la Poussière", "f"], ["du Sable", "m"], ["des Chaleurs", "fp"], ["des Grains", "mp"], ["des Ombres", "fp"], ["des Silences", "mp"]] }),
+    crystalline: Object.freeze({ subjects: [["Le Prisme", "m"], ["La Veine", "f"], ["Les Facettes", "fp"], ["Le Filon", "m"], ["La Géode", "f"], ["Les Cristaux", "mp"], ["La Galerie", "f"], ["Le Seuil", "m"]], nouns: [["des Éclats", "mp"], ["des Résonances", "fp"], ["du Quartz", "m"], ["des Lumières", "fp"], ["des Reflets", "mp"], ["des Vibrations", "fp"], ["des Transparences", "fp"], ["des Étincelles", "fp"]] }),
+    fungal: Object.freeze({ subjects: [["La Colonie", "f"], ["Le Jardin", "m"], ["Les Filaments", "mp"], ["La Futaie", "f"], ["Le Réseau", "m"], ["Les Anneaux", "mp"], ["La Nappe", "f"], ["Le Mycélium", "m"]], nouns: [["des Spores", "fp"], ["des Champignons", "mp"], ["des Hyphes", "fp"], ["des Lamelles", "fp"], ["des Chapeaux", "mp"], ["des Voiles", "mp"], ["des Sporophores", "mp"], ["des Lueurs", "fp"]] }),
+    ruins: Object.freeze({ subjects: [["Le Sanctuaire", "m"], ["La Cour", "f"], ["Les Vestiges", "mp"], ["Le Passage", "m"], ["La Voûte", "f"], ["Les Arcades", "fp"], ["La Galerie", "f"], ["Le Portique", "m"]], nouns: [["des Fragments", "mp"], ["des Mémoires", "fp"], ["des Pierres", "fp"], ["des Stèles", "fp"], ["des Reliques", "fp"], ["des Inscriptions", "fp"], ["des Colonnes", "fp"], ["des Traces", "fp"]] }),
+    frozen: Object.freeze({ subjects: [["Le Glacier", "m"], ["La Banquise", "f"], ["Les Crevasses", "fp"], ["Le Plateau", "m"], ["La Combe", "f"], ["Les Glaces", "fp"], ["La Plaine", "f"], ["Le Dôme", "m"]], nouns: [["du Givre", "m"], ["des Neiges", "fp"], ["des Flocons", "mp"], ["des Congères", "fp"], ["des Cristaux", "mp"], ["des Frimas", "mp"], ["des Brumes", "fp"], ["des Aiguilles", "fp"]] }),
+    volcanic: Object.freeze({ subjects: [["La Caldeira", "f"], ["Le Cratère", "m"], ["Les Coulées", "fp"], ["La Forge", "f"], ["Le Volcan", "m"], ["Les Fumerolles", "fp"], ["La Chambre", "f"], ["Le Cône", "m"]], nouns: [["des Cendres", "fp"], ["des Braises", "fp"], ["de la Lave", "f"], ["des Scories", "fp"], ["des Roches", "fp"], ["des Chaleurs", "fp"], ["du Soufre", "m"], ["des Fissures", "fp"]] }),
+    magnetic: Object.freeze({ subjects: [["Le Pôle", "m"], ["La Veine", "f"], ["Les Arches", "fp"], ["Le Champ", "m"], ["La Crête", "f"], ["Les Roches", "fp"], ["La Spirale", "f"], ["Le Seuil", "m"]], nouns: [["des Aimants", "mp"], ["des Attractions", "fp"], ["des Suspensions", "fp"], ["des Courbes", "fp"], ["des Alignements", "mp"], ["des Oscillations", "fp"], ["des Ferrites", "fp"], ["des Lévitations", "fp"]] }),
+    electrical: Object.freeze({ subjects: [["Le Circuit", "m"], ["La Spirale", "f"], ["Les Arcs", "mp"], ["Le Nœud", "m"], ["La Trame", "f"], ["Les Sillons", "mp"], ["La Voûte", "f"], ["Le Réseau", "m"]], nouns: [["des Décharges", "fp"], ["des Pulsations", "fp"], ["des Conducteurs", "mp"], ["des Étincelles", "fp"], ["des Impulsions", "fp"], ["des Charges", "fp"], ["des Filaments", "mp"], ["des Signaux", "mp"]] }),
+    city: Object.freeze({ subjects: [["La Place", "f"], ["Le Quartier", "m"], ["Les Avenues", "fp"], ["La Cité", "f"], ["Le Rempart", "m"], ["Les Passages", "mp"], ["La Cour", "f"], ["Le Faubourg", "m"]], nouns: [["des Colonnes", "fp"], ["des Portes", "fp"], ["des Escaliers", "mp"], ["des Façades", "fp"], ["des Voûtes", "fp"], ["des Jardins", "mp"], ["des Terrasses", "fp"], ["des Pavés", "mp"]] }),
+    floating_islands: Object.freeze({ subjects: [["L’Îlot", "m"], ["La Terrasse", "f"], ["Les Arches", "fp"], ["Le Balcon", "m"], ["La Nacelle", "f"], ["Les Îles", "fp"], ["La Passerelle", "f"], ["Le Belvédère", "m"]], nouns: [["des Nuages", "mp"], ["des Suspensions", "fp"], ["des Hauteurs", "fp"], ["des Courants", "mp"], ["des Ciels", "mp"], ["des Brumes", "fp"], ["des Ascensions", "fp"], ["des Vents", "mp"]] }),
+    curiosity: Object.freeze({ subjects: [["Le Domaine", "m"], ["La Frontière", "f"], ["Les Géométries", "fp"], ["Le Jardin", "m"], ["La Trame", "f"], ["Les Signes", "mp"], ["La Chambre", "f"], ["Le Seuil", "m"]], nouns: [["des Anomalies", "fp"], ["des Énigmes", "fp"], ["des Échos", "mp"], ["des Formes", "fp"], ["des Inversions", "fp"], ["des Reflets", "mp"], ["des Questions", "fp"], ["des Silhouettes", "fp"]] }),
   });
+  const NAME_ADJECTIVES = Object.freeze([
+    ["Paisible", "Paisible", "Paisibles", "Paisibles"],
+    ["Secret", "Secrète", "Secrets", "Secrètes"],
+    ["Lumineux", "Lumineuse", "Lumineux", "Lumineuses"],
+    ["Profond", "Profonde", "Profonds", "Profondes"],
+    ["Endormi", "Endormie", "Endormis", "Endormies"],
+    ["Silencieux", "Silencieuse", "Silencieux", "Silencieuses"],
+    ["Lointain", "Lointaine", "Lointains", "Lointaines"],
+    ["Oublié", "Oubliée", "Oubliés", "Oubliées"]
+  ]);
+  const nameKey = value => String(value || "").normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("fr")
+    .replace(/[’']/g, "'").replace(/\s+/g, " ").trim();
+  const validHumanName = value => Boolean(String(value || "").trim()) &&
+    !/\d|(?:^|\s)(?:generated-|map[-_]|scene[-_])|\.(?:png|webp|jpg)$/i.test(String(value));
+  const readNameAliases = () => {
+    try {
+      const value = JSON.parse(global.localStorage.getItem("bluefox_map_names_v1") || "{}");
+      return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+    } catch { return {}; }
+  };
+  // Le nom humain n'est pas une règle de peuplement. Les maps historiques
+  // renommées gardent exactement leur ancien contexte ; les nouvelles utilisent
+  // le contexte du template choisi, indépendant du vocabulaire d'affichage.
+  const populationDefinition = definition => definition?.generator?.namingContextName
+    ? { ...definition, name: definition.generator.namingContextName }
+    : definition;
 
   class Random {
     constructor(seed) { this.seed = seed >>> 0; }
@@ -292,53 +296,93 @@
     return { urls: selected.slice(0, plateauCount), sources: sources.slice(0, plateauCount) };
   };
 
-  const usedGeneratedNames = (excludeId = null) => new Set(
-    readDefinitions()
-      .filter((entry) => entry?.id !== excludeId)
-      .map((entry) => String(entry?.name || "").trim())
-      .filter(Boolean)
-  );
+  const usedGeneratedNames = (excludeId = null) => new Set([
+    ...readDefinitions(), ...Object.values(BF.maps || {}),
+    ...Object.entries(readNameAliases()).map(([id, name]) => ({ id, name }))
+  ].filter(entry => entry?.id !== excludeId).map(entry => nameKey(entry?.name)).filter(Boolean));
 
-  const duplicateVisualIdentity = (template, excludeId = null) =>
-    readDefinitions().some((entry) =>
-      entry?.id !== excludeId &&
-      (
-        entry?.generator?.templateId === template?.id ||
-        String(entry?.generator?.templateNumber || "") === String(template?.number || "") ||
-        String(entry?.generator?.baseTemplateName || "") === String(template?.name || "")
-      )
-    );
-
-  const blueFoxName = (template, profile, seed, excludeId = null) => {
-    const used = usedGeneratedNames(excludeId);
-    const names = BLUEFOX_DUPLICATE_NAMES[profile] || BLUEFOX_DUPLICATE_NAMES.alien;
-    const start = hash(seed, template?.id, template?.name, profile) % names.length;
-    for (let offset = 0; offset < names.length; offset += 1) {
-      const candidate = names[(start + offset) % names.length];
-      if (!used.has(candidate)) return candidate;
+  const blueFoxName = (definition, template, profile, seed, biomeId) => {
+    const lexiconId = BLUEFOX_BIOME_LEXICONS[biomeId] ? biomeId
+      : BLUEFOX_BIOME_LEXICONS[profile] ? profile : "curiosity";
+    const lexicon = BLUEFOX_BIOME_LEXICONS[lexiconId];
+    const used = usedGeneratedNames(definition.id);
+    const ordinal = Number(definition.generator?.ordinal) || Infinity;
+    const recent = readDefinitions().filter(entry => entry.id !== definition.id &&
+      entry.generator?.nameLexicon?.biome === lexiconId &&
+      (Number(entry.generator?.ordinal) || 0) < ordinal)
+      .sort((a, b) => (Number(a.generator?.ordinal) || 0) - (Number(b.generator?.ordinal) || 0))
+      .slice(-3).map(entry => entry.generator.nameLexicon);
+    const agreement = (adjective, gender) => NAME_ADJECTIVES[adjective][["m", "f", "mp", "fp"].indexOf(gender)];
+    const count = lexicon.subjects.length * lexicon.nouns.length * NAME_ADJECTIVES.length * 4;
+    const start = hash(seed, biomeId, template?.id, "name") % count;
+    // Le pas impair parcourt tout cet espace de taille puissance de deux.
+    for (let tier = 0; tier <= NAME_ADJECTIVES.length; tier += 1) {
+      for (let relax = 0; relax < 2; relax += 1) {
+        for (let offset = 0; offset < count; offset += 1) {
+          let index = (start + offset * 131) % count;
+          const pattern = index % 4; index = Math.floor(index / 4);
+          const adjective = index % NAME_ADJECTIVES.length; index = Math.floor(index / NAME_ADJECTIVES.length);
+          const nounIndex = index % lexicon.nouns.length;
+          const subjectIndex = Math.floor(index / lexicon.nouns.length);
+          const [subject, subjectGender] = lexicon.subjects[subjectIndex];
+          const [noun, nounGender] = lexicon.nouns[nounIndex];
+          const subjectTerm = nameKey(subject), nounTerm = nameKey(noun);
+          if (!relax && recent.some(entry => entry.subject === subjectTerm || entry.noun === nounTerm)) continue;
+          const names = [
+            `${subject} ${noun}`,
+            `${subject} ${agreement(adjective, subjectGender)}`,
+            `${subject} ${noun} ${agreement(adjective, nounGender)}`,
+            `${subject} ${agreement(adjective, subjectGender)} ${noun}`
+          ];
+          const name = tier
+            ? `${subject} ${agreement(adjective, subjectGender)} ${noun} ${agreement((adjective + tier) % NAME_ADJECTIVES.length, nounGender)}`
+            : names[pattern];
+          if (used.has(nameKey(name))) continue;
+          return { name, source: "bluefox", nameLexicon: {
+            biome: lexiconId, subject: subjectTerm, noun: !tier && pattern === 1 ? null : nounTerm
+          } };
+        }
+      }
     }
-    // Cas exceptionnel : garder un nom humain, jamais un ID/nom de fichier.
-    return `${names[start]} — ${["Nord", "Sud", "Aube", "Crépuscule"][hash(seed, "name") % 4]}`;
+    throw new Error("Le champ lexical de ce biome est entièrement utilisé.");
   };
 
   const resolvedMapName = (definition, template, profile, seed, options = {}) => {
     const source = definition?.generator?.nameSource;
-    const explicitCustom =
-      options.preserveName === true ||
-      source === "custom" ||
-      source === "bluefox" ||
-      definition?.customName === true ||
-      definition?.nameLocked === true;
-    if (explicitCustom && definition?.name) {
-      return { name: definition.name, source: source || "custom" };
+    const biomeId = options.biomeId || definition.generator?.biomeId || profile;
+    const preserve = options.preserveName === true || source === "custom" || source === "bluefox" ||
+      definition.customName === true || definition.nameLocked === true;
+    const explicit = definition.customName === true || definition.nameLocked === true || source === "custom";
+    if (preserve && definition.name && (explicit || validHumanName(definition.name)) &&
+        (!definition.generator?.nameLexicon || definition.generator.nameLexicon.biome === biomeId || explicit)) {
+      return { name: definition.name, source: source || "custom", nameLexicon: definition.generator?.nameLexicon };
     }
-    if (!duplicateVisualIdentity(template, definition?.id)) {
-      return { name: template?.name || "Territoire inconnu", source: "template" };
+    return blueFoxName(definition, template, profile, seed, biomeId);
+  };
+
+  const resolveName = (definition, options = {}) => {
+    if (!definition) return "";
+    const aliases = readNameAliases();
+    const name = aliases[definition.id] || definition.name;
+    const explicit = definition.customName === true || definition.nameLocked === true || definition.generator?.nameSource === "custom";
+    if (explicit || validHumanName(name)) {
+      definition.name = name;
+      return name;
     }
-    return {
-      name: blueFoxName(template, profile, seed, definition?.id),
-      source: "bluefox"
-    };
+    definition.generator ||= {};
+    definition.generator.namingContextName ||= name || definition.generator.baseTemplateName || definition.profile;
+    const naming = blueFoxName(definition, { id: definition.generator.templateId || definition.id },
+      definition.profile, Number(definition.seed) || hash(definition.id), definition.generator.biomeId);
+    definition.name = naming.name;
+    definition.generator.nameSource = naming.source;
+    definition.generator.nameLexicon = naming.nameLexicon;
+
+    aliases[definition.id] = naming.name;
+    global.localStorage.setItem("bluefox_map_names_v1", JSON.stringify(aliases));
+    const saved = readDefinitions();
+    const index = saved.findIndex(entry => entry.id === definition.id);
+    if (index >= 0) { saved[index] = clone(definition); saveDefinitions(saved); }
+    return definition.name;
   };
 
   const resolveVisualIdentity = (definition, options = {}) => {
@@ -367,6 +411,8 @@
       pickTemplate(random, biomeId, draft.profile, preferredTemplateId);
     if (!template) return definition;
 
+    const samePhysicalIdentity = definition.generator?.biomeId === biomeId &&
+      definition.generator?.templateId === template.id;
     const terrainPlan = terrainSelection(
       template,
       plateauCount,
@@ -379,7 +425,7 @@
       template,
       draft.profile,
       seed,
-      options
+      { ...options, biomeId }
     );
 
     definition.name = naming.name;
@@ -402,8 +448,12 @@
     definition.generator.microSceneIds = [...draft.microSceneIds];
     definition.generator.templateId = template.id;
     definition.generator.templateNumber = template.number;
-    definition.generator.baseTemplateName = template.name || null;
+    definition.generator.baseTemplateName = populationDefinition(template).name || null;
     definition.generator.nameSource = naming.source;
+    definition.generator.nameLexicon = naming.nameLexicon;
+    if (naming.nameLexicon && (!definition.generator.namingContextName || !samePhysicalIdentity)) {
+      definition.generator.namingContextName = populationDefinition(template).name || draft.profile;
+    }
     definition.generator.visualIdentityVersion = VISUAL_IDENTITY_VERSION;
     definition.generator.terrainPolicy =
       "associated-max2_then-themed-max2_then-default-028";
@@ -465,12 +515,13 @@
         migrated = migrated || before !== after;
       }
 
+      resolveName(definition);
       BF.maps[definition.id] = definition;
       healed.push(clone(definition));
       restored.push(definition.id);
     });
 
-    if (migrated) saveDefinitions(healed);
+    if (migrated || JSON.stringify(savedDefinitions) !== JSON.stringify(healed)) saveDefinitions(healed);
     return restored;
   };
 
@@ -720,6 +771,8 @@
     getPlanetSeed: ensurePlanetSeed,
     listSaved: () => clone(readDefinitions()),
     resolveVisualIdentity,
+    resolveName,
+    populationDefinition,
     terrainSelection,
     terrainUrlsOf,
     templateScore,
