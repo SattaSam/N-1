@@ -30,6 +30,18 @@
     return null;
   };
 
+  const requiredMapMatches = (manager, node, mapId) => {
+    const actualMapId = String(mapId || "");
+    if (node.params?.mapId && String(node.params.mapId) !== actualMapId) return false;
+    const factKey = String(node.params?.requiredMapFact || "");
+    if (factKey) {
+      const fact = manager?.memory?.getFact?.(factKey, null);
+      const expected = fact?.[node.params.requiredMapField || "mapId"];
+      if (!expected || String(expected) !== actualMapId) return false;
+    }
+    return true;
+  };
+
   const contextMatches = (node, detail) => {
     const expectedId = node?.params?.microSceneId;
     if (node?.params?.anyMicroScene !== true && expectedId != null &&
@@ -80,16 +92,22 @@
     const missionFilter = Array.isArray(options.missionIds)
       ? new Set(options.missionIds.map((value) => String(value)).filter(Boolean))
       : null;
+    const excludedMissionIds = new Set(
+      (Array.isArray(options.excludedMissionIds) ? options.excludedMissionIds : [])
+        .map((value) => String(value)).filter(Boolean)
+    );
 
     let changed = 0;
     manager.trees.forEach((tree, missionId) => {
       if (missionFilter && !missionFilter.has(String(missionId))) return;
+      if (excludedMissionIds.has(String(missionId))) return;
       if (manager.ensureLifecycle?.(missionId)?.status !== "active") return;
       let treeChanged = false;
 
       tree.availableLeaves().forEach((node) => {
         if (node.isComplete) return;
         if (node.params?.biblePattern !== "CONTEXT_MSC") return;
+        if (!requiredMapMatches(manager, node, detail.mapId)) return;
         if (!contextMatches(node, detail)) return;
 
         const identity = contextIdentity(node, detail);
@@ -245,10 +263,17 @@
   };
 
   const onObjectEvent = (event) => {
-    if (BF.bibleRuntime?.isActivationEvent?.(event?.id)) return;
+    const activationEvent = BF.bibleRuntime?.isActivationEvent?.(event?.id);
+    const excludedMissionIds = activationEvent
+      ? (BF.bibleRuntime?.activationMissionsForEvent?.(event.id) ||
+          [BF.bibleRuntime?.activationMissionForEvent?.(event.id)].filter(Boolean))
+      : [];
+    // Conserver la protection des missions révélées par cet événement, tout
+    // en laissant les missions de contexte déjà actives consommer leur preuve.
+    if (activationEvent && !excludedMissionIds.length) return;
     const normalizedDetail = describeMSCEvent(event);
     if (normalizedDetail) {
-      progressContextMissions(normalizedDetail);
+      progressContextMissions(normalizedDetail, { excludedMissionIds });
       return;
     }
 
@@ -260,7 +285,7 @@
     if (!object) return;
     const detail = describeMSCObject(object, event);
     if (!detail) return;
-    progressContextMissions(detail);
+    progressContextMissions(detail, { excludedMissionIds });
   };
 
   // CONTEXT_MSC progresse uniquement sur une preuve d'événement canonique.
@@ -285,13 +310,7 @@
         node.params?.eventDriven === true || node.params?.catalogManaged === true ||
         !tree.availableLeaves().includes(node)) return null;
     const mapId = String(engine.currentMapId || "");
-    if (node.params?.mapId && String(node.params.mapId) !== mapId) return null;
-    const factKey = String(node.params?.requiredMapFact || "");
-    if (factKey) {
-      const fact = manager.memory?.getFact?.(factKey, null);
-      const expected = fact?.[node.params.requiredMapField || "mapId"];
-      if (!expected || String(expected) !== mapId) return null;
-    }
+    if (!requiredMapMatches(manager, node, mapId)) return null;
     const candidates = (engine.currentMap?.interactables || []).filter((object) => {
       if (!object?.userData?.active) return false;
       const interaction = BF.resolveObjectInteraction?.(object);

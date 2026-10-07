@@ -731,15 +731,25 @@
   const nodeNeedsObjectEvidence = (tree, node) => {
     if (!tree?.root || !node) return false;
     const slot = String(node.params?.sequenceSlot || "").trim();
-    if (!slot) return false;
 
     let referencedByRelation = false;
     tree.root.walk?.((candidate) => {
-      if (String(candidate?.params?.relation?.fromSlot || "").trim() === slot) {
+      const fromSlot = String(candidate?.params?.relation?.fromSlot || "").trim();
+      if (!fromSlot) return;
+      // Les autres patrons utilisent leurs IDs canoniques, sans sequenceSlot.
+      // Réutiliser la même résolution que relationMatches(), sans changer le
+      // contrat compilé ni reconstruire les preuves d'une étape déjà terminée.
+      const source = !slot
+        ? (tree.findSequenceSlot
+            ? tree.findSequenceSlot(fromSlot)
+            : tree.find?.(`${tree.id}:${fromSlot}`))
+        : null;
+      if ((slot && fromSlot === slot) || source === node) {
         referencedByRelation = true;
       }
     });
     if (referencedByRelation) return true;
+    if (!slot) return false;
 
     const catalog = Array.isArray(BF.BibleCatalog)
       ? BF.BibleCatalog
