@@ -10,6 +10,26 @@
   textureImage.src = TEXTURE_URL;
 
   let imageReady = false;
+  let texturePixels = null;
+  const readTexturePixels = () => {
+    if (texturePixels === false) return null;
+    if (texturePixels) return texturePixels;
+    const canvas = document.createElement("canvas");
+    const ratio = Math.min(1, 1024 / textureImage.naturalWidth);
+    canvas.width = Math.max(1, Math.round(textureImage.naturalWidth * ratio));
+    canvas.height = Math.max(1, Math.round(textureImage.naturalHeight * ratio));
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    if (!context) return null;
+    try {
+      context.drawImage(textureImage, 0, 0, canvas.width, canvas.height);
+      texturePixels = context.getImageData(0, 0, canvas.width, canvas.height);
+      return texturePixels;
+    } catch {
+      // Texture non lisible : conserver la projection historique, mais bornée.
+      texturePixels = false;
+      return null;
+    }
+  };
 
   textureImage.addEventListener("load", () => {
     imageReady = true;
@@ -43,6 +63,7 @@
       canvas.setAttribute("aria-hidden", "true");
       viewport.prepend(canvas);
       state.canvas = canvas;
+      state.textureSignature = null;
       state.context = canvas.getContext("2d", { alpha: true });
     }
 
@@ -55,6 +76,7 @@
       state.width = width;
       state.height = height;
       state.dpr = dpr;
+      state.textureSignature = null;
       canvas.width = Math.round(width * dpr);
       canvas.height = Math.round(height * dpr);
       canvas.style.width = `${width}px`;
@@ -112,7 +134,7 @@
   };
 
   const renderTexture = (viewport) => {
-    if (!imageReady) return;
+    if (!imageReady || !viewport.isConnected) return;
     const view = viewport._bluefoxView;
     if (!view) return;
 
@@ -125,6 +147,8 @@
     const imageWidth = textureImage.naturalWidth;
     const imageHeight = textureImage.naturalHeight;
     if (!imageWidth || !imageHeight) return;
+    const signature = [width, height, state.dpr, view.x, view.y, view.zoom].join(":");
+    if (state.textureSignature === signature) return;
 
     ctx.clearRect(0, 0, width, height);
     ctx.fillStyle = "#06131b";
@@ -142,8 +166,43 @@
     const sourcePerLonRadian = imageWidth / (Math.PI * 2);
     const sourcePerLatRadian = imageHeight / Math.PI;
 
-    const rowStep = height > 760 ? 3 : 2;
-    const colStep = width > 760 ? 3 : 2;
+    const pixels = readTexturePixels();
+    if (pixels) {
+      const buffer = state.projectionCanvas ||= document.createElement("canvas");
+      const ratio = Math.min(1, 512 / Math.max(width, height));
+      const bw = Math.max(1, Math.round(width * ratio)), bh = Math.max(1, Math.round(height * ratio));
+      const output = state.projectionContext ||= buffer.getContext("2d");
+      if (!output) return;
+      if (buffer.width !== bw || buffer.height !== bh) {
+        buffer.width = bw; buffer.height = bh;
+        state.projectionPixels = output.createImageData(bw, bh);
+      }
+      const data = state.projectionPixels ||= output.createImageData(bw, bh);
+      const sourceX = new Int32Array(bw), sourceY = new Int32Array(bh);
+      const scale = Math.max(.82, zoom);
+      for (let x = 0; x < bw; x++) {
+        const lon = Math.asin(Math.max(-.9995, Math.min(.9995, (x + .5) / bw * 2 - 1)));
+        sourceX[x] = Math.floor(positiveModulo(pixels.width / 2 +
+          (lon + rotationLongitude) * pixels.width / (Math.PI * 2) / scale, pixels.width));
+      }
+      for (let y = 0; y < bh; y++) {
+        const lat = Math.asin(Math.max(-.9995, Math.min(.9995, (y + .5) / bh * 2 - 1)));
+        sourceY[y] = Math.floor(positiveModulo(pixels.height / 2 +
+          (lat + rotationLatitude) * pixels.height / Math.PI / scale, pixels.height));
+      }
+      for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) {
+        const from = (sourceY[y] * pixels.width + sourceX[x]) * 4;
+        const to = (y * bw + x) * 4;
+        data.data[to] = pixels.data[from];
+        data.data[to + 1] = pixels.data[from + 1];
+        data.data[to + 2] = pixels.data[from + 2];
+        data.data[to + 3] = pixels.data[from + 3];
+      }
+      output.putImageData(data, 0, 0);
+      ctx.drawImage(buffer, 0, 0, width, height);
+    } else {
+    const rowStep = Math.max(2, Math.ceil(height / 96));
+    const colStep = Math.max(2, Math.ceil(width / 128));
 
     for (let y = 0; y < height; y += rowStep) {
       const nextY = Math.min(height, y + rowStep);
@@ -190,6 +249,8 @@
       }
     }
 
+    }
+    state.textureSignature = signature;
     const vignette = ctx.createRadialGradient(
       width * .47, height * .42, 0,
       width * .5, height * .5, Math.max(width, height) * .59
@@ -238,6 +299,7 @@
     if (state.raf) return;
     state.raf = global.requestAnimationFrame(() => {
       state.raf = 0;
+      if (!viewport.isConnected) return;
       renderTexture(viewport);
       applySphereProjection(viewport);
     });
@@ -266,7 +328,10 @@
       viewport._bluefoxApplyTransform = wrapped;
     }
 
-    const resizeObserver = new ResizeObserver(() => scheduleRender(viewport));
+    const resizeObserver = new ResizeObserver(() => {
+      if (!viewport.isConnected) { resizeObserver.disconnect(); return; }
+      scheduleRender(viewport);
+    });
     resizeObserver.observe(viewport);
 
     scheduleRender(viewport);

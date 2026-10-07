@@ -415,3 +415,42 @@
     font-size: 13px;
   }
 }
+
+.mission-browser-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  max-width: 1220px;
+  margin: 14px auto;
+}
+.mission-browser-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: #a9c7d8;
+  font-size: 12px;
+  min-width: 0;
+}
+.mission-browser-filters select,
+.mission-browser-filters input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px;
+  border: 1px solid rgba(100, 220, 255, .3);
+  border-radius: 9px;
+  color: #dff8ff;
+  background: #0e3754;
+  font: inherit;
+}
+.mission-browser-result-count {
+  display: block;
+  max-width: 1220px;
+  margin: 10px auto;
+  color: #95b7ca;
+}
+@media (max-width: 760px) {
+  .mission-browser-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 420px) {
+  .mission-browser-filters { grid-template-columns: 1fr; }
+}

@@ -834,13 +834,19 @@
       const result = new Set();
       tree.root.walk?.((node) => {
         asArray(node.distinctValues).forEach((value) => {
-          const text = String(value || "").trim();
+          // ObjectM0 ajoute la génération d'étude à sa clé de déduplication.
+          // Une relation avec un nouvel individu compare l'identité physique.
+          const text = String(value || "").trim().replace(/#study-\d+$/, "");
           if (text) result.add(text);
         });
         asArray(node.historyValues).forEach((value) => {
           try {
             const parsed = JSON.parse(value);
-            const instanceId = String(parsed?.instanceId || "").trim();
+            const instanceId = String(
+              parsed?.owner === "object-m0"
+                ? parsed.evidence?.instanceId || ""
+                : parsed?.instanceId || ""
+            ).trim();
             if (instanceId) result.add(instanceId);
           } catch {}
         });
@@ -1066,7 +1072,40 @@
       ) <= 8;
     }
 
-    constructionAvailability(kind, mapId = BF.currentEngine?.currentMapId) {
+    autonomousCampSpacing(mapId, missionId = null) {
+      const engine = BF.currentEngine;
+      const target = String(mapId || "");
+      const minimum = 10; // même espacement que l'opportunité autonome historique
+      if (!target || !engine?.findKnownRoute) return { allowed: false, nearest: null, minimum };
+      const occupied = new Set();
+      Object.entries(this.manager()?.memory?.state?.siteProgression || {}).forEach(([id, raw]) => {
+        const sites = raw?.sites || { [raw?.kind]: raw };
+        Object.values(sites).forEach(site => {
+          if (site && ["camp", "refuge", "base"].includes(lower(site.kind))) {
+            occupied.add(String(site.mapId || raw.mapId || id));
+          }
+        });
+      });
+      // Deux projets autonomes proches ne doivent pas réserver chacun un camp.
+      Object.values(this.state.constructionInstances || {}).forEach(record => {
+        if (record.kind === "camp" && record.source === "autonomy" &&
+            record.missionId !== missionId && this.missionLifecycle(record.missionId).active) {
+          occupied.add(String(record.mapId || ""));
+        }
+      });
+      let nearest = Infinity;
+      for (const id of occupied) {
+        if (!id) continue;
+        if (id === target) { nearest = 0; break; }
+        const route = engine.findKnownRoute(target, id);
+        // Un chemin inconnu ne démontre jamais une distance suffisante.
+        if (!Array.isArray(route) || !route.length) return { allowed: false, nearest: null, minimum };
+        nearest = Math.min(nearest, route.length - 1);
+      }
+      return { allowed: nearest >= minimum, nearest: Number.isFinite(nearest) ? nearest : null, minimum };
+    }
+
+    constructionAvailability(kind, mapId = BF.currentEngine?.currentMapId, options = {}) {
       const normalizedKind = lower(kind);
       const targetMapId = String(mapId || "");
       const rewardId = normalizedKind === "camp"
@@ -1109,6 +1148,11 @@
         reason = "Un établi est déjà implanté sur Crystal.";
       }
 
+      if (allowed && normalizedKind === "camp" && options.source === "autonomy" &&
+          !this.autonomousCampSpacing(targetMapId).allowed) {
+        allowed = false;
+        reason = "Un camp autonome doit être distant d'au moins 10 transitions d'une infrastructure existante ou d'un autre projet autonome.";
+      }
       const mission = this.byId.get(missionId);
       const tree = this.manager()?.trees?.get?.(missionId);
       const resources = lifecycle.active && mission ? this.constructionResourceStatus(mission) : null;
@@ -1139,7 +1183,7 @@
     startConstruction(kind, options = {}) {
       const targetMapId = String(options.mapId || BF.currentEngine?.currentMapId || "");
       const source = options.source === "autonomy" ? "autonomy" : "player";
-      const availability = this.constructionAvailability(kind, targetMapId);
+      const availability = this.constructionAvailability(kind, targetMapId, { source });
       if (!availability.allowed) return false;
       const mission = this.buildConstructionMission(kind, targetMapId, source);
       if (!mission || !this.registerDynamicMission(mission)) return false;
@@ -6594,6 +6638,59 @@
       return { ok: true, missionId: id };
     }
 
+    existingConstructionSite(mission) {
+      // Une construction répétable reste un projet propre à son instance.
+      // L'adoption ne concerne que les objectifs de construction du catalogue.
+      if (!mission || mission.repeatable === true || mission.constructionMission) return null;
+      const effect = this.constructionPlacementEffect(mission);
+      const mapId = this.missionTargetMapId(mission);
+      if (!effect || !mapId || asArray(mission.effects).some((entry) =>
+        !["site.establish", "inventory.consume"].includes(entry.type)
+      )) return null;
+      const site = this.siteBucket(mapId)[lower(effect.kind)];
+      if (!site?.id || !site.missionId || site.missionId === mission.id ||
+          site.mapId !== mapId || lower(site.kind) !== lower(effect.kind) ||
+          !(Number(site.establishedAt) > 0) || !site.anchor ||
+          !Number.isFinite(Number(site.anchor.x)) || !Number.isFinite(Number(site.anchor.z)) ||
+          !Number.isFinite(Number(site.stage)) ||
+          Number(site.stage) < Math.max(1, Number(effect.stage) || 1) ||
+          !BF.MicroScenes?.get?.(site.microSceneId)) return null;
+      return site;
+    }
+
+    constructionAdoptionAvailable(missionId) {
+      const mission = this.byId.get(missionId);
+      const manager = this.manager();
+      if (mission?.activationSource !== "player" ||
+          this.missionLifecycle(missionId).status !== "active" ||
+          !manager?.trees?.get?.(missionId)?.root?.isComplete) return false;
+      return Boolean(this.existingConstructionSite(mission));
+    }
+
+    adoptExistingConstruction(missionId) {
+      if (!this.constructionAdoptionAvailable(missionId)) return false;
+      const mission = this.byId.get(missionId);
+      const site = this.existingConstructionSite(mission);
+      if (!site || site.mapId !== String(BF.currentEngine?.currentMapId || "")) return false;
+      const manager = this.manager();
+      const receiptId = `${this.repeatableEffectKey(mission)}:completion:v${mission.version || 1}`;
+      // Action joueur explicite : ni spawn, ni changement de propriétaire, ni
+      // consommation des matériaux déjà investis par le projet d'origine.
+      if (!manager.memory.recordEffectReceipt(receiptId, {
+        missionId, source: "player-existing-site", siteId: site.id,
+        existingSiteProof: {
+          mapId: site.mapId, missionId: site.missionId,
+          establishedAt: site.establishedAt
+        }
+      })) return false;
+      manager.memory.save?.();
+      this.state.effectsApplied[this.repeatableEffectKey(mission)] = Date.now();
+      this.saveState();
+      manager.syncLifecycleFromTrees?.();
+      manager.publish?.();
+      return true;
+    }
+
     canFinalizeMission(missionId) {
       const mission = this.byId.get(missionId);
       if (!mission) return true;
@@ -6610,7 +6707,15 @@
         const isEstablished = (site) =>
           Boolean(site) &&
           String(site.mapId || "") === mapId &&
-          String(site.missionId || "") === String(mission.id || "");
+          (String(site.missionId || "") === String(mission.id || "") || (() => {
+            const existing = this.existingConstructionSite(mission);
+            const receiptId = `${this.repeatableEffectKey(mission)}:completion:v${mission.version || 1}`;
+            const receipt = this.manager()?.memory?.state?.effectReceipts?.[receiptId];
+            const proof = receipt?.existingSiteProof;
+            return existing === site && receipt?.source === "player-existing-site" &&
+              receipt.siteId === site.id && proof?.mapId === mapId &&
+              proof.missionId === site.missionId && proof.establishedAt === site.establishedAt;
+          })());
 
         // Pour une construction répétable, un ancien gate/receipt ne constitue
         // jamais une preuve de fin : le site réel de CETTE mission doit exister.
@@ -7869,6 +7974,8 @@
         mission.activationSource ||
         this.state.constructionInstances?.[mission.id]?.source ||
         "system";
+      if (activationSource === "autonomy" && lower(establish.kind) === "camp" &&
+          !this.autonomousCampSpacing(targetMapId, mission.id).allowed) return false;
       const playerConstruction =
         activationSource === "player" &&
         Boolean(this.constructionPlacementEffect(mission));

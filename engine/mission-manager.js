@@ -661,7 +661,7 @@
       });
       if (constructionNode) {
         const kind = constructionNode.params.siteProgressionKind;
-        const state = BF.bibleRuntime?.constructionAvailability?.(kind, this.engine.currentMapId);
+        const state = BF.bibleRuntime?.constructionAvailability?.(kind, this.engine.currentMapId, { source: "autonomy" });
         if (String(BF.getAutonomyMode?.() || "").toLowerCase() === "full" &&
             state?.allowed === true && !state.active) return {
           missionId, nodeId: constructionNode.id, type: Missions.ActionType.BUILD,
@@ -3013,8 +3013,7 @@
       return scopedMapId === currentMapId;
     }
 
-    isMissionVisibleOnCurrentMap(missionId) {
-      const definition = this.definition(missionId) || {};
+    isMissionVisibleOnCurrentMap(missionId, definition = this.definition(missionId) || {}) {
       if (definition.localVisibility !== "current-map") return true;
       const currentMapId = String(this.engine?.currentMapId || "");
       if (!currentMapId) return false;
@@ -3127,8 +3126,7 @@
       return this.missionHasHistoricalCollectionObjective(missionId);
     }
 
-    missionIsBackgroundProgressOnly(missionId) {
-      const definition = this.definition(missionId);
+    missionIsBackgroundProgressOnly(missionId, definition = this.definition(missionId)) {
       const leaves = [];
       const visit = (node) => {
         if (!node || typeof node !== "object") return;
@@ -3658,6 +3656,9 @@
           scope: this.definition(request.missionId)?.scope || "global",
           progress: 0,
           pendingExperimental: true,
+          theme: "research",
+          passivePriorityAxis: "research",
+          activatedAt: Number(lifecycle.activatedAt) || 0,
           waitingFor: [...(lifecycle.waitingFor || [])],
           journalIntro: `Prérequis expérimental : obtenir « ${knowledgeLabel} » depuis Recherche, près de ${location}.`,
           unlockHint: `Lancer les expérimentations ${experiment?.theme?.label || "scientifiques"} jusqu’au niveau ${stage || "requis"}.`
@@ -4839,7 +4840,47 @@
       return snapshot;
     }
 
+    missionBrowserMetadata(missionId, definition = this.definition(missionId) || {}) {
+      const baseId = definition.baseMissionId || String(missionId).split("@")[0];
+      const catalog = BF.bibleRuntime?.byId?.get?.(missionId) ||
+        BF.bibleRuntime?.byId?.get?.(baseId) || {};
+      const lifecycle = this.memory.state.missionLifecycle?.[missionId] || {};
+      const localMapId = definition.instanceScope === "map"
+        ? definition.scopeId || String(missionId).split("@").slice(1).join("@") : null;
+      return {
+        activatedAt: Number(lifecycle.activatedAt) || 0,
+        completedAt: Number(lifecycle.completedAt) || 0,
+        theme: catalog.theme || null,
+        narrativeAxis: definition.narrativeAxis || catalog.narrativeAxis || null,
+        passivePriorityAxis: definition.passivePriorityAxis || null,
+        backgroundProgressOnly: this.missionIsBackgroundProgressOnly(missionId, definition),
+        scope: definition.scope || definition.instanceScope || "global",
+        locationMapId: localMapId || definition.targetMapId ||
+          (catalog.targetMapFact
+            ? this.memory.getFact(catalog.targetMapFact)?.[catalog.targetMapField || "mapId"] : null),
+        constructionAdoptionAvailable: lifecycle.status === "active" &&
+          BF.bibleRuntime?.constructionAdoptionAvailable?.(missionId) === true,
+        playerActionDestinations: lifecycle.status === "active"
+          ? BF.getMissionPlayerActionDestinations?.(missionId) || [] : []
+      };
+    }
+
     getState() {
+      const browserMetadata = new Map(), browserDefinitions = new Map();
+      const definitionFor = (id) => {
+        if (!browserDefinitions.has(id)) {
+          // Métadonnées de présentation : le contrat canonique suffit, la map
+          // de l'instance est lue séparément dans son ID persistant. Ne pas
+          // cloner des centaines d'arbres scoped à chaque publication UI.
+          browserDefinitions.set(id, Missions.definitions[id] ||
+            Missions.definitions[String(id).split("@")[0]] || this.definition(id));
+        }
+        return browserDefinitions.get(id);
+      };
+      const metadataFor = (id) => {
+        if (!browserMetadata.has(id)) browserMetadata.set(id, this.missionBrowserMetadata(id, definitionFor(id)));
+        return browserMetadata.get(id);
+      };
       const missionIds = [...(this.activeMissionIds || [])]
         .filter((id) => this.trees?.has(id))
         .filter((id) => this.isMissionVisibleOnCurrentMap(id));
@@ -4859,6 +4900,7 @@
         .map((id) => {
           const tree = this.trees.get(id);
           return {
+            ...metadataFor(id),
             missionId: id,
             title: tree.title,
             description: tree.description,
@@ -4873,9 +4915,11 @@
             tree: this.displayTreeSnapshot(tree)
           };
         });
-      const publicCatalog = Object.keys(Missions.definitions)
-        .filter((id) => id !== "foundation")
-        .filter((id) => Missions.definitions[id].instanceScope !== "map")
+      const publicCatalog = [...new Set([
+        ...Object.keys(Missions.definitions), ...this.trees.keys()
+      ])]
+        .filter((id) => id !== "foundation" && definitionFor(id))
+        .filter((id) => definitionFor(id).instanceScope !== "map" || String(id).includes("@"))
         .filter((id) => Object.prototype.hasOwnProperty.call(
           this.memory.state.missionLifecycle || {},
           id
@@ -4897,21 +4941,22 @@
         })
         .map((id) => {
           const lifecycle = this.memory.state.missionLifecycle[id] || {};
-          const visibleHere = this.isMissionVisibleOnCurrentMap(id);
+          const visibleHere = this.isMissionVisibleOnCurrentMap(id, definitionFor(id));
           return {
+            ...metadataFor(id),
             missionId: id,
-            title: Missions.definitions[id].title,
+            title: definitionFor(id).title,
             status: lifecycle.status,
             lifecycleStatus: lifecycle.status,
             contextVisible: visibleHere !== false,
-            scope: Missions.definitions[id].scope ||
-              Missions.definitions[id].instanceScope || "global",
+            scope: definitionFor(id).scope ||
+              definitionFor(id).instanceScope || "global",
             progress: this.trees.has(id)
               ? this.treeProgress(this.trees.get(id))
               : lifecycle.status === "completed"
                 ? 1
                 : 0,
-            journalIntro: Missions.definitions[id].journalIntro ||
+            journalIntro: definitionFor(id).journalIntro ||
               `Cette mission est apparue lorsque ma progression a atteint un nouveau seuil. Je veux maintenant vérifier méthodiquement ce que ces découvertes rendent possible.`,
             discoveryReason: lifecycle.discoveryReason,
             waitingFor: [...(lifecycle.waitingFor || [])]
@@ -4922,6 +4967,7 @@
       if (!this.tree && !missionStates.length) {
         return {
           version: "M2",
+          currentMapId: this.engine?.currentMapId || null,
           primaryMissionId: "",
           activeMissionIds: [],
           selectionReason: "Aucune mission active.",
@@ -4951,6 +4997,7 @@
         : null;
       return {
         version: "M2",
+        currentMapId: this.engine?.currentMapId || null,
         primaryMissionId: publicPrimaryMissionId,
         activeMissionIds: [...missionIds],
         selectionReason: this.selectionReason,

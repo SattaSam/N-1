@@ -5,6 +5,66 @@
   let latestState = null;
   let lastSignature = "";
   let browserStatus = "active";
+  const browserFilters = { theme: "all", situation: "all", sort: "priority", query: "" };
+  const MISSION_THEMES = {
+    exploration: "Exploration", archaeology: "Archéologie", geology: "Géologie",
+    flora: "Flore", fauna: "Faune", energy: "Énergie", research: "Recherche",
+    engineering: "Ingénierie et technologie", survival: "Survie et construction",
+    relations: "Relations et civilisations", collection: "Collecte", logistics: "Logistique",
+    other: "Autres"
+  };
+  const normalizeSearch = (value) => String(value || "").normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("fr");
+
+  function missionTheme(mission) {
+    const theme = normalizeSearch(mission.theme);
+    if (theme === "technology") return "engineering";
+    if (MISSION_THEMES[theme]) return theme;
+    const axes = { ARCHEOLOGUE: "archaeology", NATURALISTE: "flora",
+      EXPLORATEUR: "exploration", SCIENTIFIQUE: "research", LOGISTICIEN: "logistics" };
+    return axes[mission.narrativeAxis] ||
+      ({ protection: "survival" }[mission.passivePriorityAxis]) ||
+      (MISSION_THEMES[mission.passivePriorityAxis] ? mission.passivePriorityAxis : "other");
+  }
+
+  function missionReturnDestinations(mission) {
+    if ((mission.lifecycleStatus || mission.status) !== "active") return [];
+    return BF.getMissionPlayerActionDestinations?.(mission.missionId || mission.id) ||
+      mission.playerActionDestinations || [];
+  }
+
+  function filteredMissionList(list, state) {
+    const currentMap = state.currentMapId || BF.currentEngine?.currentMapId;
+    const filtered = list.filter((mission) => {
+      if (browserStatus !== "all" && mission.status !== browserStatus) return false;
+      if (browserFilters.theme !== "all" && missionTheme(mission) !== browserFilters.theme) return false;
+      if (browserFilters.query && !normalizeSearch(mission.title).includes(normalizeSearch(browserFilters.query))) return false;
+      const maps = [mission.locationMapId,
+        ...(mission.playerActionDestinations || []).map(entry => entry.mapId)].filter(Boolean);
+      switch (browserFilters.situation) {
+        case "player": return Boolean(mission.playerActionDestinations?.length);
+        case "here": return maps.includes(currentMap);
+        case "elsewhere": return maps.some(id => id !== currentMap);
+        case "background": return mission.backgroundProgressOnly === true;
+        default: return true;
+      }
+    });
+    const alphabetic = (a, b) => String(a.title || "").localeCompare(String(b.title || ""), "fr", { sensitivity: "base" }) ||
+      String(a.missionId).localeCompare(String(b.missionId));
+    return filtered.sort((a, b) => {
+      const sort = browserFilters.sort;
+      if (sort === "az") return alphabetic(a, b);
+      if (sort === "za") return -alphabetic(a, b);
+      if (sort === "progress") return (b.progress || 0) - (a.progress || 0) || alphabetic(a, b);
+      if (sort === "recent" || sort === "oldest") {
+        const left = Number(a.activatedAt) || 0, right = Number(b.activatedAt) || 0;
+        // Date absente : toujours après les dates connues, jamais inventée.
+        return (!left) - (!right) || (sort === "recent" ? right - left : left - right) || alphabetic(a, b);
+      }
+      return (Number(a.priorityRank) || (a.isPrimary ? 1 : 99)) -
+        (Number(b.priorityRank) || (b.isPrimary ? 1 : 99)) || alphabetic(a, b);
+    });
+  }
   let completionHideTimer = null;
   const HUD_COMPLETION_MS = 6000;
   const hudExpandedMissions = new Set();
@@ -516,9 +576,8 @@
   }
 
   function renderMissionReturnControls(mission) {
-    if (mission.status !== "active") return null;
     const missionId = String(mission.missionId || mission.id || "");
-    const destinations = BF.getMissionPlayerActionDestinations?.(missionId) || [];
+    const destinations = missionReturnDestinations(mission);
     if (!destinations.length) return null;
     const container = document.createElement("div");
     container.className = "mission-browser-actions";
@@ -664,7 +723,8 @@
         mission.lifecycleStatus,
         Math.round((mission.progress || 0) * 100),
         mission.isPrimary,
-        mission.priorityRank || 0
+        mission.priorityRank || 0,
+        (mission.playerActionDestinations || []).map(entry => entry.mapId)
       ]),
       catalog: (state.catalog || []).map((mission) => [
         mission.missionId,
@@ -737,6 +797,10 @@
       const body = document.createElement("div");
       body.className = "mission-card-entry-body";
       if (mission.description) body.appendChild(createTextElement("p", "", mission.description));
+      if (missionReturnDestinations(mission).length) {
+        body.appendChild(createTextElement("small", "m2-construction-shortage mission-return-hint",
+          "Action joueur requise — retour vers le lieu disponible dans le menu Missions."));
+      }
       constructionShortages(mission).forEach((requirement) => {
         body.appendChild(createTextElement(
           "small",
@@ -804,9 +868,21 @@
   function renderMissionBrowser(state) {
     const browser = document.querySelector(".mission-browser");
     if (!browser || !state) return;
+    const scrollTop = browser.scrollTop;
+    const focused = browser.contains(document.activeElement) ? document.activeElement : null;
+    const focusKey = focused?.dataset?.missionFilter;
+    const selection = focusKey === "query" ? [focused.selectionStart, focused.selectionEnd] : null;
     rememberExpanded(browser, ".mission-browser-card", browserExpandedMissions);
     const list = missionList(state);
+    const browserSignature = JSON.stringify({
+      filters: browserFilters, status: browserStatus, currentMapId: state.currentMapId,
+      guidance: state.missionGuidanceEnabled, resumeAt: state.missionGuidanceResumeAt,
+      list, resources: [...constructionResourceStatusByMission.entries()]
+    });
+    if (browser._bluefoxMissionSignature === browserSignature) return;
+    browser._bluefoxMissionSignature = browserSignature;
     const statuses = [
+      ["all", "Toutes"],
       ["available", "Disponibles"],
       ["active", "Actives"],
       ["paused", "En pause"],
@@ -850,20 +926,60 @@
       const button = createTextElement(
         "button",
         browserStatus === status ? "active" : "",
-        `${label} (${list.filter((mission) => mission.status === status).length})`
+        `${label} (${status === "all" ? list.length : list.filter((mission) => mission.status === status).length})`
       );
       button.type = "button";
       button.addEventListener("click", () => {
         browserStatus = status;
-        renderMissionBrowser(state);
+        renderMissionBrowser(latestState || state);
       });
       tabs.appendChild(button);
     });
     browser.appendChild(tabs);
+    const filters = document.createElement("div");
+    filters.className = "mission-browser-filters";
+    const addSelect = (key, label, options) => {
+      const field = createTextElement("label", "", label);
+      const select = document.createElement("select");
+      select.dataset.missionFilter = key;
+      select.setAttribute("aria-label", label);
+      options.forEach(([value, text]) => {
+        const option = createTextElement("option", "", text);
+        option.value = value;
+        select.appendChild(option);
+      });
+      select.value = browserFilters[key];
+      select.addEventListener("change", () => {
+        browserFilters[key] = select.value;
+        renderMissionBrowser(latestState || state);
+      });
+      field.appendChild(select);
+      filters.appendChild(field);
+    };
+    addSelect("theme", "Thème", [["all", "Tous les thèmes"], ...Object.entries(MISSION_THEMES)]);
+    addSelect("situation", "Situation", [["all", "Toutes les situations"], ["player", "Action joueur requise"],
+      ["here", "Sur cette map"], ["elsewhere", "Sur une autre map"], ["background", "Progression en arrière-plan"]]);
+    addSelect("sort", "Trier par", [["priority", "Priorité actuelle"], ["recent", "Apparition la plus récente"],
+      ["oldest", "Apparition la plus ancienne"], ["az", "Nom A → Z"], ["za", "Nom Z → A"], ["progress", "Progression"]]);
+    const searchField = createTextElement("label", "", "Rechercher une mission");
+    const search = document.createElement("input");
+    search.type = "search";
+    search.dataset.missionFilter = "query";
+    search.setAttribute("aria-label", "Rechercher une mission");
+    search.placeholder = "Titre de la mission…";
+    search.value = browserFilters.query;
+    search.addEventListener("input", () => {
+      browserFilters.query = search.value;
+      renderMissionBrowser(latestState || state);
+    });
+    searchField.appendChild(search);
+    filters.appendChild(searchField);
+    browser.appendChild(filters);
+    const visible = filteredMissionList(list, state);
+    browser.appendChild(createTextElement("small", "mission-browser-result-count", `${visible.length} mission(s) affichée(s)`));
     const cards = document.createElement("div");
     cards.className = "mission-browser-list";
-    list.filter((mission) => mission.status === browserStatus)
-      .forEach((mission) => {
+    visible.forEach((mission) => {
         const details = document.createElement("details");
         details.className = "mission-browser-card";
         details.dataset.missionId = mission.missionId;
@@ -879,7 +995,7 @@
           createTextElement(
             "small",
             "",
-            `${mission.priorityRank ? `TOP ${mission.priorityRank} · ` : ""}${mission.scope || "global"} · ${percent} %`
+            `${mission.priorityRank ? `TOP ${mission.priorityRank} · ` : ""}${MISSION_THEMES[missionTheme(mission)]} · ${mission.scope === "map" ? "Locale" : "Globale"} · ${percent} %`
           )
         );
         details.appendChild(summary);
@@ -892,6 +1008,10 @@
         ));
         if (mission.description) {
           body.appendChild(createTextElement("p", "", mission.description));
+        }
+        if (mission.locationMapId && BF.maps?.[mission.locationMapId]?.name) {
+          body.appendChild(createTextElement("small", "mission-browser-location",
+            `Lieu : ${BF.maps[mission.locationMapId].name}`));
         }
         const bar = document.createElement("i");
         bar.className = "mission-progress-bar";
@@ -908,6 +1028,13 @@
         if (choiceControls) body.appendChild(choiceControls);
         const returnControls = renderMissionReturnControls(mission);
         if (returnControls) body.appendChild(returnControls);
+        if (mission.constructionAdoptionAvailable === true &&
+            mission.locationMapId === state.currentMapId) {
+          const adopt = createTextElement("button", "mission-existing-site-action", "Utiliser l’installation existante");
+          adopt.addEventListener("click", () =>
+            BF.bibleRuntime?.adoptExistingConstruction?.(mission.missionId));
+          body.appendChild(adopt);
+        }
         const actions = document.createElement("div");
         actions.className = "mission-browser-actions";
         const contextVisible = mission.contextVisible !== false;
@@ -933,6 +1060,12 @@
       cards.appendChild(createTextElement("p", "mission-browser-empty", "Aucune mission dans cette catégorie."));
     }
     browser.appendChild(cards);
+    if (focusKey) {
+      const control = browser.querySelector(`[data-mission-filter="${focusKey}"]`);
+      control?.focus({ preventScroll: true });
+      if (selection) control?.setSelectionRange(...selection);
+    }
+    browser.scrollTop = scrollTop;
   }
 
   function ensureMissionTool() {

@@ -568,8 +568,31 @@
     );
     const mode = String(step?.params?.evidenceMode || "").trim();
     const fromSlot = String(step?.params?.evidenceFromSlot || "").trim();
-    return mode === "sample" && fromSlot
-      ? { mode, fromSlot, tree, node }
+    if (mode === "sample" && fromSlot) return { mode, fromSlot, tree, node };
+
+    // Une suite lexicale sur la même instance réutilise la preuve de son geste
+    // canonique. Les comportements, acteurs indépendants et relevés distants
+    // restent des interactions réelles ; aucun rapprochement par type seul.
+    const relation = node.params?.relation;
+    const sourceSlot = String(relation?.fromSlot || "").trim();
+    const source = tree.findSequenceSlot?.(sourceSlot);
+    const studyTypes = ["observe", "inspect", "analyze"];
+    const sourceType = Missions.normalizeActionType(source?.type);
+    const currentType = Missions.normalizeActionType(node.type);
+    const params = node.params || {};
+    const independent = params.eventDriven || params.catalogManaged || params.actor ||
+      params.actorsAny || params.remote != null || params.reactionsAny ||
+      params.excludeReactions || params.tagsAll || params.worldEventRequirements;
+    if (!sourceSlot || !source || independent || Number(node.target) !== 1 ||
+        Number(source.target) !== 1 || !node.requires?.includes(source.id) ||
+        asArray(relation.sameBy).length !== 1 || relation.sameBy[0] !== "instanceId" ||
+        asArray(relation.differentBy).length) return null;
+    const acquired = ["collect", "extract"].includes(sourceType);
+    const lexicalContinuation = ["inspect", "analyze"].includes(currentType) &&
+      studyTypes.includes(sourceType);
+    return studyTypes.includes(currentType) && (acquired || lexicalContinuation)
+      ? { mode: acquired ? "sample" : "study", fromSlot: sourceSlot,
+          tree, node, inferred: true }
       : null;
   };
 
@@ -585,11 +608,33 @@
       Number(source.progress || 0) >= Math.max(1, Number(source.target) || 1);
     if (!complete) return null;
     const evidence = parsedRelationEvidence(source);
+    let reference = evidence[evidence.length - 1];
+    if (contract.inferred) {
+      reference = [...evidence].reverse().find((proof) => {
+        if (!proof.instanceId || !proof.objectId || !proof.mapId ||
+            !relationMatches(contract.tree, contract.node, proof)) return false;
+        const definition = BF.ObjectLibrary?.getById?.(String(proof.objectId).toUpperCase());
+        if (!definition) return false;
+        const params = contract.node.params || {};
+        const metadata = { ...definitionMissionMetadata(definition), ...proof,
+          microSceneId: source.params?.microSceneId || null };
+        if (!metadataMatchesMissionCriteria(metadata, studyTargetCriteria(params), { skipSubject: true }) ||
+            !matchesStudySubject(definition, params.subject)) return false;
+        const requiredMap = params.requiredMapFact
+          ? engine.missionManager.memory?.getFact?.(params.requiredMapFact)?.[params.requiredMapField || "mapId"]
+          : params.mapId;
+        if ((params.requiredMapFact || params.mapId) &&
+            (!requiredMap || String(requiredMap) !== String(proof.mapId))) return false;
+        return eventMatchesBoundTarget(engine.missionManager, action.missionId,
+          { ...proof, detail: { cuoType: proof.cuoType } });
+      });
+      if (!reference) return null;
+    }
     return {
       contract,
       source,
-      evidence: evidence.length
-        ? evidence[evidence.length - 1]
+      evidence: reference
+        ? reference
         : {
             legacyCompletedSlot: true,
             missionId: String(action.missionId || ""),
@@ -1688,11 +1733,12 @@
           value: {
             amount: 1,
             narrativeEvidence: true,
-            evidenceMode: "sample",
+            evidenceMode: evidenceContract.mode,
             evidenceFromSlot: evidenceContract.fromSlot,
             sourceMissionId: action.missionId || null,
             sourceObjectId: evidence.objectId || null,
             sourceCuoType: evidence.cuoType || null,
+            sourceInstanceId: evidence.instanceId || null,
             sourceMapId: evidence.mapId || null,
             legacyCompletedSlot: evidence.legacyCompletedSlot === true
           },
