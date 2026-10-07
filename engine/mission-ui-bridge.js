@@ -724,6 +724,7 @@
         Math.round((mission.progress || 0) * 100),
         mission.isPrimary,
         mission.priorityRank || 0,
+        mission.constructionAdoptionAvailable === true,
         (mission.playerActionDestinations || []).map(entry => entry.mapId)
       ]),
       catalog: (state.catalog || []).map((mission) => [
@@ -813,6 +814,18 @@
       });
       const choiceControls = renderMissionChoiceControls(mission);
       if (choiceControls) body.appendChild(choiceControls);
+      if (mission.constructionAdoptionAvailable === true &&
+          mission.locationMapId === state.currentMapId) {
+        const adopt = createTextElement(
+          "button",
+          "mission-existing-site-action",
+          "Utiliser cette installation comme Repaire improvisé"
+        );
+        adopt.type = "button";
+        adopt.addEventListener("click", () =>
+          BF.bibleRuntime?.adoptExistingConstruction?.(mission.missionId));
+        body.appendChild(adopt);
+      }
       if (!mission.isPrimary && mission.lifecycleStatus === "active") {
         const prioritize = createTextElement("button", "mission-priority-button", "Définir comme priorité");
         prioritize.type = "button";
