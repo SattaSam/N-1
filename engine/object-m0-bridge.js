@@ -848,7 +848,6 @@
       const sameOriginMission = !originMissionId ||
         originMissionId === String(missionId || "");
       if (sameOriginMission && detail.missionNodeId !== node.id) return false;
-      if (event.type !== BF.ObjectEvents?.types.PHENOMENON_OBSERVED) return false;
     }
 
     // Convention BlueFox : observer / inspecter / analyser appartiennent à la
@@ -975,12 +974,8 @@
     let changed = 0;
     let currentMatched = false;
     const current = manager.currentAction;
-    const ownerOnly = options.ownerOnly === true;
-    const ownerMissionId = String(
-      options.ownerMissionId ||
-      event?.detail?.missionId ||
-      current?.missionId ||
-      ""
+    const excludedMissionIds = new Set(
+      asArray(options.excludedMissionIds).map((id) => String(id || "")).filter(Boolean)
     );
     const trees = manager.trees?.size
       ? manager.trees
@@ -989,7 +984,7 @@
         : new Map();
     if (!trees.size) return 0;
     trees.forEach((tree, missionId) => {
-      if (ownerOnly && String(missionId || "") !== ownerMissionId) return;
+      if (excludedMissionIds.has(String(missionId || ""))) return;
       if (!eventMatchesBoundTarget(manager, missionId, event)) return;
 
       // L'acquittement de l'action physique est indépendant de la progression
@@ -1097,47 +1092,30 @@
         BF.ObjectEvents.types.RESOURCE_COLLECTED,
         BF.ObjectEvents.types.RESOURCE_EXTRACTED
       ].includes(event.type);
-      const activationMissionId =
-        BF.bibleRuntime?.activationMissionForEvent?.(event.id) || null;
-      const activationBaseId = String(activationMissionId || "").split("@")[0];
-      const localActivation = Boolean(
-        activationMissionId &&
-        BF.bibleRuntime?.byId?.get?.(activationBaseId)?.localMission
-      );
-      if (
+      const activatedMissionIds =
+        BF.bibleRuntime?.activationMissionsForEvent?.(event.id) ||
+        [BF.bibleRuntime?.activationMissionForEvent?.(event.id)].filter(Boolean);
+      const localActivation = activatedMissionIds.some((missionId) => {
+        const baseId = String(missionId || "").split("@")[0];
+        return BF.bibleRuntime?.byId?.get?.(baseId)?.localMission === true;
+      });
+      const protectFreshActivation = Boolean(
         BF.bibleRuntime?.isActivationEvent?.(event.id) &&
         (!isAcquisition || localActivation)
-      ) {
-        const current = this.currentAction || null;
-        const eventMissionId = String(event.detail?.missionId || "");
-        const eventNodeId = String(event.detail?.missionNodeId || "");
-        const eventInstanceId = String(
-          event.instanceId || event.detail?.instanceId || ""
-        );
-        const currentInstanceId = String(current?.instanceId || "");
-        const explicitCurrentOwner = Boolean(
-          current &&
-          eventMissionId &&
-          eventNodeId &&
-          eventMissionId === String(current.missionId || "") &&
-          eventNodeId === String(current.nodeId || "") &&
-          (!currentInstanceId ||
-            (Boolean(eventInstanceId) && eventInstanceId === currentInstanceId))
-        );
-        const result = explicitCurrentOwner
-          ? applyObjectEventProgress(this, event, {
-              ownerOnly: true,
-              ownerMissionId: eventMissionId
-            })
-          : { changed: 0, currentMatched: false };
+      );
+      const result = applyObjectEventProgress(this, event, {
+        // L’événement reste distribué à toutes les missions déjà actives. Seules
+        // celles révélées par CE même événement sont exclues une fois, afin de
+        // préserver le garde-fou anti auto-validation de BibleRuntime.
+        excludedMissionIds: protectFreshActivation ? activatedMissionIds : []
+      });
+      if (protectFreshActivation) {
         this.memory.remember(event.type, {
           ...(event.detail || {}),
           activationOnly: true,
           eventId: event.id
         });
-        return result.currentMatched || result.changed > 0;
       }
-      const result = applyObjectEventProgress(this, event);
       return result.currentMatched || result.changed > 0;
     };
     const originalCreate = Missions.MissionManager.create;

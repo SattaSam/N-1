@@ -52,6 +52,11 @@
       this.unsubscribeObjectEvents = null;
       this.activationEventIds = new Set();
       this.activationEventMissionIds = new Map();
+      // Un événement peut révéler plusieurs missions dans le même cycle causal.
+      // Cette table runtime distingue les missions activées PAR l’événement de
+      // celles qui étaient déjà actives et doivent conserver le fan-out ObjectM0.
+      // Cache runtime uniquement : aucune donnée n’est persistée.
+      this.activationEventMissionIdSets = new Map();
       // Cache runtime uniquement : observe les transitions lifecycle sans
       // backfill au chargement. MissionManager reste propriétaire du statut ;
       // BibleRuntime traduit seulement une transition réelle -> completed en
@@ -5427,7 +5432,7 @@
       // consommé explicitement cet événement juste au-dessus.
       if (droneHistoricalObservation) return;
       const activeBefore = new Set(
-        this.catalog
+        this.allMissions()
           .filter((mission) => this.missionLifecycle(mission.id).active)
           .map((mission) => mission.id)
       );
@@ -5469,17 +5474,29 @@
         activatedMissionId = activatedMissionId || result.activatedMissionId || null;
       }
 
-      const activatedNow = Boolean(activatedMissionId) || this.allMissions().some((mission) =>
-        !activeBefore.has(mission.id) && this.missionLifecycle(mission.id).active
-      );
+      const activatedMissionIds = this.allMissions()
+        .filter((mission) =>
+          !activeBefore.has(mission.id) && this.missionLifecycle(mission.id).active
+        )
+        .map((mission) => mission.id);
+      if (activatedMissionId && !activatedMissionIds.includes(activatedMissionId)) {
+        activatedMissionIds.push(activatedMissionId);
+      }
+      const activatedNow = activatedMissionIds.length > 0;
       if (activatedNow && rawEvent.id) {
         this.activationEventIds.add(rawEvent.id);
-        if (activatedMissionId) {
-          this.activationEventMissionIds.set(rawEvent.id, activatedMissionId);
-        }
+        this.activationEventMissionIds.set(
+          rawEvent.id,
+          activatedMissionId || activatedMissionIds[0] || null
+        );
+        this.activationEventMissionIdSets.set(
+          rawEvent.id,
+          new Set(activatedMissionIds)
+        );
         global.setTimeout?.(() => {
           this.activationEventIds.delete(rawEvent.id);
           this.activationEventMissionIds.delete(rawEvent.id);
+          this.activationEventMissionIdSets.delete(rawEvent.id);
         }, 0);
       }
 
@@ -5959,6 +5976,11 @@
 
     activationMissionForEvent(eventId) {
       return eventId ? this.activationEventMissionIds.get(eventId) || null : null;
+    }
+
+    activationMissionsForEvent(eventId) {
+      if (!eventId) return [];
+      return [...(this.activationEventMissionIdSets.get(eventId) || [])];
     }
 
     bridgeMissionProgress(event) {
