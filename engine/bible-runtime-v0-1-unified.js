@@ -3737,6 +3737,42 @@
       return candidates[0] || null;
     }
 
+    missionNpcKnownDestinationCriteria(missionId, nodeId, preferredMapId = "") {
+      const mission = this.byId.get(missionId) || this.dynamicMissions.get(missionId);
+      const validation = mission?.runtimeValidation;
+      const manager = this.manager();
+      const tree = manager?.trees?.get?.(missionId);
+      if (validation?.type !== "civilization-contact" || !tree || tree.root.isComplete) return null;
+      const node = tree.findSequenceSlot(validation.slot || "contact");
+      if (node?.id !== nodeId || node.params?.catalogManaged !== true ||
+          node.params?.eventDriven !== true ||
+          !tree.availableLeaves().some(leaf => leaf.id === nodeId)) return null;
+      // Les destinations explicites et les contrats de site gardent leur autorité.
+      if (mission.targetMapId || mission.targetMapFact || mission.completionGate?.mapId ||
+          node.params.requiredMapFact || node.params.targetMapFact) return null;
+      const entries = this.npcEncounterEntries(missionId).filter(({ entry }) =>
+        !entry.microSceneId && Number(entry.triggerDistance) > 0 &&
+        (!entry.requiresSlotComplete || tree.findSequenceSlot(entry.requiresSlotComplete)?.isComplete) &&
+        !manager.memory.getFact?.(this.npcEncounterFactKey(missionId, entry), {})?.despawned
+      );
+      const types = [...new Set(entries.map(({ entry }) => String(entry.cuoType)))];
+      if (types.length !== 1) return null;
+      const cuoType = types[0];
+      const current = String(BF.currentEngine?.currentMapId || "");
+      const local = entries.some(({ entry }) => {
+        const root = this.npcEncounterRoot(entry);
+        if (!root || root.visible === false || BF.NpcRuntime?.getState?.(root)?.enabled === false) return false;
+        let parent = root.parent;
+        while (parent && parent !== BF.currentEngine?.currentMap?.group) parent = parent.parent;
+        return Boolean(parent);
+      });
+      if (local && current) return { mapId: current };
+      // MissionManager transmet la préférence de son intention native ;
+      // le runtime vérifie toujours le CUO et la route de cette map connue.
+      const mapId = this.knownMapForCuoType(cuoType, preferredMapId || current);
+      return mapId ? { mapId } : null;
+    }
+
     microSceneProximityAnchor(microSceneId) {
       const map = BF.currentEngine?.currentMap;
       const entries = Array.isArray(map?.group?.userData?.microScenes)

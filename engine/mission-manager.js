@@ -1605,7 +1605,15 @@
           return criteria;
         })
         .filter((criteria) => Object.keys(criteria).length > 0);
-      if (!contexts.length) return null;
+      if (!contexts.length) {
+        const intent = this.memory.getFact?.(this.missionReturnIntentKey(missionId), null);
+        const preferredMapId = intent?.active === true && intent.kind === "known-destination" &&
+          intent.nodeId === `${nodeId}:known-destination`
+          ? String(intent.targetMapId || intent.mapId || "") : "";
+        return BF.bibleRuntime?.missionNpcKnownDestinationCriteria?.(
+          missionId, nodeId, preferredMapId
+        ) || null;
+      }
 
       const unique = new Map();
       contexts.forEach((criteria) => {
