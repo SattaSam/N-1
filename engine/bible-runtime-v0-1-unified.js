@@ -238,7 +238,7 @@
     localMissionActivationMatches(activation, event) {
       if (!activation || !event || activation.type !== event.type) return false;
       const exactKeys = [
-        "objectId", "kind", "family", "subject", "category", "persistentMicroSceneId"
+        "objectId", "kind", "family", "subject", "category", "persistentMicroSceneId", "microSceneId"
       ];
       for (const key of exactKeys) {
         if (activation[key] != null && lower(activation[key]) !== lower(event[key])) {
@@ -2175,6 +2175,8 @@
           event.persistentMicroSceneId ||
           event.detail?.persistentMicroSceneId ||
           null,
+        microSceneId:
+          event.microSceneId || event.detail?.microSceneId || null,
         kind,
         family,
         category,

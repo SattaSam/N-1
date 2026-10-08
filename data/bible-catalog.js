@@ -4314,7 +4314,7 @@
     narrativeAxis: "ARCHEOLOGUE",
     reinforcesNarrativeAxis: Object.freeze({ axis: "ARCHEOLOGUE", weight: 1 }),
     localMission: Object.freeze({
-      activation: Object.freeze({ type: "interaction.any", persistentMicroSceneId: "MSC-CUSTOM-HABITAT-RUINE" })
+      activation: Object.freeze({ type: "interaction.any", microSceneId: "MSC-CUSTOM-HABITAT-RUINE" })
     }),
     slots: Object.freeze({
       context: Object.freeze({
@@ -4345,7 +4345,7 @@
     narrativeAxis: "EXPLORATEUR",
     reinforcesNarrativeAxis: Object.freeze({ axis: "EXPLORATEUR", weight: 1 }),
     localMission: Object.freeze({
-      activation: Object.freeze({ type: "interaction.any", persistentMicroSceneId: "MSC-CUSTOM-RUISSEAU-MARE" })
+      activation: Object.freeze({ type: "interaction.any", microSceneId: "MSC-CUSTOM-RUISSEAU-MARE" })
     }),
     slots: Object.freeze({
       context: Object.freeze({
@@ -4402,13 +4402,13 @@
     narrativeAxis: "NATURALISTE",
     reinforcesNarrativeAxis: Object.freeze({ axis: "NATURALISTE", weight: 1 }),
     localMission: Object.freeze({
-      activation: Object.freeze({ type: "interaction.any", persistentMicroSceneId: "MSC-CUSTOM-NID-DE-FAUNE5" })
+      activation: Object.freeze({ type: "interaction.any", microSceneId: "MSC-CUSTOM-NID-DE-FAUNE5" })
     }),
     slots: Object.freeze({
       study: Object.freeze({
         title: "Détecter et observer une créature près du nid",
         target: 1,
-        params: Object.freeze({ cuoType: "brouteur", persistentMicroSceneId: "MSC-CUSTOM-NID-DE-FAUNE5" })
+        params: Object.freeze({ tagsAny: Object.freeze(["fauna"]), microSceneId: "MSC-CUSTOM-NID-DE-FAUNE5" })
       })
     })
   });
@@ -4533,7 +4533,7 @@
     scoreTrauma: 22,
     narrativeAxis: "EXPLORATEUR",
     reinforcesNarrativeAxis: Object.freeze({ axis: "EXPLORATEUR", weight: 1 }),
-    localMission: Object.freeze({ activation: Object.freeze({ type: "interaction.any", persistentMicroSceneId: "MSC-CUSTOM-EPAVE-MAJEUR" }) }),
+    localMission: Object.freeze({ activation: Object.freeze({ type: "interaction.any", microSceneId: "MSC-CUSTOM-EPAVE-MAJEUR" }) }),
     slots: Object.freeze({ context: Object.freeze({ title: "Étudier l’épave", target: 1, params: Object.freeze({ microSceneId: "MSC-CUSTOM-EPAVE-MAJEUR", distinctBy: "microSceneInstance" }) }) })
   });
 
@@ -4574,7 +4574,7 @@
     scoreTrauma: 32,
     narrativeAxis: "SCIENTIFIQUE",
     reinforcesNarrativeAxis: Object.freeze({ axis: "SCIENTIFIQUE", weight: 1 }),
-    localMission: Object.freeze({ activation: Object.freeze({ type: "interaction.any", persistentMicroSceneId: "MSC-CUSTOM-BASALT-RIFT" }) }),
+    localMission: Object.freeze({ activation: Object.freeze({ type: "interaction.any", microSceneId: "MSC-CUSTOM-BASALT-RIFT" }) }),
     slots: Object.freeze({ context: Object.freeze({ title: "Étudier la faille", target: 1, params: Object.freeze({ microSceneId: "MSC-CUSTOM-BASALT-RIFT", distinctBy: "microSceneInstance" }) }) })
   });
 
@@ -4597,7 +4597,7 @@
     scoreTrauma: 62,
     narrativeAxis: "ARCHEOLOGUE",
     reinforcesNarrativeAxis: Object.freeze({ axis: "ARCHEOLOGUE", weight: 1 }),
-    localMission: Object.freeze({ activation: Object.freeze({ type: "interaction.any", persistentMicroSceneId: "MSC-CUSTOM-SANCTUAIRE-RING" }) }),
+    localMission: Object.freeze({ activation: Object.freeze({ type: "interaction.any", microSceneId: "MSC-CUSTOM-SANCTUAIRE-RING" }) }),
     slots: Object.freeze({ context: Object.freeze({ title: "Étudier le sanctuaire", target: 1, params: Object.freeze({ microSceneId: "MSC-CUSTOM-SANCTUAIRE-RING", distinctBy: "microSceneInstance" }) }) })
   });
 
@@ -4719,12 +4719,12 @@
     souvenir: true,
     memoryValence: "positive",
     scoreTrauma: 62,
-    localMission: Object.freeze({ activation: Object.freeze({ type: "interaction.any", persistentMicroSceneId: "MSC-CUSTOM-BASE-DRONE-FONCTIONEL" }) }),
+    localMission: Object.freeze({ activation: Object.freeze({ type: "interaction.any", microSceneId: "MSC-CUSTOM-BASE-DRONE-FONCTIONEL" }) }),
     slots: Object.freeze({
       collect: Object.freeze({
         title: "Collecter un composant technologique",
         requirements: Object.freeze([
-          Object.freeze({ target: 1, params: Object.freeze({ persistentMicroSceneId: "MSC-CUSTOM-BASE-DRONE-FONCTIONEL", tagsAny: Object.freeze(["technology", "component"]) }) })
+          Object.freeze({ target: 1, params: Object.freeze({ microSceneId: "MSC-CUSTOM-BASE-DRONE-FONCTIONEL", tagsAny: Object.freeze(["technology", "component"]) }) })
         ])
       })
     }),

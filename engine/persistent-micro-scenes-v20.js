@@ -643,6 +643,7 @@
     const wrapped = function buildMapWithPersistentScenes(THREE, definition, assets, renderer) {
       const built = previousBuildMap(THREE, definition, assets, renderer);
       spawnForBuiltMap(THREE, built, definition);
+      BF.ObjectSpawner?.placeMissionNpcsNearHabitats?.(THREE, built);
       return built;
     };
     wrapped.__persistentMicroScenesV20 = true;

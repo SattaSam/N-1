@@ -1277,5 +1277,83 @@
       })));
     }).sort((a, b) => a.distance - b.distance || a.zoneIndex - b.zoneIndex);
   };
+  // Après matérialisation des habitats, raccorder les PNJ prescrits à leur
+  // civilisation. Les MSC, identités et preuves restent inchangées.
+  ObjectSpawner.placeMissionNpcsNearHabitats = (THREE, built) => {
+    if (!built?.group || !built.walkableRegions?.length) return 0;
+    const habitats = {
+      npc_translucent: "MSC-CUSTOM-HABITAT-TRANSLUCENT-ARCH37",
+      npc_rocky: "MSC-CUSTOM-HABITAT-ROCKY-ARCH37"
+    };
+    const roots = [];
+    built.group.traverse((root) => {
+      if (root.userData?.bibleMissionRequiredObject === true &&
+          habitats[root.userData.libraryType] && !root.userData.worldAnchor &&
+          root.parent === built.group) roots.push(root);
+    });
+    let placed = 0;
+    roots.forEach((root) => {
+      const scenes = (built.group.userData.microScenes || []).filter((scene) =>
+        scene.id === habitats[root.userData.libraryType] && scene.instanceRoot);
+      // Une association ambiguë ne justifie aucun déplacement implicite.
+      if (scenes.length !== 1) return;
+      const scene = scenes[0];
+      scene.instanceRoot.updateWorldMatrix(true, true);
+      const anchor = scene.instanceRoot.getWorldPosition(new THREE.Vector3());
+      const footprint = ObjectSpawner.microSceneFootprint(THREE, scene);
+      if (!footprint) return;
+      const minX = anchor.x + footprint.minX, maxX = anchor.x + footprint.maxX;
+      const minZ = anchor.z + footprint.minZ, maxZ = anchor.z + footprint.maxZ;
+      const centerX = (minX + maxX) / 2, centerZ = (minZ + maxZ) / 2;
+      const region = built.walkableRegions.find((candidate) =>
+        centerX >= candidate.minX && centerX <= candidate.maxX &&
+        centerZ >= candidate.minZ && centerZ <= candidate.maxZ);
+      if (!region) return;
+      const radius = Math.max(0.1,
+        Number(BF.ObjectLibrary.getMapPlacement(root.userData.libraryType)?.radius) || 0.5);
+      const candidates = [];
+      for (const gap of [2, 3, 4, 5, 6]) {
+        for (let i = 0; i <= 8; i += 1) {
+          const t = i / 8;
+          candidates.push(
+            { x: minX - gap - radius, z: minZ + (maxZ - minZ) * t, gap },
+            { x: maxX + gap + radius, z: minZ + (maxZ - minZ) * t, gap },
+            { x: minX + (maxX - minX) * t, z: minZ - gap - radius, gap },
+            { x: minX + (maxX - minX) * t, z: maxZ + gap + radius, gap }
+          );
+        }
+      }
+      const isOwnCollider = (collider) => collider.owner === root ||
+        collider.owner?.userData?.worldAnchor === root;
+      const safe = candidates.filter((point) =>
+        point.x >= region.minX + radius + 2 && point.x <= region.maxX - radius - 2 &&
+        point.z >= region.minZ + radius + 2 && point.z <= region.maxZ - radius - 2 &&
+        !(built.colliders || []).some((collider) => !isOwnCollider(collider) &&
+          Math.hypot(point.x - Number(collider.position?.x ?? collider.x ?? 0),
+            point.z - Number(collider.position?.z ?? collider.z ?? 0)) <
+          radius + Number(collider.radius || 0) + 0.5)
+      ).sort((a, b) => a.gap - b.gap ||
+        Math.hypot(a.x - centerX, a.z - centerZ) - Math.hypot(b.x - centerX, b.z - centerZ));
+      const point = safe[0];
+      if (!point) return;
+      // Les PNJ concernés sont des racines ordinaires sous la map. Convertir
+      // le point monde pour conserver ce contrat même si le groupe est déplacé.
+      const old = root.getWorldPosition(new THREE.Vector3());
+      const local = built.group.worldToLocal(new THREE.Vector3(point.x, old.y, point.z));
+      root.position.copy(local);
+      root.updateWorldMatrix(true, true);
+      (built.colliders || []).filter(isOwnCollider).forEach((collider) => {
+        if (collider.position) {
+          collider.position.x += point.x - old.x;
+          collider.position.z += point.z - old.z;
+        } else {
+          if (Number.isFinite(collider.x)) collider.x += point.x - old.x;
+          if (Number.isFinite(collider.z)) collider.z += point.z - old.z;
+        }
+      });
+      placed += 1;
+    });
+    return placed;
+  };
   BF.ObjectSpawner = ObjectSpawner;
 })(window);
