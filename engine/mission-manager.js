@@ -1343,7 +1343,7 @@
     playerActionReturnWork() {
       const intent = this.pendingPlayerActionReturn();
       if (!intent) return false;
-      const nodeId = BF.bibleRuntime?.missionPlayerActionNode?.(intent.missionId);
+      const nodeId = BF.bibleRuntime?.missionPlayerActionNode?.(intent.missionId, intent.nodeId);
       if (nodeId !== intent.nodeId || !BF.maps?.[intent.targetMapId] ||
           String(this.engine.currentMapId) === intent.targetMapId) {
         this.cancelPlayerActionReturn();

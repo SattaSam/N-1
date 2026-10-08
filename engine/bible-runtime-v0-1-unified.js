@@ -3809,8 +3809,12 @@
 
 
     knownMapForCuoType(cuoType, preferredMapId = "") {
+      return this.knownMapsForCuoType(cuoType, preferredMapId)[0] || "";
+    }
+
+    knownMapsForCuoType(cuoType, preferredMapId = "") {
       const engine = BF.currentEngine;
-      if (!engine?.discoveredMaps || !cuoType) return "";
+      if (!engine?.discoveredMaps || !cuoType) return [];
       const expected = String(cuoType);
       const current = String(engine.currentMapId || "");
       const candidates = [...engine.discoveredMaps]
@@ -3854,7 +3858,7 @@
           Number(right.mapId === String(preferredMapId)) -
             Number(left.mapId === String(preferredMapId)) ||
           left.route.length - right.route.length);
-      return candidates[0]?.mapId || "";
+      return candidates.map(entry => entry.mapId);
     }
 
     npcEncounterEntries(missionId = null) {
@@ -6241,7 +6245,23 @@
       return result;
     }
 
-    missionPlayerActionNode(missionId) {
+    missionPlayerContactRequirements(missionId) {
+      const mission = this.byId.get(missionId);
+      const tree = this.manager()?.trees?.get?.(missionId);
+      if (!mission || !tree || !this.missionLifecycle(missionId).active) return [];
+      return asArray(mission.worldEventRequirements).flatMap(requirement => {
+        const criteria = requirement?.criteria || {};
+        if (criteria.type !== "NPC_CONTACTED" || criteria.interactionSource !== "manual") return [];
+        const node = tree.findSequenceSlot?.(requirement.slot);
+        if (!node || node.isComplete || !["available", "active"].includes(node.status) ||
+            node.params?.eventDriven !== true || node.params?.catalogManaged !== true) return [];
+        const cuoType = `npc_${lower(criteria.civilizationId)}`;
+        if (!asArray(mission.npcEncounters).some(entry => entry.cuoType === cuoType)) return [];
+        return [{ node, requirement, cuoType }];
+      });
+    }
+
+    missionPlayerActionNode(missionId, requestedNodeId = null) {
       const mission = this.byId.get(missionId);
       const manager = this.manager();
       const tree = manager?.trees?.get?.(missionId);
@@ -6249,13 +6269,18 @@
       if (mission.runtimeValidation?.type === "arch38-civilization-choice") {
         const node = tree.findSequenceSlot?.(mission.runtimeValidation.contactSlot || "firstContact");
         return node && !node.isComplete &&
-          ["available", "active"].includes(node.status) ? node.id : null;
+          ["available", "active"].includes(node.status) &&
+          (!requestedNodeId || requestedNodeId === node.id) ? node.id : null;
       }
       const placement = this.constructionPlacementEffect(mission);
       const source = mission.activationSource || this.state.constructionInstances?.[missionId]?.source || "player";
       if (placement && source !== "autonomy" && tree.root.isComplete &&
-          !this.canFinalizeMission(missionId)) return `${missionId}:completion-gate`;
-      return null;
+          !this.canFinalizeMission(missionId)) {
+        const nodeId = `${missionId}:completion-gate`;
+        return !requestedNodeId || requestedNodeId === nodeId ? nodeId : null;
+      }
+      return this.missionPlayerContactRequirements(missionId)
+        .find(entry => !requestedNodeId || entry.node.id === requestedNodeId)?.node.id || null;
     }
 
     missionPlayerActionDestinations(missionId) {
@@ -6264,13 +6289,30 @@
       const mission = this.byId.get(missionId);
       const tree = this.manager().trees.get(missionId);
       const result = new Map();
-      const add = (mapId) => {
-        if (!mapId || !BF.maps?.[mapId]) return;
-        result.set(mapId, { mapId, nodeId, label: BF.currentEngine?.narrativeMapName?.(mapId) ||
+      const add = (mapId, actionNodeId = nodeId) => {
+        if (!mapId || !BF.maps?.[mapId] || result.has(mapId)) return;
+        result.set(mapId, { mapId, nodeId: actionNodeId, label: BF.currentEngine?.narrativeMapName?.(mapId) ||
           BF.maps[mapId].name || "Territoire découvert" });
       };
       if (this.constructionPlacementEffect(mission)) {
         add(this.missionTargetMapId(mission));
+      } else if (this.missionPlayerContactRequirements(missionId).length) {
+        // Le joueur choisit parmi les lieux réellement connus des interlocuteurs
+        // requis. Plusieurs contacts parallèles gardent chacun leur nœud.
+        const current = String(BF.currentEngine?.currentMapId || "");
+        const mapsByType = new Map();
+        for (const { node, requirement, cuoType } of this.missionPlayerContactRequirements(missionId)) {
+          if (!mapsByType.has(cuoType)) mapsByType.set(cuoType, this.knownMapsForCuoType(cuoType, current));
+          const factKey = node.params?.requiredMapFact || node.params?.targetMapFact;
+          const fact = factKey ? this.manager()?.memory?.getFact?.(factKey, null) : null;
+          const field = node.params?.requiredMapField || node.params?.targetMapField || "mapId";
+          const requiredMapId = requirement.criteria?.mapId || (factKey ? fact?.[field] : null);
+          if (factKey && !requiredMapId) continue;
+          for (const mapId of mapsByType.get(cuoType)) {
+            if (requiredMapId && mapId !== String(requiredMapId)) continue;
+            add(mapId, node.id);
+          }
+        }
       } else {
         // Relire les preuves d’approche : l’identité de la map est celle de la
         // découverte réelle, jamais un numéro présumé de nouvelle partie.
