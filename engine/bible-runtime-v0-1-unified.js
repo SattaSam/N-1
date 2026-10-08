@@ -1928,7 +1928,7 @@
       // pas l'identité physique déjà figée dans le protocole ENV.
       if (entityId && !frozenEntity && !environmentEligible) return false;
 
-      // Ne copier le protocole monde que lorsqu'une preuve nouvelle sera écrite.
+      // Ne copier le protocole que lorsqu'une preuve nouvelle sera écrite.
       const newEntity = frozenEntity && !asArray(mapCoverage.observedEntityIds).includes(entityId);
       const newEnvironmentInstance = instanceId && ENV_FAMILIES.some(family => {
         const entry = mapCoverage.envFamilies?.[family];
@@ -1936,7 +1936,14 @@
           !asArray(entry.observedInstanceIds).includes(instanceId);
       });
       if (!newEntity && !newEnvironmentInstance) return false;
-      const next = clone(coverage);
+      // Seule cette map est modifiée. Les autres entrées restent en lecture ;
+      // captureObservationMap les copie avant toute écriture ultérieure.
+      const next = {
+        ...coverage,
+        maps: { ...coverage.maps, [mapId]: clone(mapCoverage) },
+        mapsReached50: [...asArray(coverage.mapsReached50)],
+        mapsReached100: [...asArray(coverage.mapsReached100)]
+      };
       const entry = next.maps[mapId];
       entry.observedEntityIds = asArray(entry.observedEntityIds);
       let changed = false;
