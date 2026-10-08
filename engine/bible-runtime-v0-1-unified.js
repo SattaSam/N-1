@@ -230,7 +230,7 @@
         id: instanceId,
         baseMissionId: baseId,
         scopeId: mapId,
-        targetMapId: mapId,
+        targetMapId: template.navigation?.scopedTargetTravel === true ? null : mapId,
         title: template.title
       };
     }
@@ -565,6 +565,7 @@
         const definition = manager.definition?.(missionId);
         if (
           definition?.localVisibility === "current-map" &&
+          definition?.navigation?.scopedTargetTravel !== true &&
           String(definition.scopeId || "") !== String(currentMapId || "")
         ) {
           changed = manager.pauseMission(
@@ -588,7 +589,8 @@
         const baseId = String(missionId).slice(0, separator);
         const scopeId = String(missionId).slice(separator + 1);
         const template = this.byId.get(baseId);
-        if (!template?.localMission || scopeId !== String(currentMapId)) return;
+        if (!template?.localMission ||
+            (scopeId !== String(currentMapId) && template.navigation?.scopedTargetTravel !== true)) return;
         changed = manager.resumeMission?.(missionId, {
           primary: false,
           autoPrimaryEligible: false,
@@ -1114,104 +1116,46 @@
     constructionAvailability(kind, mapId = BF.currentEngine?.currentMapId, options = {}) {
       const normalizedKind = lower(kind);
       const targetMapId = String(mapId || "");
-      const rewardId = normalizedKind === "camp"
-        ? "camp-establish-v1"
-        : normalizedKind === "refuge"
-          ? "refuge-build-v1"
-          : normalizedKind === "workbench"
-            ? "workbench-build-v1"
-            : null;
-      const missionId = this.constructionMissionId(normalizedKind, targetMapId);
-      const lifecycle = this.missionLifecycle(missionId);
+      const rewardId = ({ camp: "camp-establish-v1", refuge: "refuge-build-v1",
+        base: "base-build-v1", workbench: "workbench-build-v1" })[normalizedKind];
       const sites = this.siteBucket(targetMapId);
       const unlocked = Boolean(rewardId && this.isResearchRewardUnlocked(rewardId));
-      let allowed = unlocked && Boolean(targetMapId) && !lifecycle.active && !lifecycle.completed;
-      let reason = "Disponible sur cette map.";
-
-      if (!unlocked) {
-        allowed = false;
-        reason = "Plan non débloqué.";
-      } else if (lifecycle.active) {
-        allowed = false;
-        reason = "Construction déjà suivie dans les missions actives.";
+      const template = this.constructionTemplate(normalizedKind);
+      const resources = template ? this.constructionResourceStatus(template) : null;
+      let reason = "Prêt à positionner.";
+      let allowed = unlocked && Boolean(template && targetMapId) &&
+        targetMapId === String(BF.currentEngine?.currentMapId || "");
+      if (!unlocked) { allowed = false; reason = "Plan non débloqué."; }
+      else if (targetMapId !== String(BF.currentEngine?.currentMapId || "")) {
+        allowed = false; reason = "Rejoignez cette map pour positionner la structure.";
       } else if (normalizedKind === "camp" && (sites.camp || sites.refuge || sites.base)) {
-        allowed = false;
-        reason = "Une infrastructure est déjà implantée sur cette map.";
-      } else if (normalizedKind === "refuge" && !sites.camp) {
-        allowed = false;
-        reason = "Un camp doit d'abord être établi sur cette map.";
-      } else if (normalizedKind === "refuge" && (sites.refuge || sites.base)) {
-        allowed = false;
-        reason = "Un refuge ou une base existe déjà sur cette map.";
-      } else if (normalizedKind === "workbench" && targetMapId !== "crystal") {
-        allowed = false;
-        reason = "Le premier établi ne peut être installé que sur Crystal.";
-      } else if (normalizedKind === "workbench" && !sites.base) {
-        allowed = false;
-        reason = "La Base renforcée doit être installée avant l'établi.";
-      } else if (normalizedKind === "workbench" && sites.workbench) {
-        allowed = false;
-        reason = "Un établi est déjà implanté sur Crystal.";
+        allowed = false; reason = "Une infrastructure est déjà implantée sur cette map.";
+      } else if (normalizedKind === "refuge" && (!sites.camp || sites.refuge || sites.base)) {
+        allowed = false; reason = sites.camp ? "Un refuge ou une base existe déjà sur cette map." : "Un camp doit d'abord être établi sur cette map.";
+      } else if (normalizedKind === "base" && (!sites.refuge || sites.base)) {
+        allowed = false; reason = sites.base ? "Une base existe déjà sur cette map." : "Un refuge doit d'abord être établi sur cette map.";
+      } else if (normalizedKind === "workbench" && (targetMapId !== "crystal" || !sites.base || sites.workbench)) {
+        allowed = false; reason = "L'établi nécessite la Base de Crystal et ne doit pas déjà exister.";
       }
-
-      if (allowed && normalizedKind === "camp" && options.source === "autonomy" &&
-          !this.autonomousCampSpacing(targetMapId).allowed) {
-        allowed = false;
-        reason = "Un camp autonome doit être distant d'au moins 10 transitions d'une infrastructure existante ou d'un autre projet autonome.";
-      }
-      const mission = this.byId.get(missionId);
-      const tree = this.manager()?.trees?.get?.(missionId);
-      const resources = lifecycle.active && mission ? this.constructionResourceStatus(mission) : null;
-      const ready = Boolean(lifecycle.active && tree?.root?.isComplete && resources?.ready &&
-        String(BF.currentEngine?.currentMapId || "") === targetMapId && !this.gateSatisfied(mission));
-      if (lifecycle.active) {
-        reason = ready ? "Prêt à positionner." : resources && !resources.ready
-          ? resources.requirements.filter(item => item.missing > 0)
-            .map(item => `${item.missing} ${item.inventoryKey || item.subject || "ressources"} manquants`).join(" · ")
-          : "Projet en cours : réunir les ressources puis positionner la structure.";
-      }
-      return {
-        ready,
-        resources,
-        kind: normalizedKind,
-        mapId: targetMapId,
-        missionId,
-        rewardId,
-        unlocked,
-        active: lifecycle.active,
-        completed: lifecycle.completed,
-        allowed,
-        reason,
-        sites
-      };
+      if (allowed && !resources?.ready) { allowed = false; reason = "Matériaux insuffisants."; }
+      if (options.source === "autonomy") { allowed = false; reason = "Positionnement disponible dans Recherche."; }
+      return { kind: normalizedKind, mapId: targetMapId, rewardId, unlocked, resources,
+        allowed, ready: allowed, active: false, completed: false, reason, sites };
     }
 
     startConstruction(kind, options = {}) {
-      const targetMapId = String(options.mapId || BF.currentEngine?.currentMapId || "");
-      const source = options.source === "autonomy" ? "autonomy" : "player";
-      const availability = this.constructionAvailability(kind, targetMapId, { source });
+      const availability = this.constructionAvailability(kind, options.mapId, options);
       if (!availability.allowed) return false;
-      const mission = this.buildConstructionMission(kind, targetMapId, source);
-      if (!mission || !this.registerDynamicMission(mission)) return false;
-      this.state.constructionInstances[mission.id] = {
-        missionId: mission.id,
-        kind: mission.constructionKind,
-        mapId: targetMapId,
-        source,
-        createdAt: Date.now()
+      const template = this.constructionTemplate(availability.kind);
+      const project = {
+        id: `blueprint:${availability.kind}:${availability.mapId}:${Date.now()}`,
+        title: template.title,
+        effects: clone(template.effects),
+        targetMapId: availability.mapId,
+        activationSource: "player",
+        blueprintConstruction: true
       };
-      this.saveState();
-      const activated = this.activateMission(mission, {
-        type: source === "autonomy" ? "autonomy.construction" : "research.blueprint",
-        mapId: targetMapId,
-        subject: mission.constructionKind
-      });
-      if (!activated) return false;
-      this.applyActivationInventoryCredits(mission);
-      global.dispatchEvent?.(new CustomEvent("bluefox:construction-mission-started", {
-        detail: { missionId: mission.id, kind: mission.constructionKind, mapId: targetMapId, source }
-      }));
-      return mission.id;
+      return this.beginSitePlacement(project);
     }
 
     validate() {
@@ -1984,6 +1928,14 @@
       // pas l'identité physique déjà figée dans le protocole ENV.
       if (entityId && !frozenEntity && !environmentEligible) return false;
 
+      // Ne copier le protocole monde que lorsqu'une preuve nouvelle sera écrite.
+      const newEntity = frozenEntity && !asArray(mapCoverage.observedEntityIds).includes(entityId);
+      const newEnvironmentInstance = instanceId && ENV_FAMILIES.some(family => {
+        const entry = mapCoverage.envFamilies?.[family];
+        return entry && asArray(entry.eligibleInstanceIds).includes(instanceId) &&
+          !asArray(entry.observedInstanceIds).includes(instanceId);
+      });
+      if (!newEntity && !newEnvironmentInstance) return false;
       const next = clone(coverage);
       const entry = next.maps[mapId];
       entry.observedEntityIds = asArray(entry.observedEntityIds);
@@ -4590,7 +4542,8 @@
       const candidates = [];
       const isPhysicalOpportunity = (mission) => Boolean(
         event?.type === "exploration.map_discovered" &&
-        /^OPP-/.test(String(mission?.id || "")) &&
+        mission?.trigger?.type === "exploration.map_discovered" &&
+        mission.trigger?.newOnly !== true &&
         asArray(mission?.trigger?.featuredMicroSceneIdsAny).length > 0
       );
 
@@ -6015,7 +5968,8 @@
           .filter(Boolean)
       );
       const physicalOpportunityIds = new Set(this.catalog
-        .filter(mission => /^OPP-/.test(String(mission.id || "")))
+        .filter(mission => mission.trigger?.type === "exploration.map_discovered" &&
+          mission.trigger?.newOnly !== true)
         .flatMap(mission => asArray(mission.trigger?.featuredMicroSceneIdsAny).map(String)));
       asArray(currentMap?.group?.userData?.microScenes).forEach(entry => {
         const id = String(entry?.id || "");
@@ -6824,6 +6778,31 @@
       return { ok: true, missionId: id };
     }
 
+    initialConstructionReceipt(mission) {
+      if (!mission || !["T03", "GAME-shelter", "GAME-base"].includes(mission.id) || mission.repeatable) return null;
+      const effect = this.constructionPlacementEffect(mission);
+      const mapId = this.missionTargetMapId(mission);
+      const receipt = this.manager()?.memory?.state?.effectReceipts?.[
+        `${mission.id}:completion:v${mission.version || 1}`
+      ];
+      if (!effect || !mapId || receipt?.missionId !== mission.id ||
+          receipt.siteId !== `${mapId}:${effect.kind}:primary` || !(Number(receipt.at) > 0)) return null;
+      // La Base remplace physiquement le Refuge ; la preuve de construction
+      // antérieure reste valable sans respawn, dépôt ni collecte supplémentaire.
+      const sites = this.siteBucket(mapId);
+      const site = sites[effect.kind] || (effect.kind === "refuge" ? sites.base : null);
+      if (!site || site.mapId !== mapId || !site.anchor ||
+          !Number.isFinite(Number(site.anchor.x)) || !Number.isFinite(Number(site.anchor.z)) ||
+          Number(site.stage) < Number(effect.stage) || !(Number(site.establishedAt) > 0)) return null;
+      if (site.kind === effect.kind && (site.id !== receipt.siteId || site.missionId !== mission.id)) return null;
+      if (site.kind !== effect.kind) {
+        const successor = this.manager()?.memory?.state?.effectReceipts?.[`${site.missionId}:completion:v1`];
+        if (successor?.siteId !== site.id || successor?.missionId !== site.missionId ||
+            !(Number(successor.at) >= Number(receipt.at))) return null;
+      }
+      return receipt;
+    }
+
     existingConstructionSite(mission) {
       // Une construction répétable reste un projet propre à son instance.
       // L'adoption ne concerne que les objectifs de construction du catalogue.
@@ -6885,6 +6864,7 @@
       if (!mission.completionGate && !standaloneConsumes && !establish) return true;
 
       if (establish) {
+        if (this.initialConstructionReceipt(mission)) return true;
         const kind = lower(establish.kind);
         const mapId =
           this.missionTargetMapId(mission) ||
@@ -6971,9 +6951,7 @@
         return lifecycle?.status === "active" && tree?.root?.isComplete;
       });
       if (!waiting) return false;
-      const before = JSON.stringify(manager.memory.state.missionLifecycle);
-      manager.syncLifecycleFromTrees?.();
-      const changed = before !== JSON.stringify(manager.memory.state.missionLifecycle);
+      const changed = manager.syncLifecycleFromTrees?.() === true;
       if (changed) {
         manager.reevaluatePendingActivations?.();
         manager.catalogController?.schedule?.();
@@ -7789,7 +7767,13 @@
       if (!node) return false;
       const inventoryKeys = this.inventoryKeysForRequirement(stock);
       if (!inventoryKeys.length) return false;
-      const available = Math.max(0, Number(BF.progression?.availableInventory?.(inventoryKeys)) || 0);
+      const receipt = this.initialConstructionReceipt(mission);
+      const committed = receipt && receipt.inventoryBypassed === false && receipt.source !== "player-existing-site"
+        ? asArray(mission.effects).filter(effect => effect.type === "inventory.consume" &&
+            this.inventoryKeysForRequirement(effect).join("|") === inventoryKeys.join("|"))
+            .reduce((total, effect) => total + Math.max(0, Number(effect.quantity) || 0), 0)
+        : 0;
+      const available = committed || Math.max(0, Number(BF.progression?.availableInventory?.(inventoryKeys)) || 0);
       const maximum = Math.max(0, Number(stock.maximum) || node.target || 0);
       const next = Math.min(node.target, maximum || node.target, available);
       const previous = Math.max(0, Number(node.progress) || 0);
@@ -7814,6 +7798,9 @@
     }
 
     reconcileStockBackedMission(mission) {
+      // La consommation déclenche des événements synchrones : attendre la
+      // fin de la transaction avant de relire le stock et son reçu durable.
+      if (this.applyingEffectIds?.has(mission?.id)) return false;
       const stocks = asArray(mission?.stockBackedSlots);
       if (!stocks.length) return false;
       const manager = this.manager();
@@ -8110,6 +8097,17 @@
     }
 
     applyEffects(mission, options = {}) {
+      this.applyingEffectIds ||= new Set();
+      if (this.applyingEffectIds.has(mission?.id)) return false;
+      this.applyingEffectIds.add(mission?.id);
+      try {
+        return this.applyEffectsTransaction(mission, options);
+      } finally {
+        this.applyingEffectIds.delete(mission?.id);
+      }
+    }
+
+    applyEffectsTransaction(mission, options = {}) {
       const effects = mission.effects || [];
       if (!effects.length) return true;
       const memory = this.manager()?.memory;
@@ -8669,7 +8667,7 @@
         ? "refuge"
         : effect.kind === "workbench"
           ? "établi"
-          : "camp";
+          : effect.kind === "base" ? "base" : "camp";
       const resumeMessage = effect.kind === "workbench"
         ? "Placement de l’établi repris. Choisissez un autre emplacement ou Échap pour annuler."
         : `Placement du ${label} repris. Choisissez un autre emplacement ou Échap pour annuler.`;
@@ -8681,9 +8679,13 @@
         kind: effect.kind,
         label,
         resumeMessage,
-        cancelMessage: "Placement annulé. La mission reste active.",
+        cancelMessage: mission.blueprintConstruction
+          ? "Placement annulé. Le plan reste disponible dans Recherche."
+          : "Placement annulé. La mission reste active.",
         startMessage: "Placement : déplacez la structure avec la souris. Clic gauche : déplacement de BlueFox. Clic droit : confirmer la position. Molette : caméra. Échap : annuler.",
         onInstall: (placement, confirmationToken) => {
+          if (mission.blueprintConstruction &&
+              !this.constructionAvailability(effect.kind, targetMapId).allowed) return false;
           if (!this.applyEffects(mission, {
             placement,
             source: "player",

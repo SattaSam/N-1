@@ -2788,12 +2788,10 @@
           : state?.active ? "Projet en cours" : entry.label || "Lancer le projet";
         button.disabled = state?.allowed !== true && state?.ready !== true;
         button.addEventListener("click", () => {
-          const missionId = state?.active ? state.missionId : research.startConstruction?.(
+          const started = research.startConstruction?.(
             entry.constructionKind, { mapId, source: "player" });
-          if (!missionId) return;
+          if (!started) return;
           panel.querySelector(".drawer-close")?.click();
-          const updated = research.constructionState?.(entry.constructionKind, mapId);
-          if (updated?.ready) research.resumePlacement?.(missionId);
           requestResearchRefresh();
         });
       } else {

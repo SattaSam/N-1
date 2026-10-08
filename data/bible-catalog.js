@@ -430,6 +430,9 @@
         })
       })
     ]),
+    rewards: Object.freeze([Object.freeze({ type: "research.blueprint", id: "base-build-v1",
+      category: "construction", constructionKind: "base", label: "Construire une base renforcée",
+      description: "Faire évoluer un refuge en base renforcée.", requiresShelter: false })]),
     narrative: Object.freeze({
       completed: Object.freeze([
         "Le Refuge est devenu une Base renforcée capable de soutenir des excursions plus lointaines."
@@ -4767,6 +4770,8 @@
     instanceScope: "map",
     localVisibility: "current-map",
     backgroundHud: true,
+    navigation: Object.freeze({ scopedTargetTravel: true, autonomousKnownReturn: true, autonomousUnknownTravel: true }),
+    mapGeneration: Object.freeze({ size: "random", biome: "random", requiredObjects: Object.freeze([Object.freeze({ type: "fog_bank", count: 1 })]) }),
     priority: 31,
     passivePriorityAxis: "research",
     ponderation: 0.45,
@@ -9762,6 +9767,7 @@
   });
 
   BF.BibleConstructionTemplates = Object.freeze({
+    base: Object.freeze({ title: base.title, effects: base.effects }),
     camp: Object.freeze({
       title: "Établir un camp",
       description: "Réunir dix bois puis revenir sur la map choisie pour installer un camp.",

@@ -72,7 +72,10 @@
     const applyScope = (node) => {
       node.id = idMap.get(node.id);
       node.requires = (node.requires || []).map((id) => idMap.get(id) || id);
-      node.params = { ...(node.params || {}), mapId: scopeId };
+      node.params = { ...(node.params || {}) };
+      // L'identité scoped reste stable ; seule une recherche explicitement
+      // mobile peut consommer une cible hors de sa map d'origine.
+      if (base.navigation?.scopedTargetTravel !== true) node.params.mapId = scopeId;
       (node.children || []).forEach(applyScope);
     };
 

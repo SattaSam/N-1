@@ -9,7 +9,8 @@
       : Object.values(BF.BibleCatalog || {});
 
   const missionById = (missionId) =>
-    catalog().find((mission) => mission?.id === missionId) || null;
+    catalog().find((mission) => mission?.id === missionId) ||
+    BF.bibleRuntime?.localMissionInstance?.(missionId) || null;
 
   const missionStatus = (engine, missionId) =>
     engine?.missionManager?.memory?.state?.missionLifecycle?.[missionId]?.status || null;

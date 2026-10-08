@@ -560,13 +560,16 @@
 
   const chooseScene = (random, biomeId, kind, options = {}) => {
     const compatible = BF.MicroScenes?.list?.(biomeId)
-      ?.filter((scene) => !scene.missionOnly) || [];
+      ?.filter((scene) => !scene.missionOnly &&
+        (scene.id !== "MSC-CUSTOM-NID-DE-FAUNE5" ||
+          BF.bibleRuntime?.foundationTutorialUnlocked?.() === true)) || [];
     const opportunityKeys = opportunityMicroSceneIds();
     const missionKeys = new Set([
       "MSC-ABANDONED-DRONE-001", "MSC-TECH-RELAY-001",
       "MSC-ANCIENT-GATEWAY-001", "MSC-RUINED-SHRINE-001",
       "MSC-ECO-STAR-001",
-      "MSC-PREDATOR-FLORA-001", "MSC-LOCAL-STORM-001"
+      "MSC-PREDATOR-FLORA-001", "MSC-LOCAL-STORM-001",
+      "MSC-CUSTOM-NID-DE-FAUNE5"
     ]);
     const candidates = compatible.filter((scene) => {
       if (kind === "mission") {

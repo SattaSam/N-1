@@ -241,6 +241,7 @@
     activateMission(missionId, options = {}) {
       const definition = this.definition(missionId);
       if (!definition) return false;
+      if (!definition.repeatable && this.memory.state.missionLifecycle?.[missionId]?.status === "completed") return false;
       if (!this.trees.has(missionId)) {
         this.trees.set(missionId, this.planner.restoreOrCreate(missionId));
       }
@@ -362,6 +363,7 @@
     startMission(missionId, options = {}) {
       const definition = this.definition(missionId);
       if (!definition) return false;
+      if (!definition.repeatable && this.memory.state.missionLifecycle?.[missionId]?.status === "completed") return false;
       const prerequisites = Array.isArray(options.prerequisites)
         ? options.prerequisites.filter(Boolean)
         : [];
@@ -424,7 +426,9 @@
     }
 
     setPrimaryMission(missionId, publish = true, reason = "Priorité choisie explicitement.") {
-      if (!this.definition(missionId)) return false;
+      const definition = this.definition(missionId);
+      if (!definition) return false;
+      if (!definition.repeatable && this.memory.state.missionLifecycle?.[missionId]?.status === "completed") return false;
       if (!this.trees.has(missionId)) {
         this.trees.set(missionId, this.planner.restoreOrCreate(missionId));
       }
@@ -1142,8 +1146,8 @@
         mission?.trigger?.type !== "exploration.map_discovered" &&
         !hasDeclaredUnknownTravelStep &&
         mission?.navigation?.controlsUnknownTravel !== true &&
-        mission?.instanceScope !== "map" &&
-        mission?.localVisibility !== "current-map" &&
+        ((mission?.instanceScope !== "map" && mission?.localVisibility !== "current-map") ||
+          (mission?.navigation?.scopedTargetTravel === true && mission?.navigation?.autonomousUnknownTravel === true)) &&
         !this.missionHasHistoricalCollectionObjective(missionId) &&
         !knownLocalMissionTarget &&
         !locallyBoundMissionWork &&
@@ -1522,7 +1526,9 @@
 
       // Relire le contrat objet canonique dans ObjectM0 : une famille seule
       // ne prouve pas la présence du type précis demandé par la feuille.
-      if (params.objectId || params.cuoType ||
+      if (params.objectId || params.cuoType || params.category ||
+          (Array.isArray(params.tagsAny) && params.tagsAny.length) ||
+          (Array.isArray(params.tagsAll) && params.tagsAll.length) ||
           (Array.isArray(params.cuoTypes) && params.cuoTypes.length)) {
         criteria.sourceNodeId = node.id;
       }
@@ -1666,8 +1672,8 @@
       currentMapId
     ) {
       if (
-        mission?.instanceScope === "map" ||
-        mission?.localVisibility === "current-map" ||
+        ((mission?.instanceScope === "map" || mission?.localVisibility === "current-map") &&
+          mission?.navigation?.scopedTargetTravel !== true) ||
         this.missionHasHistoricalCollectionObjective(missionId)
       ) return false;
       const tree = this.trees.get(missionId) || null;
@@ -1711,8 +1717,8 @@
       currentMapId
     ) {
       if (
-        mission?.instanceScope === "map" ||
-        mission?.localVisibility === "current-map" ||
+        ((mission?.instanceScope === "map" || mission?.localVisibility === "current-map") &&
+          mission?.navigation?.scopedTargetTravel !== true) ||
         this.missionHasHistoricalCollectionObjective(missionId)
       ) return null;
       const tree = this.trees.get(missionId) || null;
@@ -3011,7 +3017,7 @@
 
     isMissionExclusiveToCurrentMap(missionId) {
       const definition = this.definition(missionId) || {};
-      if (definition.instanceScope !== "map") return false;
+      if (definition.instanceScope !== "map" || definition.navigation?.scopedTargetTravel === true) return false;
       const currentMapId = String(this.engine?.currentMapId || "");
       if (!currentMapId) return false;
       const separator = String(missionId || "").indexOf("@");
@@ -3022,7 +3028,7 @@
     }
 
     isMissionVisibleOnCurrentMap(missionId, definition = this.definition(missionId) || {}) {
-      if (definition.localVisibility !== "current-map") return true;
+      if (definition.localVisibility !== "current-map" || definition.navigation?.scopedTargetTravel === true) return true;
       const currentMapId = String(this.engine?.currentMapId || "");
       if (!currentMapId) return false;
       const separator = String(missionId || "").indexOf("@");
@@ -4618,6 +4624,14 @@
     syncLifecycleFromTrees() {
       let changed = false;
       this.trees.forEach((tree, missionId) => {
+        const persistedLifecycle = this.memory.state.missionLifecycle?.[missionId];
+        // Une réussite non répétable est un fait historique, même si le site
+        // qui l'a validée a ensuite évolué (Refuge -> Base).
+        if (persistedLifecycle?.status === "completed" && !this.definition(missionId)?.repeatable) {
+          if (this.activeMissionIds.includes(missionId)) changed = true;
+          this.activeMissionIds = this.activeMissionIds.filter(id => id !== missionId);
+          return;
+        }
         if (!tree.root.isComplete) return;
         const lifecycle = this.ensureLifecycle(missionId);
         const gate = BF.bibleRuntime?.completionGateState?.(missionId) || null;

@@ -591,7 +591,13 @@
     });
     select.value = destinations[0].mapId;
     if (destinations.length > 1) container.appendChild(select);
-    const button = createTextElement("button", "", "Retourner vers la map de cette mission");
+    const button = createTextElement("button", "", "");
+    const updateLabel = () => {
+      const destination = destinations.find(entry => entry.mapId === select.value) || destinations[0];
+      button.textContent = `Retourner vers ${destination.label}`;
+    };
+    updateLabel();
+    select.addEventListener("change", updateLabel);
     button.type = "button";
     const feedback = createTextElement("small", "", "");
     button.addEventListener("click", () => {

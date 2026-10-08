@@ -4262,9 +4262,9 @@
       const fatigue = survival.fatigue || { level: "normal", movement: 1, actionDuration: 1 };
       this.character.fatigueSpeedMultiplier = fatigue.movement || 1;
 
-      // Une mission principale active conserve l'autorité, même lorsqu'elle
-      // attend temporairement une cible, une direction ou une action joueur.
-      if (this.missionManager?.hasPrimaryMissionAuthority?.() ||
+      // MissionManager possède l'autorité globale : Top1, relais Top2→Top4,
+      // transitions structurées et retours joueur avant l'autonomie libre.
+      if (this.missionManager?.hasMissionExecutionAuthority?.() ||
           this.missionManager?.pendingPlayerActionReturn?.()) return;
 
       this.lastAutonomyAt = now;
@@ -4472,6 +4472,9 @@
         return;
       }
       if (now - this.lastActivityAt < 12000) return;
+      // Le contrôle global intervient uniquement avant une initiative libre :
+      // ne pas ajouter un scan Top4 aux frames déjà occupées/en récupération.
+      if (this.missionManager?.hasMissionExecutionAuthority?.()) return;
 
       this.pendingInteraction = null;
       this.character.cancelInteraction();
