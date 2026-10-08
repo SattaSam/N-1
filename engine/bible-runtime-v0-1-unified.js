@@ -250,7 +250,8 @@
           !activation.tagsAny.some((tag) => tags.has(lower(tag)))) return false;
       if (activation.tagsAll?.length &&
           !activation.tagsAll.every((tag) => tags.has(lower(tag)))) return false;
-      if (activation.requireMicroScene === true && !event.persistentMicroSceneId) {
+      if (activation.requireMicroScene === true &&
+          !event.persistentMicroSceneId && !event.microSceneId) {
         return false;
       }
       return true;

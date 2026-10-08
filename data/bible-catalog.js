@@ -3191,7 +3191,8 @@
         target: 1,
         requires: Object.freeze([]),
         params: Object.freeze({
-          subject: "fauna"
+          subject: "fauna",
+          category: "fauna"
         })
       }),
       Object.freeze({
@@ -3215,6 +3216,7 @@
         requires: Object.freeze(["reachEastMap"]),
         params: Object.freeze({
           subject: "fauna",
+          category: "fauna",
           relation: Object.freeze({
             fromSlot: "referenceFauna",
             sameBy: Object.freeze(["objectId"]),
@@ -4645,8 +4647,8 @@
     scoreTrauma: 35,
     narrativeAxis: "NATURALISTE",
     reinforcesNarrativeAxis: Object.freeze({ axis: "NATURALISTE", weight: 1 }),
-    localMission: Object.freeze({ activation: Object.freeze({ type: "interaction.any", subject: "fauna" }) }),
-    slots: Object.freeze({ study: Object.freeze({ title: "Observer une espèce non étudiée", target: 1, params: Object.freeze({ subject: "fauna", preferUnstudied: true }) }) })
+    localMission: Object.freeze({ activation: Object.freeze({ type: "interaction.any", subject: "fauna", category: "fauna" }) }),
+    slots: Object.freeze({ study: Object.freeze({ title: "Observer une espèce non étudiée", target: 1, params: Object.freeze({ subject: "fauna", category: "fauna", preferUnstudied: true }) }) })
   });
 
   const LOC13 = Object.freeze({
