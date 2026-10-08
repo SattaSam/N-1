@@ -3679,6 +3679,60 @@
           mapId: engine.currentMapId, anchor: point, radius,
           distance: Math.hypot(player.x - point.x, player.z - point.z) });
       });
+      // Les rencontres relationnelles ont leur propre producteur de preuve.
+      // Fournir uniquement le déplacement, jamais une observation de substitution.
+      const mission = this.byId.get(missionId) || this.dynamicMissions.get(missionId);
+      const validation = mission?.runtimeValidation;
+      const contactNode = validation?.type === "civilization-contact"
+        ? tree.findSequenceSlot(validation.slot || "contact") : null;
+      if (contactNode?.params?.catalogManaged === true && available.has(contactNode.id)) {
+        const targetMapId = this.missionTargetMapId(mission);
+        this.npcEncounterEntries(missionId).forEach(({ entry }) => {
+          if (targetMapId && targetMapId !== String(engine.currentMapId)) return;
+          if (entry.requiresSlotComplete &&
+              !tree.findSequenceSlot(entry.requiresSlotComplete)?.isComplete) return;
+          const state = this.manager()?.memory?.getFact?.(
+            this.npcEncounterFactKey(missionId, entry), {}) || {};
+          if (state.despawned) return;
+          const root = this.npcEncounterRoot(entry);
+          const npcState = root && BF.NpcRuntime?.getState?.(root);
+          if (!root || !root.parent || root.visible === false || npcState?.enabled === false) return;
+          let parent = root;
+          while (parent && parent !== engine.currentMap?.group) parent = parent.parent;
+          if (!parent) return;
+          const point = this.observationPoint(root, engine);
+          const distance = Math.hypot(player.x - point.x, player.z - point.z);
+          const triggerDistance = Number(entry.triggerDistance);
+          if (!(triggerDistance > 0)) return;
+          const rearmDistance = Math.max(triggerDistance + 1,
+            Number(entry.rearmDistance) || triggerDistance + 4);
+          let anchor = point;
+          let radius = Math.max(1, triggerDistance - 0.5);
+          if (["signal-repeat", "return"].includes(validation.phase) &&
+              state.armed === false && distance <= rearmDistance) {
+            // Le fait armed appartient au monitor existant. Une sortie physique
+            // réarme celui-ci et NpcRuntime produit l'identité de rencontre suivante.
+            const angle = Math.atan2(player.z - point.z, player.x - point.x);
+            anchor = null;
+            radius = 0.8;
+            for (let index = 0; index < 12; index += 1) {
+              const direction = angle + index * Math.PI / 6;
+              const candidate = new engine.THREE.Vector3(
+                point.x + Math.cos(direction) * (rearmDistance + 1.6), 0,
+                point.z + Math.sin(direction) * (rearmDistance + 1.6));
+              engine.character.constrainToWalkable(candidate);
+              if (Math.hypot(candidate.x - point.x, candidate.z - point.z) <=
+                  rearmDistance + radius ||
+                  engine.character.positionOverlapsCollider(candidate)) continue;
+              anchor = candidate;
+              break;
+            }
+            if (!anchor) return;
+          }
+          candidates.push({ missionId, nodeId: contactNode.id, context: entry,
+            mapId: engine.currentMapId, anchor, radius, distance });
+        });
+      }
       candidates.sort((a, b) => a.distance - b.distance);
       return candidates[0] || null;
     }
@@ -3718,14 +3772,15 @@
     }
 
 
-    knownMapForCuoType(cuoType) {
+    knownMapForCuoType(cuoType, preferredMapId = "") {
       const engine = BF.currentEngine;
       if (!engine?.discoveredMaps || !cuoType) return "";
       const expected = String(cuoType);
       const current = String(engine.currentMapId || "");
       const candidates = [...engine.discoveredMaps]
         .map(String)
-        .filter((mapId) => mapId && mapId !== current)
+        .filter((mapId) => mapId &&
+          (mapId !== current || mapId === String(preferredMapId)))
         .filter((mapId) => {
           const definition = BF.maps?.[mapId];
           const requiredObjectPresent = asArray(
@@ -3734,6 +3789,9 @@
             String(entry?.type || entry?.cuoType || "") === expected
           );
           if (requiredObjectPresent) return true;
+          // Les villes fixes découvertes portent leurs PNJ dans customObjects.
+          if (asArray(definition?.customObjects).some((entry) =>
+            String(entry?.type || entry?.cuoType || "") === expected)) return true;
 
           // Une destination connue peut porter le CUO via une micro-scène
           // réellement matérialisée, sans l'avoir dupliqué dans requiredObjects.
@@ -3752,13 +3810,21 @@
           mapId,
           route: engine.findKnownRoute?.(current, mapId)
         }))
-        .filter((entry) => Array.isArray(entry.route) && entry.route.length > 1)
-        .sort((left, right) => left.route.length - right.route.length);
+        .filter((entry) => Array.isArray(entry.route) &&
+          (entry.route.length > 1 ||
+            entry.route.length === 1 && entry.mapId === current &&
+            entry.mapId === String(preferredMapId)))
+        .sort((left, right) =>
+          Number(right.mapId === String(preferredMapId)) -
+            Number(left.mapId === String(preferredMapId)) ||
+          left.route.length - right.route.length);
       return candidates[0]?.mapId || "";
     }
 
-    npcEncounterEntries() {
-      return this.allMissions().flatMap((mission) => {
+    npcEncounterEntries(missionId = null) {
+      const missions = missionId == null ? this.allMissions()
+        : [this.byId.get(missionId) || this.dynamicMissions.get(missionId)].filter(Boolean);
+      return missions.flatMap((mission) => {
         if (!this.missionLifecycle(mission.id).active) return [];
         return asArray(mission?.npcEncounters)
           .filter((entry) => entry && entry.cuoType)
@@ -3900,6 +3966,12 @@
 
         const armed = state.armed !== false;
         if (!armed || distance >= triggerDistance) return;
+        // Une nouvelle rencontre ne conserve pas la prudence de la précédente.
+        // Attendre sa preuve réelle avant le contact automatique ; les contacts
+        // manuels et les autres patrons de rencontre restent inchangés.
+        if (entry.autoContact === true &&
+            mission.runtimeValidation?.type === "civilization-contact" &&
+            BF.NpcRuntime?.getState?.(root)?.cautiousQualified !== true) return;
 
         const reaction = entry.spatialDecision === true
           ? BF.NpcRuntime?.chooseRelationalDistance?.(root, {
@@ -4936,13 +5008,20 @@
       const civilizationId = candidateIds.find((id) => id !== selected) || "";
       if (!civilizationId) return null;
       const entry = entries.find((candidate) => lower(candidate?.selectionValue) === civilizationId) || null;
-      const city = global.BlueFoxCivilizationCities?.[civilizationId] ||
-        BF.BlueFoxCivilizationCities?.[civilizationId] ||
-        null;
+      const cuoType = String(entry?.cuoType || "");
+      const existing = this.manager()?.memory?.getFact?.(nextSelectionFact, null);
+      const previousMapId = lower(existing?.civilizationId) === civilizationId
+        ? String(existing?.mapId || "") : "";
+      const currentMapId = String(BF.currentEngine?.currentMapId || "");
+      const localNpc = cuoType && this.objectProximityAnchor(cuoType);
+      const mapId = previousMapId === currentMapId && localNpc
+        ? currentMapId
+        : this.knownMapForCuoType(cuoType, previousMapId) ||
+          (localNpc ? currentMapId : "");
       return Object.freeze({
         civilizationId,
-        cuoType: String(entry?.cuoType || ""),
-        mapId: String(city?.mapId || ""),
+        cuoType,
+        mapId,
         nextMissionId,
         nextSelectionFact
       });
@@ -4959,12 +5038,16 @@
       }
 
       const existing = manager?.memory?.getFact?.(target.nextSelectionFact, null);
-      if (lower(existing?.civilizationId) !== target.civilizationId) {
+      if (lower(existing?.civilizationId) !== target.civilizationId ||
+          String(existing?.mapId || "") !== target.mapId ||
+          String(existing?.cuoType || "") !== target.cuoType) {
         manager?.memory?.setFact?.(target.nextSelectionFact, {
+          ...(lower(existing?.civilizationId) === target.civilizationId ? existing : {}),
           civilizationId: target.civilizationId,
           cuoType: target.cuoType,
           mapId: target.mapId,
-          selectedAt: Date.now(),
+          selectedAt: lower(existing?.civilizationId) === target.civilizationId
+            ? existing.selectedAt || Date.now() : Date.now(),
           sourceMissionId: mission.id
         });
         manager?.memory?.save?.();

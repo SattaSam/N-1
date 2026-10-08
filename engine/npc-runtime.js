@@ -1016,6 +1016,7 @@
         moving: Boolean(state.motion),
         relationRank: state.relationRank,
         civilizationId: civilizationIdForType(state.type),
+        cautiousQualified: state.cautiousEmitted === true,
         enabled: state.enabled
       }) : null;
     },
