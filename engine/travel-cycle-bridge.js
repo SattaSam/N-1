@@ -30,7 +30,7 @@
     return 0;
   };
 
-  const eventMatchesFilters = (node, detail) => {
+  const eventMatchesFilters = (node, detail, manager = BF.currentEngine?.missionManager) => {
     const params = node?.params || {};
     if (params.direction != null &&
         normalize(params.direction) !== normalize(detail.direction)) {
@@ -43,6 +43,14 @@
     if (params.toMapId != null &&
         normalize(params.toMapId) !== normalize(detail.toMapId)) {
       return false;
+    }
+    // Une destination mémorisée contraint l'arrivée autant qu'un toMapId.
+    // L'absence du fait ne doit jamais transformer un retour en voyage libre.
+    if (params.targetMapFact) {
+      const fact = manager?.memory?.getFact?.(String(params.targetMapFact), null);
+      const field = String(params.targetMapField || "mapId");
+      const target = fact && typeof fact === "object" ? fact[field] || fact.mapId : null;
+      if (!target || normalize(target) !== normalize(detail.toMapId)) return false;
     }
     if (params.transitionSource != null &&
         normalize(params.transitionSource) !== normalize(detail.source)) {
@@ -165,43 +173,6 @@
     return true;
   };
 
-  const bindArrivalFacts = (manager, missionId, node, detail) => {
-    const definition = manager?.definition?.(missionId);
-    const sequence = Array.isArray(definition?.sequence)
-      ? definition.sequence
-      : [];
-    const slot = sequence.find((step) =>
-      String(node?.id || "") === `${missionId}:${step?.slot || ""}`
-    )?.slot || null;
-    if (!slot || !detail?.toMapId) return 0;
-
-    const bindings = new Map();
-    sequence
-      .filter((step) => Array.isArray(step?.requires) && step.requires.includes(slot))
-      .forEach((step) => {
-        const key = String(step?.params?.requiredMapFact || "");
-        const field = String(step?.params?.requiredMapField || "mapId");
-        if (key) bindings.set(`${key}::${field}`, { key, field });
-      });
-
-    let changed = 0;
-    bindings.forEach(({ key, field }) => {
-      const previous = manager.memory?.getFact?.(key, {}) || {};
-      if (normalize(previous?.[field]) === normalize(detail.toMapId)) return;
-      manager.memory?.setFact?.(key, {
-        ...previous,
-        [field]: detail.toMapId,
-        mapId: detail.toMapId,
-        toMapId: detail.toMapId,
-        arrived: true,
-        updatedAt: Date.now()
-      });
-      changed += 1;
-    });
-    if (changed) manager.memory?.save?.();
-    return changed;
-  };
-
   const bindCompletionArrivalFact = (manager, node, detail) => {
     if (!node?.isComplete || !detail?.toMapId) return 0;
     const key = String(node?.params?.completionArrivalFact || "");
@@ -243,8 +214,8 @@
         const node = tree.find?.(`${missionId}:${step.slot}`);
         if (!node?.isComplete) return;
         const detail = { toMapId: currentMapId, mapId: currentMapId };
-        if (!eventMatchesFilters(node, detail)) return;
-        changed += bindArrivalFacts(manager, missionId, node, detail);
+        if (!eventMatchesFilters(node, detail, manager)) return;
+        changed += bindCompletionArrivalFact(manager, node, detail);
       });
     });
 
@@ -262,7 +233,7 @@
       tree.availableLeaves().forEach((node) => {
         if (node.isComplete || node.params?.returnConsumedOnly !== true) return;
         if (Missions.normalizeActionType(node.type) !== Missions.ActionType.TRAVEL) return;
-        if (!eventMatchesFilters(node, detail)) return;
+        if (!eventMatchesFilters(node, detail, manager)) return;
         if (node.increment(1)) {
           changed += 1;
           treeChanged = true;
@@ -293,10 +264,9 @@
     if (!eventDriven && node.params?.biblePattern !== "TRAVEL_CYCLE") return false;
     if (Missions.normalizeActionType(node.type) !== Missions.ActionType.TRAVEL) return false;
     if (!generatedTargetMatchesTravel(manager, missionId, node, detail)) return false;
-    if (!eventMatchesFilters(node, detail)) return false;
+    if (!eventMatchesFilters(node, detail, manager)) return false;
     if (!progressTravelNode(node, detail)) return false;
 
-    bindArrivalFacts(manager, missionId, node, detail);
     bindCompletionArrivalFact(manager, node, detail);
     if (node.isComplete) {
       const key = `missionReturnIntent:${missionId}`;
@@ -332,12 +302,11 @@
         if (!eventDriven && node.params?.biblePattern !== "TRAVEL_CYCLE") return;
         if (Missions.normalizeActionType(node.type) !== Missions.ActionType.TRAVEL) return;
         if (!generatedTargetMatchesTravel(manager, missionId, node, detail)) return;
-        if (!eventMatchesFilters(node, detail)) return;
+        if (!eventMatchesFilters(node, detail, manager)) return;
 
         if (progressTravelNode(node, detail)) {
           changed += 1;
           treeChanged = true;
-          bindArrivalFacts(manager, missionId, node, detail);
           bindCompletionArrivalFact(manager, node, detail);
           if (node.isComplete) {
             const key = `missionReturnIntent:${missionId}`;

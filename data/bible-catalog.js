@@ -902,7 +902,7 @@
         title: "Découvrir une première nouvelle map au Sud",
         action: "travel",
         target: 1,
-        params: Object.freeze({ eventDriven: true, newOnly: true, distinctBy: "mapId", direction: "south" })
+        params: Object.freeze({ eventDriven: true, newOnly: true, distinctBy: "mapId", direction: "south", completionArrivalFact: "gameCartographer:map1", completionArrivalField: "mapId" })
       }),
       Object.freeze({
         slot: "explore1",
@@ -921,7 +921,7 @@
         action: "travel",
         target: 1,
         requires: Object.freeze(["explore1"]),
-        params: Object.freeze({ eventDriven: true, newOnly: true, distinctBy: "mapId", direction: "south" })
+        params: Object.freeze({ eventDriven: true, newOnly: true, distinctBy: "mapId", direction: "south", completionArrivalFact: "gameCartographer:map2", completionArrivalField: "mapId" })
       }),
       Object.freeze({
         slot: "explore2",
@@ -5356,7 +5356,7 @@
     mapGeneration: Object.freeze({ size: "random", biome: "random", requiredMicroScenes: Object.freeze([Object.freeze({ id: "MSC-ECO-FOSSIL-001", persistent: true, spawnOnce: true, contextRole: "energyRootContext" })]) }),
     sequence: Object.freeze([
       Object.freeze({ slot: "reachEnergyRoots", title: "Rejoindre un territoire où sol et végétation peuvent être comparés", action: "travel", target: 1, requires: Object.freeze([]), params: Object.freeze({ eventDriven: true, newOnly: true, distinctBy: "mapId" }) }),
-      Object.freeze({ slot: "rootFlora", title: "Analyser la végétation de la micro-scène", action: "analyze", target: 1, requires: Object.freeze(["reachEnergyRoots"]), params: Object.freeze({ subject: "flora", microSceneId: "MSC-ECO-FOSSIL-001" }) }),
+      Object.freeze({ slot: "rootFlora", title: "Analyser la végétation de la micro-scène", action: "analyze", target: 1, requires: Object.freeze(["reachEnergyRoots"]), params: Object.freeze({ subject: "flora", microSceneId: "MSC-ECO-FOSSIL-001", requiredMapFact: "tutorialExcursion:FLO-05", requiredMapField: "generatedTargetMapId" }) }),
       Object.freeze({ slot: "groundReference", title: "Analyser une référence géologique dans la même micro-scène", action: "analyze", target: 1, requires: Object.freeze(["rootFlora"]), params: Object.freeze({ tagsAny: Object.freeze(["rock", "geology", "mineral"]), microSceneId: "MSC-ECO-FOSSIL-001", relation: Object.freeze({ fromSlot: "rootFlora", sameBy: Object.freeze(["persistentMicroSceneId", "mapId"]) }) }) })
     ]),
     narrative: Object.freeze({
@@ -9640,7 +9640,7 @@
         action: "travel",
         target: 1,
         requires: Object.freeze(["rockyContribution", "translucentContribution"]),
-        params: Object.freeze({ eventDriven: true, toMapId: "custom-map-33-temple-magnet" })
+        params: Object.freeze({ eventDriven: true, toMapId: "custom-map-33-temple-magnet", completionArrivalFact: "dip03:temple-map", completionArrivalField: "mapId" })
       }),
       Object.freeze({
         slot: "delegateRocky1",

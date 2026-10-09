@@ -261,6 +261,7 @@
             firstKnownAt: Number(event.at) || Date.now(),
             lastKnownAt: Number(event.at) || Date.now(),
             knowledgeLevel: level,
+            hasInteraction: event.isLocalInteraction === true,
             resources: {},
             families: {}
           };
@@ -275,6 +276,8 @@
           instance.resources ||= {};
           instance.families ||= {};
         }
+
+        if (event.isLocalInteraction === true) instance.hasInteraction = true;
 
         const resourceKeys = [...new Set([
           event.inventoryKey
@@ -817,7 +820,8 @@
     const site = system.siteById.get(identity.microSceneInstanceId);
     const slot = identity.microSceneObjectIndex;
     const studied = slot != null && site?.instances?.[`slot:${Number(slot)}`];
-    return Boolean(site?.mapId === mapId && Number(studied?.knowledgeLevel) >= 2);
+    return Boolean(site?.mapId === mapId && studied?.hasInteraction !== false &&
+      Number(studied?.knowledgeLevel) >= 2);
   };
   BF.getMapProgressionIndicators = (mapId) => system.getMapIndicators(mapId);
   BF.getKnownSites = (criteria) => system.getKnownSites(criteria);

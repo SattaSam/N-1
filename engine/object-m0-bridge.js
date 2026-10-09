@@ -1443,6 +1443,15 @@
 
   const candidateWasStudied = (resolved) => {
     const state = interactionState(resolved);
+    if (state.collected || Number(state.collectionCount || 0) > 0) return true;
+    // Local novelty means an interaction on this map. Knowledge and automatic
+    // fauna observations may already mark the object observed globally.
+    if (typeof BF.hasLocalObjectInteraction === "function") {
+      return BF.hasLocalObjectInteraction(BF.currentEngine?.currentMapId, {
+        ...(BF.ObjectEvents?.siteContext?.(resolved.object, { mapId: BF.currentEngine?.currentMapId }) || {}),
+        instanceId: resolved.data?.instanceId || resolved.rootData?.instanceId
+      });
+    }
     return Boolean(
       state.observed || state.inspected || state.analyzed || state.identified ||
       state.collected || Number(state.collectionCount || 0) > 0 ||

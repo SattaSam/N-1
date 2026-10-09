@@ -5489,6 +5489,9 @@
         const validation = mission?.runtimeValidation || {};
         if (validation.type !== "long-expedition" || !validation.remarkableFact) continue;
         if (!this.missionLifecycle(mission.id).active) continue;
+        // La première rencontre est le site de référence de cette expédition.
+        // Une nouvelle rareté ne déplace ni son étude ni sa future balise.
+        if (manager.memory.getFact?.(validation.remarkableFact, null)?.mapId) continue;
         manager.memory.setFact?.(validation.remarkableFact, {
           mapId: String(event.mapId),
           featuredMicroSceneIds: [...asArray(event.featuredMicroSceneIds)],
@@ -5563,6 +5566,10 @@
 
     handleLongExpeditionStudyEvent(event = {}) {
       if (!["interaction.observe", "interaction.inspect", "interaction.analyze"].includes(String(event.type || ""))) return false;
+      // OBJECT_SEEN est normalisé en observe, mais le repérage Scout n'est
+      // pas une interaction physique d'étude par BlueFox.
+      if (!["PHENOMENON_OBSERVED", "OBJECT_INSPECTED", "OBJECT_ANALYZED"]
+          .includes(String(event.rawType || ""))) return false;
       const manager = this.manager();
       if (!manager?.memory) return false;
       let changed = false;
@@ -6150,7 +6157,11 @@
         amount: 1
       };
 
-      this.captureLongExpeditionRemarkableMap(detail, event);
+      if (this.captureLongExpeditionRemarkableMap(detail, event)) {
+        // Après le quota de voyages, cette rencontre peut être le seul fait
+        // nouveau : ne pas attendre la publication d'une autre mission.
+        this.reconcileLongExpeditionValidations();
+      }
       this.progressLongExpeditionTeleport(detail);
 
       const crossing = this.consumeTriggerEvent({

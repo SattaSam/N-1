@@ -128,10 +128,20 @@
     const targetScenes = existingConfigured > zones.length * 3
       ? existingConfigured
       : Math.max(existingConfigured, regularLimit);
+    // Les installations ajoutées après la découverte ne changent ni les
+    // quotas naturels ni la séquence RNG du peuplement déjà mémorisable par seed.
+    const isConstruction = (scene) => {
+      const id = scene?.microSceneId || scene?.id;
+      const template = BF.MicroScenes?.get?.(id);
+      return template?.rarity === "constructed" ||
+        ["camp", "refuge", "shelter", "base", "workbench", "deployed_beacon"]
+          .includes(String(scene?.kind || scene?.contextRole || ""));
+    };
     const sceneCountsByZone = () => {
       const counts = zones.map(() => 0);
       const indexed = new Set();
       (this.microSceneInstances || []).forEach((scene) => {
+        if (isConstruction(scene)) return;
         const root = scene.instanceRoot || scene.records?.[0]?.root;
         const point = root?.getWorldPosition?.(new this.THREE.Vector3()) || scene.anchor;
         if (!point) return;
@@ -140,7 +150,7 @@
       });
       // Les ancrages persistants sont déjà réservés même avant leur instanciation.
       (options.definition?.persistentMicroScenes || []).forEach((scene) => {
-        if (scene.persistent === false || !scene.anchor || indexed.has(String(scene.instanceId))) return;
+        if (scene.persistent === false || !scene.anchor || isConstruction(scene) || indexed.has(String(scene.instanceId))) return;
         counts[nearestZoneIndex(zones, scene.anchor)] += 1;
       });
       return counts;
@@ -153,12 +163,13 @@
         radius: BF.ObjectLibrary.getMapPlacement(record.type)?.radius || 1 };
     });
     const reservations = [];
+    const constructionReservations = [];
     const reserveScene = (scene) => {
       const footprint = BF.ObjectSpawner.microSceneFootprint(this.THREE, scene);
       const root = scene.instanceRoot;
       if (!footprint) return;
       const p = root?.getWorldPosition(new this.THREE.Vector3()) || scene.anchor || { x: 0, z: 0 };
-      reservations.push({ minX: p.x + footprint.minX, maxX: p.x + footprint.maxX,
+      (isConstruction(scene) ? constructionReservations : reservations).push({ minX: p.x + footprint.minX, maxX: p.x + footprint.maxX,
         minZ: p.z + footprint.minZ, maxZ: p.z + footprint.maxZ });
     };
     (this.microSceneInstances || []).forEach(reserveScene);
@@ -187,7 +198,7 @@
         box.minX = Math.min(box.minX, x - r); box.maxX = Math.max(box.maxX, x + r);
         box.minZ = Math.min(box.minZ, z - r); box.maxZ = Math.max(box.maxZ, z + r);
       });
-      reservations.push(box);
+      (isConstruction(scene) ? constructionReservations : reservations).push(box);
     });
     const overlapsReservation = (x, z, radius) => reservations.some(box =>
       x + radius + 0.55 > box.minX && x - radius - 0.55 < box.maxX &&
@@ -412,7 +423,39 @@
     });
 
 
+    const clearConstructionOverlaps = () => {
+      if (!constructionReservations.length) return 0;
+      const removed = this.instances.slice(startIndex).filter((record) => {
+        const source = String(record.root?.userData?.spawnSource || "");
+        if (source !== "map-population" && !source.startsWith("decorative-microscene:")) return false;
+        const point = record.root?.getWorldPosition?.(new this.THREE.Vector3()) || record.position;
+        const radius = BF.ObjectLibrary.getMapPlacement(record.type)?.radius || 1;
+        return constructionReservations.some(box =>
+          point.x + radius + 0.55 > box.minX && point.x - radius - 0.55 < box.maxX &&
+          point.z + radius + 0.55 > box.minZ && point.z - radius - 0.55 < box.maxZ);
+      });
+      const roots = new Set(removed.map(record => record.root));
+      const hitboxes = new Set(removed.map(record => record.instance?.hitbox).filter(Boolean));
+      const prune = (array, predicate) => {
+        if (!Array.isArray(array)) return;
+        for (let i = array.length - 1; i >= 0; i -= 1) if (predicate(array[i])) array.splice(i, 1);
+      };
+      removed.forEach(record => {
+        if (record.root?.userData) record.root.userData.active = false;
+        if (record.instance?.hitbox?.userData) record.instance.hitbox.userData.active = false;
+        record.root?.parent?.remove(record.root);
+        BF.disposeObject?.(record.root);
+      });
+      prune(this.instances, record => roots.has(record.root));
+      prune(options.interactables, object => hitboxes.has(object) || roots.has(object?.userData?.worldAnchor));
+      prune(options.colliders, collider => roots.has(collider?.owner));
+      prune(options.animatedObjects, object => roots.has(object?.root));
+      this.microSceneInstances.forEach(scene => prune(scene.records, record => roots.has(record.root)));
+      return removed.length;
+    };
+
     if (isTutorialProtected(options.definition)) return {
+      removedConstructionOverlaps: clearConstructionOverlaps(),
       ...result, microSceneBudgetSeparate: true, decorativeMicroScenes: 0,
       decorativeMicroScenesByZone: zoneStats.map(() => 0),
       populationHierarchyVersion: VERSION, tutorialPopulationProtected: true
@@ -527,7 +570,8 @@
       microSceneBudgetSeparate: true,
       decorativeMicroScenes: zoneStats.reduce((sum, stat) => sum + stat.scenes, 0),
       decorativeMicroScenesByZone: zoneStats.map((stat) => stat.scenes),
-      populationHierarchyVersion: VERSION
+      populationHierarchyVersion: VERSION,
+      removedConstructionOverlaps: clearConstructionOverlaps()
     };
   };
 

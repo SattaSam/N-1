@@ -641,6 +641,9 @@
   if (typeof BF.buildMap === "function" && !BF.buildMap.__persistentMicroScenesV20) {
     const previousBuildMap = BF.buildMap;
     const wrapped = function buildMapWithPersistentScenes(THREE, definition, assets, renderer) {
+      // Les réservations restaurées doivent être connues dès le peuplement,
+      // y compris pour Crystal qui n'est pas une définition procédurale sauvegardée.
+      hydrateSites(definition);
       const built = previousBuildMap(THREE, definition, assets, renderer);
       spawnForBuiltMap(THREE, built, definition);
       BF.ObjectSpawner?.placeMissionNpcsNearHabitats?.(THREE, built);

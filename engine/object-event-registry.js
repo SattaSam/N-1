@@ -231,7 +231,11 @@
     const instanceId = data.instanceId || root?.userData?.instanceId || null;
     const mapId = detail.mapId || BF.currentEngine?.currentMapId || null;
     const key = localInteractionKey({ ...microSceneContext, instanceId });
-    const isLocalInteraction = detail.interactionSource !== "drone" && ([
+    // Autonomous fauna behaviors remain observation evidence, but are not
+    // an interaction by BlueFox and must not consume local novelty.
+    const autonomousFaunaBehavior = (detail.tags || []).includes("fauna_behavior") &&
+      !["mission", "player", "manual"].includes(detail.interactionSource);
+    const isLocalInteraction = !autonomousFaunaBehavior && detail.interactionSource !== "drone" && ([
       EVENT_TYPES.OBJECT_INSPECTED, EVENT_TYPES.OBJECT_ANALYZED,
       EVENT_TYPES.PHENOMENON_OBSERVED, EVENT_TYPES.RESOURCE_COLLECTED,
       EVENT_TYPES.RESOURCE_EXTRACTED, EVENT_TYPES.OBJECT_USED,
