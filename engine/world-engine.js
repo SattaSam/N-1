@@ -4416,7 +4416,14 @@
       if (completedMissionType) {
         this.missionManager?.notifyActionCompleted(
           completedMissionType,
-          { routine: finished, amount: 1 }
+          {
+            ...finishedRoutine.detail,
+            routine: finished,
+            amount: 1,
+            mapId: this.currentMapId,
+            startedMapId: finishedRoutine.detail?.mapId || null,
+            duration: Math.max(0, Number(finishedRoutine.endsAt) - Number(finishedRoutine.startedAt))
+          }
         );
       }
       this.lastAutonomyAt = now - 5000;

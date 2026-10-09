@@ -3783,6 +3783,32 @@
       });
     }
 
+    researchCompletionMatches(node, detail = {}) {
+      const params = node?.params || {};
+      const mapId = String(detail.mapId || this.engine?.currentMapId || "");
+      const fact = params.requiredMapFact
+        ? this.memory.getFact?.(params.requiredMapFact, null) : null;
+      const requiredMap = params.requiredMapFact
+        ? fact?.[params.requiredMapField || "mapId"]
+        : params.requiredMapId || params.mapId;
+      if ((params.requiredMapFact || params.requiredMapId || params.mapId) &&
+          (!requiredMap || mapId !== String(requiredMap) ||
+           (detail.startedMapId && String(detail.startedMapId) !== String(requiredMap)))) return false;
+      if (params.duration && Number(detail.duration || 0) < Number(params.duration)) return false;
+      if (params.requiredSiteFact) {
+        const site = BF.bibleRuntime?.completionSiteFact?.(params.requiredSiteFact) ||
+          this.memory.getFact?.(params.requiredSiteFact, null);
+        if (!site || !detail.siteId || String(detail.siteId) !== String(site.siteId)) return false;
+      }
+      // Une dépense et une présence au camp sont des preuves de cette action,
+      // jamais des conditions que peut acquitter une recherche étrangère.
+      if ((params.inventoryConsume?.length || params.requiresShelter) &&
+          (detail.nodeId !== node.id ||
+           (params.inventoryConsume?.length && detail.inventoryConsumed !== true) ||
+           (params.requiresShelter && detail.shelterAccepted !== true))) return false;
+      return true;
+    }
+
     matchesPassiveAction(node, type, detail) {
       if (node.params?.catalogManaged) return false;
       const nodeType = Missions.normalizeActionType(node.type);
@@ -3790,6 +3816,7 @@
       if (nodeType !== type && !(acquisition.includes(nodeType) && acquisition.includes(type))) {
         return false;
       }
+      if (type === Missions.ActionType.RESEARCH && !this.researchCompletionMatches(node, detail)) return false;
       if (node.params.kind && detail.kind !== node.params.kind) return false;
       if (node.params.subject && detail.subject && detail.subject !== node.params.subject) {
         return false;
@@ -4628,7 +4655,9 @@
 
     notifyActionCompleted(type, detail = {}, options = {}) {
       const passive = options.passive !== false;
-      if (!this.currentAction || this.currentAction.type !== type) {
+      if (!this.currentAction || this.currentAction.type !== type ||
+          (type === Missions.ActionType.RESEARCH && detail.routine === "research" &&
+           detail.nodeId && detail.nodeId !== this.currentAction.nodeId)) {
         const changed = passive ? this.progressPassiveMissions(type, detail) : 0;
         if (changed) {
           this.syncLifecycleFromTrees();
@@ -4644,6 +4673,9 @@
       const actionTree = this.trees.get(missionId) || this.tree;
       if (!actionTree) return false;
       const node = actionTree.find(completedAction.nodeId);
+      if (type === Missions.ActionType.RESEARCH && detail.routine === "research" &&
+          (detail.nodeId && detail.nodeId !== completedAction.nodeId ||
+           !this.researchCompletionMatches(node, detail))) return false;
       const alreadyProgressed = options.progressAlreadyApplied === true &&
         completedAction.type === Missions.ActionType.EXPLORE_ZONE &&
         node?.params?.metric === "surfacePercent" &&

@@ -154,6 +154,65 @@
       return false;
     }
 
+    executeProximity(action, target, now) {
+      const engine = this.engine;
+      const radius = Math.max(0.5, Number(action.params.proximityRadius) || 2.5);
+      const point = engine.interactionWorldPosition?.(target) || target.position;
+      if (!point) return false;
+      const player = engine.character.root.position;
+      const distance = player.distanceTo
+        ? player.distanceTo(point)
+        : Math.hypot(
+            Number(player.x) - Number(point.x),
+            Number(player.z) - Number(point.z)
+          );
+
+      if (distance <= radius) {
+        const definition = target.userData.functional ||
+          BF.ObjectLibrary?.get?.(target.userData.libraryType) ||
+          BF.ObjectLibrary?.get?.(target.userData.kind);
+        BF.ObjectEvents?.emit?.(
+          BF.ObjectEvents?.types?.OBJECT_SEEN || "OBJECT_SEEN",
+          target,
+          {
+            mapId: engine.currentMapId,
+            zoneId: engine.currentZoneIndex,
+            missionId: action.missionId || null,
+            missionNodeId: action.nodeId || null,
+            cuoType: definition?.type || target.userData.kind || null,
+            subject: action.params?.subject || definition?.category || definition?.type || null,
+            interactionSource: "mission-proximity",
+            proximityRadius: radius,
+            proximityDistance: distance
+          }
+        );
+        target.userData.lastInteractionAt = performance.now();
+        return true;
+      }
+
+      const destination = point.clone
+        ? point.clone()
+        : new engine.THREE.Vector3(Number(point.x) || 0, Number(point.y) || 0, Number(point.z) || 0);
+      if (distance > 0.001) {
+        const offset = radius * 0.8;
+        const dx = Number(player.x) - Number(point.x);
+        const dz = Number(player.z) - Number(point.z);
+        const length = Math.hypot(dx, dz) || 1;
+        destination.x = Number(point.x) + (dx / length) * offset;
+        destination.z = Number(point.z) + (dz / length) * offset;
+      }
+      const accepted = engine.character.setTarget(
+        destination,
+        action.params?.movementMode || "auto"
+      );
+      if (accepted === false) return false;
+      engine.showWorldMarker?.(destination);
+      engine.callbacks?.onStatus?.(
+        `Mission : BlueFox s’approche à moins de ${radius.toFixed(1)} m de ${(target.userData.functional?.label || "la cible").toLowerCase()}.`
+      );
+      return true;
+    }
+
     execute(action, now) {
       if (!action || this.isEngineBusy()) return false;
       const engine = this.engine;
@@ -214,62 +273,7 @@
           if (!candidates.length) return false;
 
           if (action.params?.proximityOnly === true) {
-            const target = candidates[0];
-            const radius = Math.max(0.5, Number(action.params.proximityRadius) || 2.5);
-            const point = engine.interactionWorldPosition?.(target) || target.position;
-            if (!point) return false;
-            const player = engine.character.root.position;
-            const distance = player.distanceTo
-              ? player.distanceTo(point)
-              : Math.hypot(
-                  Number(player.x) - Number(point.x),
-                  Number(player.z) - Number(point.z)
-                );
-
-            if (distance <= radius) {
-              const definition = target.userData.functional ||
-                BF.ObjectLibrary?.get?.(target.userData.libraryType) ||
-                BF.ObjectLibrary?.get?.(target.userData.kind);
-              BF.ObjectEvents?.emit?.(
-                BF.ObjectEvents?.types?.OBJECT_SEEN || "OBJECT_SEEN",
-                target,
-                {
-                  mapId: engine.currentMapId,
-                  zoneId: engine.currentZoneIndex,
-                  missionId: action.missionId || null,
-                  missionNodeId: action.nodeId || null,
-                  cuoType: definition?.type || target.userData.kind || null,
-                  subject: action.params?.subject || definition?.category || definition?.type || null,
-                  interactionSource: "mission-proximity",
-                  proximityRadius: radius,
-                  proximityDistance: distance
-                }
-              );
-              target.userData.lastInteractionAt = performance.now();
-              return true;
-            }
-
-            const destination = point.clone
-              ? point.clone()
-              : new engine.THREE.Vector3(Number(point.x) || 0, Number(point.y) || 0, Number(point.z) || 0);
-            if (distance > 0.001) {
-              const offset = radius * 0.8;
-              const dx = Number(player.x) - Number(point.x);
-              const dz = Number(player.z) - Number(point.z);
-              const length = Math.hypot(dx, dz) || 1;
-              destination.x = Number(point.x) + (dx / length) * offset;
-              destination.z = Number(point.z) + (dz / length) * offset;
-            }
-            const accepted = engine.character.setTarget(
-              destination,
-              action.params?.movementMode || "auto"
-            );
-            if (accepted === false) return false;
-            engine.showWorldMarker?.(destination);
-            engine.callbacks?.onStatus?.(
-              `Mission : BlueFox s’approche à moins de ${radius.toFixed(1)} m de ${(target.userData.functional?.label || "la cible").toLowerCase()}.`
-            );
-            return true;
+            return this.executeProximity(action, candidates[0], now);
           }
 
           candidates[0].userData.requestedInteraction = action.type;
@@ -417,7 +421,15 @@
           engine.startRoutine(
             "research",
             now,
-            Math.max(1500, Number(action.params.duration) || 6500)
+            Math.max(1500, Number(action.params.duration) || 6500),
+            {
+              missionId: action.missionId || null,
+              nodeId: action.nodeId || null,
+              mapId: engine.currentMapId,
+              subject: action.params?.subject || null,
+              inventoryConsumed: consumes.length > 0,
+              shelterAccepted: action.params?.requiresShelter === true
+            }
           );
           return true;
         }

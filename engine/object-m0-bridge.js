@@ -872,6 +872,17 @@
       return studySubjectMatches(event, node, tags);
     }
 
+    if (node.params?.proximityOnly === true) {
+      if (event.type !== BF.ObjectEvents?.types.OBJECT_SEEN ||
+          detail.interactionSource !== "mission-proximity" ||
+          String(detail.missionId || "") !== String(missionId || "") ||
+          detail.missionNodeId !== node.id ||
+          !Number.isFinite(Number(detail.proximityDistance)) ||
+          Number(detail.proximityDistance) > Math.max(0.5, Number(node.params.proximityRadius) || 2.5)) return false;
+      return metadataMatchesMissionCriteria(eventMissionMetadata(event), node.params || {}, { skipSubject: true }) &&
+        relationMatches(tree, node, relationEvidenceFromEvent(event)) && studySubjectMatches(event, node, tags);
+    }
+
     if (![BF.ObjectEvents?.types.OBJECT_INSPECTED, BF.ObjectEvents?.types.PHENOMENON_OBSERVED, BF.ObjectEvents?.types.OBJECT_ANALYZED].includes(event.type)) return false;
     if (!isStudyAction(type)) return false;
 
@@ -1066,6 +1077,9 @@
         if (!requiredMapMatches(manager, node, event.mapId)) return;
         if (!requiredSiteMatchesEvent(manager, node, event)) return;
         if (node.isComplete || !eventMatchesNode(event, node, missionId, tree)) return;
+        // Le compteur Bible possède ce crédit, sans retirer à ObjectM0
+        // l'exécution physique ni l'acquittement de currentAction.
+        if (BF.bibleRuntime?.worldEventRequirementForNode?.(missionId, node.id)) return;
         if (progressNodeFromEvent(node, event)) {
           rememberRelationEvidence(tree, node, event);
           rememberCompletionSiteFact(manager, missionId, node, event);
@@ -1343,6 +1357,10 @@
     return null;
   };
 
+  const worldEventTargetCredited = (node, identity) => BF.bibleRuntime?.worldEventTargetCredited?.(
+    String(node?.id || "").split(":")[0], node?.id, identity
+  ) === true;
+
   const distinctValueFromResolved = (node, resolved, mapId = null) => {
     const mode = studyDistinctMode(node);
     if (!mode || mode === "none") return null;
@@ -1510,13 +1528,15 @@
           !relationMatches(tree, node, relationEvidenceFromResolved(resolved, mapId)) ||
           !matchesBoundTarget({ ...engine, currentMapId: mapId }, missionId, resolved)) return false;
         const distinct = distinctValueFromResolved(node, resolved, mapId);
-        return distinct == null || !node.hasDistinctValue?.(distinct);
+        return !worldEventTargetCredited(node, { ...identityOf(resolved), mapId }) &&
+          (distinct == null || !node.hasDistinctValue?.(distinct));
       });
     });
   };
 
   // Une étude CUO générique ne doit être lancée que pour une feuille dont
-  // ObjectM0 possède réellement l’exécution ET la progression. Ces exclusions
+  // ObjectM0 possède réellement l’exécution physique. La progression peut être
+  // possédée par un compteur Bible déclaré. Ces exclusions
   // existaient déjà dans activeStudyDirective(); les centraliser évite qu’une
   // feuille spécialisée soit déclarée runnable par un objet générique.
   const isGenericObjectStudyNode = (node) => Boolean(
@@ -1567,7 +1587,9 @@
         if (!requiredSiteMatchesResolved(engine?.missionManager, node, resolved, engine?.currentMapId)) return null;
         if (!relationMatches(tree, node, relationEvidenceFromResolved(resolved, engine?.currentMapId))) return null;
         const distinctValue = distinctValueFromResolved(node, resolved, engine?.currentMapId);
-        if (!environmentStudy && distinctValue != null && node?.hasDistinctValue?.(distinctValue)) return null;
+        if (!environmentStudy && (worldEventTargetCredited(node, {
+          ...identityOf(resolved), mapId: engine?.currentMapId
+        }) || (distinctValue != null && node?.hasDistinctValue?.(distinctValue)))) return null;
         if (!(definition && (canStudy(definition) || passiveMissionStudy))) return null;
         if (!metadataMatchesMissionCriteria(
           definitionMissionMetadata(definition, resolved),
@@ -1829,6 +1851,9 @@
         if (target) {
           const identity = identityOf(resolveMissionCandidate(target));
           action.instanceId = identity.instanceId || null;
+          if (action.params?.proximityOnly === true) {
+            return this.executeProximity(action, target, now);
+          }
           target.userData.requestedInteraction = "observe";
           target.userData.requestedInteractionSource = "mission";
           target.userData.missionSubject = action.params?.subject || null;
@@ -2744,7 +2769,8 @@
       : mode === "mapId" ? String(known.mapId || "")
       : mode === "cuoType" ? lower(definition.type) : null;
     if (mode === "instanceId" && !known.instanceId && node.distinctValues?.length) return false;
-    if (distinct != null && node.hasDistinctValue?.(distinct)) return false;
+    if (worldEventTargetCredited(node, { ...known, cuoType: definition.type }) ||
+        (distinct != null && node.hasDistinctValue?.(distinct))) return false;
     const metadata = {
       ...definitionMissionMetadata(definition),
       microSceneId: known.microSceneId || null,

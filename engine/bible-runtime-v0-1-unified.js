@@ -2761,6 +2761,32 @@
       return true;
     }
 
+    worldEventRequirementForNode(missionId, nodeId) {
+      const mission = this.byId.get(missionId);
+      const requirement = asArray(mission?.worldEventRequirements)
+        .find((entry) => `${missionId}:${entry.slot}` === nodeId);
+      return requirement ? { mission, requirement } : null;
+    }
+
+    worldEventTargetCredited(missionId, nodeId, identity = {}) {
+      const contract = this.worldEventRequirementForNode(missionId, nodeId);
+      if (!contract) return false;
+      const { mission, requirement } = contract;
+      const distinctBy = requirement.distinctBy || requirement.criteria?.distinctBy;
+      if (!distinctBy || !identity[distinctBy]) return false;
+      const tree = this.manager()?.trees?.get?.(missionId);
+      const baseline = this.ensureWorldEventRequirementBaseline(
+        mission, requirement, tree, this.ensureWorldEventBaseline(mission)
+      );
+      if (!baseline) return false;
+      return Number(BF.getHistoricalEventCount?.({
+        ...(requirement.criteria || {}),
+        [distinctBy]: identity[distinctBy],
+        distinctBy,
+        sinceSequence: Math.max(0, Number(baseline.sequence) || 0)
+      })) > 0;
+    }
+
     reconcileWorldEventRequirements() {
       if (this.worldEventReconciling || typeof BF.getHistoricalEventCount !== "function") return false;
       const manager = this.manager();
@@ -3319,7 +3345,14 @@
     }
 
     handleFinalCoreIntegration(event = {}) {
-      if (String(event.type || "") !== "interaction.analyze") return false;
+      // Observer / inspecter / analyser sont le même geste physique d'étude.
+      // La disponibilité de la feuille et le stock réel restent les validations.
+      if (!["interaction.observe", "interaction.inspect", "interaction.analyze"]
+          .includes(String(event.type || ""))) return false;
+      // OBJECT_SEEN est aussi normalisé en observe : voir la capsule ou la
+      // repérer à distance ne constitue pas une interaction d'intégration.
+      if (event.rawType && !["PHENOMENON_OBSERVED", "OBJECT_INSPECTED", "OBJECT_ANALYZED"]
+          .includes(String(event.rawType))) return false;
       const manager = this.manager();
       if (!manager?.memory) return false;
       for (const mission of this.allMissions()) {
