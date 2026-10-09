@@ -1014,7 +1014,7 @@
           createTextElement(
             "small",
             "",
-            `${mission.priorityRank ? `TOP ${mission.priorityRank} · ` : ""}${MISSION_THEMES[missionTheme(mission)]} · ${mission.scope === "map" ? "Locale" : "Globale"} · ${percent} %`
+            `${mission.priorityRank ? `TOP ${mission.priorityRank} · ` : ""}${MISSION_THEMES[missionTheme(mission)]} · ${mission.scope === "map" ? `Locale · ${BF.maps?.[mission.locationMapId]?.name || mission.locationMapId || "Map inconnue"}` : "Globale"} · ${percent} %`
           )
         );
         details.appendChild(summary);

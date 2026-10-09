@@ -799,6 +799,7 @@
     if (node.params?.catalogManaged || node.params?.siteProgressionKind) return false;
     const type = Missions.normalizeActionType(node.type);
     const detail = event.detail || {};
+    if (node.params?.preferUnstudied === true && event.firstLocalInteraction !== true) return false;
     const tags = new Set([...(event.tags || []), ...(detail.tags || [])]);
     if ([
       BF.ObjectEvents?.types.RESOURCE_COLLECTED,
@@ -921,7 +922,7 @@
   const missionSiteFact = (manager, node) => {
     const factKey = String(node?.params?.requiredSiteFact || "").trim();
     if (!factKey) return null;
-    const fact = manager?.memory?.getFact?.(factKey, null);
+    const fact = BF.bibleRuntime?.completionSiteFact?.(factKey) || manager?.memory?.getFact?.(factKey, null);
     return fact && typeof fact === "object" ? fact : null;
   };
 
@@ -1117,7 +1118,11 @@
         // L’événement reste distribué à toutes les missions déjà actives. Seules
         // celles révélées par CE même événement sont exclues une fois, afin de
         // préserver le garde-fou anti auto-validation de BibleRuntime.
-        excludedMissionIds: protectFreshActivation ? activatedMissionIds : []
+        excludedMissionIds: protectFreshActivation ? activatedMissionIds.filter((missionId) => {
+          const template = BF.bibleRuntime?.byId?.get?.(String(missionId).split("@")[0]);
+          return !(event.firstLocalInteraction === true &&
+            template?.localMission?.activation?.firstLocalInteraction === true);
+        }) : []
       });
       if (protectFreshActivation) {
         this.memory.remember(event.type, {
@@ -1394,6 +1399,11 @@
     const state = interactionState(resolved);
     return Boolean(
       state.observed || state.inspected || state.analyzed || state.identified ||
+      state.collected || Number(state.collectionCount || 0) > 0 ||
+      BF.hasLocalObjectInteraction?.(BF.currentEngine?.currentMapId, {
+        ...(BF.ObjectEvents?.siteContext?.(resolved.object, { mapId: BF.currentEngine?.currentMapId }) || {}),
+        instanceId: resolved.data?.instanceId || resolved.rootData?.instanceId
+      }) ||
       Number(state.observationCount || 0) > 0 ||
       Number(state.inspectionCount || 0) > 0 ||
       Number(state.analysisCount || 0) > 0

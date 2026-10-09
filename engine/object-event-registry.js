@@ -203,6 +203,13 @@
     return context;
   };
 
+  const localInteractionKey = (identity = {}) => {
+    if (identity.microSceneInstanceId && identity.microSceneObjectIndex != null) {
+      return `site:${identity.microSceneInstanceId}:slot:${identity.microSceneObjectIndex}`;
+    }
+    return String(identity.instanceId || "");
+  };
+
   const normalize = (type, source, detail = {}) => {
     const root = source?.userData?.worldAnchor || source?.userData?.worldRoot || source;
     const data = source?.userData || root?.userData || {};
@@ -221,7 +228,24 @@
     const normalizedDetail = acquisitionIntent != null || acquisitionPhase != null
       ? { ...detail, acquisitionIntent, acquisitionPhase }
       : detail;
+    const instanceId = data.instanceId || root?.userData?.instanceId || null;
+    const mapId = detail.mapId || BF.currentEngine?.currentMapId || null;
+    const key = localInteractionKey({ ...microSceneContext, instanceId });
+    const isLocalInteraction = detail.interactionSource !== "drone" && ([
+      EVENT_TYPES.OBJECT_INSPECTED, EVENT_TYPES.OBJECT_ANALYZED,
+      EVENT_TYPES.PHENOMENON_OBSERVED, EVENT_TYPES.RESOURCE_COLLECTED,
+      EVENT_TYPES.RESOURCE_EXTRACTED, EVENT_TYPES.OBJECT_USED,
+      EVENT_TYPES.OBJECT_REPAIRED, EVENT_TYPES.OBJECT_DESTROYED,
+      EVENT_TYPES.NPC_CONTACTED, EVENT_TYPES.NPC_DIALOGUE
+    ].includes(type) || (detail.interactionSource === "mission-proximity" &&
+      type === EVENT_TYPES.OBJECT_SEEN));
+    const firstLocalInteraction = Boolean(isLocalInteraction && mapId && key &&
+      BF.hasLocalObjectInteraction &&
+      !BF.hasLocalObjectInteraction(mapId, { ...microSceneContext, instanceId }));
     return Object.freeze({
+      localInteractionKey: key,
+      isLocalInteraction,
+      firstLocalInteraction,
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       type,
       at: Date.now(),
@@ -253,7 +277,7 @@
       variant: data.variant ?? root?.userData?.variant ?? 0,
       state: detail.state || "present",
       planetId: detail.planetId || null,
-      mapId: detail.mapId || null,
+      mapId,
       zoneId: detail.zoneId ?? null,
       factionId: detail.factionId || null,
       missionId: detail.missionId || null,
@@ -270,6 +294,10 @@
       throw new Error(`Type d’événement objet inconnu : ${type}`);
     }
     const event = normalize(type, source, detail);
+    // Reserve the owner's receipt before fan-out: nested emissions and listener
+    // order cannot both claim the same first interaction. Normal consume/save
+    // still owns the single progression publication and persistence cycle.
+    BF.noteLocalObjectInteraction?.(event);
     history.push(event);
     if (history.length > MAX_HISTORY) history.splice(0, history.length - MAX_HISTORY);
     listeners.forEach((listener) => listener(event));
@@ -280,6 +308,7 @@
   BF.ObjectEvents = Object.freeze({
     types: EVENT_TYPES,
     emit,
+    localInteractionKey,
     siteContext(source, detail = {}) {
       const root = source?.userData?.worldAnchor || source?.userData?.worldRoot || source;
       return resolveMicroSceneContext(source, root, detail);

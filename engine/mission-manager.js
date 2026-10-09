@@ -1603,14 +1603,22 @@
         : [])
         .filter((context) => String(context?.slot || "").trim() === slot)
         .map((context) => {
+          const factKey = context.requiredSiteFact || context.requiredMapFact;
+          const fact = factKey ? BF.bibleRuntime?.completionSiteFact?.(factKey) ||
+            this.memory.getFact?.(factKey, null) : null;
+          if (context.requiredSiteFact && (!fact || (!fact.siteId && !fact.persistentMicroSceneId))) return null;
+          if (context.requiredMapFact && !fact?.[context.requiredMapField || "mapId"] && !fact?.mapId) return null;
           const criteria = {};
           ["siteId", "microSceneId", "persistentMicroSceneId", "mapId"].forEach((key) => {
-            const value = String(context?.[key] ?? "").trim();
+            const value = String(fact?.[key] ?? context?.[key] ?? "").trim();
             if (value) criteria[key] = value;
           });
+          if (context.requiredMapField && fact?.[context.requiredMapField]) {
+            criteria.mapId = String(fact[context.requiredMapField]);
+          }
           return criteria;
         })
-        .filter((criteria) => Object.keys(criteria).length > 0);
+        .filter((criteria) => criteria && Object.keys(criteria).length > 0);
       if (!contexts.length) {
         const intent = this.memory.getFact?.(this.missionReturnIntentKey(missionId), null);
         const preferredMapId = intent?.active === true && intent.kind === "known-destination" &&

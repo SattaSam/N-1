@@ -2065,20 +2065,12 @@
     passivePriorityAxis: "research",
     ponderation: 0.8,
     navigation: Object.freeze({ autonomousUnknownTravel: true }),
-    mapGeneration: Object.freeze({
-      size: "random",
-      biome: "random",
-      requiredMicroScenes: Object.freeze([
-        Object.freeze({ id: "MSC-ECO-THERM-001", persistent: true, spawnOnce: true, contextRole: "thermalFloraMineralContext" }),
-        Object.freeze({ id: "MSC-CUSTOM-GIANTCRISTAL-TREE", persistent: true, spawnOnce: true, contextRole: "giantTreeContext" })
-      ])
-    }),
     sequence: Object.freeze([
-      Object.freeze({ slot: "reachThermalMap", title: "Rejoindre un nouveau territoire avec une veine thermique", action: "travel", target: 1, requires: Object.freeze([]), params: Object.freeze({ eventDriven: true, newOnly: true, distinctBy: "mapId" }) }),
+      Object.freeze({ slot: "reachThermalMap", title: "Rejoindre un nouveau territoire avec une veine thermique", action: "travel", target: 1, requires: Object.freeze([]), params: Object.freeze({ eventDriven: true, newOnly: true, distinctBy: "mapId", mapGenerationOnCount: Object.freeze({ 1: Object.freeze({ size: "random", biome: "random", requiredMicroScenes: Object.freeze([Object.freeze({ id: "MSC-ECO-THERM-001", persistent: true, spawnOnce: true, contextRole: "thermalFloraMineralContext" })]) }) }) }) }),
       Object.freeze({ slot: "floraPartner", title: "Analyser une mousse thermosève associée au basalte", action: "analyze", target: 1, requires: Object.freeze(["reachThermalMap"]), params: Object.freeze({ cuoType: "thermosap_moss", microSceneId: "MSC-ECO-THERM-001" }) }),
       Object.freeze({ slot: "mineralPartner", title: "Analyser le basalte résonant du même contexte", action: "analyze", target: 1, requires: Object.freeze(["floraPartner"]), params: Object.freeze({ cuoType: "resonant_basalt", microSceneId: "MSC-ECO-THERM-001", relation: Object.freeze({ fromSlot: "floraPartner", sameBy: Object.freeze(["persistentMicroSceneId", "mapId"]) }) }) }),
       Object.freeze({ slot: "nearPlant", title: "Comparer une seconde mousse thermosève", action: "analyze", target: 1, requires: Object.freeze(["mineralPartner"]), params: Object.freeze({ cuoType: "thermosap_moss", microSceneId: "MSC-ECO-THERM-001", relation: Object.freeze({ fromSlot: "floraPartner", sameBy: Object.freeze(["persistentMicroSceneId", "mapId"]), differentBy: Object.freeze(["instanceId"]) }) }) }),
-      Object.freeze({ slot: "reachGiantTree", title: "Suivre les indices vers un nouveau territoire", action: "travel", target: 1, requires: Object.freeze(["nearPlant"]), params: Object.freeze({ eventDriven: true, newOnly: true, distinctBy: "mapId" }) })
+      Object.freeze({ slot: "reachGiantTree", title: "Suivre les indices vers un nouveau territoire", action: "travel", target: 1, requires: Object.freeze(["nearPlant"]), params: Object.freeze({ eventDriven: true, newOnly: true, distinctBy: "mapId", mapGenerationOnCount: Object.freeze({ 1: Object.freeze({ size: "random", biome: "random", requiredMicroScenes: Object.freeze([Object.freeze({ id: "MSC-CUSTOM-GIANTCRISTAL-TREE", persistent: true, spawnOnce: true, contextRole: "giantTreeContext" })]) }) }) }) })
     ]),
     narrative: Object.freeze({
       revealed: Object.freeze(["La proximité entre le minerai et la flore devient elle-même un indice. Je vais suivre cette relation jusqu’à un cas impossible à confondre."]),
@@ -2091,15 +2083,17 @@
     title: "Le Giant Tree — La preuve vivante",
     description: "Étudier le Giant Tree comme système naturel complet reliant structures minérales et végétales.",
     pattern: "SEQUENCE_ACTIONS",
-    trigger: Object.freeze({ type: "progression.mission_completed", missionId: "ENE-06", count: 1 }),
+    trigger: Object.freeze({ type: "interaction.discovery", microSceneId: "MSC-CUSTOM-GIANTCRISTAL-TREE", cuoType: "crystalline_tree", count: 1 }),
+    triggerOnly: true,
+    activationSiteFact: "ene07:giant-tree-site",
     prerequisites: Object.freeze(["ENE-06"]),
     priority: 302,
     passivePriorityAxis: "research",
     ponderation: 1,
     sequence: Object.freeze([
-      Object.freeze({ slot: "architecture", title: "Observer l’architecture du Giant Tree", action: "observe", target: 1, requires: Object.freeze([]), params: Object.freeze({ cuoType: "crystalline_tree", microSceneId: "MSC-CUSTOM-GIANTCRISTAL-TREE" }) }),
-      Object.freeze({ slot: "livingComponent", title: "Analyser la composante végétale", action: "analyze", target: 1, requires: Object.freeze(["architecture"]), params: Object.freeze({ cuoType: "crystalline_tree", microSceneId: "MSC-CUSTOM-GIANTCRISTAL-TREE" }) }),
-      Object.freeze({ slot: "mineralComponent", title: "Analyser une composante minérale du site", action: "analyze", target: 1, requires: Object.freeze(["livingComponent"]), params: Object.freeze({ subject: "geology", microSceneId: "MSC-CUSTOM-GIANTCRISTAL-TREE", relation: Object.freeze({ fromSlot: "livingComponent", sameBy: Object.freeze(["persistentMicroSceneId", "mapId"]) }) }) }),
+      Object.freeze({ slot: "architecture", title: "Observer l’architecture du Giant Tree", action: "observe", target: 1, requires: Object.freeze([]), params: Object.freeze({ cuoType: "crystalline_tree", microSceneId: "MSC-CUSTOM-GIANTCRISTAL-TREE", completionSiteFact: "ene07:giant-tree-site", requiredSiteFact: "ene07:giant-tree-site", requiredMapFact: "ene07:giant-tree-site" }) }),
+      Object.freeze({ slot: "livingComponent", title: "Analyser la composante végétale", action: "analyze", target: 1, requires: Object.freeze(["architecture"]), params: Object.freeze({ cuoType: "crystalline_tree", microSceneId: "MSC-CUSTOM-GIANTCRISTAL-TREE", requiredSiteFact: "ene07:giant-tree-site", requiredMapFact: "ene07:giant-tree-site" }) }),
+      Object.freeze({ slot: "mineralComponent", title: "Analyser une composante minérale du site", action: "analyze", target: 1, requires: Object.freeze(["livingComponent"]), params: Object.freeze({ subject: "geology", microSceneId: "MSC-CUSTOM-GIANTCRISTAL-TREE", requiredSiteFact: "ene07:giant-tree-site", requiredMapFact: "ene07:giant-tree-site", relation: Object.freeze({ fromSlot: "livingComponent", sameBy: Object.freeze(["persistentMicroSceneId", "mapId"]) }) }) }),
       Object.freeze({ slot: "synthesis", title: "Comparer le Giant Tree aux indices antérieurs", action: "research", target: 1, requires: Object.freeze(["mineralComponent"]), params: Object.freeze({}) })
     ]),
     narrative: Object.freeze({
@@ -2125,6 +2119,8 @@
         fact: "ene08:giant-tree-reference",
         slot: "plantReference",
         microSceneId: "MSC-CUSTOM-GIANTCRISTAL-TREE",
+        requiredSiteFact: "ene07:giant-tree-site",
+        requiredMapFact: "ene07:giant-tree-site",
         useSceneRadius: true
       }),
       Object.freeze({
@@ -2132,6 +2128,7 @@
         fact: "ene08:giant-tree-return",
         slot: "returnValidation",
         microSceneId: "MSC-CUSTOM-GIANTCRISTAL-TREE",
+        requiredSiteFact: "ene07:giant-tree-site",
         useSceneRadius: true,
         requiredMapFact: "ene08:giant-tree-reference",
         requiredMapField: "mapId"
@@ -2139,7 +2136,7 @@
     ]),
     sequence: Object.freeze([
       Object.freeze({ slot: "plantReference", title: "Établir la référence du Giant Tree par proximité", action: "observe", target: 1, requires: Object.freeze([]), params: Object.freeze({ eventDriven: true, catalogManaged: true }) }),
-      Object.freeze({ slot: "mineralReference", title: "Établir la référence minérale du site", action: "analyze", target: 1, requires: Object.freeze(["plantReference"]), params: Object.freeze({ subject: "geology", microSceneId: "MSC-CUSTOM-GIANTCRISTAL-TREE", requiredMapFact: "ene08:giant-tree-reference", requiredMapField: "mapId" }) }),
+      Object.freeze({ slot: "mineralReference", title: "Établir la référence minérale du site", action: "analyze", target: 1, requires: Object.freeze(["plantReference"]), params: Object.freeze({ subject: "geology", microSceneId: "MSC-CUSTOM-GIANTCRISTAL-TREE", requiredSiteFact: "ene07:giant-tree-site", requiredMapFact: "ene08:giant-tree-reference", requiredMapField: "mapId" }) }),
       Object.freeze({ slot: "leaveReference", title: "Quitter le site pour préparer un contrôle", action: "travel", target: 1, requires: Object.freeze(["mineralReference"]), params: Object.freeze({ eventDriven: true, newOnly: true, distinctBy: "mapId" }) }),
       Object.freeze({ slot: "returnToReference", title: "Revenir sur la map de référence du Giant Tree", action: "travel", target: 1, requires: Object.freeze(["leaveReference"]), params: Object.freeze({ eventDriven: true, targetMapFact: "ene08:giant-tree-reference", targetMapField: "mapId", distinctBy: "transition" }) }),
       Object.freeze({ slot: "returnValidation", title: "Revenir à proximité du même Giant Tree", action: "observe", target: 1, requires: Object.freeze(["returnToReference"]), params: Object.freeze({ eventDriven: true, catalogManaged: true }) })
@@ -2163,7 +2160,7 @@
     sequence: Object.freeze([
       Object.freeze({ slot: "plants", title: "Comparer trois supports végétaux", action: "analyze", target: 3, requires: Object.freeze([]), params: Object.freeze({ subject: "flora", distinctBy: "objectId", excludeKinds: Object.freeze(["wood"]) }) }),
       Object.freeze({ slot: "minerals", title: "Comparer trois stabilisateurs minéraux", action: "analyze", target: 3, requires: Object.freeze(["plants"]), params: Object.freeze({ subject: "mineral", distinctBy: "objectId" }) }),
-      Object.freeze({ slot: "couple", title: "Valider le couple au Giant Tree", action: "analyze", target: 1, requires: Object.freeze(["minerals"]), params: Object.freeze({ cuoType: "crystalline_tree", microSceneId: "MSC-CUSTOM-GIANTCRISTAL-TREE" }) })
+      Object.freeze({ slot: "couple", title: "Valider le couple au Giant Tree", action: "analyze", target: 1, requires: Object.freeze(["minerals"]), params: Object.freeze({ cuoType: "crystalline_tree", microSceneId: "MSC-CUSTOM-GIANTCRISTAL-TREE", requiredSiteFact: "ene07:giant-tree-site", requiredMapFact: "ene07:giant-tree-site" }) })
     ]),
     effects: Object.freeze([
       Object.freeze({ type: "inventory.consume", inventoryKeys: Object.freeze(["fiber", "adaptive_biomass", "biocapital"]), quantity: 12 }),
@@ -2188,7 +2185,7 @@
     ponderation: 0.85,
     navigation: Object.freeze({ autonomousUnknownTravel: true }),
     sequence: Object.freeze([
-      Object.freeze({ slot: "charge", title: "Charger expérimentalement le support au Giant Tree", action: "analyze", target: 1, requires: Object.freeze([]), params: Object.freeze({ cuoType: "crystalline_tree", microSceneId: "MSC-CUSTOM-GIANTCRISTAL-TREE" }) }),
+      Object.freeze({ slot: "charge", title: "Charger expérimentalement le support au Giant Tree", action: "analyze", target: 1, requires: Object.freeze([]), params: Object.freeze({ cuoType: "crystalline_tree", microSceneId: "MSC-CUSTOM-GIANTCRISTAL-TREE", requiredSiteFact: "ene07:giant-tree-site", requiredMapFact: "ene07:giant-tree-site" }) }),
       Object.freeze({ slot: "leave", title: "Éloigner l’expérience du sanctuaire", action: "travel", target: 1, requires: Object.freeze(["charge"]), params: Object.freeze({ eventDriven: true, newOnly: true, distinctBy: "mapId" }) }),
       Object.freeze({ slot: "remoteCheck", title: "Vérifier la charge après déplacement", action: "research", target: 1, requires: Object.freeze(["leave"]), params: Object.freeze({}) }),
       Object.freeze({ slot: "repeat", title: "Reproduire l’expérience", action: "research", target: 2, requires: Object.freeze(["remoteCheck"]), params: Object.freeze({}) })
@@ -2345,6 +2342,8 @@
     proximityContexts: Object.freeze([Object.freeze({
       id: "ene14-giant-tree-calibration",
       microSceneId: "MSC-CUSTOM-GIANTCRISTAL-TREE",
+      requiredSiteFact: "ene07:giant-tree-site",
+      requiredMapFact: "ene07:giant-tree-site",
       fact: "ene14:giantTreeCalibration:v1",
       slot: "calibration",
       radius: 5
@@ -4623,7 +4622,7 @@
     localMission: Object.freeze({
       captureFamily: true,
       captureMicroScene: true,
-      activation: Object.freeze({ type: "interaction.any", tagsAny: Object.freeze(["resource"]) })
+      activation: Object.freeze({ type: "interaction.discovery", firstLocalInteraction: true, tagsAny: Object.freeze(["resource"]) })
     }),
     sequence: Object.freeze([
       Object.freeze({ slot: "observe", title: "Repérer une ressource non étudiée", action: "observe", target: 1, params: Object.freeze({ tagsAny: Object.freeze(["resource"]), preferUnstudied: true }) }),
@@ -4650,7 +4649,7 @@
     scoreTrauma: 35,
     narrativeAxis: "NATURALISTE",
     reinforcesNarrativeAxis: Object.freeze({ axis: "NATURALISTE", weight: 1 }),
-    localMission: Object.freeze({ activation: Object.freeze({ type: "interaction.any", subject: "fauna", category: "fauna" }) }),
+    localMission: Object.freeze({ activation: Object.freeze({ type: "interaction.discovery", firstLocalInteraction: true, subject: "fauna", category: "fauna" }) }),
     slots: Object.freeze({ study: Object.freeze({ title: "Observer une espèce non étudiée", target: 1, params: Object.freeze({ subject: "fauna", category: "fauna", preferUnstudied: true }) }) })
   });
 

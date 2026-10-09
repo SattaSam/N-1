@@ -424,6 +424,17 @@
       if (event.family) increment(mapBucket, `family:${event.family}`, quantity);
     }
 
+    rememberLocalInteraction(event) {
+      const key = event.localInteractionKey || event.instanceId;
+      if (event.isLocalInteraction !== true || !event.mapId || !key) return false;
+      const bucket = this.mapBucket(event.mapId);
+      bucket.localInteractions ||= {};
+      return rememberUnique(bucket.localInteractions, key, {
+        objectId: event.objectId || null, firstInteractionEventId: event.id,
+        firstInteractionAt: event.at
+      });
+    }
+
     applyMapIndicators(event) {
       const bucket = this.mapBucket(event.mapId);
       const quantity = Math.max(1, Number(event.quantity) || 1);
@@ -444,7 +455,19 @@
       bucket.expertise += expertise;
 
       rememberUnique(bucket.uniqueObjects, event.objectId, { family: event.family || null });
-      rememberUnique(bucket.uniqueInstances, event.instanceId, { objectId: event.objectId || null });
+      rememberUnique(bucket.uniqueInstances, event.instanceId, {
+        objectId: event.objectId || null, hasInteraction: false
+      });
+      const key = event.localInteractionKey || event.instanceId;
+      if (event.isLocalInteraction === true && key) {
+        this.rememberLocalInteraction(event);
+        const record = bucket.uniqueInstances[event.instanceId];
+        if (record && record.hasInteraction !== true) {
+          record.hasInteraction = true;
+          record.firstInteractionEventId = event.id;
+          record.firstInteractionAt = event.at;
+        }
+      }
       if ([types.RESOURCE_COLLECTED, types.RESOURCE_EXTRACTED].includes(event.type)) {
         rememberUnique(bucket.uniqueResources, event.inventoryKey || event.family, {
           objectId: event.objectId || null
@@ -783,6 +806,19 @@
   };
   BF.getJournalNarrativeState = () => system.getJournalNarrative();
   BF.consolidateJournalNarrative = (candidate) => system.consolidateJournalNarrative(candidate);
+  BF.noteLocalObjectInteraction = (event) => system.rememberLocalInteraction(event);
+  BF.hasLocalObjectInteraction = (mapId, identity = {}) => {
+    const bucket = system.state.mapIndicators?.[mapId] || {};
+    const key = BF.ObjectEvents?.localInteractionKey?.(identity) || identity.instanceId;
+    if (key && bucket.localInteractions?.[key]) return true;
+    const record = identity.instanceId && bucket.uniqueInstances?.[identity.instanceId];
+    // Preserve legacy local evidence; new non-interaction sightings carry false.
+    if (record && record.hasInteraction !== false) return true;
+    const site = system.siteById.get(identity.microSceneInstanceId);
+    const slot = identity.microSceneObjectIndex;
+    const studied = slot != null && site?.instances?.[`slot:${Number(slot)}`];
+    return Boolean(site?.mapId === mapId && Number(studied?.knowledgeLevel) >= 2);
+  };
   BF.getMapProgressionIndicators = (mapId) => system.getMapIndicators(mapId);
   BF.getKnownSites = (criteria) => system.getKnownSites(criteria);
   BF.getKnownSite = (siteId) => system.getKnownSite(siteId);

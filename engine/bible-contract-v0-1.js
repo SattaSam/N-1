@@ -35,7 +35,7 @@
       "objectId", "kind", "family", "subject", "tagsAny", "tagsAll", "studyOnly"
     ]),
     "interaction.discovery": Object.freeze([
-      "objectId", "kind", "family", "subject", "tagsAny", "tagsAll"
+      "objectId", "kind", "family", "subject", "tagsAny", "tagsAll", "microSceneId", "cuoType"
     ]),
     "interaction.collect": Object.freeze([
       "objectId", "kind", "family", "subject", "tagsAny", "tagsAll"

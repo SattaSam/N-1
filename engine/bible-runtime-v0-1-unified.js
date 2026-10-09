@@ -237,8 +237,9 @@
 
     localMissionActivationMatches(activation, event) {
       if (!activation || !event || activation.type !== event.type) return false;
+      if (activation.firstLocalInteraction === true && event.rawType === "OBJECT_SEEN") return false;
       const exactKeys = [
-        "objectId", "kind", "family", "subject", "category", "persistentMicroSceneId", "microSceneId"
+        "objectId", "kind", "family", "subject", "category", "persistentMicroSceneId", "microSceneId", "firstLocalInteraction"
       ];
       for (const key of exactKeys) {
         if (activation[key] != null && lower(activation[key]) !== lower(event[key])) {
@@ -2119,6 +2120,7 @@
 
       return {
         eventId: event.id || null,
+        firstLocalInteraction: event.firstLocalInteraction === true,
         type,
         physicalType: OBJECT_TYPE_TO_TRIGGER[event.type],
         rawType: event.type,
@@ -2135,6 +2137,7 @@
           event.persistentMicroSceneId ||
           event.detail?.persistentMicroSceneId ||
           null,
+        microSceneInstanceId: event.microSceneInstanceId || null,
         microSceneId:
           event.microSceneId || event.detail?.microSceneId || null,
         kind,
@@ -2163,7 +2166,7 @@
       const exactKeys = [
         "objectId", "kind", "family", "subject",
         "mapId", "zoneId", "direction", "fromMapId", "toMapId",
-        "missionId", "milestoneId", "skillId", "biome"
+        "missionId", "milestoneId", "skillId", "biome", "microSceneId", "cuoType"
       ];
 
       for (const key of exactKeys) {
@@ -3627,7 +3630,7 @@
           const mapId = String(fact?.[context.requiredMapField || "mapId"] || fact?.mapId || "");
           if (!mapId || mapId !== String(engine.currentMapId)) return;
         }
-        const anchor = context.microSceneId ? this.microSceneProximityAnchor(context.microSceneId)
+        const anchor = context.microSceneId ? this.microSceneProximityAnchor(context.microSceneId, context)
           : this.objectProximityAnchor(context.cuoType);
         if (!anchor) return;
         const point = this.observationPoint(anchor, engine);
@@ -3732,13 +3735,69 @@
       return mapId ? { mapId } : null;
     }
 
-    microSceneProximityAnchor(microSceneId) {
+    completionSiteFact(factKey) {
+      const memory = this.manager()?.memory;
+      const existing = memory?.getFact?.(factKey, null);
+      if (existing?.siteId || existing?.persistentMicroSceneId) return existing;
+      for (const mission of this.catalog) {
+        const producer = asArray(mission.sequence).find(step => step.params?.completionSiteFact === factKey);
+        if (!producer) continue;
+        const tree = this.manager()?.trees?.get?.(mission.id);
+        const node = tree?.findSequenceSlot?.(producer.slot);
+        if (!node?.isComplete) return null;
+        const proofs = asArray(node.historyValues).map(value => {
+          try { const parsed = JSON.parse(value); return parsed.owner === "object-m0" ? parsed.evidence : null; }
+          catch { return null; }
+        }).filter(proof => proof?.mapId && proof?.persistentMicroSceneId);
+        // Older completed producers may carry only the canonical physical
+        // distinctValues. Match that exact instance prefix against persisted MSC
+        // records, never the first/nearest scene or a family.
+        for (const value of asArray(node.distinctValues)) {
+          const instanceId = String(value).replace(/#study-\d+$/, "");
+          for (const [mapId, definition] of Object.entries(BF.maps || {})) {
+            for (const record of asArray(definition.persistentMicroScenes)) {
+              const id = record.instanceId;
+              if (!id || !instanceId.startsWith(`${id}:`) ||
+                  record.microSceneId !== producer.params.microSceneId) continue;
+              proofs.push({ mapId, persistentMicroSceneId: id });
+            }
+          }
+        }
+        const sites = new Map(proofs.map(proof => [
+          `${proof.mapId}:${proof.persistentMicroSceneId}`, proof
+        ]));
+        if (sites.size !== 1) return null;
+        const proof = [...sites.values()][0];
+        const fact = { mapId: proof.mapId, persistentMicroSceneId: proof.persistentMicroSceneId,
+          microSceneId: producer.params.microSceneId, sourceMissionId: mission.id, sourceNodeId: node.id };
+        memory.setFact?.(factKey, fact);
+        memory.save?.();
+        return fact;
+      }
+      return existing;
+    }
+
+    microSceneProximityAnchor(microSceneId, context = {}) {
       const map = BF.currentEngine?.currentMap;
       const entries = Array.isArray(map?.group?.userData?.microScenes)
         ? map.group.userData.microScenes
         : [];
       const normalized = String(microSceneId || "");
-      const entry = entries.find((item) => String(item?.id || "") === normalized);
+      const factKey = context.requiredSiteFact || context.requiredMapFact;
+      const fact = factKey ? this.completionSiteFact(factKey) : null;
+      if (context.requiredSiteFact && (!fact || (!fact.siteId && !fact.persistentMicroSceneId))) return null;
+      if (fact?.mapId && String(fact.mapId) !== String(BF.currentEngine?.currentMapId)) return null;
+      const entry = entries.find((item) => {
+        if (String(item?.id || "") !== normalized) return false;
+        const persistentId = item?.persistentMicroSceneId || item?.instanceRoot?.userData?.persistentMicroSceneId || null;
+        if (fact?.persistentMicroSceneId && persistentId !== fact.persistentMicroSceneId) return false;
+        if (fact?.siteId) {
+          const site = BF.ObjectEvents?.siteContext?.(item.records?.[0]?.root || item.instanceRoot,
+            { mapId: BF.currentEngine?.currentMapId });
+          return site?.microSceneInstanceId === fact.siteId;
+        }
+        return true;
+      });
       if (!entry) return null;
       return entry.instanceRoot || entry.records?.[0]?.root || null;
     }
@@ -4023,7 +4082,7 @@
       let changed = false;
       this.proximityContextEntries().forEach(({ mission, context }) => {
         const anchor = context.microSceneId
-          ? this.microSceneProximityAnchor(context.microSceneId)
+          ? this.microSceneProximityAnchor(context.microSceneId, context)
           : this.objectProximityAnchor(context.cuoType);
         if (!anchor) {
           if (context.allowKnownMapTravel === true && context.cuoType && context.targetMapFact) {
@@ -4126,6 +4185,9 @@
           microSceneId: context.microSceneId || null,
           cuoType: context.cuoType || null,
           mapId: engine.currentMapId,
+          persistentMicroSceneId: anchor.userData?.persistentMicroSceneId ||
+            BF.ObjectEvents?.siteContext?.(anchor, { mapId: engine.currentMapId })?.persistentMicroSceneId || null,
+          siteId: BF.ObjectEvents?.siteContext?.(anchor, { mapId: engine.currentMapId })?.microSceneInstanceId || null,
           reachedAt: Date.now()
         });
         manager.memory.save?.();
@@ -4308,6 +4370,7 @@
         return false;
       }
 
+      if (!this.rememberActivationSite(mission, event)) return false;
       try {
         diagnostic.startResult =
           this.startMissionThroughBible(mission.id, {
@@ -4397,11 +4460,26 @@
       }
     }
 
+    rememberActivationSite(mission, event = {}) {
+      const key = mission.activationSiteFact;
+      const memory = this.manager()?.memory;
+      if (!key || !memory) return true;
+      if (memory.getFact?.(key, null)) return true;
+      if (!event.mapId || (!event.persistentMicroSceneId && !event.microSceneInstanceId)) return false;
+      memory.setFact?.(key, { mapId: event.mapId, microSceneId: event.microSceneId,
+        persistentMicroSceneId: event.persistentMicroSceneId || null,
+        siteId: event.microSceneInstanceId || null,
+        sourceMissionId: mission.id, acquiredAt: Date.now() });
+      memory.save?.();
+      return true;
+    }
+
     rememberDeferredTriggerContext(mission, event = {}, options = {}) {
       const manager = this.manager();
       const memory = manager?.memory;
       if (!mission?.id || !memory) return false;
 
+      if (!this.rememberActivationSite(mission, event)) return false;
       memory.setFact?.(`bibleDeferredTrigger:${mission.id}`, {
         type: event.type || null,
         missionId: event.missionId || null,
@@ -4570,6 +4648,7 @@
         if (mission?.localMission) continue;
         if (options.physicalOpportunitiesOnly === true && !isPhysicalOpportunity(mission)) continue;
         if (!this.eventMatchesTrigger(mission.trigger, event)) continue;
+        if (mission.activationSiteFact && !event.persistentMicroSceneId && !event.microSceneInstanceId) continue;
         // Une mission dont le premier travail dépend explicitement de la map
         // qu'elle a fait générer ne peut pas être activée par la découverte
         // fortuite d'une autre mission. Elle reste dormante jusqu'à ce que le

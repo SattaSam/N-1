@@ -186,6 +186,8 @@
   };
 
   const activeMapGenerationPrescription = () => {
+    if (BF.__pendingBibleMapGenerationContext &&
+        BF.__pendingBibleMapGenerationContext.intent !== "mission-destination") return null;
     const engine = BF.currentEngine;
     const manager = engine?.missionManager;
     const missionId = String(
