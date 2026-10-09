@@ -549,6 +549,20 @@
       return total ? completed / total : (tree.root.isComplete ? 1 : 0);
     }
 
+    persistedTreeProgress(missionId) {
+      const root = this.memory.state.missions?.[missionId]?.root;
+      if (!root) return 0;
+      let total = 0, completed = 0;
+      const visit = (node) => {
+        if (node.children?.length) return node.children.forEach(visit);
+        const target = Math.max(0, Number(node.target) || 0);
+        total += target;
+        completed += Math.min(Math.max(0, Number(node.progress) || 0), target);
+      };
+      visit(root);
+      return total ? completed / total : 0;
+    }
+
     playerPriority(axis) {
       if (!axis) return 50;
       try {
@@ -650,7 +664,9 @@
 
     missionRunnableAction(missionId, tree, context, now = performance.now(), options = {}) {
       if (!tree || tree.root?.isComplete) return null;
+      const attemptedNodes = new Set();
       const availableLeaves = () => tree.availableLeaves().filter((node) =>
+        !attemptedNodes.has(node.id) &&
         !this.isExecutionNodeSuppressed(missionId, node.id, context, now) &&
         !(node.params?.requiresShelter === true && BF.canAccessCampInventory?.() !== true)
       );
@@ -673,69 +689,74 @@
           siteProgressionKind: kind, issuedAt: Date.now()
         };
       }
-      const environmentNode = this.missionIsBackgroundProgressOnly(missionId)
-        ? availableLeaves().find((node) => {
-            const params = node.params || {};
-            const mapState = this.planner.requiredMapState(node, context);
-            return (!mapState.constrained || mapState.runnable) &&
-              (params.envHistoricalFamily || params.envLocalFamily || params.envWorldMastery);
-          }) : null;
-      let planned = environmentNode ? {
-        id: `${environmentNode.id}:${environmentNode.progress + 1}`,
-        nodeId: environmentNode.id,
-        type: Missions.ActionType.OBSERVE,
-        title: environmentNode.title,
-        params: { ...environmentNode.params },
-        backgroundEnvironment: true,
-        issuedAt: Date.now()
-      } : this.planner.nextAction({ availableLeaves }, context);
-      if (planned?.backgroundEnvironment && !BF.probeMissionActionTarget?.(
-          this.engine, { ...planned, missionId })) {
-        // La visite/exploration reste physique. Seul le runtime ENV créditera
-        // les observations distinctes et la qualification réelle des biomes.
-        const destinations = BF.bibleRuntime?.environmentPlayerDestinationMaps?.(environmentNode) || [];
-        if (environmentNode.params?.envLocalFamily ||
-            Number(BF.getMapExplorationState?.(this.engine.currentMapId)?.surfacePercent) >= 100 ||
-            (destinations.length && !destinations.includes(this.engine.currentMapId)) ||
-            (environmentNode.params?.envWorldMastery &&
-              BF.bibleRuntime?.environmentQualifiedBiomeTypes?.().has(
-                BF.bibleRuntime.environmentMapBiome(this.engine.currentMapId)))) return null;
-        planned.type = Missions.ActionType.EXPLORE_ZONE;
-      }
-      if (!planned) return null;
-
-      // `catalogManaged` signifie que la progression de cette feuille appartient
-      // à un runtime spécialisé (compteur, proximité, validation, scène...).
-      // ObjectM0 et le fan-out passif refusent déjà volontairement de la créditer
-      // comme interaction missionnelle générique : ne pas créer ici une
-      // currentAction que personne ne pourra clôturer.
-      const plannedNode = tree.find?.(planned.nodeId) || null;
-      if (plannedNode?.params?.catalogManaged === true && !planned.backgroundEnvironment) return null;
-      // Une mission de progression de fond consomme les événements canoniques
-      // par fan-out ; elle ne crée pas d'initiative physique autonome. Lire le
-      // contrat depuis la définition courante permet aussi de corriger les arbres
-      // hydratés depuis une sauvegarde antérieure au marqueur.
-      if (!this.missionAllowsAutomaticExecution(missionId)) return null;
-
-      const action = { ...planned, missionId };
-      const type = Missions.normalizeActionType(action.type);
-      const objectAction = [
-        Missions.ActionType.COLLECT,
-        Missions.ActionType.EXTRACT,
-        Missions.ActionType.OBSERVE,
-        Missions.ActionType.INSPECT,
-        Missions.ActionType.ANALYZE
-      ].includes(type);
-      if (objectAction && typeof BF.probeMissionActionTarget === "function") {
-        const target = BF.probeMissionActionTarget(this.engine, { ...action, type });
-        if (!target) {
-          if (options.reportUnresolved !== false) {
-            this.rememberUnresolvedMissionTarget(missionId, action, context, now);
-          }
-          return null;
+      const candidateLimit = availableLeaves().length;
+      for (let candidate = 0; candidate < candidateLimit; candidate += 1) {
+        const environmentNode = this.missionIsBackgroundProgressOnly(missionId)
+          ? availableLeaves().find((node) => {
+              const params = node.params || {};
+              const mapState = this.planner.requiredMapState(node, context);
+              return (!mapState.constrained || mapState.runnable) &&
+                (params.envHistoricalFamily || params.envLocalFamily || params.envWorldMastery);
+            }) : null;
+        let planned = environmentNode ? {
+          id: `${environmentNode.id}:${environmentNode.progress + 1}`,
+          nodeId: environmentNode.id,
+          type: Missions.ActionType.OBSERVE,
+          title: environmentNode.title,
+          params: { ...environmentNode.params },
+          backgroundEnvironment: true,
+          issuedAt: Date.now()
+        } : this.planner.nextAction({ availableLeaves }, context);
+        if (planned?.backgroundEnvironment && !BF.probeMissionActionTarget?.(
+            this.engine, { ...planned, missionId })) {
+          // La visite/exploration reste physique. Seul le runtime ENV créditera
+          // les observations distinctes et la qualification réelle des biomes.
+          const destinations = BF.bibleRuntime?.environmentPlayerDestinationMaps?.(environmentNode) || [];
+          if (environmentNode.params?.envLocalFamily ||
+              Number(BF.getMapExplorationState?.(this.engine.currentMapId)?.surfacePercent) >= 100 ||
+              (destinations.length && !destinations.includes(this.engine.currentMapId)) ||
+              (environmentNode.params?.envWorldMastery &&
+                BF.bibleRuntime?.environmentQualifiedBiomeTypes?.().has(
+                  BF.bibleRuntime.environmentMapBiome(this.engine.currentMapId)))) return null;
+          planned.type = Missions.ActionType.EXPLORE_ZONE;
         }
+        if (!planned) return null;
+        attemptedNodes.add(planned.nodeId);
+  
+        // `catalogManaged` signifie que la progression de cette feuille appartient
+        // à un runtime spécialisé (compteur, proximité, validation, scène...).
+        // ObjectM0 et le fan-out passif refusent déjà volontairement de la créditer
+        // comme interaction missionnelle générique : ne pas créer ici une
+        // currentAction que personne ne pourra clôturer.
+        const plannedNode = tree.find?.(planned.nodeId) || null;
+        if (plannedNode?.params?.catalogManaged === true && !planned.backgroundEnvironment) continue;
+        // Une mission de progression de fond consomme les événements canoniques
+        // par fan-out ; elle ne crée pas d'initiative physique autonome. Lire le
+        // contrat depuis la définition courante permet aussi de corriger les arbres
+        // hydratés depuis une sauvegarde antérieure au marqueur.
+        if (!this.missionAllowsAutomaticExecution(missionId)) return null;
+  
+        const action = { ...planned, missionId };
+        const type = Missions.normalizeActionType(action.type);
+        const objectAction = [
+          Missions.ActionType.COLLECT,
+          Missions.ActionType.EXTRACT,
+          Missions.ActionType.OBSERVE,
+          Missions.ActionType.INSPECT,
+          Missions.ActionType.ANALYZE
+        ].includes(type);
+        if (objectAction && typeof BF.probeMissionActionTarget === "function") {
+          const target = BF.probeMissionActionTarget(this.engine, { ...action, type });
+          if (!target) {
+            if (options.reportUnresolved !== false) {
+              this.rememberUnresolvedMissionTarget(missionId, action, context, now);
+            }
+            continue;
+          }
+        }
+        return action;
       }
-      return action;
+      return null;
     }
 
     recordExecutionFailure(
@@ -1314,15 +1335,27 @@
       this.memory.save?.();
     }
 
+    playerActionReturnSuggestion(mapId, missionId) {
+      const frontier = this.missionUndiscoveredAdjacentTarget(mapId);
+      const common = { source: "mission-player-action", missionId,
+        allowTeleportOptimization: false };
+      if (frontier) {
+        return frontier.frontierMapId === String(this.engine.currentMapId)
+          ? { ...common, discoverUnknown: true, direction: frontier.direction }
+          : { ...common, mapId: frontier.frontierMapId };
+      }
+      const route = this.engine.findKnownRoute?.(this.engine.currentMapId, mapId);
+      return Array.isArray(route) && route.length >= 2 ? { ...common, mapId } : null;
+    }
+
     requestMissionPlayerActionReturn(missionId, mapId) {
       const destination = BF.bibleRuntime?.missionPlayerActionDestinations?.(missionId)
         .find(entry => entry.mapId === mapId);
       if (!destination) return false;
       const currentMapId = String(this.engine.currentMapId || "");
-      if (currentMapId !== mapId) {
-        const route = this.engine.findKnownRoute?.(currentMapId, mapId);
-        if (!Array.isArray(route) || route.length < 2) return false;
-      }
+      const suggestion = currentMapId !== mapId
+        ? this.playerActionReturnSuggestion(mapId, missionId) : null;
+      if (currentMapId !== mapId && !suggestion) return false;
       this.cancelPlayerActionReturn();
       this.memory.setFact?.(this.missionReturnIntentKey(missionId), {
         active: currentMapId !== mapId, missionId, nodeId: destination.nodeId,
@@ -1332,9 +1365,7 @@
       this.memory.save?.();
       this.wakeIdleRetry?.();
       if (currentMapId !== mapId && !this.shouldDeferPlayerActionReturn()) {
-        this.engine.handleNavigationSuggestion?.({ mapId,
-          source: "mission-player-action", missionId,
-          allowTeleportOptimization: false });
+        this.engine.handleNavigationSuggestion?.(suggestion);
       }
       return true;
     }
@@ -1361,15 +1392,18 @@
       if (this.shouldDeferPlayerActionReturn()) return false;
       const navigation = this.engine.persistentNavigationIntent;
       if (navigation?.source === "mission-player-action" &&
-          navigation.mapId === intent.targetMapId &&
+          navigation.missionId === intent.missionId &&
+          (this.engine.pendingGate || this.engine.navigationRoute?.length)) return true;
+      const suggestion = this.playerActionReturnSuggestion(intent.targetMapId, intent.missionId);
+      if (!suggestion) return false;
+      if (navigation?.source === "mission-player-action" &&
+          (suggestion.discoverUnknown
+            ? navigation.discoverUnknown && navigation.direction === suggestion.direction
+            : navigation.mapId === suggestion.mapId) &&
           (this.engine.pendingGate || this.engine.navigationRoute?.length)) return true;
       // Sans chemin connu, conserver l’intention mais ne pas créer de voyage
       // fictif. La prochaine passe pourra relire les liens effectivement découverts.
-      const route = this.engine.findKnownRoute?.(this.engine.currentMapId, intent.targetMapId);
-      if (!Array.isArray(route) || route.length < 2) return false;
-      this.engine.handleNavigationSuggestion?.({ mapId: intent.targetMapId,
-        source: "mission-player-action", missionId: intent.missionId,
-        allowTeleportOptimization: false });
+      this.engine.handleNavigationSuggestion?.(suggestion);
       return true;
     }
 
@@ -1526,11 +1560,20 @@
 
       // Relire le contrat objet canonique dans ObjectM0 : une famille seule
       // ne prouve pas la présence du type précis demandé par la feuille.
-      if (params.objectId || params.cuoType || params.category ||
+      if (params.objectId || params.cuoType || params.category || params.subject ||
           (Array.isArray(params.tagsAny) && params.tagsAny.length) ||
           (Array.isArray(params.tagsAll) && params.tagsAll.length) ||
           (Array.isArray(params.cuoTypes) && params.cuoTypes.length)) {
         criteria.sourceNodeId = node.id;
+      }
+
+      const siteFact = params.requiredSiteFact
+        ? BF.bibleRuntime?.completionSiteFact?.(params.requiredSiteFact) ||
+          this.memory.getFact?.(params.requiredSiteFact, null) : null;
+      if (siteFact) {
+        ["mapId", "siteId", "microSceneId", "persistentMicroSceneId"].forEach((key) => {
+          if (siteFact[key]) criteria[key] = String(siteFact[key]);
+        });
       }
 
       const relationCriteria = this.missionRelationKnownMapCriteria(tree, node);
@@ -2027,10 +2070,11 @@
       const sourceNode = sourceTree?.find?.(sourceNodeId);
       if (sourceNodeId) {
         if (!sourceNode || typeof BF.matchesKnownMissionObject !== "function") return [];
+        const localObjectLookup = new Map();
         const matchesKnownObject = (mapId, objectId, detail = {}) =>
           BF.matchesKnownMissionObject(sourceTree, sourceNode, {
             ...detail, mapId, objectId
-          });
+          }, localObjectLookup);
         // Une MSC connue apporte ses instances/contexte. Les objets de population
         // viennent du même mapIndicators canonique déjà consommé pour les familles.
         const matchingMaps = new Set();
@@ -2040,13 +2084,21 @@
           Object.entries(site.instances || {}).forEach(([instanceId, detail]) => {
             if (matchesKnownObject(String(site.mapId), detail?.objectId, {
               instanceId, microSceneId: site.microSceneId,
-              persistentMicroSceneId: site.siteId
+              siteId: site.siteId,
+              persistentMicroSceneId: site.persistentMicroSceneId ||
+                String(site.siteId || "").replace(/^persistent:/, "")
             })) matchingMaps.add(String(site.mapId));
           });
         });
         [...discovered].map(String).forEach((mapId) => {
           const bucket = BF.getMapProgressionIndicators?.(mapId);
-          Object.entries(bucket?.uniqueObjects || {}).forEach(([objectId]) => {
+          const instances = Object.entries(bucket?.uniqueInstances || {});
+          instances.forEach(([instanceId, detail]) => {
+            if (matchesKnownObject(mapId, detail?.objectId, { ...detail, instanceId })) matchingMaps.add(mapId);
+          });
+          // Les anciennes mémoires sans instances restent lisibles, mais ne
+          // prouvent pas une nouvelle instance après un crédit déjà acquis.
+          if (!instances.length) Object.entries(bucket?.uniqueObjects || {}).forEach(([objectId]) => {
             if (matchesKnownObject(mapId, objectId)) matchingMaps.add(mapId);
           });
         });
@@ -4946,7 +4998,8 @@
           };
         });
       const publicCatalog = [...new Set([
-        ...Object.keys(Missions.definitions), ...this.trees.keys()
+        ...Object.keys(Missions.definitions), ...this.trees.keys(),
+        ...Object.keys(this.memory.state.missionLifecycle || {})
       ])]
         .filter((id) => id !== "foundation" && definitionFor(id))
         .filter((id) => definitionFor(id).instanceScope !== "map" || String(id).includes("@"))
@@ -4985,7 +5038,7 @@
               ? this.treeProgress(this.trees.get(id))
               : lifecycle.status === "completed"
                 ? 1
-                : 0,
+                : this.persistedTreeProgress(id),
             journalIntro: definitionFor(id).journalIntro ||
               `Cette mission est apparue lorsque ma progression a atteint un nouveau seuil. Je veux maintenant vérifier méthodiquement ce que ces découvertes rendent possible.`,
             discoveryReason: lifecycle.discoveryReason,

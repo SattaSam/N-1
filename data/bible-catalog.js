@@ -4626,7 +4626,7 @@
     }),
     sequence: Object.freeze([
       Object.freeze({ slot: "observe", title: "Repérer une ressource non étudiée", action: "observe", target: 1, params: Object.freeze({ tagsAny: Object.freeze(["resource"]), preferUnstudied: true }) }),
-      Object.freeze({ slot: "analyze", title: "Analyser cette même ressource", action: "analyze", target: 1, requires: Object.freeze(["observe"]), params: Object.freeze({ tagsAny: Object.freeze(["resource"]), relation: Object.freeze({ fromSlot: "observe", sameBy: Object.freeze(["instanceId"]) }) }) })
+      Object.freeze({ slot: "analyze", title: "Confirmer l’analyse de cette ressource", action: "analyze", target: 1, requires: Object.freeze(["observe"]), params: Object.freeze({ tagsAny: Object.freeze(["resource"]), allowSameTypeOnSourceMap: true, relation: Object.freeze({ fromSlot: "observe", sameBy: Object.freeze(["instanceId"]) }) }) })
     ])
   });
 
@@ -9136,6 +9136,14 @@
     slots: Object.freeze({}),
     mapGeneration: contactSelectedNpcMapGeneration,
     sequence: Object.freeze([Object.freeze({ slot: "contact", title: "Être reconnu comme ami", action: "observe", target: 1, params: Object.freeze({ eventDriven: true, catalogManaged: true }) })]),
+    worldTopologyLinks: Object.freeze([
+      Object.freeze({ id: "rocky-village", mapId: "custom-map-32-rock-village", civilizationId: "rocky",
+        relationRanks: Object.freeze(["friendly", "honored"]), knownNpcAnchors: true, allowCompleted: true,
+        directions: Object.freeze(["north", "east", "south", "west"]), mapFact: "civilization:rocky-village" }),
+      Object.freeze({ id: "translucent-village", mapId: "custom-map-31-tinycity", civilizationId: "translucent",
+        relationRanks: Object.freeze(["friendly", "honored"]), knownNpcAnchors: true, allowCompleted: true,
+        directions: Object.freeze(["north", "east", "south", "west"]), mapFact: "civilization:translucent-village" })
+    ]),
     runtimeValidation: Object.freeze({
       type: "civilization-contact", phase: "friendly", slot: "contact",
       nextContactMissionId: "CONTACT-10",
@@ -9271,9 +9279,9 @@
     ]),
     worldEventRequirements: Object.freeze([
       Object.freeze({ slot: "rockyContact", target: 1, distinctBy: "instanceId", criteria: Object.freeze({ type: "NPC_CONTACTED", civilizationId: "rocky", interactionSource: "manual" }) }),
-      Object.freeze({ slot: "rockyDialogue", target: 1, distinctBy: "instanceId", civilizationId: "rocky", relationScoreOnSatisfied: 1, sinceSlotComplete: "rockyContact", criteria: Object.freeze({ type: "NPC_DIALOGUE", civilizationId: "rocky" }) }),
+      Object.freeze({ slot: "rockyDialogue", target: 1, distinctBy: "instanceId", civilizationId: "rocky", relationScoreOnSatisfied: 1, sinceSlotComplete: "rockyContact", criteria: Object.freeze({ type: "NPC_DIALOGUE", missionId: "DIP-01", civilizationId: "rocky" }) }),
       Object.freeze({ slot: "translucentContact", target: 1, distinctBy: "instanceId", criteria: Object.freeze({ type: "NPC_CONTACTED", civilizationId: "translucent", interactionSource: "manual" }) }),
-      Object.freeze({ slot: "translucentDialogue", target: 1, distinctBy: "instanceId", civilizationId: "translucent", relationScoreOnSatisfied: 1, sinceSlotComplete: "translucentContact", criteria: Object.freeze({ type: "NPC_DIALOGUE", civilizationId: "translucent" }) })
+      Object.freeze({ slot: "translucentDialogue", target: 1, distinctBy: "instanceId", civilizationId: "translucent", relationScoreOnSatisfied: 1, sinceSlotComplete: "translucentContact", criteria: Object.freeze({ type: "NPC_DIALOGUE", missionId: "DIP-01", civilizationId: "translucent" }) })
     ]),
     npcEncounters: diplomacyDialogueEncounters("dip01", {
       rockyRequires: "rockyContact",
@@ -9310,9 +9318,9 @@
     ]),
     worldEventRequirements: Object.freeze([
       Object.freeze({ slot: "rockyContact", target: 1, distinctBy: "instanceId", criteria: Object.freeze({ type: "NPC_CONTACTED", civilizationId: "rocky", interactionSource: "manual" }) }),
-      Object.freeze({ slot: "rockyDialogue", target: 1, distinctBy: "instanceId", civilizationId: "rocky", relationScoreOnSatisfied: 1, sinceSlotComplete: "rockyContact", criteria: Object.freeze({ type: "NPC_DIALOGUE", civilizationId: "rocky" }) }),
+      Object.freeze({ slot: "rockyDialogue", target: 1, distinctBy: "instanceId", civilizationId: "rocky", relationScoreOnSatisfied: 1, sinceSlotComplete: "rockyContact", criteria: Object.freeze({ type: "NPC_DIALOGUE", missionId: "GAME-contact_first", civilizationId: "rocky" }) }),
       Object.freeze({ slot: "translucentContact", target: 1, distinctBy: "instanceId", criteria: Object.freeze({ type: "NPC_CONTACTED", civilizationId: "translucent", interactionSource: "manual" }) }),
-      Object.freeze({ slot: "translucentDialogue", target: 1, distinctBy: "instanceId", civilizationId: "translucent", relationScoreOnSatisfied: 1, sinceSlotComplete: "translucentContact", criteria: Object.freeze({ type: "NPC_DIALOGUE", civilizationId: "translucent" }) })
+      Object.freeze({ slot: "translucentDialogue", target: 1, distinctBy: "instanceId", civilizationId: "translucent", relationScoreOnSatisfied: 1, sinceSlotComplete: "translucentContact", criteria: Object.freeze({ type: "NPC_DIALOGUE", missionId: "GAME-contact_first", civilizationId: "translucent" }) })
     ]),
     npcEncounters: diplomacyDialogueEncounters("game-contact-first", {
       rockyRequires: "rockyContact",
@@ -9346,9 +9354,9 @@
     ]),
     worldEventRequirements: Object.freeze([
       Object.freeze({ slot: "rockyContacts", target: 3, distinctBy: "instanceId", criteria: Object.freeze({ type: "NPC_CONTACTED", civilizationId: "rocky", interactionSource: "manual" }) }),
-      Object.freeze({ slot: "rockyDialogue", target: 1, distinctBy: "instanceId", civilizationId: "rocky", relationScoreOnSatisfied: 1, sinceSlotComplete: "rockyContacts", criteria: Object.freeze({ type: "NPC_DIALOGUE", civilizationId: "rocky" }) }),
+      Object.freeze({ slot: "rockyDialogue", target: 1, distinctBy: "instanceId", civilizationId: "rocky", relationScoreOnSatisfied: 1, sinceSlotComplete: "rockyContacts", criteria: Object.freeze({ type: "NPC_DIALOGUE", missionId: "GAME-contact_cautious", civilizationId: "rocky" }) }),
       Object.freeze({ slot: "translucentContacts", target: 3, distinctBy: "instanceId", criteria: Object.freeze({ type: "NPC_CONTACTED", civilizationId: "translucent", interactionSource: "manual" }) }),
-      Object.freeze({ slot: "translucentDialogue", target: 1, distinctBy: "instanceId", civilizationId: "translucent", relationScoreOnSatisfied: 1, sinceSlotComplete: "translucentContacts", criteria: Object.freeze({ type: "NPC_DIALOGUE", civilizationId: "translucent" }) })
+      Object.freeze({ slot: "translucentDialogue", target: 1, distinctBy: "instanceId", civilizationId: "translucent", relationScoreOnSatisfied: 1, sinceSlotComplete: "translucentContacts", criteria: Object.freeze({ type: "NPC_DIALOGUE", missionId: "GAME-contact_cautious", civilizationId: "translucent" }) })
     ]),
     npcEncounters: diplomacyDialogueEncounters("game-contact-cautious", {
       rockyRequires: "rockyContacts",
@@ -9702,9 +9710,9 @@
     ]),
     worldEventRequirements: Object.freeze([
       Object.freeze({ slot: "rockyContact", target: 1, distinctBy: "instanceId", criteria: Object.freeze({ type: "NPC_CONTACTED", civilizationId: "rocky", interactionSource: "manual" }) }),
-      Object.freeze({ slot: "rockyDialogue", target: 1, distinctBy: "instanceId", sinceSlotComplete: "rockyContact", criteria: Object.freeze({ type: "NPC_DIALOGUE", civilizationId: "rocky" }) }),
+      Object.freeze({ slot: "rockyDialogue", target: 1, distinctBy: "instanceId", sinceSlotComplete: "rockyContact", criteria: Object.freeze({ type: "NPC_DIALOGUE", missionId: "DIP-03", civilizationId: "rocky" }) }),
       Object.freeze({ slot: "translucentContact", target: 1, distinctBy: "instanceId", criteria: Object.freeze({ type: "NPC_CONTACTED", civilizationId: "translucent", interactionSource: "manual" }) }),
-      Object.freeze({ slot: "translucentDialogue", target: 1, distinctBy: "instanceId", sinceSlotComplete: "translucentContact", criteria: Object.freeze({ type: "NPC_DIALOGUE", civilizationId: "translucent" }) })
+      Object.freeze({ slot: "translucentDialogue", target: 1, distinctBy: "instanceId", sinceSlotComplete: "translucentContact", criteria: Object.freeze({ type: "NPC_DIALOGUE", missionId: "DIP-03", civilizationId: "translucent" }) })
     ]),
     npcEncounters: diplomacyDialogueEncounters("dip03", {
       rockyRequires: "rockyContact",

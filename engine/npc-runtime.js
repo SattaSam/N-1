@@ -247,7 +247,7 @@
     return true;
   };
 
-  const presentSpeech = (state, text, elapsed, duration = 3.8, emitDialogue = true) => {
+  const presentSpeech = (state, text, elapsed, duration = 3.8, emitDialogue = true, missionId = null) => {
     const message = String(text || "⋔ ⌁ ∆ ⟟");
     state.speechUntil = elapsed + Math.max(1.2, Number(duration) || 3.8);
     drawSpeech(state, message);
@@ -264,6 +264,7 @@
           cuoType: state.type,
           mapId: BF.currentEngine?.currentMapId || null,
           state: "dialogue",
+          missionId: missionId || null,
           tags: ["npc_dialogue", "civilization", civilizationIdForType(state.type)],
           text: message
         });
@@ -1148,7 +1149,8 @@
         text,
         elapsed,
         Number(options.duration) || 3.8,
-        options.emitDialogue !== false
+        options.emitDialogue !== false,
+        options.missionId || null
       );
     },
     setEnabled(root, enabled) {

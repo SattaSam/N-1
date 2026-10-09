@@ -8,6 +8,7 @@
   const FILE_BOOTSTRAP_KEY = "bluefox_file_save_bootstrap_v1";
   const FILE_DIAGNOSTICS_KEY = "bluefox_file_save_diagnostics_v1";
   const MISSION_MEMORY_KEY = "bluefox_mission_memory_m0_v1";
+  const PROGRESSION_KEY = "bluefox_progression_registry_v1";
   const AUTOSAVE_INTERVAL_MS = 90000;
   const INTRO_VIDEO_PATH = "assets/video/bluefox-intro.mp4";
 
@@ -136,7 +137,9 @@
     ];
     const errors = [];
     calls.forEach((call) => {
-      try { call(); } catch (error) { errors.push(error); }
+      try {
+        if (call() === false) errors.push(new Error("Écriture d’un propriétaire refusée."));
+      } catch (error) { errors.push(error); }
     });
     return errors;
   };
@@ -149,7 +152,9 @@
         .map((key) => [key, global.localStorage.getItem(key)])
     );
 
-  const stateSignature = (state) => JSON.stringify(state || {});
+  const stateSignature = (state) => JSON.stringify(Object.fromEntries(
+    Object.entries(state || {}).sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
+  ));
 
   const validMissionMemoryState = (state) => {
     try {
@@ -173,8 +178,21 @@
       Number.isFinite(Number(snapshot.savedAt))
     );
 
+  const validProgressionState = (state) => {
+    const raw = state?.[PROGRESSION_KEY];
+    // Les snapshots historiques sans registre restent lisibles uniquement si
+    // aucun registre actif à préserver ni propriétaire courant ne l'exige.
+    if (raw == null) return !BF.progression && global.localStorage.getItem(PROGRESSION_KEY) == null;
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed?.version === 1 && parsed.campStorage &&
+        typeof parsed.campStorage === "object" && !Array.isArray(parsed.campStorage) &&
+        parsed.inventory && typeof parsed.inventory === "object" && !Array.isArray(parsed.inventory);
+    } catch { return false; }
+  };
+
   const restorableSnapshot = (snapshot) =>
-    validSnapshot(snapshot) && validMissionMemoryState(snapshot.state);
+    validSnapshot(snapshot) && validMissionMemoryState(snapshot.state) && validProgressionState(snapshot.state);
 
   const buildSnapshot = (slot) => {
     const runtimeErrors = persistRuntime();
@@ -234,11 +252,6 @@
     }
   };
 
-  const markActiveSnapshot = (slot, snapshot) => {
-    safeSetItem(ACTIVE_SLOT_KEY, String(slot));
-    safeSetItem(RESTORED_AT_KEY, String(snapshot.savedAt));
-  };
-
   const fileRequest = async (path, options = {}) => {
     const response = await global.fetch(path, {
       cache: "no-store",
@@ -270,22 +283,40 @@
 
   const applySnapshot = (snapshot, slot) => {
     if (!restorableSnapshot(snapshot)) {
-      throw new Error("Instantané de sauvegarde incomplet : mémoire missionnelle absente ou invalide.");
+      throw new Error("Instantané incomplet : mémoire missionnelle ou registre d’inventaire absent ou invalide.");
     }
-
-    clearActive();
-
-    Object.entries(snapshot.state).forEach(([key, value]) => {
-      if (
-        key.startsWith("bluefox_") &&
-        !RESERVED_KEYS.has(key) &&
-        value != null
-      ) {
-        global.localStorage.setItem(key, String(value));
+    const previous = captureState();
+    const markers = Object.fromEntries([ACTIVE_SLOT_KEY, RESTORED_AT_KEY].map((key) =>
+      [key, global.localStorage.getItem(key)]));
+    const incoming = Object.fromEntries(Object.entries(snapshot.state).filter(([key, value]) =>
+      key.startsWith("bluefox_") && !RESERVED_KEYS.has(key) && value != null
+    ).map(([key, value]) => [key, String(value)]));
+    try {
+      // Écrire avant de retirer : un setItem refusé laisse l'ancienne valeur
+      // intacte. Aucun second snapshot volumineux n'est stocké localement.
+      Object.entries(incoming).forEach(([key, value]) => {
+        if (global.localStorage.getItem(key) !== value) global.localStorage.setItem(key, value);
+      });
+      Object.keys(previous).forEach((key) => {
+        if (!(key in incoming)) global.localStorage.removeItem(key);
+      });
+      if (stateSignature(captureState()) !== stateSignature(Object.fromEntries(Object.entries(incoming).sort(([a], [b]) => a.localeCompare(b))))) {
+        throw new Error("L’état restauré ne correspond pas au fichier.");
       }
-    });
-
-    markActiveSnapshot(slot, snapshot);
+      global.localStorage.setItem(ACTIVE_SLOT_KEY, String(slot));
+      global.localStorage.setItem(RESTORED_AT_KEY, String(snapshot.savedAt));
+    } catch (error) {
+      let rollbackComplete = true;
+      for (const key of new Set([...Object.keys(captureState()), ...Object.keys(previous), ...Object.keys(markers)])) {
+        const value = key in markers ? markers[key] : previous[key];
+        try {
+          if (value == null) global.localStorage.removeItem(key);
+          else if (global.localStorage.getItem(key) !== value) global.localStorage.setItem(key, value);
+        } catch { rollbackComplete = false; }
+      }
+      error.rollbackComplete = rollbackComplete;
+      throw error;
+    }
   };
 
   const writeSnapshot = async (slot = "auto", options = {}) => {
@@ -307,10 +338,11 @@
       runtimeErrors
     } = buildSnapshot(slot);
 
-    if (!validMissionMemoryState(snapshot.state)) {
+    if (runtimeErrors.length || !restorableSnapshot(snapshot)) {
       diagnostics.lastFailureAt = Date.now();
       diagnostics.lastError =
-        "Mémoire missionnelle indisponible : sauvegarde refusée pour éviter un snapshot incomplet.";
+        runtimeErrors.length ? "Échec de synchronisation du runtime : sauvegarde refusée pour éviter un état périmé." :
+        "Mémoire missionnelle ou registre d’inventaire indisponible : sauvegarde incomplète refusée.";
       persistDiagnostics();
       return false;
     }
@@ -334,7 +366,8 @@
         method: "POST",
         body: serialized
       });
-      if (!validSnapshot(stored) || stored.savedAt !== snapshot.savedAt) {
+      if (!restorableSnapshot(stored) || stored.savedAt !== snapshot.savedAt ||
+          stateSignature(stored.state) !== stateSignature(snapshot.state)) {
         throw new Error("Le fichier relu ne correspond pas à l’écriture.");
       }
 
@@ -365,14 +398,14 @@
   };
 
   const createRecoverySnapshot = async () => {
-    const { snapshot } = buildSnapshot("recovery");
-    if (!validMissionMemoryState(snapshot.state)) return false;
+    const { snapshot, runtimeErrors } = buildSnapshot("recovery");
+    if (runtimeErrors.length || !restorableSnapshot(snapshot)) return false;
     try {
-      await fileRequest("/api/saves/recovery", {
+      const stored = await fileRequest("/api/saves/recovery", {
         method: "POST",
         body: JSON.stringify(snapshot)
       });
-      return true;
+      return restorableSnapshot(stored) && stateSignature(stored.state) === stateSignature(snapshot.state);
     } catch {
       return false;
     }
@@ -393,9 +426,22 @@
       return false;
     }
 
-    await createRecoverySnapshot();
+    const recovered = await createRecoverySnapshot();
+    if (!recovered && validMissionMemoryState(captureState())) {
+      diagnostics.lastError = "Sauvegarde de récupération indisponible : restauration refusée.";
+      diagnostics.lastFailureAt = Date.now();
+      persistDiagnostics();
+      return false;
+    }
     restoreInProgress = true;
-    applySnapshot(snapshot, slot);
+    try { applySnapshot(snapshot, slot); } catch (error) {
+      restoreInProgress = error.rollbackComplete === false;
+      diagnostics.exactRestore = !restoreInProgress;
+      diagnostics.lastError = error.message;
+      diagnostics.lastFailureAt = Date.now();
+      persistDiagnostics();
+      return false;
+    }
     writeLocalCache(slot, snapshot);
     if (String(slot) === "auto") {
       lastAutoStateSignature = stateSignature(snapshot.state);
@@ -417,6 +463,8 @@
         readLocalSnapshot(slot) ||
         (slot === "auto" ? readLocalSnapshot("backup") : null);
       const restoredAt = Number(global.localStorage.getItem(RESTORED_AT_KEY)) || 0;
+      const activeStateValid = restorableSnapshot({ format: "bluefox-save-file", schemaVersion: 1,
+        savedAt: restoredAt, state: captureState() });
 
       // Une source fichier valide permet de supprimer sans ambiguïté les
       // duplications de snapshots locales avant le démarrage du runtime.
@@ -425,9 +473,17 @@
       if (
         restorableSnapshot(fileSnapshot) &&
         fileSnapshot.savedAt >
-          Math.max(restoredAt, Number(localSnapshot?.savedAt) || 0)
+          Math.max(activeStateValid ? restoredAt : 0,
+            restorableSnapshot(localSnapshot) ? Number(localSnapshot.savedAt) || 0 : 0)
       ) {
-        applySnapshot(fileSnapshot, slot);
+        try { applySnapshot(fileSnapshot, slot); } catch (error) {
+          diagnostics.lastError = error.message;
+          diagnostics.lastFailureAt = Date.now();
+          diagnostics.exactRestore = error.rollbackComplete !== false;
+          persistDiagnostics();
+          startupReady = error.rollbackComplete !== false;
+          return startupReady;
+        }
         diagnostics.restoredFromFile = true;
         safeSetItem(FILE_BOOTSTRAP_KEY, String(fileSnapshot.savedAt));
         global.location.reload();

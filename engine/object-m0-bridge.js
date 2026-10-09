@@ -629,6 +629,14 @@
           { ...proof, detail: { cuoType: proof.cuoType } });
       });
       if (!reference) return null;
+      // Les confirmations locales gardent un second geste réel tant qu'une
+      // ressource admissible est présente. La preuve demeure utilisable après
+      // disparition/collecte de l'instance, sans recréer l'objet.
+      if (sameTypeOnSourceMap(contract.tree, contract.node, reference)) {
+        const physical = selectObservable(engine, action, { activatePassive: false });
+        if (physical?.userData?.active &&
+            !interactionState(resolveMissionCandidate(physical)).collected) return null;
+      }
     }
     return {
       contract,
@@ -705,6 +713,19 @@
       String(left[field]) === String(right[field]);
   };
 
+  const sameTypeOnSourceMap = (tree, node, evidence) => {
+    if (!node) return (tree?.availableLeaves?.() || []).some((leaf) =>
+      sameTypeOnSourceMap(tree, leaf, evidence));
+    const slot = node.params?.sequenceSlot || String(node.id).slice(String(tree?.id).length + 1);
+    const step = asArray(catalogMission(tree?.id)?.sequence).find((entry) => entry.slot === slot);
+    if (node.params?.allowSameTypeOnSourceMap !== true && step?.params?.allowSameTypeOnSourceMap !== true) return false;
+    const source = tree?.findSequenceSlot?.(node.params?.relation?.fromSlot);
+    return parsedRelationEvidence(source).some((reference) =>
+      Boolean(reference.cuoType && reference.mapId) &&
+      lower(reference.cuoType) === lower(evidence?.cuoType) &&
+      String(reference.mapId) === String(evidence?.mapId || ""));
+  };
+
   const relationMatches = (tree, node, evidence) => {
     const relation = node?.params?.relation;
     if (!relation) return true;
@@ -719,7 +740,7 @@
       const same = sameBy.every((field) =>
         relationFieldMatches(field, reference, evidence)
       );
-      if (!same) return false;
+      if (!same && !sameTypeOnSourceMap(tree, node, evidence)) return false;
       return differentBy.every((field) =>
         Boolean(String(reference[field] || "")) &&
         Boolean(String(evidence[field] || "")) &&
@@ -826,9 +847,13 @@
         return false;
       }
       if (!relationMatches(tree, node, relationEvidenceFromEvent(event))) return false;
+      if (!studySubjectMatches(event, node, tags)) return false;
       const reaction = lower(detail.reaction || detail.state);
       const allowed = asArray(node.params?.reactionsAny).map(lower).filter(Boolean);
       const excluded = asArray(node.params?.excludeReactions).map(lower).filter(Boolean);
+      // Une réaction n'est ni une inspection ni une analyse physique. Seuls
+      // les objectifs qui déclarent ce signal peuvent le consommer ici.
+      if (!allowed.length && !excluded.length) return false;
       if (allowed.length && !allowed.includes(reaction)) return false;
       if (excluded.includes(reaction)) return false;
       return true;
@@ -877,6 +902,7 @@
     if (!bound || (!bound.instanceId && !bound.objectId && !bound.cuoType && !bound.missionSceneMissionId)) return true;
     if (bound.mapId && String(event.mapId || "") !== String(bound.mapId)) return false;
     if (bound.binding === "instance" && bound.instanceId) {
+      if (sameTypeOnSourceMap(manager?.trees?.get?.(missionId), null, relationEvidenceFromEvent(event))) return true;
       return samePhysicalInstance(
         {
           instanceId: bound.instanceId,
@@ -1356,6 +1382,8 @@
     if (bound.mapId && String(engine?.currentMapId || "") !== String(bound.mapId)) return false;
     const identity = identityOf(resolved);
     if (bound.binding === "instance" && bound.instanceId) {
+      if (sameTypeOnSourceMap(engine?.missionManager?.trees?.get?.(missionId), null,
+          relationEvidenceFromResolved(resolved, engine?.currentMapId))) return true;
       return samePhysicalInstance(
         {
           instanceId: bound.instanceId,
@@ -1652,9 +1680,10 @@
     if (!engine || !action?.missionId || !action?.nodeId) return null;
     const evidenceContract = evidenceContractForAction(engine, action);
     if (evidenceContract) {
-      return missionEvidenceForAction(engine, action)
-        ? { missionEvidence: true }
-        : null;
+      if (missionEvidenceForAction(engine, action)) return { missionEvidence: true };
+      // Une preuve inférée incomplète ne supprime pas l'interaction physique.
+      // Les contrats explicites de prélèvement restent exclusivement narratifs.
+      if (!evidenceContract.inferred) return null;
     }
     const type = Missions.normalizeActionType(action.type);
     if ([Missions.ActionType.COLLECT, Missions.ActionType.EXTRACT].includes(type)) {
@@ -1722,10 +1751,10 @@
     const originalExecute = proto.execute;
     const executeObjectAware = function executeObjectAware(action, now) {
       const evidenceContract = evidenceContractForAction(this.engine, action);
-      if (evidenceContract) {
+      const sourceProof = evidenceContract ? missionEvidenceForAction(this.engine, action) : null;
+      if (evidenceContract && !evidenceContract.inferred && !sourceProof) return false;
+      if (sourceProof) {
         if (this.isEngineBusy()) return false;
-        const sourceProof = missionEvidenceForAction(this.engine, action);
-        if (!sourceProof) return false;
         const evidence = sourceProof.evidence || {};
         Object.defineProperty(action, "__missionEvidenceCompletion", {
           value: {
@@ -2684,10 +2713,38 @@
   };
   // La mémoire géographique réutilise le matching du propriétaire CUO. Une
   // destination connue n'est pas une interaction ni un crédit missionnel.
-  BF.matchesKnownMissionObject = (tree, node, known) => {
+  BF.matchesKnownMissionObject = (tree, node, known, localObjectLookup = null) => {
     const definition = BF.ObjectLibrary?.getById?.(known?.objectId) ||
       BF.ObjectLibrary?.getById?.(String(known?.objectId || "").toUpperCase());
     if (!definition || !tree || !node) return false;
+    const manager = BF.currentEngine?.missionManager;
+    if (!requiredMapMatches(manager, node, known.mapId)) return false;
+    const fact = missionSiteFact(manager, node);
+    if (node.params?.requiredSiteFact && (!fact || !siteFactMatchesContext(fact, {
+      microSceneInstanceId: known.siteId || (known.persistentMicroSceneId ? `persistent:${known.persistentMicroSceneId}` : ""),
+      microSceneId: known.microSceneId,
+      persistentMicroSceneId: known.persistentMicroSceneId
+    }, known.mapId))) return false;
+    const mode = studyDistinctMode(node);
+    let generation = Math.max(0, Number(known.studyGeneration) || 0);
+    if (known.instanceId && String(known.mapId) === String(BF.currentEngine?.currentMapId)) {
+      const objects = BF.currentEngine?.currentMap?.interactables || [];
+      if (localObjectLookup && !localObjectLookup.has(null)) {
+        objects.forEach((object) => localObjectLookup.set(identityOf(resolveMissionCandidate(object)).instanceId, object));
+        localObjectLookup.set(null, true);
+      }
+      const physical = localObjectLookup ? localObjectLookup.get(String(known.instanceId)) : objects.find((object) =>
+        identityOf(resolveMissionCandidate(object)).instanceId === String(known.instanceId));
+      if (physical) generation = interactionState(resolveMissionCandidate(physical)).studyGeneration;
+    }
+    const distinct = mode === "instanceId"
+      ? (known.instanceId ? (isStudyAction(node.type)
+        ? studyInstanceDistinctValue(known.instanceId, generation) : String(known.instanceId)) : null)
+      : mode === "objectId" ? lower(known.objectId)
+      : mode === "mapId" ? String(known.mapId || "")
+      : mode === "cuoType" ? lower(definition.type) : null;
+    if (mode === "instanceId" && !known.instanceId && node.distinctValues?.length) return false;
+    if (distinct != null && node.hasDistinctValue?.(distinct)) return false;
     const metadata = {
       ...definitionMissionMetadata(definition),
       microSceneId: known.microSceneId || null,

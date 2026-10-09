@@ -3006,17 +3006,38 @@
       for (const mission of this.allMissions()) {
         if (missionIds.size && !missionIds.has(String(mission?.id || ""))) continue;
         const specs = asArray(mission?.worldTopologyLinks);
-        if (!specs.length || !this.missionLifecycle(mission.id).active) continue;
+        const lifecycle = this.missionLifecycle(mission.id);
+        if (!specs.length || (!lifecycle.active && !lifecycle.completed)) continue;
         const tree = manager.trees?.get?.(mission.id);
         if (!tree) continue;
 
         for (const spec of specs) {
+          if (!lifecycle.active && spec.allowCompleted !== true) continue;
+          if (spec.civilizationId && !asArray(spec.relationRanks).includes(
+              manager.catalogController?.getRelation?.(spec.civilizationId)?.rank)) continue;
           if (!spec?.mapId || !this.topologyLinkSlotsSatisfied(mission, spec, tree)) continue;
           const targetMapId = String(spec.mapId);
           if (!BF.maps?.[targetMapId] && !this.persistentWorldSceneMap(targetMapId)) continue;
           const anchors = asArray(spec.anchorMapIds).map(String).filter(Boolean);
           const directions = asArray(spec.directions).map((value) => lower(value)).filter(Boolean);
           const existingReceipt = manager.memory.getFact?.(`worldTopologyLink:${mission.id}:${spec.id || targetMapId}`, null);
+          const receiptLinkValid = existingReceipt?.mapId === targetMapId &&
+            String(BF.maps?.[existingReceipt.anchorMapId]?.exits?.[existingReceipt.direction]?.targetMap || "") === targetMapId &&
+            String(topology.targetFrom?.(existingReceipt.anchorMapId, existingReceipt.direction)?.mapId || "") === targetMapId;
+          if (spec.knownNpcAnchors === true && receiptLinkValid) {
+            anchors.unshift(existingReceipt.anchorMapId);
+          } else if (spec.knownNpcAnchors === true) {
+            const discovered = engine.discoveredMaps instanceof Set ? [...engine.discoveredMaps].map(String) : [];
+            const reachable = discovered.filter((mapId) => mapId !== targetMapId &&
+              !BF.maps?.[mapId]?.civilizationRole && topology.coordinateOf?.(mapId) &&
+              (mapId === engine.currentMapId || engine.findKnownRoute?.(engine.currentMapId, mapId)?.length > 1));
+            const npcType = `npc_${spec.civilizationId}`;
+            const preferred = reachable.filter((mapId) => Object.keys(
+              BF.getMapProgressionIndicators?.(mapId)?.uniqueObjects || {}
+            ).some((id) => lower(BF.ObjectLibrary?.getById?.(id)?.type) === npcType));
+            anchors.push(...[...new Set([...preferred, ...reachable])].slice(0, 128));
+            if (existingReceipt?.anchorMapId && discovered.includes(existingReceipt.anchorMapId)) anchors.unshift(existingReceipt.anchorMapId);
+          }
 
           let linked = false;
           let linkedAnchor = null;
@@ -3041,6 +3062,8 @@
               const anchorPoint = topology.coordinateOf?.(anchorMapId);
               if (!anchorPoint) continue;
               for (const direction of directions) {
+                const authoredTarget = BF.maps?.[anchorMapId]?.exits?.[direction]?.targetMap;
+                if (authoredTarget && String(authoredTarget) !== targetMapId) continue;
                 const target = topology.targetFrom?.(anchorMapId, direction) || null;
                 if (!target || !Number.isFinite(Number(target.x)) || !Number.isFinite(Number(target.y))) continue;
                 const x = Number(target.x);
@@ -3974,23 +3997,37 @@
           Number(player.z) - Number(root.position?.z || 0)
         );
 
-        if (entry.speech && !state.speechShown && (
+        const available = tree?.availableLeaves?.() || [];
+        const pendingNarrativeSpeech = entry.emitDialogue === true && state.speechMissionId !== mission.id && (
+          asArray(mission.worldEventRequirements).some((requirement) =>
+            requirement.criteria?.type === "NPC_DIALOGUE" &&
+            `npc_${requirement.criteria.civilizationId}` === entry.cuoType &&
+            available.includes(tree?.find?.(`${mission.id}:${requirement.slot}`))) ||
+          (mission.runtimeValidation?.type === "civilization-contact" &&
+            ["dialogue", "indication"].includes(mission.runtimeValidation.phase) &&
+            available.includes(tree?.find?.(`${mission.id}:${mission.runtimeValidation.slot}`)))
+        );
+        if (entry.speech && (!state.speechShown || pendingNarrativeSpeech) && (
           !Number.isFinite(Number(entry.speechTriggerDistance)) ||
           Number(entry.speechTriggerDistance) <= 0 ||
           distance <= Number(entry.speechTriggerDistance)
         )) {
-          BF.NpcRuntime?.speak?.(root, String(entry.speech), {
+          const spoken = BF.NpcRuntime?.speak?.(root, String(entry.speech), {
             duration: Math.max(1.5, Number(entry.speechDuration) || 4),
-            emitDialogue: entry.emitDialogue === true
+            emitDialogue: entry.emitDialogue === true,
+            missionId: mission.id
           });
-          manager.memory.setFact?.(factKey, {
-            ...state,
-            speechShown: true,
-            speechShownAt: Date.now()
-          });
-          manager.memory.save?.();
-          state.speechShown = true;
-          changed = true;
+          if (typeof BF.NpcRuntime?.speak === "function" && spoken !== false) {
+            manager.memory.setFact?.(factKey, {
+              ...state,
+              speechShown: true,
+              speechMissionId: mission.id,
+              speechShownAt: Date.now()
+            });
+            manager.memory.save?.();
+            state.speechShown = true;
+            changed = true;
+          }
         }
 
         if (entry.despawnOnSlotComplete) {
@@ -5274,6 +5311,7 @@
       }
       if (phase === "dialogue" || phase === "indication") {
         if (type !== String(types.NPC_DIALOGUE || "NPC_DIALOGUE")) return false;
+        if (String(detail.missionId || "") !== String(mission.id)) return false;
         return this.progressRuntimeValidationSlot(mission.id, slot, 1);
       }
       if (phase === "cooperation-reaction") {
@@ -6351,6 +6389,18 @@
           for (const mapId of mapsByType.get(cuoType)) {
             if (requiredMapId && mapId !== String(requiredMapId)) continue;
             add(mapId, node.id);
+          }
+          // Un village indiqué par la civilisation est une destination à
+          // découvrir, sans devenir pour autant une map déjà visitée.
+          const civilizationId = lower(requirement.criteria?.civilizationId);
+          const village = civilizationId ? this.manager()?.memory?.getFact?.(
+            `civilization:${civilizationId}-village`, null) : null;
+          const villageMapId = String(village?.mapId || "");
+          if (villageMapId && (!requiredMapId || villageMapId === String(requiredMapId)) &&
+              asArray(BF.maps?.[villageMapId]?.customObjects).some(entry =>
+                String(entry?.type || entry?.cuoType || "") === cuoType) &&
+              this.manager()?.missionUndiscoveredAdjacentTarget?.(villageMapId)) {
+            add(villageMapId, node.id);
           }
         }
       } else {
@@ -9366,6 +9416,18 @@
     }
 
     onMissionState(state) {
+      // Initialiser même pendant une réconciliation réentrante : la mission
+      // suivante doit avoir sa fenêtre AVANT son premier événement réel.
+      for (const missionId of this.manager()?.activeMissionIds || []) {
+        const mission = this.byId.get(missionId);
+        if (!mission || !asArray(mission.worldEventRequirements).length ||
+            this.manager()?.memory?.state?.missionLifecycle?.[mission.id]?.status !== "active") continue;
+        const baseline = this.ensureWorldEventBaseline(mission);
+        const tree = this.manager()?.trees?.get?.(mission.id);
+        for (const requirement of asArray(mission.worldEventRequirements)) {
+          this.ensureWorldEventRequirementBaseline(mission, requirement, tree, baseline);
+        }
+      }
       if (!this.observationCaptureQueued) {
         this.observationCaptureQueued = true;
         const schedule = global.queueMicrotask || ((callback) => Promise.resolve().then(callback));
