@@ -158,7 +158,12 @@
       String(step?.params?.requiredMapFact || "") === factKey &&
       String(step?.params?.requiredMapField || "") === "generatedTargetMapId"
     );
-    return dependent ? { factKey } : null;
+    // Une découverte libre et une destination prescrite ne partagent pas
+    // leur preuve d'arrivée. Le contenu/biome prescrit appartient au trajet
+    // ouvert, même si sa feuille suivante mémorise un autre arrivalFact.
+    const prescribedDestination = definition?.mapGeneration &&
+      node?.params?.newOnly === true && Number(node.target) === 1;
+    return dependent || prescribedDestination ? { factKey } : null;
   };
 
   const generatedTargetMatchesTravel = (manager, missionId, node, detail) => {
@@ -170,6 +175,8 @@
     if (!targetMapId || !toMapId || targetMapId !== toMapId) return false;
     const travelNodeId = String(excursion?.travelNodeId || "");
     if (travelNodeId && travelNodeId !== String(node?.id || "")) return false;
+    const provenance = manager?.generatedMissionTargetProvenance?.(missionId, targetMapId);
+    if (provenance?.known && provenance.valid === false) return false;
     return true;
   };
 

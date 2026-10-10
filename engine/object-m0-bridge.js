@@ -1798,6 +1798,10 @@
             sourceCuoType: evidence.cuoType || null,
             sourceInstanceId: evidence.instanceId || null,
             sourceMapId: evidence.mapId || null,
+            // La confirmation porte le lieu de la preuve, comme un événement
+            // physique. Le Planner ne doit ni perdre ce lieu ni lui substituer
+            // la map courante lorsque la confirmation est narrative.
+            mapId: evidence.mapId || null,
             legacyCompletedSlot: evidence.legacyCompletedSlot === true
           },
           enumerable: false,

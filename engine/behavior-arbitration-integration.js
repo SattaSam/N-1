@@ -1388,7 +1388,8 @@
           return;
         } else if (
           cautiousFauna.phase === "outer" &&
-          now - cautiousFauna.arrivedAt >= 1200
+          now - cautiousFauna.arrivedAt >= 1200 &&
+          faunaRuntimeState(object)?.cautiousQualified === true
         ) {
           const anchor = targetPosition(object);
           const fromAnimal = this.character.root.position.clone().sub(anchor).setY(0);
@@ -1411,6 +1412,10 @@
         ) {
           return;
         } else if (cautiousFauna.phase === "outer") {
+          return;
+        } else if (faunaRuntimeState(object)?.acceptedProximity !== true) {
+          // FaunaRuntime possède la tolérance de l'animal. Une durée fixe
+          // côté BAC ne vaut ni qualification prudente ni proximité acceptée.
           return;
         } else {
           this.__bacFaunaApproach = null;

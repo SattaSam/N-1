@@ -1501,7 +1501,7 @@
     mapGeneration: Object.freeze({ size: "random", biome: "random", requiredObjects: Object.freeze([Object.freeze({ type: "stele", count: 1, contextRole: "civilizationTrail1" })]) }),
     sequence: Object.freeze([
       Object.freeze({ slot: "travel", title: "Rejoindre une nouvelle map", action: "travel", target: 1, requires: Object.freeze([]), params: Object.freeze({ eventDriven: true, newOnly: true, distinctBy: "mapId" }) }),
-      Object.freeze({ slot: "stele", title: "Observer la stèle de cette nouvelle map", action: "observe", target: 1, requires: Object.freeze(["travel"]), params: Object.freeze({ cuoType: "stele" }) })
+      Object.freeze({ slot: "stele", title: "Observer la stèle de cette nouvelle map", action: "observe", target: 1, requires: Object.freeze(["travel"]), params: Object.freeze({ requiredMapFact: "tutorialExcursion:GAME-civilization_3", requiredMapField: "generatedTargetMapId", cuoType: "stele" }) })
     ]),
     narrative: Object.freeze({
       revealed: Object.freeze(["Certaines marques ressemblent moins à un symbole qu'à une indication. Peut-être qu'elles montrent une direction."]),
@@ -1523,7 +1523,7 @@
     mapGeneration: Object.freeze({ size: "random", biome: "random", requiredObjects: Object.freeze([Object.freeze({ type: "stele", count: 1, contextRole: "civilizationTrail2" })]) }),
     sequence: Object.freeze([
       Object.freeze({ slot: "travel", title: "Rejoindre une deuxième nouvelle map", action: "travel", target: 1, requires: Object.freeze([]), params: Object.freeze({ eventDriven: true, newOnly: true, distinctBy: "mapId" }) }),
-      Object.freeze({ slot: "stele", title: "Observer une nouvelle stèle", action: "observe", target: 1, requires: Object.freeze(["travel"]), params: Object.freeze({ cuoType: "stele" }) })
+      Object.freeze({ slot: "stele", title: "Observer une nouvelle stèle", action: "observe", target: 1, requires: Object.freeze(["travel"]), params: Object.freeze({ requiredMapFact: "tutorialExcursion:GAME-civilization_4", requiredMapField: "generatedTargetMapId", cuoType: "stele" }) })
     ]),
     narrative: Object.freeze({
       revealed: Object.freeze(["La première stèle m'a donné une direction. Je veux savoir si cette logique tient encore une carte plus loin."]),
@@ -1550,7 +1550,7 @@
     }),
     sequence: Object.freeze([
       Object.freeze({ slot: "travel", title: "Rejoindre une troisième nouvelle map", action: "travel", target: 1, requires: Object.freeze([]), params: Object.freeze({ eventDriven: true, newOnly: true, distinctBy: "mapId" }) }),
-      Object.freeze({ slot: "stele", title: "Observer la stèle qui termine la piste", action: "observe", target: 1, requires: Object.freeze(["travel"]), params: Object.freeze({ cuoType: "stele" }) }),
+      Object.freeze({ slot: "stele", title: "Observer la stèle qui termine la piste", action: "observe", target: 1, requires: Object.freeze(["travel"]), params: Object.freeze({ requiredMapFact: "tutorialExcursion:GAME-civilization_5", requiredMapField: "generatedTargetMapId", cuoType: "stele" }) }),
       Object.freeze({ slot: "reserve", title: "Récupérer les 700 unités encore exploitables", action: "collect", target: 700, requires: Object.freeze(["stele"]), params: Object.freeze({ catalogManaged: true }) })
     ]),
     proximityContexts: Object.freeze([Object.freeze({
@@ -1985,9 +1985,9 @@
     }),
     sequence: Object.freeze([
       Object.freeze({ slot: "reachStormMap", title: "Rejoindre un nouveau territoire soumis au phénomène", action: "travel", target: 1, requires: Object.freeze([]), params: Object.freeze({ eventDriven: true, newOnly: true, distinctBy: "mapId" }) }),
-      Object.freeze({ slot: "phenomenon", title: "Observer le phénomène énergétique", action: "observe", target: 1, requires: Object.freeze(["reachStormMap"]), params: Object.freeze({ cuoType: "electrostatic_storm", microSceneId: "MSC-LOCAL-STORM-001" }) }),
-      Object.freeze({ slot: "affectedFlora", title: "Étudier la flore affectée", action: "analyze", target: 1, requires: Object.freeze(["phenomenon"]), params: Object.freeze({ cuoType: "fluorescent_vegetation", microSceneId: "MSC-LOCAL-STORM-001", relation: Object.freeze({ fromSlot: "phenomenon", sameBy: Object.freeze(["persistentMicroSceneId", "mapId"]) }) }) }),
-      Object.freeze({ slot: "affectedMineral", title: "Étudier le minerai affecté", action: "analyze", target: 1, requires: Object.freeze(["affectedFlora"]), params: Object.freeze({ cuoType: "magnetic_ore", microSceneId: "MSC-LOCAL-STORM-001", relation: Object.freeze({ fromSlot: "affectedFlora", sameBy: Object.freeze(["persistentMicroSceneId", "mapId"]) }) }) })
+      Object.freeze({ slot: "phenomenon", title: "Observer le phénomène énergétique", action: "observe", target: 1, requires: Object.freeze(["reachStormMap"]), params: Object.freeze({ requiredMapFact: "tutorialExcursion:ENE-03", requiredMapField: "generatedTargetMapId", cuoType: "electrostatic_storm", microSceneId: "MSC-LOCAL-STORM-001" }) }),
+      Object.freeze({ slot: "affectedFlora", title: "Étudier la flore affectée", action: "analyze", target: 1, requires: Object.freeze(["phenomenon"]), params: Object.freeze({ requiredMapFact: "tutorialExcursion:ENE-03", requiredMapField: "generatedTargetMapId", cuoType: "fluorescent_vegetation", microSceneId: "MSC-LOCAL-STORM-001", relation: Object.freeze({ fromSlot: "phenomenon", sameBy: Object.freeze(["persistentMicroSceneId", "mapId"]) }) }) }),
+      Object.freeze({ slot: "affectedMineral", title: "Étudier le minerai affecté", action: "analyze", target: 1, requires: Object.freeze(["affectedFlora"]), params: Object.freeze({ requiredMapFact: "tutorialExcursion:ENE-03", requiredMapField: "generatedTargetMapId", cuoType: "magnetic_ore", microSceneId: "MSC-LOCAL-STORM-001", relation: Object.freeze({ fromSlot: "affectedFlora", sameBy: Object.freeze(["persistentMicroSceneId", "mapId"]) }) }) })
     ]),
     narrative: Object.freeze({
       revealed: Object.freeze(["Cette fois, je veux regarder ce que le phénomène transporte, pas seulement ce qu’il fait bouger."]),
@@ -2887,7 +2887,7 @@
         action: "observe",
         target: 1,
         requires: Object.freeze(["reachFaunaNest"]),
-        params: Object.freeze({
+        params: Object.freeze({ requiredMapFact: "tutorialExcursion:FAU-01", requiredMapField: "generatedTargetMapId",
           subject: "fauna",
           microSceneId: "MSC-CUSTOM-NID-DE-FAUNE5",
           tagsAll: Object.freeze(["fauna_behavior", "cautious_approach", "no_flee"])
@@ -3216,7 +3216,7 @@
         action: "observe",
         target: 1,
         requires: Object.freeze(["reachEastMap"]),
-        params: Object.freeze({
+        params: Object.freeze({ requiredMapFact: "tutorialExcursion:FAU-06", requiredMapField: "generatedTargetMapId",
           subject: "fauna",
           category: "fauna",
           relation: Object.freeze({
@@ -3351,7 +3351,7 @@
         action: "observe",
         target: 1,
         requires: Object.freeze(["reachMixedGroup"]),
-        params: Object.freeze({
+        params: Object.freeze({ requiredMapFact: "tutorialExcursion:FAU-08", requiredMapField: "generatedTargetMapId",
           subject: "fauna",
           microSceneId: "MSC-PEACEFUL-FAUNA-001",
           tagsAll: Object.freeze(["fauna_behavior", "peaceful_group", "multi_species", "no_flee"])
@@ -3424,7 +3424,7 @@
         action: "observe",
         target: 1,
         requires: Object.freeze(["reachParentalContext"]),
-        params: Object.freeze({
+        params: Object.freeze({ requiredMapFact: "tutorialExcursion:FAU-09", requiredMapField: "generatedTargetMapId",
           subject: "fauna",
           microSceneId: "MSC-CUSTOM-FUNA-PARENTAL",
           tagsAll: Object.freeze(["fauna_behavior", "parental_protect"])
@@ -3497,7 +3497,7 @@
         action: "observe",
         target: 2,
         requires: Object.freeze(["reachToolUseContext"]),
-        params: Object.freeze({
+        params: Object.freeze({ requiredMapFact: "tutorialExcursion:FAU-10", requiredMapField: "generatedTargetMapId",
           subject: "fauna",
           microSceneId: "MSC-FAUNA-TOOL-USE-001",
           tagsAll: Object.freeze(["fauna_behavior", "tool_use_cycle"])
@@ -3629,7 +3629,7 @@
         action: "observe",
         target: 1,
         requires: Object.freeze(["reachPeacefulScene"]),
-        params: Object.freeze({
+        params: Object.freeze({ requiredMapFact: "tutorialExcursion:FAU-12", requiredMapField: "generatedTargetMapId",
           subject: "fauna",
           microSceneId: "MSC-PEACEFUL-FAUNA-001",
           tagsAll: Object.freeze(["fauna_behavior", "peaceful_group", "no_flee"])
@@ -5262,7 +5262,7 @@
         action: "analyze",
         target: 1,
         requires: Object.freeze(["reachComparisonMap"]),
-        params: Object.freeze({
+        params: Object.freeze({ requiredMapFact: "tutorialExcursion:FLO-02", requiredMapField: "generatedTargetMapId",
           subject: "flora",
           relation: Object.freeze({
             fromSlot: "referencePlant",
@@ -5331,9 +5331,9 @@
     mapGeneration: Object.freeze({ size: "random", biome: "random", requiredObjects: Object.freeze([Object.freeze({ type: "fluorescent_vegetation", count: 1, contextRole: "bioluminescentFlora" })]) }),
     sequence: Object.freeze([
       Object.freeze({ slot: "reachFirstGlowMap", title: "Rejoindre un territoire avec une plante lumineuse", action: "travel", target: 1, requires: Object.freeze([]), params: Object.freeze({ eventDriven: true, newOnly: true, distinctBy: "mapId" }) }),
-      Object.freeze({ slot: "firstGlowPlant", title: "Analyser une première plante bioluminescente", action: "analyze", target: 1, requires: Object.freeze(["reachFirstGlowMap"]), params: Object.freeze({ subject: "flora", tagsAny: Object.freeze(["glowing", "bioluminescent"]) }) }),
+      Object.freeze({ slot: "firstGlowPlant", title: "Analyser une première plante bioluminescente", action: "analyze", target: 1, requires: Object.freeze(["reachFirstGlowMap"]), params: Object.freeze({ requiredMapFact: "tutorialExcursion:FLO-04", requiredMapField: "generatedTargetMapId", subject: "flora", tagsAny: Object.freeze(["glowing", "bioluminescent"]) }) }),
       Object.freeze({ slot: "reachSecondGlowMap", title: "Rejoindre un autre territoire", action: "travel", target: 1, requires: Object.freeze(["firstGlowPlant"]), params: Object.freeze({ eventDriven: true, newOnly: true, distinctBy: "mapId" }) }),
-      Object.freeze({ slot: "secondGlowPlant", title: "Analyser une plante bioluminescente sur l’autre map", action: "analyze", target: 1, requires: Object.freeze(["reachSecondGlowMap"]), params: Object.freeze({ subject: "flora", tagsAny: Object.freeze(["glowing", "bioluminescent"]), relation: Object.freeze({ fromSlot: "firstGlowPlant", differentBy: Object.freeze(["mapId"]) }) }) })
+      Object.freeze({ slot: "secondGlowPlant", title: "Analyser une plante bioluminescente sur l’autre map", action: "analyze", target: 1, requires: Object.freeze(["reachSecondGlowMap"]), params: Object.freeze({ requiredMapFact: "tutorialExcursion:FLO-04", requiredMapField: "generatedTargetMapId", subject: "flora", tagsAny: Object.freeze(["glowing", "bioluminescent"]), relation: Object.freeze({ fromSlot: "firstGlowPlant", differentBy: Object.freeze(["mapId"]) }) }) })
     ]),
     narrative: Object.freeze({
       revealed: Object.freeze(["Leur lumière ne ressemble pas à une simple réaction isolée. Je veux la retrouver ailleurs et l’observer comme un phénomène du vivant, surtout lorsqu’elle devient visible dans l’obscurité."]),
@@ -5357,7 +5357,7 @@
     sequence: Object.freeze([
       Object.freeze({ slot: "reachEnergyRoots", title: "Rejoindre un territoire où sol et végétation peuvent être comparés", action: "travel", target: 1, requires: Object.freeze([]), params: Object.freeze({ eventDriven: true, newOnly: true, distinctBy: "mapId" }) }),
       Object.freeze({ slot: "rootFlora", title: "Analyser la végétation de la micro-scène", action: "analyze", target: 1, requires: Object.freeze(["reachEnergyRoots"]), params: Object.freeze({ subject: "flora", microSceneId: "MSC-ECO-FOSSIL-001", requiredMapFact: "tutorialExcursion:FLO-05", requiredMapField: "generatedTargetMapId" }) }),
-      Object.freeze({ slot: "groundReference", title: "Analyser une référence géologique dans la même micro-scène", action: "analyze", target: 1, requires: Object.freeze(["rootFlora"]), params: Object.freeze({ tagsAny: Object.freeze(["rock", "geology", "mineral"]), microSceneId: "MSC-ECO-FOSSIL-001", relation: Object.freeze({ fromSlot: "rootFlora", sameBy: Object.freeze(["persistentMicroSceneId", "mapId"]) }) }) })
+      Object.freeze({ slot: "groundReference", title: "Analyser une référence géologique dans la même micro-scène", action: "analyze", target: 1, requires: Object.freeze(["rootFlora"]), params: Object.freeze({ requiredMapFact: "tutorialExcursion:FLO-05", requiredMapField: "generatedTargetMapId", tagsAny: Object.freeze(["rock", "geology", "mineral"]), microSceneId: "MSC-ECO-FOSSIL-001", relation: Object.freeze({ fromSlot: "rootFlora", sameBy: Object.freeze(["persistentMicroSceneId", "mapId"]) }) }) })
     ]),
     narrative: Object.freeze({
       revealed: Object.freeze(["Les racines suivent les mêmes lignes que certaines anomalies du sol. Je veux vérifier le lien sans rejouer les études géologiques déjà acquises."]),
@@ -5381,9 +5381,9 @@
     sequence: Object.freeze([
       Object.freeze({ slot: "firstBiome", title: "Analyser une première référence végétale énergétique", action: "analyze", target: 1, requires: Object.freeze([]), params: Object.freeze({ subject: "flora", tagsAny: Object.freeze(["glowing", "bioluminescent"]) }) }),
       Object.freeze({ slot: "reachSecondBiome", title: "Rejoindre un second territoire", action: "travel", target: 1, requires: Object.freeze(["firstBiome"]), params: Object.freeze({ eventDriven: true, newOnly: true, distinctBy: "mapId" }) }),
-      Object.freeze({ slot: "secondBiome", title: "Analyser une référence végétale énergétique sur le second territoire", action: "analyze", target: 1, requires: Object.freeze(["reachSecondBiome"]), params: Object.freeze({ subject: "flora", tagsAny: Object.freeze(["glowing", "bioluminescent"]), relation: Object.freeze({ fromSlot: "firstBiome", differentBy: Object.freeze(["mapId"]) }) }) }),
+      Object.freeze({ slot: "secondBiome", title: "Analyser une référence végétale énergétique sur le second territoire", action: "analyze", target: 1, requires: Object.freeze(["reachSecondBiome"]), params: Object.freeze({ requiredMapFact: "tutorialExcursion:FLO-06", requiredMapField: "generatedTargetMapId", subject: "flora", tagsAny: Object.freeze(["glowing", "bioluminescent"]), relation: Object.freeze({ fromSlot: "firstBiome", differentBy: Object.freeze(["mapId"]) }) }) }),
       Object.freeze({ slot: "reachThirdBiome", title: "Rejoindre un troisième territoire", action: "travel", target: 1, requires: Object.freeze(["secondBiome"]), params: Object.freeze({ eventDriven: true, newOnly: true, distinctBy: "mapId" }) }),
-      Object.freeze({ slot: "thirdBiome", title: "Analyser une référence végétale énergétique sur le troisième territoire", action: "analyze", target: 1, requires: Object.freeze(["reachThirdBiome"]), params: Object.freeze({ subject: "flora", tagsAny: Object.freeze(["glowing", "bioluminescent"]), relation: Object.freeze({ fromSlot: "secondBiome", differentBy: Object.freeze(["mapId"]) }) }) })
+      Object.freeze({ slot: "thirdBiome", title: "Analyser une référence végétale énergétique sur le troisième territoire", action: "analyze", target: 1, requires: Object.freeze(["reachThirdBiome"]), params: Object.freeze({ requiredMapFact: "tutorialExcursion:FLO-06", requiredMapField: "generatedTargetMapId", subject: "flora", tagsAny: Object.freeze(["glowing", "bioluminescent"]), relation: Object.freeze({ fromSlot: "secondBiome", differentBy: Object.freeze(["mapId"]) }) }) })
     ]),
     narrative: Object.freeze({
       revealed: Object.freeze(["Une anomalie locale ne suffirait pas. Si la même signature traverse plusieurs territoires, alors c’est la biosphère entière qu’il faut relire."]),
@@ -5686,7 +5686,7 @@
         action: "analyze",
         target: 1,
         requires: Object.freeze(["reachOtherMap"]),
-        params: Object.freeze({
+        params: Object.freeze({ requiredMapFact: "tutorialExcursion:GEO-04", requiredMapField: "generatedTargetMapId",
           cuoType: "resonant_basalt",
           relation: Object.freeze({
             fromSlot: "referenceBasalt",
@@ -7904,7 +7904,7 @@
         action: "observe",
         target: 1,
         requires: Object.freeze(["travel"]),
-        params: Object.freeze({
+        params: Object.freeze({ requiredMapFact: "tutorialExcursion:ARCH-11", requiredMapField: "generatedTargetMapId",
           cuoType: "strong_rock",
           microSceneId: "MSC-CUSTOM-CARRIERE"
         })
@@ -7915,7 +7915,7 @@
         action: "collect",
         target: 1,
         requires: Object.freeze(["quarry"]),
-        params: Object.freeze({
+        params: Object.freeze({ requiredMapFact: "tutorialExcursion:ARCH-11", requiredMapField: "generatedTargetMapId",
           cuoType: "magnetic_ore"
         })
       })
@@ -8095,7 +8095,7 @@
         action: "observe",
         target: 1,
         requires: Object.freeze(["travel"]),
-        params: Object.freeze({ microSceneId: "MSC-CUSTOM-ETABLI" })
+        params: Object.freeze({ requiredMapFact: "tutorialExcursion:ARCH-14", requiredMapField: "generatedTargetMapId", microSceneId: "MSC-CUSTOM-ETABLI" })
       }),
       Object.freeze({
         slot: "relay",
@@ -8103,7 +8103,7 @@
         action: "observe",
         target: 1,
         requires: Object.freeze(["context"]),
-        params: Object.freeze({ cuoType: "relay_block", microSceneId: "MSC-CUSTOM-ETABLI" })
+        params: Object.freeze({ requiredMapFact: "tutorialExcursion:ARCH-14", requiredMapField: "generatedTargetMapId", cuoType: "relay_block", microSceneId: "MSC-CUSTOM-ETABLI" })
       }),
       Object.freeze({
         slot: "core",
@@ -8111,7 +8111,7 @@
         action: "observe",
         target: 1,
         requires: Object.freeze(["context"]),
-        params: Object.freeze({ cuoType: "pulse_core", microSceneId: "MSC-CUSTOM-ETABLI" })
+        params: Object.freeze({ requiredMapFact: "tutorialExcursion:ARCH-14", requiredMapField: "generatedTargetMapId", cuoType: "pulse_core", microSceneId: "MSC-CUSTOM-ETABLI" })
       }),
       Object.freeze({
         slot: "machine",
@@ -8119,7 +8119,7 @@
         action: "observe",
         target: 1,
         requires: Object.freeze(["context"]),
-        params: Object.freeze({ cuoType: "ancient_machine_wreck", microSceneId: "MSC-CUSTOM-ETABLI" })
+        params: Object.freeze({ requiredMapFact: "tutorialExcursion:ARCH-14", requiredMapField: "generatedTargetMapId", cuoType: "ancient_machine_wreck", microSceneId: "MSC-CUSTOM-ETABLI" })
       })
     ]),
     narrative: Object.freeze({
@@ -8290,7 +8290,7 @@
         action: "observe",
         target: 1,
         requires: Object.freeze(["travel"]),
-        params: Object.freeze({ microSceneId: "MSC-CUSTOM-HAUTEL-STELL-RELIC-COMP" })
+        params: Object.freeze({ requiredMapFact: "tutorialExcursion:ARCH-17", requiredMapField: "generatedTargetMapId", microSceneId: "MSC-CUSTOM-HAUTEL-STELL-RELIC-COMP" })
       }),
       Object.freeze({
         slot: "relicObserve",
@@ -8298,7 +8298,7 @@
         action: "observe",
         target: 1,
         requires: Object.freeze(["context"]),
-        params: Object.freeze({ cuoType: "tech_relic", microSceneId: "MSC-CUSTOM-HAUTEL-STELL-RELIC-COMP" })
+        params: Object.freeze({ requiredMapFact: "tutorialExcursion:ARCH-17", requiredMapField: "generatedTargetMapId", cuoType: "tech_relic", microSceneId: "MSC-CUSTOM-HAUTEL-STELL-RELIC-COMP" })
       }),
       Object.freeze({
         slot: "relicAnalyze",
@@ -8306,7 +8306,7 @@
         action: "analyze",
         target: 1,
         requires: Object.freeze(["relicObserve"]),
-        params: Object.freeze({ cuoType: "tech_relic", microSceneId: "MSC-CUSTOM-HAUTEL-STELL-RELIC-COMP" })
+        params: Object.freeze({ requiredMapFact: "tutorialExcursion:ARCH-17", requiredMapField: "generatedTargetMapId", cuoType: "tech_relic", microSceneId: "MSC-CUSTOM-HAUTEL-STELL-RELIC-COMP" })
       })
     ]),
     narrative: Object.freeze({
@@ -8386,7 +8386,7 @@
     }),
     sequence: Object.freeze([
       Object.freeze({ slot: "travel", title: "Rejoindre un nouveau secteur de vestiges", action: "travel", target: 1, requires: Object.freeze([]), params: Object.freeze({ eventDriven: true, newOnly: true, distinctBy: "mapId" }) }),
-      Object.freeze({ slot: "weapon", title: "Observer la machine abandonnée", action: "observe", target: 1, requires: Object.freeze(["travel"]), params: Object.freeze({ cuoType: "ancient_machine_wreck", microSceneId: "MSC-CUSTOM-MACHINE-ABANDONNEE" }) })
+      Object.freeze({ slot: "weapon", title: "Observer la machine abandonnée", action: "observe", target: 1, requires: Object.freeze(["travel"]), params: Object.freeze({ requiredMapFact: "tutorialExcursion:ARCH-19", requiredMapField: "generatedTargetMapId", cuoType: "ancient_machine_wreck", microSceneId: "MSC-CUSTOM-MACHINE-ABANDONNEE" }) })
     ]),
     narrative: Object.freeze({
       revealed: Object.freeze(["Une arme prouve un conflit, pas la nature entière d'un peuple. Je veux regarder cette machine avant d'en tirer davantage." ]),
@@ -8418,8 +8418,8 @@
     }),
     sequence: Object.freeze([
       Object.freeze({ slot: "travel", title: "Rejoindre un nouveau secteur susceptible d’abriter l’instrument", action: "travel", target: 1, requires: Object.freeze([]), params: Object.freeze({ eventDriven: true, newOnly: true, distinctBy: "mapId" }) }),
-      Object.freeze({ slot: "relic", title: "Observer l’instrument ancien", action: "observe", target: 1, requires: Object.freeze(["travel"]), params: Object.freeze({ cuoType: "tech_relic", microSceneId: "MSC-CUSTOM-HAUTEL-STELL-RELIC-COMP" }) }),
-      Object.freeze({ slot: "component", title: "Analyser un composant de l’instrument", action: "analyze", target: 1, requires: Object.freeze(["relic"]), params: Object.freeze({ cuoTypes: Object.freeze(["logic_prism", "pulse_core"]), microSceneId: "MSC-CUSTOM-HAUTEL-STELL-RELIC-COMP" }) })
+      Object.freeze({ slot: "relic", title: "Observer l’instrument ancien", action: "observe", target: 1, requires: Object.freeze(["travel"]), params: Object.freeze({ requiredMapFact: "tutorialExcursion:ARCH-20", requiredMapField: "generatedTargetMapId", cuoType: "tech_relic", microSceneId: "MSC-CUSTOM-HAUTEL-STELL-RELIC-COMP" }) }),
+      Object.freeze({ slot: "component", title: "Analyser un composant de l’instrument", action: "analyze", target: 1, requires: Object.freeze(["relic"]), params: Object.freeze({ requiredMapFact: "tutorialExcursion:ARCH-20", requiredMapField: "generatedTargetMapId", cuoTypes: Object.freeze(["logic_prism", "pulse_core"]), microSceneId: "MSC-CUSTOM-HAUTEL-STELL-RELIC-COMP" }) })
     ]),
     narrative: Object.freeze({
       revealed: Object.freeze(["Cet appareil ne transforme rien. Il semble conçu pour mesurer, comparer ou expérimenter." ]),
@@ -8454,8 +8454,8 @@
     }),
     sequence: Object.freeze([
       Object.freeze({ slot: "travel", title: "Rejoindre un nouveau secteur d'archives", action: "travel", target: 1, requires: Object.freeze([]), params: Object.freeze({ eventDriven: true, newOnly: true, distinctBy: "mapId" }) }),
-      Object.freeze({ slot: "surface", title: "Observer le cristal porteur de motifs", action: "observe", target: 1, requires: Object.freeze(["travel"]), params: Object.freeze({ cuoType: "crystal", microSceneId: "MSC-CRYSTAL-GROVE-001", distinctBy: "instanceId" }) }),
-      Object.freeze({ slot: "analysis", title: "Compléter l'analyse du même support", action: "analyze", target: 1, requires: Object.freeze(["surface"]), params: Object.freeze({ cuoType: "crystal", microSceneId: "MSC-CRYSTAL-GROVE-001", relation: Object.freeze({ fromSlot: "surface", sameBy: Object.freeze(["instanceId"]) }) }) })
+      Object.freeze({ slot: "surface", title: "Observer le cristal porteur de motifs", action: "observe", target: 1, requires: Object.freeze(["travel"]), params: Object.freeze({ requiredMapFact: "tutorialExcursion:ARCH-21", requiredMapField: "generatedTargetMapId", cuoType: "crystal", microSceneId: "MSC-CRYSTAL-GROVE-001", distinctBy: "instanceId" }) }),
+      Object.freeze({ slot: "analysis", title: "Compléter l'analyse du même support", action: "analyze", target: 1, requires: Object.freeze(["surface"]), params: Object.freeze({ requiredMapFact: "tutorialExcursion:ARCH-21", requiredMapField: "generatedTargetMapId", cuoType: "crystal", microSceneId: "MSC-CRYSTAL-GROVE-001", relation: Object.freeze({ fromSlot: "surface", sameBy: Object.freeze(["instanceId"]) }) }) })
     ]),
     narrative: Object.freeze({
       revealed: Object.freeze(["Les motifs internes varient comme une écriture. Ce cristal pourrait être une archive." ]),
@@ -8598,7 +8598,7 @@
     mapGeneration: Object.freeze({ size: "random", biome: "random", requiredMicroScenes: Object.freeze([Object.freeze({ id: "MSC-CUSTOM-FOYER-ANCIEN", persistent: true, spawnOnce: true, contextRole: "archRecentFire" })]) }),
     sequence: Object.freeze([
       Object.freeze({ slot: "travel", title: "Chercher un foyer récent sur une nouvelle map", action: "travel", target: 1, requires: Object.freeze([]), params: Object.freeze({ eventDriven: true, newOnly: true, distinctBy: "mapId" }) }),
-      Object.freeze({ slot: "fire", title: "Observer le foyer encore identifiable", action: "observe", target: 1, requires: Object.freeze(["travel"]), params: Object.freeze({ cuoType: "base_fire", microSceneId: "MSC-CUSTOM-FOYER-ANCIEN" }) })
+      Object.freeze({ slot: "fire", title: "Observer le foyer encore identifiable", action: "observe", target: 1, requires: Object.freeze(["travel"]), params: Object.freeze({ requiredMapFact: "tutorialExcursion:ARCH-26", requiredMapField: "generatedTargetMapId", cuoType: "base_fire", microSceneId: "MSC-CUSTOM-FOYER-ANCIEN" }) })
     ]),
     narrative: Object.freeze({
       revealed: Object.freeze(["La chaleur résiduelle peut lever le doute : je veux vérifier ce foyer sans perturber d'éventuels occupants." ]),
@@ -8655,7 +8655,7 @@
     mapGeneration: Object.freeze({ size: "random", biome: "random", requiredMicroScenes: Object.freeze([Object.freeze({ id: "MSC-CUSTOM-HABITAT-RUINE", persistent: true, spawnOnce: true, contextRole: "archOccupiedHabitat" })]) }),
     sequence: Object.freeze([
       Object.freeze({ slot: "travel", title: "Chercher un habitat entretenu sur une nouvelle map", action: "travel", target: 1, requires: Object.freeze([]), params: Object.freeze({ eventDriven: true, newOnly: true, distinctBy: "mapId" }) }),
-      Object.freeze({ slot: "signs", title: "Observer deux signes distincts d'occupation", action: "observe", target: 2, requires: Object.freeze(["travel"]), params: Object.freeze({ cuoTypes: Object.freeze(["base_fire", "wall", "toile", "wood_plane"]), microSceneId: "MSC-CUSTOM-HABITAT-RUINE", distinctBy: "instanceId" }) })
+      Object.freeze({ slot: "signs", title: "Observer deux signes distincts d'occupation", action: "observe", target: 2, requires: Object.freeze(["travel"]), params: Object.freeze({ requiredMapFact: "tutorialExcursion:ARCH-28", requiredMapField: "generatedTargetMapId", cuoTypes: Object.freeze(["base_fire", "wall", "toile", "wood_plane"]), microSceneId: "MSC-CUSTOM-HABITAT-RUINE", distinctBy: "instanceId" }) })
     ]),
     narrative: Object.freeze({
       revealed: Object.freeze(["Cette structure semble réparée, approvisionnée et utilisée. Je vais rester à distance et chercher seulement des signes matériels." ]),
@@ -8794,7 +8794,7 @@
     mapGeneration: Object.freeze({ requiredMicroScenes: Object.freeze([Object.freeze({ id: "MSC-CUSTOM-HAUTEL-STELL-RELIC-COMP", persistent: true, spawnOnce: true })]) }),
     sequence: Object.freeze([
       Object.freeze({ slot: "travel", title: "Rejoindre le site entretenu", action: "travel", target: 1, params: Object.freeze({ eventDriven: true, newOnly: true, distinctBy: "mapId" }) }),
-      Object.freeze({ slot: "site", title: "Observer le site ancien encore entretenu", action: "observe", target: 1, requires: Object.freeze(["travel"]), params: Object.freeze({ microSceneId: "MSC-CUSTOM-HAUTEL-STELL-RELIC-COMP" }) })
+      Object.freeze({ slot: "site", title: "Observer le site ancien encore entretenu", action: "observe", target: 1, requires: Object.freeze(["travel"]), params: Object.freeze({ requiredMapFact: "tutorialExcursion:ARCH-34", requiredMapField: "generatedTargetMapId", microSceneId: "MSC-CUSTOM-HAUTEL-STELL-RELIC-COMP" }) })
     ])
   });
 
@@ -8808,8 +8808,8 @@
     mapGeneration: Object.freeze({ requiredMicroScenes: Object.freeze([Object.freeze({ id: "MSC-TECH-RELAY-001", persistent: true, spawnOnce: true })]), requiredObjects: Object.freeze([Object.freeze({ type: "relay_block", count: 15 }), Object.freeze({ type: "npc_translucent", count: 1 })]) }),
     sequence: Object.freeze([
       Object.freeze({ slot: "travel", title: "Rejoindre la map du signal", action: "travel", target: 1, params: Object.freeze({ eventDriven: true, newOnly: true, distinctBy: "mapId" }) }),
-      Object.freeze({ slot: "beacon", title: "Observer l’ancienne balise", action: "observe", target: 1, requires: Object.freeze(["travel"]), params: Object.freeze({ cuoType: "survey_beacon", microSceneId: "MSC-TECH-RELAY-001" }) }),
-      Object.freeze({ slot: "components", title: "Récupérer quinze composants", action: "collect", target: 15, requires: Object.freeze(["beacon"]), params: Object.freeze({ cuoTypes: Object.freeze(["relay_block","pulse_core","logic_prism","memory_capsule"]) }) })
+      Object.freeze({ slot: "beacon", title: "Observer l’ancienne balise", action: "observe", target: 1, requires: Object.freeze(["travel"]), params: Object.freeze({ requiredMapFact: "tutorialExcursion:ARCH-35", requiredMapField: "generatedTargetMapId", cuoType: "survey_beacon", microSceneId: "MSC-TECH-RELAY-001" }) }),
+      Object.freeze({ slot: "components", title: "Récupérer quinze composants", action: "collect", target: 15, requires: Object.freeze(["beacon"]), params: Object.freeze({ requiredMapFact: "tutorialExcursion:ARCH-35", requiredMapField: "generatedTargetMapId", cuoTypes: Object.freeze(["relay_block","pulse_core","logic_prism","memory_capsule"]) }) })
     ]),
     npcEncounters: Object.freeze([Object.freeze({ id: "arch35-witness", cuoType: "npc_translucent", speech: "⋔ ⌁ ∆ ⟟", despawnOnDistanceBelow: 10, despawnOnSlotComplete: "components" })])
   });
@@ -10512,7 +10512,7 @@
         action: "observe",
         target: 1,
         requires: Object.freeze(["reachPhenomenon"]),
-        params: Object.freeze({ cuoType: "fog_bank", actor: "bluefox", sequenceSlot: "bluefoxReading" })
+        params: Object.freeze({ requiredMapFact: "tutorialExcursion:PHEN-01", requiredMapField: "generatedTargetMapId", cuoType: "fog_bank", actor: "bluefox", sequenceSlot: "bluefoxReading" })
       }),
       Object.freeze({
         slot: "scoutReading",
@@ -10520,7 +10520,7 @@
         action: "observe",
         target: 1,
         requires: Object.freeze(["bluefoxReading"]),
-        params: Object.freeze({
+        params: Object.freeze({ requiredMapFact: "tutorialExcursion:PHEN-01", requiredMapField: "generatedTargetMapId",
           cuoType: "fog_bank",
           actor: "scout",
           relation: Object.freeze({ fromSlot: "bluefoxReading", sameBy: Object.freeze(["instanceId"]) })
@@ -10576,7 +10576,7 @@
         action: "observe",
         target: 3,
         requires: Object.freeze(["reachVolcanic"]),
-        params: Object.freeze({
+        params: Object.freeze({ requiredMapFact: "tutorialExcursion:PHEN-02", requiredMapField: "generatedTargetMapId",
           cuoTypes: Object.freeze(["resonant_basalt", "magnetic_ore", "thermosap_moss"]),
           actor: "scout",
           distinctBy: "instanceId"
@@ -10588,7 +10588,7 @@
         action: "analyze",
         target: 1,
         requires: Object.freeze(["scoutSurvey"]),
-        params: Object.freeze({
+        params: Object.freeze({ requiredMapFact: "tutorialExcursion:PHEN-02", requiredMapField: "generatedTargetMapId",
           cuoTypes: Object.freeze(["resonant_basalt", "magnetic_ore"]),
           actor: "bluefox"
         })
@@ -10636,7 +10636,7 @@
         action: "analyze",
         target: 1,
         requires: Object.freeze(["reachFrozen"]),
-        params: Object.freeze({
+        params: Object.freeze({ requiredMapFact: "tutorialExcursion:PHEN-03", requiredMapField: "generatedTargetMapId",
           cuoTypes: Object.freeze(["azure_ferrite", "magnetic_ore", "crystal", "thermosap_moss"]),
           actor: "bluefox",
           sequenceSlot: "referenceCold"
@@ -10648,7 +10648,7 @@
         action: "analyze",
         target: 2,
         requires: Object.freeze(["referenceCold"]),
-        params: Object.freeze({
+        params: Object.freeze({ requiredMapFact: "tutorialExcursion:PHEN-03", requiredMapField: "generatedTargetMapId",
           cuoTypes: Object.freeze(["azure_ferrite", "magnetic_ore", "crystal", "thermosap_moss"]),
           actorsAny: Object.freeze(["bluefox", "scout"]),
           distinctBy: "objectId",
@@ -10740,7 +10740,7 @@
         action: "observe",
         target: 1,
         requires: Object.freeze(["reachSuspended"]),
-        params: Object.freeze({ cuoType: "mobile_islet", actor: "bluefox" })
+        params: Object.freeze({ requiredMapFact: "tutorialExcursion:PHEN-05", requiredMapField: "generatedTargetMapId", cuoType: "mobile_islet", actor: "bluefox" })
       }),
       Object.freeze({
         slot: "scoutSet",
@@ -10748,7 +10748,7 @@
         action: "observe",
         target: 3,
         requires: Object.freeze(["bluefoxObserve"]),
-        params: Object.freeze({ cuoType: "mobile_islet", actor: "scout", distinctBy: "instanceId" })
+        params: Object.freeze({ requiredMapFact: "tutorialExcursion:PHEN-05", requiredMapField: "generatedTargetMapId", cuoType: "mobile_islet", actor: "scout", distinctBy: "instanceId" })
       })
     ]),
     narrative: Object.freeze({
@@ -10789,7 +10789,7 @@
         action: "observe",
         target: 1,
         requires: Object.freeze(["reachStorm"]),
-        params: Object.freeze({ cuoType: "electrostatic_storm", actor: "scout" })
+        params: Object.freeze({ requiredMapFact: "tutorialExcursion:PHEN-06", requiredMapField: "generatedTargetMapId", cuoType: "electrostatic_storm", actor: "scout" })
       }),
       Object.freeze({
         slot: "interpret",

@@ -598,6 +598,11 @@
     const memory = engine.missionManager?.memory;
     const key = `tutorialExcursion:${mission.id}`;
     const previous = memory?.getFact?.(key, {}) || {};
+    const foreignDestination = Boolean(mission.mapGeneration &&
+      previous.generatedTargetMapId &&
+      engine.missionManager?.generatedMissionTargetProvenance?.(
+        mission.id, previous.generatedTargetMapId
+      )?.valid === false);
     const repeatUntilComplete =
       mission?.navigation?.repeatUnknownTravelUntilComplete === true;
     const activeTravelNode = activeEventDrivenTravelNode(engine, mission);
@@ -623,6 +628,7 @@
       // créditer la feuille TRAVEL avant qu'une seconde demande soit possible.
       if (requestedProgress > progress) return false;
     } else if (
+      !foreignDestination &&
       (previous.generatedTargetMapId || previous.arrived === true) &&
       String(previous.travelNodeId || travelNode?.id || "") ===
         String(travelNode?.id || "")
@@ -643,6 +649,12 @@
 
     memory?.setFact?.(key, {
       ...previous,
+      // Chaque feuille de voyage a sa destination. La map de la feuille
+      // précédente ne peut pas servir de preuve pendant la génération suivante.
+      ...(foreignDestination ||
+          (previous.travelNodeId && previous.travelNodeId !== String(travelNode?.id || ""))
+        ? { generatedTargetMapId: null, mapId: null, toMapId: null, arrived: false }
+        : {}),
       direction,
       fromMapId: engine.currentMapId,
       travelNodeId: String(travelNode?.id || ""),
@@ -802,6 +814,11 @@
             manager?.memory?.getFact?.(excursionKey, {}) || {};
           manager?.memory?.setFact?.(excursionKey, {
             ...previousExcursion,
+            ...(travelNode && previousExcursion.travelNodeId &&
+                previousExcursion.travelNodeId !== String(travelNode.id)
+              ? { generatedTargetMapId: null, mapId: null, toMapId: null, arrived: false }
+              : {}),
+            travelNodeId: travelNode ? String(travelNode.id) : previousExcursion.travelNodeId || null,
             fromMapId: engine.currentMapId,
             direction,
             confirmedAt: Date.now()

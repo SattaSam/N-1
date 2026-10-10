@@ -3,6 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const path=require('node:path');
+const ROOT=process.env.BLUEFOX_ROOT||path.resolve(__dirname,'..');
 
 class V3{
   constructor(x=0,y=0,z=0){this.x=x;this.y=y;this.z=z;}
@@ -21,6 +22,7 @@ function load(){
   const animalRoot={position:new V3(0,0,0),userData:{}};
   const animal={position:animalRoot.position,userData:{active:true,worldAnchor:animalRoot,functional:{type:'brouteur',category:'fauna',spawn:{tags:['fauna']},interaction:{actions:['observe']}}}};
   let originalInteractions=0;
+  const faunaState={state:'observe',cautiousQualified:false,acceptedProximity:false};
   const character={root:{position:new V3(8,0,0)},target:new V3(8,0,0),speed:0,fatigueSpeedMultiplier:1,
     setTarget(p,mode){this.target=p.clone();this.lastMode=mode;return true;},stop(){this.speed=0;}};
   const engine={
@@ -37,7 +39,7 @@ function load(){
   const BF={
     Missions:{}, currentEngine:engine,
     BAC:{evaluateSurvivalDecision(){return null;},weightedPick(options){return options.find(o=>o.id==='relations-object');}},
-    FaunaRuntime:{getState(root){return root===animalRoot?{state:'observe',acceptedProximity:false}:null;}},
+    FaunaRuntime:{getState(root){return root===animalRoot?faunaState:null;}},
     ObjectLibrary:{get(){return null;}},
     ObjectEvents:{types:{},history(){return[];}},
     getSurvivalState(){return {fatigue:{level:'normal',movement:1,actionDuration:1},needs:{}};},
@@ -47,8 +49,8 @@ function load(){
     addEventListener(){},setTimeout(fn){fn();},setInterval(){return 1;},clearInterval(){}};
   context.window=context;
   vm.createContext(context);
-  vm.runInContext(fs.readFileSync(path.join(__dirname,'..','engine','behavior-arbitration-integration.js'),'utf8'),context);
-  return {BF,engine,animal,animalRoot,character,get interactions(){return originalInteractions;}};
+  vm.runInContext(fs.readFileSync(path.join(ROOT,'engine','behavior-arbitration-integration.js'),'utf8'),context);
+  return {BF,engine,animal,animalRoot,character,faunaState,get interactions(){return originalInteractions;}};
 }
 
 test('autonomie faune: point prudent, arret, puis interaction finale',()=>{
@@ -66,6 +68,9 @@ test('autonomie faune: point prudent, arret, puis interaction finale',()=>{
 
   h.engine.updateAutonomy(8300);
   assert.equal(h.interactions,0);
+  assert.equal(h.engine.__bacFaunaApproach.phase,'outer');
+  h.faunaState.cautiousQualified=true;
+  h.engine.updateAutonomy(8400);
   assert.equal(h.engine.__bacFaunaApproach.phase,'inner');
   assert.ok(Math.abs(h.character.target.distanceTo(h.animalRoot.position)-3.0)<1e-6);
 
@@ -73,6 +78,9 @@ test('autonomie faune: point prudent, arret, puis interaction finale',()=>{
   h.engine.updateAutonomy(8500);
   assert.equal(h.engine.__bacFaunaApproach.arrivedAt,8500);
   h.engine.updateAutonomy(9400);
+  assert.equal(h.interactions,0);
+  h.faunaState.acceptedProximity=true;
+  h.engine.updateAutonomy(9500);
   assert.equal(h.interactions,1);
   assert.equal(h.engine.__bacFaunaApproach,null);
 });
