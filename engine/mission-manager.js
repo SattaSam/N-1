@@ -827,6 +827,8 @@
         "object-inactive",
         "object-definition-missing",
         "interaction-inaccessible",
+        "spatial-navigation-failed",
+        "spatial-target-lost",
         "mission-acquisition-invalid"
       ]).has(String(reason || ""));
     }
@@ -3785,6 +3787,8 @@
 
     researchCompletionMatches(node, detail = {}) {
       const params = node?.params || {};
+      if (params.spatialMode && (detail.spatialMode !== params.spatialMode ||
+          detail.nodeId !== node.id || detail.spatialVerified !== true || !detail.instanceId)) return false;
       const mapId = String(detail.mapId || this.engine?.currentMapId || "");
       const fact = params.requiredMapFact
         ? this.memory.getFact?.(params.requiredMapFact, null) : null;
@@ -3810,7 +3814,11 @@
     }
 
     matchesPassiveAction(node, type, detail) {
-      if (node.params?.catalogManaged) return false;
+      if (node.params?.catalogManaged || node.params?.spatialMode) return false;
+      // Les mesures d’exploration appartiennent au propriétaire des seuils.
+      if (Missions.normalizeActionType(node.type) === Missions.ActionType.EXPLORE_ZONE &&
+          (node.params?.biblePattern === "EXPLORE_SCOPE" || node.params?.metric === "surfacePercent" ||
+           Number.isFinite(Number(node.params?.threshold)))) return false;
       const nodeType = Missions.normalizeActionType(node.type);
       const acquisition = [Missions.ActionType.COLLECT, Missions.ActionType.EXTRACT];
       if (nodeType !== type && !(acquisition.includes(nodeType) && acquisition.includes(type))) {
@@ -3824,15 +3832,28 @@
       return true;
     }
 
-    progressPassiveMissions(type, detail = {}, excluded = {}) {
+    completionFrontier() {
+      const frontier = new Map();
+      this.trees.forEach((tree, missionId) => {
+        if (this.ensureLifecycle(missionId).status === "active") {
+          frontier.set(missionId, tree.availableLeaves());
+        }
+      });
+      return frontier;
+    }
+
+    progressPassiveMissions(type, detail = {}, excluded = {}, frontier = this.completionFrontier()) {
+      const amount = detail.amount == null ? 1 : Number(detail.amount);
+      if (!Number.isFinite(amount) || amount <= 0) return 0;
       let changed = 0;
       this.trees.forEach((tree, missionId) => {
         if (this.ensureLifecycle(missionId).status !== "active") return;
         let treeChanged = false;
-        tree.availableLeaves().forEach((node) => {
+        (frontier.get(missionId) || []).forEach((node) => {
+          if (node.isComplete || tree.find(node.id) !== node) return;
           if (missionId === excluded.missionId && node.id === excluded.nodeId) return;
           if (!this.matchesPassiveAction(node, type, detail)) return;
-          if (node.increment(Math.max(1, Number(detail.amount) || 1))) {
+          if (node.increment(amount)) {
             changed += 1;
             treeChanged = true;
           }
@@ -4294,12 +4315,16 @@
           mapId, source: "autonomy"
         }));
       }
-      if (!tree || !this.bridge.execute(action, now)) {
-        if (tree) this.recordExecutionFailure(action, "execute-false", now);
+      if (!tree || this.currentAction) return false;
+      // Une exécution peut émettre et clôturer son événement immédiatement.
+      this.currentAction = action;
+      this.memory.remember("action-started", action);
+      if (!this.bridge.execute(action, now)) {
+        if (this.currentAction === action) this.currentAction = null;
+        this.recordExecutionFailure(action, "execute-false", now);
         return false;
       }
-
-      this.currentAction = action;
+      if (this.currentAction !== action) return true;
       const node = tree.find(action.nodeId);
       if (node && node.status === Missions.MissionStatus.AVAILABLE) {
         node.status = Missions.MissionStatus.ACTIVE;
@@ -4311,7 +4336,6 @@
           ? `Mission : ${action.title}.`
           : `Mission secondaire : ${action.title}.`
       );
-      this.memory.remember("action-started", action);
 
       // Les études de preuve sont des étapes missionnelles narratives : le bridge
       // a validé la preuve source mais n'a lancé aucune interaction monde. On
@@ -4655,10 +4679,11 @@
 
     notifyActionCompleted(type, detail = {}, options = {}) {
       const passive = options.passive !== false;
+      const frontier = passive ? this.completionFrontier() : null;
       if (!this.currentAction || this.currentAction.type !== type ||
           (type === Missions.ActionType.RESEARCH && detail.routine === "research" &&
            detail.nodeId && detail.nodeId !== this.currentAction.nodeId)) {
-        const changed = passive ? this.progressPassiveMissions(type, detail) : 0;
+        const changed = passive ? this.progressPassiveMissions(type, detail, {}, frontier) : 0;
         if (changed) {
           this.syncLifecycleFromTrees();
           this.reevaluatePendingActivations();
@@ -4676,11 +4701,18 @@
       if (type === Missions.ActionType.RESEARCH && detail.routine === "research" &&
           (detail.nodeId && detail.nodeId !== completedAction.nodeId ||
            !this.researchCompletionMatches(node, detail))) return false;
+      if (node?.params?.spatialMode &&
+          (detail.spatialMode !== node.params.spatialMode || detail.nodeId !== node.id ||
+           !detail.instanceId || detail.instanceId !== completedAction.instanceId ||
+           detail.spatialVerified !== true)) return false;
+      const measuredExploration = type === Missions.ActionType.EXPLORE_ZONE &&
+        !node?.params?.spatialMode && (node?.params?.biblePattern === "EXPLORE_SCOPE" ||
+         node?.params?.metric === "surfacePercent" || Number.isFinite(Number(node?.params?.threshold)));
       const alreadyProgressed = options.progressAlreadyApplied === true &&
         completedAction.type === Missions.ActionType.EXPLORE_ZONE &&
         node?.params?.metric === "surfacePercent" &&
         Number(node.progress) > Number(detail.previousProgress);
-      if (!completedAction.backgroundEnvironment && !alreadyProgressed &&
+      if (!completedAction.backgroundEnvironment && !alreadyProgressed && !measuredExploration &&
           !this.planner.applyCompletion(actionTree, completedAction, detail)) {
         return false;
       }
@@ -4695,7 +4727,7 @@
         this.progressPassiveMissions(type, detail, {
           missionId,
           nodeId: completedAction.nodeId
-        });
+        }, frontier);
       }
       this.syncLifecycleFromTrees();
       this.ensureMissionTransitionIntent();

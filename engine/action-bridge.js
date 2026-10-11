@@ -154,6 +154,48 @@
       return false;
     }
 
+    executeSpatial(action, now) {
+      const engine = this.engine;
+      const target = BF.resolveMissionSpatialTarget?.(engine, action);
+      const radius = Number(BF.SpecialObjectRuntime?.hazardRadius?.(action.params.cuoType));
+      if (!target || !(radius > 0)) return false;
+      const point = engine.interactionWorldPosition?.(target) || target.position;
+      const player = engine.character.root.position;
+      const mode = action.params.spatialMode;
+      const state = {
+        kind: "mission-spatial", mode, sourceObject: target,
+        missionId: action.missionId, nodeId: action.nodeId, mapId: engine.currentMapId,
+        radius, clearance: radius + 1.2, duration: Math.max(1500, Number(action.params.duration) || 6500),
+        instanceId: String(target.userData?.instanceId || target.userData?.worldAnchor?.userData?.instanceId || "")
+      };
+      if (!state.instanceId || !["exposure", "retreat"].includes(mode)) return false;
+      action.instanceId = state.instanceId;
+      const distance = Math.hypot(player.x - point.x, player.z - point.z);
+      const alreadyReached = mode === "exposure" ? distance < radius : distance >= state.clearance;
+      if (alreadyReached) {
+        engine.pendingZoneExploration = state;
+        return engine.updateMissionSpatial?.(now) === true;
+      }
+      const angle = Math.atan2(player.z - point.z, player.x - point.x);
+      for (let attempt = 0; attempt < 8; attempt += 1) {
+        const direction = angle + attempt * Math.PI / 4;
+        const offset = mode === "exposure" ? radius * 0.9 : state.clearance + 0.8;
+        const destination = point.clone?.() || new engine.THREE.Vector3(point.x, 0, point.z);
+        destination.x = point.x + Math.cos(direction) * offset;
+        destination.z = point.z + Math.sin(direction) * offset;
+        destination.y = 0;
+        engine.character.constrainToWalkable?.(destination);
+        const actualDistance = Math.hypot(destination.x - point.x, destination.z - point.z);
+        if (mode === "exposure" ? actualDistance >= radius : actualDistance < state.clearance) continue;
+        if (engine.character.setTarget(destination, "walk") === false) continue;
+        state.destination = destination;
+        engine.pendingZoneExploration = state;
+        engine.showWorldMarker?.(destination);
+        return true;
+      }
+      return false;
+    }
+
     executeProximity(action, target, now) {
       const engine = this.engine;
       const radius = Math.max(0.5, Number(action.params.proximityRadius) || 2.5);
@@ -292,6 +334,7 @@
           return true;
         }
         case Missions.ActionType.EXPLORE_ZONE: {
+          if (action.params?.spatialMode) return this.executeSpatial(action, now);
           const zones = engine.currentMap.zoneRegions
             .filter((candidate) => !engine.discoveredZones.has(
               `${engine.currentMapId}:${candidate.index}`
@@ -390,6 +433,7 @@
           return false;
         }
         case Missions.ActionType.RESEARCH: {
+          if (action.params?.spatialMode) return this.executeSpatial(action, now);
           if (action.params?.requiresShelter === true && BF.canAccessCampInventory?.() !== true) {
             return false;
           }

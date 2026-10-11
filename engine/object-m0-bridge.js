@@ -755,7 +755,7 @@
 
     let referencedByRelation = false;
     tree.root.walk?.((candidate) => {
-      const fromSlot = String(candidate?.params?.relation?.fromSlot || "").trim();
+      const fromSlot = String(candidate?.params?.relation?.fromSlot || candidate?.params?.spatialFromSlot || "").trim();
       if (!fromSlot) return;
       // Les autres patrons utilisent leurs IDs canoniques, sans sequenceSlot.
       // Réutiliser la même résolution que relationMatches(), sans changer le
@@ -1707,8 +1707,40 @@
       : physicallyApproachableTarget(engine, candidates, action.type);
   };
 
+  // Les déplacements et routines spatiales utilisent les identités du même
+  // propriétaire que les études, sans produire un faux événement d'étude.
+  const resolveMissionSpatialTarget = (engine, action) => {
+    const manager = engine?.missionManager;
+    const tree = manager?.trees?.get?.(action?.missionId);
+    const params = action?.params || {};
+    if (!params.spatialMode || !tree || !requiredMapMatches(manager, { params }, engine.currentMapId)) return null;
+    const source = tree.findSequenceSlot?.(params.spatialFromSlot) ||
+      tree.find?.(`${tree.id}:${params.spatialFromSlot}`);
+    if (!source?.isComplete) return null;
+    const proof = parsedRelationEvidence(source).slice(-1)[0];
+    const candidates = (engine.currentMap?.interactables || []).filter(object => {
+      const resolved = resolveMissionCandidate(object);
+      if (!resolved?.definition || resolved.object?.userData?.active === false) return false;
+      const metadata = definitionMissionMetadata(resolved.definition, resolved);
+      if (!metadataMatchesMissionCriteria(metadata, params)) return false;
+      const identity = relationEvidenceFromResolved(resolved, engine.currentMapId);
+      if (proof && (String(proof.mapId) !== String(engine.currentMapId) ||
+          !relationFieldMatches("instanceId", proof, identity))) return false;
+      return true;
+    });
+    candidates.sort((a, b) => {
+      const distance = object => {
+        const point = engine.interactionWorldPosition?.(object) || object.position;
+        return Math.hypot(engine.character.root.position.x - point.x, engine.character.root.position.z - point.z);
+      };
+      return distance(a) - distance(b);
+    });
+    return candidates[0] || null;
+  };
+
   const probeMissionActionTarget = (engine, action) => {
     if (!engine || !action?.missionId || !action?.nodeId) return null;
+    if (action.params?.spatialMode) return resolveMissionSpatialTarget(engine, action);
     const evidenceContract = evidenceContractForAction(engine, action);
     if (evidenceContract) {
       if (missionEvidenceForAction(engine, action)) return { missionEvidence: true };
@@ -2118,6 +2150,18 @@
       action = null,
       reason = "cancelled"
     ) {
+      if (action?.params?.spatialMode) {
+        const owns = state => state?.missionId === action.missionId && state.nodeId === action.nodeId;
+        const pending = this.pendingZoneExploration;
+        const routine = this.currentRoutine;
+        if (owns(pending) || owns(routine?.spatial)) {
+          if (owns(pending)) this.pendingZoneExploration = null;
+          if (owns(routine?.spatial)) this.currentRoutine = null;
+          this.character.stop();
+          this.character.cancelInteraction();
+          return true;
+        }
+      }
       const object = this.pendingInteraction || this.__objectM0PassiveStudy;
       if (!object?.userData) return false;
 
@@ -2795,6 +2839,7 @@
         known.instanceId, known.persistentMicroSceneId));
   };
   BF.probeMissionActionTarget = probeMissionActionTarget;
+  BF.resolveMissionSpatialTarget = resolveMissionSpatialTarget;
   BF.isScoutMissionTarget = isScoutMissionTarget;
   BF.installObjectM0Bridge = install;
   BF.getObjectM0BridgeState = () => ({ ...installed });

@@ -7,6 +7,7 @@
     "electrostatic_storm", "mobile_islet", "carnivorous_plant",
     "scout_drone", "harvest_drone", "survey_beacon", "npc_translucent", "npc_rocky"
   ]);
+  const HAZARD_RADII = Object.freeze({ electrostatic_storm: 5.6, carnivorous_plant: 1.85 });
   const sceneCache = new WeakMap();
   const STORAGE_KEY = "bluefox_special_objects_v1";
   const DRONE_TYPES = new Set(["scout_drone", "harvest_drone"]);
@@ -210,7 +211,7 @@
         if (child.name === "StormLight") child.intensity = 4.2 + Math.max(0, Math.sin(elapsed * 9.5)) * 3.8;
       });
       updateLightning(root, elapsed);
-      if (distanceToPlayer(root) < 5.6) {
+      if (distanceToPlayer(root) < HAZARD_RADII.electrostatic_storm) {
         applyHazard(root, "electrostatic_storm", 8000, { rest: 1.4, safety: 2.2 }, "La tempête électrostatique perturbe les systèmes de BlueFox.");
       }
     } else if (type === "mobile_islet") {
@@ -234,7 +235,7 @@
       root.children.forEach((child, index) => {
         if (child.name === "PlantTendril") child.rotation.y = Math.sin(elapsed * 0.8 + index) * 0.09;
       });
-      if (proximity < 1.85) {
+      if (proximity < HAZARD_RADII.carnivorous_plant) {
         applyHazard(root, "carnivorous_plant", 18000, { rest: 2.1, safety: 3.5 }, "La plante carnivore se referme : BlueFox recule de la zone dangereuse.");
       }
     } else if (type === "survey_beacon") {
@@ -2039,7 +2040,8 @@
     const engine = BF.currentEngine;
     const mapId = String(options.mapId || engine?.currentMapId || "");
     const definition = BF.maps?.[mapId];
-    if (!engine?.THREE || !engine?.currentMap || !definition || !placement?.anchor) return false;
+    if (!engine?.THREE || !engine?.currentMap || !definition || !placement?.anchor ||
+        mapId !== String(engine.currentMapId || "")) return false;
     if (hasDeployedBeacon(mapId)) {
       announce("Une balise BlueFox est déjà implantée sur cette map.");
       return false;
@@ -2053,7 +2055,7 @@
         return false;
       }
     }
-    if ((BF.availableInventory?.("deployed_beacon") || 0) < 1) {
+    if ((BF.getExpeditionQuantity?.("deployed_beacon") || 0) < 1) {
       announce("Aucune balise transportable dans le Kit d’expédition.");
       return false;
     }
@@ -2071,7 +2073,7 @@
       spawnOnce: true,
       createdAt: Date.now()
     };
-    const removed = BF.consumeInventoryPool?.("deployed_beacon", 1) || 0;
+    const removed = BF.consumeInventory?.("deployed_beacon", 1) || 0;
     if (removed !== 1) return false;
     const spawned = BF.PersistentMicroScenes?.spawnRecord?.(
       engine.THREE,
@@ -2102,7 +2104,7 @@
   const deployBeacon = (options = {}) => {
     const engine = BF.currentEngine;
     const mapId = String(engine?.currentMapId || "");
-    if (!mapId || (BF.availableInventory?.("deployed_beacon") || 0) < 1) return false;
+    if (!mapId || (BF.getExpeditionQuantity?.("deployed_beacon") || 0) < 1) return false;
     if (hasDeployedBeacon(mapId)) return false;
     const source = options.source || "player";
     if (source === "autonomy") {
@@ -2268,6 +2270,7 @@
     recallDrone,
     deployBeacon,
     installBeaconAt,
+    hazardRadius: (type) => HAZARD_RADII[String(type)] || 0,
     harvestFleet: () => snapshot().harvestFleet,
     consoleState,
     availablePriorities,

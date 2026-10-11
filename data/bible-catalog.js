@@ -11949,8 +11949,8 @@
     obsessionIntensity: 4,
     sequence: Object.freeze([
       Object.freeze({ slot: "approach", title: "Approcher assez pour observer", action: "observe", target: 1, params: Object.freeze({ cuoType: "carnivorous_plant", microSceneId: "MSC-PREDATOR-FLORA-001", proximityOnly: true, proximityRadius: 2.0, requiredMapFact: "bibleActivation:TERR-CARN-01", requiredMapField: "mapId" }) }),
-      Object.freeze({ slot: "exposure", title: "Rester brièvement dans le champ pour en mesurer le risque", action: "research", target: 1, requires: Object.freeze(["approach"]), params: Object.freeze({ duration: 6500, requiredMapFact: "bibleActivation:TERR-CARN-01", requiredMapField: "mapId" }) }),
-      Object.freeze({ slot: "retreat", title: "Rompre l’exposition et reprendre de la distance", action: "explore-zone", target: 1, requires: Object.freeze(["exposure"]), params: Object.freeze({ requiredMapFact: "bibleActivation:TERR-CARN-01", requiredMapField: "mapId" }) }),
+      Object.freeze({ slot: "exposure", title: "Rester brièvement dans le champ pour en mesurer le risque", action: "research", target: 1, requires: Object.freeze(["approach"]), params: Object.freeze({ spatialMode: "exposure", spatialFromSlot: "approach", cuoType: "carnivorous_plant", microSceneId: "MSC-PREDATOR-FLORA-001", duration: 6500, requiredMapFact: "bibleActivation:TERR-CARN-01", requiredMapField: "mapId" }) }),
+      Object.freeze({ slot: "retreat", title: "Rompre l’exposition et reprendre de la distance", action: "explore-zone", target: 1, requires: Object.freeze(["exposure"]), params: Object.freeze({ spatialMode: "retreat", spatialFromSlot: "approach", cuoType: "carnivorous_plant", microSceneId: "MSC-PREDATOR-FLORA-001", requiredMapFact: "bibleActivation:TERR-CARN-01", requiredMapField: "mapId" }) }),
       Object.freeze({ slot: "recover", title: "Effectuer un vrai repos après l’exposition", action: "rest", target: 1, requires: Object.freeze(["retreat"]), params: Object.freeze({}) }),
       Object.freeze({ slot: "restore", title: "Se restaurer avant de reprendre la mission précédente", action: "eat", target: 1, requires: Object.freeze(["recover"]), params: Object.freeze({}) })
     ]),
@@ -11979,8 +11979,8 @@
     scoreTrauma: 84,
     sequence: Object.freeze([
       Object.freeze({ slot: "approach", title: "Approcher assez pour observer", action: "observe", target: 1, params: Object.freeze({ cuoType: "carnivorous_plant", microSceneId: "MSC-PREDATOR-FLORA-001", proximityOnly: true, proximityRadius: 2.1, requiredMapFact: "bibleActivation:TERR-CARN-02", requiredMapField: "mapId" }) }),
-      Object.freeze({ slot: "exposure", title: "Rester brièvement dans le champ pour en mesurer le risque", action: "research", target: 1, requires: Object.freeze(["approach"]), params: Object.freeze({ duration: 6000, requiredMapFact: "bibleActivation:TERR-CARN-02", requiredMapField: "mapId" }) }),
-      Object.freeze({ slot: "retreat", title: "Rompre l’exposition et reprendre de la distance", action: "explore-zone", target: 1, requires: Object.freeze(["exposure"]), params: Object.freeze({ requiredMapFact: "bibleActivation:TERR-CARN-02", requiredMapField: "mapId" }) }),
+      Object.freeze({ slot: "exposure", title: "Rester brièvement dans le champ pour en mesurer le risque", action: "research", target: 1, requires: Object.freeze(["approach"]), params: Object.freeze({ spatialMode: "exposure", spatialFromSlot: "approach", cuoType: "carnivorous_plant", microSceneId: "MSC-PREDATOR-FLORA-001", duration: 6000, requiredMapFact: "bibleActivation:TERR-CARN-02", requiredMapField: "mapId" }) }),
+      Object.freeze({ slot: "retreat", title: "Rompre l’exposition et reprendre de la distance", action: "explore-zone", target: 1, requires: Object.freeze(["exposure"]), params: Object.freeze({ spatialMode: "retreat", spatialFromSlot: "approach", cuoType: "carnivorous_plant", microSceneId: "MSC-PREDATOR-FLORA-001", requiredMapFact: "bibleActivation:TERR-CARN-02", requiredMapField: "mapId" }) }),
       Object.freeze({ slot: "recover", title: "Effectuer un vrai repos après l’exposition", action: "rest", target: 1, requires: Object.freeze(["retreat"]), params: Object.freeze({}) }),
       Object.freeze({ slot: "restore", title: "Se restaurer avant de reprendre la mission précédente", action: "eat", target: 1, requires: Object.freeze(["recover"]), params: Object.freeze({}) })
     ]),
@@ -12007,8 +12007,8 @@
     scoreTrauma: 62,
     sequence: Object.freeze([
       Object.freeze({ slot: "approach", title: "Approcher assez pour observer", action: "observe", target: 1, params: Object.freeze({ cuoType: "carnivorous_plant", microSceneId: "MSC-PREDATOR-FLORA-001", proximityOnly: true, proximityRadius: 2.2, requiredMapFact: "bibleActivation:TERR-CARN-03", requiredMapField: "mapId" }) }),
-      Object.freeze({ slot: "exposure", title: "Rester brièvement dans le champ pour en mesurer le risque", action: "research", target: 1, requires: Object.freeze(["approach"]), params: Object.freeze({ duration: 5000, requiredMapFact: "bibleActivation:TERR-CARN-03", requiredMapField: "mapId" }) }),
-      Object.freeze({ slot: "retreat", title: "Rompre l’exposition et reprendre de la distance", action: "explore-zone", target: 1, requires: Object.freeze(["exposure"]), params: Object.freeze({ requiredMapFact: "bibleActivation:TERR-CARN-03", requiredMapField: "mapId" }) })
+      Object.freeze({ slot: "exposure", title: "Rester brièvement dans le champ pour en mesurer le risque", action: "research", target: 1, requires: Object.freeze(["approach"]), params: Object.freeze({ spatialMode: "exposure", spatialFromSlot: "approach", cuoType: "carnivorous_plant", microSceneId: "MSC-PREDATOR-FLORA-001", duration: 5000, requiredMapFact: "bibleActivation:TERR-CARN-03", requiredMapField: "mapId" }) }),
+      Object.freeze({ slot: "retreat", title: "Rompre l’exposition et reprendre de la distance", action: "explore-zone", target: 1, requires: Object.freeze(["exposure"]), params: Object.freeze({ spatialMode: "retreat", spatialFromSlot: "approach", cuoType: "carnivorous_plant", microSceneId: "MSC-PREDATOR-FLORA-001", requiredMapFact: "bibleActivation:TERR-CARN-03", requiredMapField: "mapId" }) })
     ]),
     narrative: Object.freeze({
       revealed: Object.freeze(["Je connais maintenant le prix d'une seconde de trop. J'approche, j'observe, puis je coupe l'exposition."]),
@@ -12030,7 +12030,7 @@
     ponderation: -0.75,
     sequence: Object.freeze([
       Object.freeze({ slot: "approach", title: "Approcher assez pour observer", action: "observe", target: 1, params: Object.freeze({ cuoType: "carnivorous_plant", microSceneId: "MSC-PREDATOR-FLORA-001", proximityOnly: true, proximityRadius: 2.3, requiredMapFact: "bibleActivation:TERR-CARN-04", requiredMapField: "mapId" }) }),
-      Object.freeze({ slot: "retreat", title: "Rompre l’exposition et reprendre de la distance", action: "explore-zone", target: 1, requires: Object.freeze(["approach"]), params: Object.freeze({ requiredMapFact: "bibleActivation:TERR-CARN-04", requiredMapField: "mapId" }) })
+      Object.freeze({ slot: "retreat", title: "Rompre l’exposition et reprendre de la distance", action: "explore-zone", target: 1, requires: Object.freeze(["approach"]), params: Object.freeze({ spatialMode: "retreat", spatialFromSlot: "approach", cuoType: "carnivorous_plant", microSceneId: "MSC-PREDATOR-FLORA-001", requiredMapFact: "bibleActivation:TERR-CARN-04", requiredMapField: "mapId" }) })
     ]),
     narrative: Object.freeze({
       revealed: Object.freeze(["Je sais ce que cette flore peut faire. Cette fois, une Observation suffit : je n'ai aucune raison de rester dans son champ d'action."]),
@@ -12054,8 +12054,8 @@
     obsessionIntensity: 4,
     sequence: Object.freeze([
       Object.freeze({ slot: "approach", title: "Approcher assez pour observer", action: "observe", target: 1, params: Object.freeze({ cuoType: "electrostatic_storm", microSceneId: "MSC-LOCAL-STORM-001", proximityOnly: true, proximityRadius: 6.5, requiredMapFact: "bibleActivation:TERR-STORM-01", requiredMapField: "mapId" }) }),
-      Object.freeze({ slot: "exposure", title: "Rester brièvement dans le champ pour en mesurer le risque", action: "research", target: 1, requires: Object.freeze(["approach"]), params: Object.freeze({ duration: 6500, requiredMapFact: "bibleActivation:TERR-STORM-01", requiredMapField: "mapId" }) }),
-      Object.freeze({ slot: "retreat", title: "Rompre l’exposition et reprendre de la distance", action: "explore-zone", target: 1, requires: Object.freeze(["exposure"]), params: Object.freeze({ requiredMapFact: "bibleActivation:TERR-STORM-01", requiredMapField: "mapId" }) }),
+      Object.freeze({ slot: "exposure", title: "Rester brièvement dans le champ pour en mesurer le risque", action: "research", target: 1, requires: Object.freeze(["approach"]), params: Object.freeze({ spatialMode: "exposure", spatialFromSlot: "approach", cuoType: "electrostatic_storm", microSceneId: "MSC-LOCAL-STORM-001", duration: 6500, requiredMapFact: "bibleActivation:TERR-STORM-01", requiredMapField: "mapId" }) }),
+      Object.freeze({ slot: "retreat", title: "Rompre l’exposition et reprendre de la distance", action: "explore-zone", target: 1, requires: Object.freeze(["exposure"]), params: Object.freeze({ spatialMode: "retreat", spatialFromSlot: "approach", cuoType: "electrostatic_storm", microSceneId: "MSC-LOCAL-STORM-001", requiredMapFact: "bibleActivation:TERR-STORM-01", requiredMapField: "mapId" }) }),
       Object.freeze({ slot: "recover", title: "Effectuer un vrai repos après l’exposition", action: "rest", target: 1, requires: Object.freeze(["retreat"]), params: Object.freeze({}) }),
       Object.freeze({ slot: "restore", title: "Se restaurer avant de reprendre la mission précédente", action: "eat", target: 1, requires: Object.freeze(["recover"]), params: Object.freeze({}) })
     ]),
@@ -12084,8 +12084,8 @@
     scoreTrauma: 84,
     sequence: Object.freeze([
       Object.freeze({ slot: "approach", title: "Approcher assez pour observer", action: "observe", target: 1, params: Object.freeze({ cuoType: "electrostatic_storm", microSceneId: "MSC-LOCAL-STORM-001", proximityOnly: true, proximityRadius: 6.5, requiredMapFact: "bibleActivation:TERR-STORM-02", requiredMapField: "mapId" }) }),
-      Object.freeze({ slot: "exposure", title: "Rester brièvement dans le champ pour en mesurer le risque", action: "research", target: 1, requires: Object.freeze(["approach"]), params: Object.freeze({ duration: 6000, requiredMapFact: "bibleActivation:TERR-STORM-02", requiredMapField: "mapId" }) }),
-      Object.freeze({ slot: "retreat", title: "Rompre l’exposition et reprendre de la distance", action: "explore-zone", target: 1, requires: Object.freeze(["exposure"]), params: Object.freeze({ requiredMapFact: "bibleActivation:TERR-STORM-02", requiredMapField: "mapId" }) }),
+      Object.freeze({ slot: "exposure", title: "Rester brièvement dans le champ pour en mesurer le risque", action: "research", target: 1, requires: Object.freeze(["approach"]), params: Object.freeze({ spatialMode: "exposure", spatialFromSlot: "approach", cuoType: "electrostatic_storm", microSceneId: "MSC-LOCAL-STORM-001", duration: 6000, requiredMapFact: "bibleActivation:TERR-STORM-02", requiredMapField: "mapId" }) }),
+      Object.freeze({ slot: "retreat", title: "Rompre l’exposition et reprendre de la distance", action: "explore-zone", target: 1, requires: Object.freeze(["exposure"]), params: Object.freeze({ spatialMode: "retreat", spatialFromSlot: "approach", cuoType: "electrostatic_storm", microSceneId: "MSC-LOCAL-STORM-001", requiredMapFact: "bibleActivation:TERR-STORM-02", requiredMapField: "mapId" }) }),
       Object.freeze({ slot: "recover", title: "Effectuer un vrai repos après l’exposition", action: "rest", target: 1, requires: Object.freeze(["retreat"]), params: Object.freeze({}) }),
       Object.freeze({ slot: "restore", title: "Se restaurer avant de reprendre la mission précédente", action: "eat", target: 1, requires: Object.freeze(["recover"]), params: Object.freeze({}) })
     ]),
@@ -12112,8 +12112,8 @@
     scoreTrauma: 62,
     sequence: Object.freeze([
       Object.freeze({ slot: "approach", title: "Approcher assez pour observer", action: "observe", target: 1, params: Object.freeze({ cuoType: "electrostatic_storm", microSceneId: "MSC-LOCAL-STORM-001", proximityOnly: true, proximityRadius: 6.5, requiredMapFact: "bibleActivation:TERR-STORM-03", requiredMapField: "mapId" }) }),
-      Object.freeze({ slot: "exposure", title: "Rester brièvement dans le champ pour en mesurer le risque", action: "research", target: 1, requires: Object.freeze(["approach"]), params: Object.freeze({ duration: 5000, requiredMapFact: "bibleActivation:TERR-STORM-03", requiredMapField: "mapId" }) }),
-      Object.freeze({ slot: "retreat", title: "Rompre l’exposition et reprendre de la distance", action: "explore-zone", target: 1, requires: Object.freeze(["exposure"]), params: Object.freeze({ requiredMapFact: "bibleActivation:TERR-STORM-03", requiredMapField: "mapId" }) })
+      Object.freeze({ slot: "exposure", title: "Rester brièvement dans le champ pour en mesurer le risque", action: "research", target: 1, requires: Object.freeze(["approach"]), params: Object.freeze({ spatialMode: "exposure", spatialFromSlot: "approach", cuoType: "electrostatic_storm", microSceneId: "MSC-LOCAL-STORM-001", duration: 5000, requiredMapFact: "bibleActivation:TERR-STORM-03", requiredMapField: "mapId" }) }),
+      Object.freeze({ slot: "retreat", title: "Rompre l’exposition et reprendre de la distance", action: "explore-zone", target: 1, requires: Object.freeze(["exposure"]), params: Object.freeze({ spatialMode: "retreat", spatialFromSlot: "approach", cuoType: "electrostatic_storm", microSceneId: "MSC-LOCAL-STORM-001", requiredMapFact: "bibleActivation:TERR-STORM-03", requiredMapField: "mapId" }) })
     ]),
     narrative: Object.freeze({
       revealed: Object.freeze(["Je connais maintenant ce front. J'approche assez pour l'Observer, pas pour lui abandonner toute mon énergie."]),
@@ -12135,7 +12135,7 @@
     ponderation: -0.75,
     sequence: Object.freeze([
       Object.freeze({ slot: "approach", title: "Approcher assez pour observer", action: "observe", target: 1, params: Object.freeze({ cuoType: "electrostatic_storm", microSceneId: "MSC-LOCAL-STORM-001", proximityOnly: true, proximityRadius: 6.5, requiredMapFact: "bibleActivation:TERR-STORM-04", requiredMapField: "mapId" }) }),
-      Object.freeze({ slot: "retreat", title: "Rompre l’exposition et reprendre de la distance", action: "explore-zone", target: 1, requires: Object.freeze(["approach"]), params: Object.freeze({ requiredMapFact: "bibleActivation:TERR-STORM-04", requiredMapField: "mapId" }) })
+      Object.freeze({ slot: "retreat", title: "Rompre l’exposition et reprendre de la distance", action: "explore-zone", target: 1, requires: Object.freeze(["approach"]), params: Object.freeze({ spatialMode: "retreat", spatialFromSlot: "approach", cuoType: "electrostatic_storm", microSceneId: "MSC-LOCAL-STORM-001", requiredMapFact: "bibleActivation:TERR-STORM-04", requiredMapField: "mapId" }) })
     ]),
     narrative: Object.freeze({
       revealed: Object.freeze(["Je n'ai plus besoin d'entrer profondément dans le front. Une Observation courte suffit."]),

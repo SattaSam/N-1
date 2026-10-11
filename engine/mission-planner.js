@@ -80,7 +80,7 @@
         }
       }
       if (type === Missions.ActionType.EXPLORE_ZONE) {
-        score += context.unexploredZones > 0 ||
+        score += node.params?.spatialMode === "retreat" || context.unexploredZones > 0 ||
           context.explorationPercent < 100 ||
           context.hasIncompleteDiscoveredMaps
           ? 70
@@ -155,7 +155,9 @@
           return false;
         }
       }
-      const changed = node.increment(Math.max(1, Number(detail.amount) || 1));
+      const amount = detail.amount == null ? 1 : Number(detail.amount);
+      if (!Number.isFinite(amount) || amount <= 0) return false;
+      const changed = node.increment(amount);
       tree.refresh();
       return changed;
     }

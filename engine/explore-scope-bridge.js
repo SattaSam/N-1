@@ -63,6 +63,7 @@
   };
 
   const progressExploreNode = (node, detail) => {
+    if (node?.params?.spatialMode) return false;
     const metric = String(node?.params?.metric || "").trim();
     const threshold = Number(node?.params?.threshold);
     const identity = nodeDistinctValue(node, detail);
@@ -82,12 +83,14 @@
       return delta > 0 ? node.increment(delta) : false;
     }
 
+    const amount = detail.amount == null ? 1 : Number(detail.amount);
+    if (!Number.isFinite(amount) || amount <= 0) return false;
     if (identity != null) {
       if (!identity) return false;
       return node.incrementDistinct?.(identity, 1) || false;
     }
 
-    return node.increment(Math.max(1, Number(detail.amount) || 1));
+    return node.increment(amount);
   };
 
   const progressActiveExploration = (detail = {}, historicalOnly = false) => {
@@ -153,7 +156,7 @@
       ...detail,
       biomeId: detail.biomeId || detail.biome || mapBiome(detail.mapId),
       biome: detail.biome || mapBiome(detail.mapId),
-      amount: Math.max(1, Number(detail.revealedSectorCount) || 1)
+      amount: Math.max(0, Number(detail.revealedSectorCount) || 0)
     });
   };
 

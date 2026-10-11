@@ -1799,6 +1799,7 @@
             break;
           }
         }
+        const wasSpatial = this.pendingZoneExploration?.kind === "mission-spatial";
         const wasResource = Boolean(this.pendingInteraction);
         const failedInteractionSource =
           this.pendingInteraction?.userData?.requestedInteractionSource || null;
@@ -1817,7 +1818,9 @@
         this.pathLine && (this.pathLine.visible = false);
         this.lastAutonomyAt = performance.now() - 5200;
         this.lastActivityAt = performance.now();
-        if (wasResource && failedInteractionSource === "mission") {
+        if (wasSpatial) {
+          this.missionManager?.cancelCurrentAction("spatial-navigation-failed");
+        } else if (wasResource && failedInteractionSource === "mission") {
           this.missionManager?.cancelCurrentAction("interaction-navigation-failed");
         }
         this.callbacks.onStatus(
@@ -3596,7 +3599,48 @@
       );
     }
 
+    missionSpatialDistance(state) {
+      if (!state || state.mapId !== this.currentMapId ||
+          !(this.currentMap?.interactables || []).includes(state.sourceObject) ||
+          state.sourceObject?.userData?.active === false) return null;
+      const point = this.interactionWorldPosition(state.sourceObject);
+      if (!point) return null;
+      return Math.hypot(this.character.root.position.x - point.x, this.character.root.position.z - point.z);
+    }
+
+    updateMissionSpatial(now) {
+      const state = this.pendingZoneExploration;
+      if (state?.kind !== "mission-spatial") return false;
+      const action = this.missionManager?.currentAction;
+      const distance = this.missionSpatialDistance(state);
+      if (!action || action.missionId !== state.missionId || action.nodeId !== state.nodeId || distance == null) {
+        this.pendingZoneExploration = null;
+        this.character.stop();
+        if (action?.nodeId === state.nodeId) this.missionManager.cancelCurrentAction("spatial-target-lost");
+        return false;
+      }
+      if (state.mode === "exposure" ? distance >= state.radius : distance < state.clearance) return true;
+      this.pendingZoneExploration = null;
+      const detail = {
+        missionId: state.missionId, nodeId: state.nodeId, mapId: state.mapId,
+        instanceId: state.instanceId, spatialMode: state.mode, spatialVerified: true,
+        spatialDistance: distance, amount: 1
+      };
+      this.character.stop();
+      if (state.mode === "exposure") {
+        this.startRoutine("research", now, state.duration, detail);
+        this.currentRoutine.spatial = state;
+      } else {
+        this.missionManager.notifyActionCompleted(BF.Missions.ActionType.EXPLORE_ZONE, detail, { passive: false });
+      }
+      return true;
+    }
+
     updateCurrentZone(now, force = false) {
+      if (this.pendingZoneExploration?.kind === "mission-spatial") {
+        this.updateMissionSpatial(now);
+        return;
+      }
       if (!this.currentMap?.zoneRegions?.length) return;
       if (!force && now - this.lastZoneCheckAt < 500) return;
       this.lastZoneCheckAt = now;
@@ -4393,6 +4437,15 @@
     }
 
     updateRoutine(now) {
+      if (this.currentRoutine?.spatial) {
+        const distance = this.missionSpatialDistance(this.currentRoutine.spatial);
+        if (distance == null || distance >= this.currentRoutine.spatial.radius) {
+          this.currentRoutine = null;
+          this.character.cancelInteraction();
+          this.missionManager?.cancelCurrentAction("spatial-exposure-interrupted");
+          return;
+        }
+      }
       if (!this.currentRoutine || now < this.currentRoutine.endsAt) return;
       const finishedRoutine = this.currentRoutine;
       const finished = finishedRoutine.type;
@@ -4594,6 +4647,14 @@
         };
       }
       if (this.pendingZoneExploration) {
+        if (this.pendingZoneExploration.kind === "mission-spatial") {
+          const retreat = this.pendingZoneExploration.mode === "retreat";
+          return {
+            key: `mission-${this.pendingZoneExploration.nodeId}`,
+            label: retreat ? "Éloignement du phénomène dangereux." : "Approche du phénomène à étudier.",
+            speech: retreat ? "Je reprends de la distance pour sortir du danger." : "Je me rapproche pour mesurer les effets du phénomène."
+          };
+        }
         return {
           key: `zone-${this.pendingZoneExploration.index}`,
           label: `Exploration de ${this.pendingZoneExploration.name}.`,
