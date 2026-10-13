@@ -4144,12 +4144,54 @@
       return changed;
     }
 
+    discoveryProximityEntries() {
+      return this.catalog.filter(mission => mission.discoveryProximity &&
+        !this.missionLifecycle(mission.id).active && !this.missionLifecycle(mission.id).completed &&
+        !this.manager()?.memory?.getFact?.(mission.activationSiteFact, null) &&
+        this.microSceneProximityAnchor(mission.discoveryProximity.microSceneId));
+    }
+
+    reviewDiscoveryProximity() {
+      const engine = BF.currentEngine;
+      const player = engine?.character?.root?.position;
+      if (!player || engine.transitioning) return false;
+      let changed = false;
+      this.discoveryProximityEntries().forEach(mission => {
+        const context = mission.discoveryProximity;
+        const anchor = this.microSceneProximityAnchor(context.microSceneId);
+        if (!anchor) return;
+        const point = this.observationPoint(anchor, engine);
+        const distance = Math.hypot(player.x - point.x, player.z - point.z);
+        const radius = Math.max(0.5, Number(context.radius) || 2.5);
+        if (distance > radius) return;
+        const event = BF.ObjectEvents?.emit?.(
+          BF.ObjectEvents.types.PHENOMENON_OBSERVED, anchor, {
+            mapId: engine.currentMapId, microSceneId: context.microSceneId,
+            interactionSource: "mission-proximity", globalMicroScene: true,
+            discoveryOnly: true, proximityRadius: radius, proximityDistance: distance
+          });
+        changed = Boolean(event) || changed;
+      });
+      return changed;
+    }
+
     reviewProximityContexts() {
       const engine = BF.currentEngine;
       const manager = this.manager();
       const player = engine?.character?.root?.position;
       if (!engine || !manager?.memory || !player) return false;
-      let changed = false;
+      let changed = this.reviewDiscoveryProximity();
+      // Acquitter l'étude globale déjà sélectionnée après son approche réelle.
+      // Ne choisir aucune étape suivante et ne détourner aucun mouvement joueur.
+      const action = manager.currentAction;
+      if (action?.params?.globalMicroScene === true && !manager.bridge?.isEngineBusy?.()) {
+        const anchor = this.microSceneProximityAnchor(action.params.microSceneId, action.params);
+        const point = anchor && this.observationPoint(anchor, engine);
+        const radius = Math.max(0.5, Number(action.params.proximityRadius) || 2.5);
+        if (point && Math.hypot(player.x - point.x, player.z - point.z) <= radius) {
+          changed = manager.bridge.execute(action, global.performance?.now?.() || 0) || changed;
+        }
+      }
       this.proximityContextEntries().forEach(({ mission, context }) => {
         const anchor = context.microSceneId
           ? this.microSceneProximityAnchor(context.microSceneId, context)
@@ -4285,7 +4327,9 @@
     }
 
     refreshProximityContextMonitor() {
-      const needed = this.proximityContextEntries().length > 0 || this.npcEncounterEntries().length > 0;
+      const needed = this.proximityContextEntries().length > 0 || this.npcEncounterEntries().length > 0 ||
+        this.discoveryProximityEntries().length > 0 ||
+        this.manager()?.currentAction?.params?.globalMicroScene === true;
       if (!needed && this.proximityContextTimer) {
         global.clearInterval?.(this.proximityContextTimer);
         this.proximityContextTimer = null;

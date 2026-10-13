@@ -1008,6 +1008,7 @@
       if (!state.enabled) restore(root);
       return true;
     },
+    currentPeriod: worldPeriod,
     snapshot() {
       return Object.freeze({
         version: VERSION,

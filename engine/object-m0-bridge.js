@@ -464,7 +464,8 @@
     "category",
     "mapId",
     "instanceId",
-    "persistentMicroSceneId"
+    "persistentMicroSceneId",
+    "period"
   ]);
 
   const relationEvidence = (
@@ -479,6 +480,7 @@
     family: lower(metadata.family),
     subject: lower(metadata.subject),
     category: lower(metadata.category),
+    period: ["day", "night"].includes(lower(metadata.period)) ? lower(metadata.period) : "",
     mapId: String(mapId || ""),
     instanceId: String(instanceId || ""),
     legacyInstanceSequence:
@@ -494,7 +496,7 @@
 
   const relationEvidenceFromEvent = (event) =>
     relationEvidence(
-      eventMissionMetadata(event),
+      { ...eventMissionMetadata(event), period: event?.detail?.period },
       event?.mapId,
       event?.instanceId,
       event?.persistentMicroSceneId,
@@ -503,10 +505,11 @@
 
   const relationEvidenceFromResolved = (resolved, mapId) => {
     const identity = identityOf(resolved);
-    return relationEvidence(
+    const evidence = relationEvidence(
       {
         ...definitionMissionMetadata(resolved?.definition, resolved),
-        ...identity
+        ...identity,
+        period: BF.FaunaRuntime?.currentPeriod?.() || null
       },
       mapId,
       identity.instanceId,
@@ -515,6 +518,9 @@
         null,
       identity.legacyInstanceSequence
     );
+    // La sélection peut préparer une nouvelle référence si une ancienne étape
+    // finie ne possède aucune preuve de période. Seul un événement réel l'écrit.
+    return { ...evidence, prospective: true };
   };
 
   const parsedRelationEvidence = (node) =>
@@ -736,7 +742,14 @@
     if (!source) return false;
     const sameBy = asArray(relation.sameBy).filter((field) => STEP_RELATION_FIELDS.has(field));
     const differentBy = asArray(relation.differentBy).filter((field) => STEP_RELATION_FIELDS.has(field));
-    return parsedRelationEvidence(source).some((reference) => {
+    const references = parsedRelationEvidence(source);
+    if (differentBy.includes("period") && source.isComplete &&
+        !references.some(reference => ["day", "night"].includes(reference.period))) {
+      return evidence?.prospective === true && Boolean(evidence.period) &&
+        (!references.length || references.some(reference => sameBy.every(field =>
+          field === "period" || relationFieldMatches(field, reference, evidence))));
+    }
+    return references.some((reference) => {
       const same = sameBy.every((field) =>
         relationFieldMatches(field, reference, evidence)
       );
@@ -797,6 +810,26 @@
       owner: "object-m0",
       evidence
     })) || false;
+  };
+
+  const rememberMissingPeriodReference = (tree, node, event) => {
+    const relation = node.params?.relation;
+    if (!asArray(relation?.differentBy).includes("period") ||
+        event.type !== BF.ObjectEvents?.types.PHENOMENON_OBSERVED) return false;
+    const source = tree.findSequenceSlot?.(relation.fromSlot);
+    if (!source?.isComplete) return false;
+    const references = parsedRelationEvidence(source);
+    if (references.some(reference => ["day", "night"].includes(reference.period))) return false;
+    const proof = relationEvidenceFromEvent(event);
+    if (!proof.period) return false;
+    const tags = new Set([...(event.tags || []), ...(event.detail?.tags || [])]);
+    if (!metadataMatchesMissionCriteria(eventMissionMetadata(event), node.params, { skipSubject: true }) ||
+        !studySubjectMatches(event, node, tags)) return false;
+    const sameBy = asArray(relation.sameBy).filter(field => STEP_RELATION_FIELDS.has(field) && field !== "period");
+    if (references.length && !references.some(reference =>
+        sameBy.every(field => relationFieldMatches(field, reference, proof)))) return false;
+    // Nouvelle observation de référence, sans réinitialiser ni migrer l'étape finie.
+    return source.pushHistoryValue?.(JSON.stringify({ owner: "object-m0", evidence: proof })) || false;
   };
 
   const acceptsScoutObservation = (node) => {
@@ -872,6 +905,17 @@
       return studySubjectMatches(event, node, tags);
     }
 
+    if (node.params?.globalMicroScene === true) {
+      if (!isStudyAction(type) || detail.globalMicroScene !== true || detail.discoveryOnly === true ||
+          event.type !== BF.ObjectEvents?.types.PHENOMENON_OBSERVED ||
+          detail.interactionSource !== "mission-proximity" ||
+          !Number.isFinite(Number(detail.proximityDistance)) ||
+          Number(detail.proximityDistance) > Math.max(0.5, Number(node.params.proximityRadius) || 2.5)) return false;
+      if (String(detail.missionId || "") === String(missionId || "") &&
+          detail.missionNodeId && detail.missionNodeId !== node.id) return false;
+      return metadataMatchesMissionCriteria(eventMissionMetadata(event), node.params, { skipSubject: true }) &&
+        relationMatches(tree, node, relationEvidenceFromEvent(event));
+    }
     if (node.params?.proximityOnly === true) {
       if (event.type !== BF.ObjectEvents?.types.OBJECT_SEEN ||
           detail.interactionSource !== "mission-proximity" ||
@@ -1076,6 +1120,12 @@
       tree.availableLeaves().forEach((node) => {
         if (!requiredMapMatches(manager, node, event.mapId)) return;
         if (!requiredSiteMatchesEvent(manager, node, event)) return;
+        if (rememberMissingPeriodReference(tree, node, event)) {
+          treeChanged = true;
+          if (current && String(event.detail?.missionId || "") === String(current.missionId || "") &&
+              event.detail?.missionNodeId === current?.nodeId) currentMatched = true;
+          manager.engine?.callbacks?.onAction?.("BlueFox reprend une observation de référence pour comparer les périodes.");
+        }
         if (node.isComplete || !eventMatchesNode(event, node, missionId, tree)) return;
         // Le compteur Bible possède ce crédit, sans retirer à ObjectM0
         // l'exécution physique ni l'acquittement de currentAction.
@@ -1325,6 +1375,7 @@
   const studyDistinctMode = (node) => {
     const configured = String(node?.params?.distinctBy || "").trim();
     if (configured) return configured;
+    if (node?.params?.globalMicroScene === true) return "microSceneInstance";
     return isStudyAction(node?.type) ? "instanceId" : "";
   };
 
@@ -1337,6 +1388,7 @@
   const distinctValueFromEvent = (node, event) => {
     const mode = studyDistinctMode(node);
     if (!mode || mode === "none") return null;
+    if (mode === "microSceneInstance") return event?.microSceneInstanceId || null;
     if (mode === "instanceId") {
       if (isStudyAction(node?.type)) {
         return studyInstanceDistinctValue(
@@ -1560,6 +1612,11 @@
     const missionNode = engine?.missionManager?.trees
       ?.get?.(action?.missionId)
       ?.find?.(action?.nodeId) || null;
+    if (missionNode?.params?.globalMicroScene === true) {
+      if (!requiredMapMatches(engine.missionManager, missionNode, engine.currentMapId)) return null;
+      return BF.bibleRuntime?.microSceneProximityAnchor?.(
+        missionNode.params.microSceneId, missionNode.params) || null;
+    }
     if (missionNode?.params?.biblePattern === "CONTEXT_MSC") {
       return BF.selectContextMissionTarget?.(engine, action) || null;
     }
@@ -1813,6 +1870,11 @@
     }
     const originalExecute = proto.execute;
     const executeObjectAware = function executeObjectAware(action, now) {
+      if (action.params?.globalMicroScene === true && isStudyAction(action.type)) {
+        if (this.isEngineBusy()) return false;
+        const target = selectObservable(this.engine, action);
+        return target ? this.executeProximity(action, target, now) : false;
+      }
       const evidenceContract = evidenceContractForAction(this.engine, action);
       const sourceProof = evidenceContract ? missionEvidenceForAction(this.engine, action) : null;
       if (evidenceContract && !evidenceContract.inferred && !sourceProof) return false;

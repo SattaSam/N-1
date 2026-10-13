@@ -199,10 +199,12 @@
     executeProximity(action, target, now) {
       const engine = this.engine;
       const radius = Math.max(0.5, Number(action.params.proximityRadius) || 2.5);
-      const point = engine.interactionWorldPosition?.(target) || target.position;
+      const globalScene = action.params?.globalMicroScene === true;
+      const point = globalScene ? BF.bibleRuntime?.observationPoint?.(target, engine)
+        : engine.interactionWorldPosition?.(target) || target.position;
       if (!point) return false;
       const player = engine.character.root.position;
-      const distance = player.distanceTo
+      const distance = !globalScene && player.distanceTo
         ? player.distanceTo(point)
         : Math.hypot(
             Number(player.x) - Number(point.x),
@@ -214,7 +216,8 @@
           BF.ObjectLibrary?.get?.(target.userData.libraryType) ||
           BF.ObjectLibrary?.get?.(target.userData.kind);
         BF.ObjectEvents?.emit?.(
-          BF.ObjectEvents?.types?.OBJECT_SEEN || "OBJECT_SEEN",
+          globalScene ? (BF.ObjectEvents?.types?.PHENOMENON_OBSERVED || "PHENOMENON_OBSERVED")
+            : (BF.ObjectEvents?.types?.OBJECT_SEEN || "OBJECT_SEEN"),
           target,
           {
             mapId: engine.currentMapId,
@@ -224,6 +227,9 @@
             cuoType: definition?.type || target.userData.kind || null,
             subject: action.params?.subject || definition?.category || definition?.type || null,
             interactionSource: "mission-proximity",
+            globalMicroScene: globalScene,
+            microSceneId: action.params?.microSceneId || null,
+            missionNarrativeVerb: action.type,
             proximityRadius: radius,
             proximityDistance: distance
           }
@@ -445,11 +451,15 @@
               inventoryKey: String(entry?.inventoryKey || ""),
               quantity: Math.max(0, Number(entry?.quantity) || 0)
             }));
-            if (plan.some((entry) =>
-              !entry.inventoryKey ||
-              !entry.quantity ||
-              Number(BF.progression?.availableInventory?.([entry.inventoryKey])) < entry.quantity
-            )) {
+            const receipts = BF.getProgressionState?.()?.transactions || {};
+            if (plan.some((entry, index) => {
+              const transactionId = `${action.missionId || "mission"}:${action.nodeId || "research"}:inventory-consume:${index}`;
+              const receipt = receipts[transactionId];
+              const paid = receipt && Number(receipt.quantity) === entry.quantity &&
+                receipt.keys?.includes(entry.inventoryKey);
+              return !entry.inventoryKey || !entry.quantity || (receipt && !paid) ||
+                (!paid && Number(BF.progression?.availableInventory?.([entry.inventoryKey])) < entry.quantity);
+            })) {
               return false;
             }
             for (const [index, entry] of plan.entries()) {

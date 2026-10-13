@@ -204,6 +204,9 @@
   };
 
   const localInteractionKey = (identity = {}) => {
+    if (identity.globalMicroScene === true && identity.microSceneInstanceId) {
+      return `site:${identity.microSceneInstanceId}:global`;
+    }
     if (identity.microSceneInstanceId && identity.microSceneObjectIndex != null) {
       return `site:${identity.microSceneInstanceId}:slot:${identity.microSceneObjectIndex}`;
     }
@@ -230,7 +233,10 @@
       : detail;
     const instanceId = data.instanceId || root?.userData?.instanceId || null;
     const mapId = detail.mapId || BF.currentEngine?.currentMapId || null;
-    const key = localInteractionKey({ ...microSceneContext, instanceId });
+    // Une étude de la MSC entière ne consomme pas la nouveauté du composant 0.
+    const localIdentity = { ...microSceneContext, instanceId,
+      ...(detail.globalMicroScene === true ? { globalMicroScene: true, microSceneObjectIndex: null } : {}) };
+    const key = localInteractionKey(localIdentity);
     // Autonomous fauna behaviors remain observation evidence, but are not
     // an interaction by BlueFox and must not consume local novelty.
     const autonomousFaunaBehavior = (detail.tags || []).includes("fauna_behavior") &&
@@ -245,7 +251,7 @@
       type === EVENT_TYPES.OBJECT_SEEN));
     const firstLocalInteraction = Boolean(isLocalInteraction && mapId && key &&
       BF.hasLocalObjectInteraction &&
-      !BF.hasLocalObjectInteraction(mapId, { ...microSceneContext, instanceId }));
+      !BF.hasLocalObjectInteraction(mapId, localIdentity));
     return Object.freeze({
       localInteractionKey: key,
       isLocalInteraction,
@@ -273,7 +279,8 @@
         null,
       microSceneInstanceId: microSceneContext?.microSceneInstanceId || null,
       microSceneAnchor: microSceneContext?.microSceneAnchor || null,
-      microSceneObjectIndex: microSceneContext?.microSceneObjectIndex ?? null,
+      microSceneObjectIndex: detail.globalMicroScene === true
+        ? null : microSceneContext?.microSceneObjectIndex ?? null,
       family: definition.resource?.family || definition.knowledge?.family || definition.category || null,
       inventoryKey: detail.inventoryKey || definition.resource?.inventoryKey || null,
       knowledgeFamily: definition.knowledge?.family || null,
