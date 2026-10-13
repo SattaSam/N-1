@@ -2507,7 +2507,18 @@
         this.character.root.position.x - anchorPosition.x,
         this.character.root.position.z - anchorPosition.z
       );
-      const interactionDistance = this.interactionValidationDistance(object);
+      const faunaTags = this.missionFaunaResultTags?.(object) || [];
+      const calmStudy = faunaTags.some(tag => ["calm_nearby", "temporal_contrast", "familiar_encounter"].includes(tag));
+      const distanceStudy = faunaTags.some(tag => ["behavior_observed", "peaceful_group", "tool_use_cycle"].includes(tag));
+      const interactionDistance = calmStudy ? 3.18 : distanceStudy ? 5.4 : this.interactionValidationDistance(object);
+      if (this.updateCautiousInteraction?.(object, now, distance)) return;
+      // L'animation d'étude n'est pas une preuve de calme : le producteur
+      // faune doit réellement constater la nouvelle observation.
+      if (calmStudy && distance <= interactionDistance && this.faunaInteractionState?.(object)?.calmEmitted === false) {
+        this.character.stop();
+        this.interactionApproachStartedAt = now;
+        return;
+      }
       if (!this.interactionStartedAt && distance > interactionDistance) {
         if (this.interactionApproachNavigationActive?.()) {
           this.interactionApproachStartedAt = now;

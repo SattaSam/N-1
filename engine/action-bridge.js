@@ -458,7 +458,7 @@
               const paid = receipt && Number(receipt.quantity) === entry.quantity &&
                 receipt.keys?.includes(entry.inventoryKey);
               return !entry.inventoryKey || !entry.quantity || (receipt && !paid) ||
-                (!paid && Number(BF.progression?.availableInventory?.([entry.inventoryKey])) < entry.quantity);
+                (!paid && (Number(BF.progression?.accessibleInventory?.([entry.inventoryKey])) || 0) < entry.quantity);
             })) {
               return false;
             }

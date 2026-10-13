@@ -48,7 +48,7 @@ test('mission research consumes 12 biomass + 4 fiber before routine', () => {
   const BF=ctx.BlueFox3D={
     Missions:{ActionType:{RESEARCH:'research',COLLECT:'collect',EXTRACT:'extract',INSPECT:'inspect',ANALYZE:'analyze',OBSERVE:'observe',EXPLORE_ZONE:'explore-zone',REST:'rest',EAT:'eat'}},
     canAccessCampInventory:()=>true,
-    progression:{availableInventory:keys=>stock[keys[0]]||0},
+    progression:{availableInventory:keys=>stock[keys[0]]||0,accessibleInventory:keys=>stock[keys[0]]||0},
     consumeInventoryPoolOnce:(id,keys,qty)=>{const k=keys[0]; if((stock[k]||0)<qty)return 0; stock[k]-=qty; return qty;}
   };
   const engine={transitioning:false,pendingInteraction:null,currentRoutine:null,pendingZoneExploration:null,pendingGate:null,character:{root:{position:{distanceTo:()=>0}},target:{}},startRoutine:(name)=>{engine.currentRoutine=name;}};

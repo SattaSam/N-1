@@ -11069,7 +11069,7 @@
         action: "research",
         target: 1,
         requires: Object.freeze(["prepare"]),
-        params: Object.freeze({})
+        params: Object.freeze({ eventDriven: true, catalogManaged: true })
       })
     ]),
     proximityContexts: Object.freeze([

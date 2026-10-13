@@ -62,6 +62,8 @@ const progressionEvents = (events, reason) => events
 
 test('consumeInventoryPoolOnce persiste retrait + transaction en une seule écriture', () => {
   const f = fixture();
+  // Ce scénario exerce une dépense depuis un camp accessible.
+  f.BF.canAccessCampInventory = () => true;
   f.BF.progression.state.inventory.wood = 7;
   f.BF.progression.state.campStorage.wood = 5;
   f.storage.resetWrites();

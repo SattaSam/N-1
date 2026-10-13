@@ -3125,6 +3125,72 @@
       ].includes(tag));
     }
 
+    updateCautiousInteraction(object, now, distance, profile = this.interactionProfile(object)) {
+      if (this.cautiousInteraction?.object === object) {
+        const faunaState = this.faunaInteractionState(object);
+        if (!faunaState) {
+          this.cautiousInteraction = null;
+        } else if (this.cautiousInteraction.phase === "withdraw") {
+          if (distance >= faunaState.resetDistance && !faunaState.calmEmitted && !faunaState.cautiousEmitted) {
+            this.cautiousInteraction = null;
+            this.targetInteraction(object, true);
+          } else if (!this.interactionApproachNavigationActive()) {
+            const retreat = this.interactionApproachPoint(object, 0, faunaState.resetDistance + 1.2);
+            if (retreat?.point) this.character.setTarget(retreat.point, "walk");
+          }
+          this.interactionApproachStartedAt = now;
+          return true;
+        } else if (faunaState.cautiousQualified === true) {
+          const finalApproachPoint = this.cautiousInteraction.finalApproachPoint;
+          this.cautiousInteraction = null;
+          this.interactionApproachStartedAt = now;
+          this.character.setTarget(finalApproachPoint, "walk");
+          this.showWorldMarker(finalApproachPoint);
+          this.callbacks.onStatus(profile.approachText);
+          return true;
+        } else {
+          if (this.cautiousInteraction.phase === "approach") {
+            if (distance >= 3.8 && distance <= 5.4) {
+              this.character.stop();
+              this.cautiousInteraction.phase = "wait";
+              this.cautiousInteraction.waitStartedAt = now;
+              return true;
+            }
+            if (now - this.interactionApproachStartedAt > 6500) {
+              if (this.interactionApproachNavigationActive()) {
+                // Le délai sert de point de contrôle, jamais de preuve d'échec.
+                // CharacterController conserve l'autorité tant que le trajet vit.
+                this.interactionApproachStartedAt = now;
+              } else {
+                // Cible mobile ou ancien point d'approche atteint : recalculer sans
+                // déclarer l'interaction inaccessible sur la seule durée écoulée.
+                this.targetInteraction(object, true);
+              }
+            }
+            return true;
+          }
+
+          this.character.stop();
+          if (now - Number(this.cautiousInteraction.waitStartedAt || now) > 6500) {
+            this.interactionApproachAttempts += 1;
+            if (this.interactionApproachAttempts <= 3) {
+              this.targetInteraction(object, true);
+            } else {
+              this.callbacks.onStatus(`BlueFox renonce temporairement : ${profile.label} est inaccessible.`);
+              this.pendingInteraction = null;
+              this.cautiousInteraction = null;
+              this.interactionApproachStartedAt = 0;
+              this.interactionApproachAttempts = 0;
+              this.character.stop();
+              this.missionManager?.cancelCurrentAction("interaction-inaccessible");
+            }
+          }
+          return true;
+        }
+      }
+      return false;
+    }
+
     targetInteraction(object, retry = false) {
       if (!retry && object?.userData?.requestedInteractionSource !== "manual") {
         this.noteLocalAutonomousDecision();
@@ -3170,6 +3236,22 @@
       if (!retry) this.interactionApproachAttempts = 0;
 
       const faunaState = this.faunaInteractionState(object);
+      const spentEncounter = faunaTags.includes("cautious_approach")
+        ? faunaState?.cautiousEmitted
+        : calmStudy && faunaState?.calmEmitted;
+      if (spentEncounter) {
+        const retreat = this.interactionApproachPoint(object, 0, faunaState.resetDistance + 1.2);
+        if (!retreat?.point || this.character.setTarget(retreat.point, "walk") === false) {
+          this.pendingInteraction = null;
+          this.cautiousInteraction = null;
+          this.missionManager?.cancelCurrentAction("interaction-inaccessible");
+          return false;
+        }
+        this.cautiousInteraction = { object, phase: "withdraw" };
+        this.showWorldMarker(retreat.point);
+        this.callbacks.onStatus("BlueFox prend du recul avant une nouvelle approche prudente.");
+        return true;
+      }
       if (
         this.isFau01CautiousInteraction(object) &&
         faunaState &&
@@ -4054,58 +4136,7 @@
       const interactionDistance = calmStudy ? 3.18 : distanceStudy ? 5.4 : this.interactionValidationDistance(object);
       const distance = horizontalDistance;
 
-      if (this.cautiousInteraction?.object === object) {
-        const faunaState = this.faunaInteractionState(object);
-        if (!faunaState) {
-          this.cautiousInteraction = null;
-        } else if (faunaState.cautiousQualified === true) {
-          const finalApproachPoint = this.cautiousInteraction.finalApproachPoint;
-          this.cautiousInteraction = null;
-          this.interactionApproachStartedAt = now;
-          this.character.setTarget(finalApproachPoint, "walk");
-          this.showWorldMarker(finalApproachPoint);
-          this.callbacks.onStatus(profile.approachText);
-          return;
-        } else {
-          if (this.cautiousInteraction.phase === "approach") {
-            if (distance >= 3.8 && distance <= 5.4) {
-              this.character.stop();
-              this.cautiousInteraction.phase = "wait";
-              this.cautiousInteraction.waitStartedAt = now;
-              return;
-            }
-            if (now - this.interactionApproachStartedAt > 6500) {
-              if (this.interactionApproachNavigationActive()) {
-                // Le délai sert de point de contrôle, jamais de preuve d'échec.
-                // CharacterController conserve l'autorité tant que le trajet vit.
-                this.interactionApproachStartedAt = now;
-              } else {
-                // Cible mobile ou ancien point d'approche atteint : recalculer sans
-                // déclarer l'interaction inaccessible sur la seule durée écoulée.
-                this.targetInteraction(object, true);
-              }
-            }
-            return;
-          }
-
-          this.character.stop();
-          if (now - Number(this.cautiousInteraction.waitStartedAt || now) > 6500) {
-            this.interactionApproachAttempts += 1;
-            if (this.interactionApproachAttempts <= 3) {
-              this.targetInteraction(object, true);
-            } else {
-              this.callbacks.onStatus(`BlueFox renonce temporairement : ${profile.label} est inaccessible.`);
-              this.pendingInteraction = null;
-              this.cautiousInteraction = null;
-              this.interactionApproachStartedAt = 0;
-              this.interactionApproachAttempts = 0;
-              this.character.stop();
-              this.missionManager?.cancelCurrentAction("interaction-inaccessible");
-            }
-          }
-          return;
-        }
-      }
+      if (this.updateCautiousInteraction(object, now, distance, profile)) return;
 
       if (
         horizontalDistance > interactionDistance ||

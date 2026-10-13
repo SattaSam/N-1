@@ -4244,6 +4244,13 @@
           return;
         }
         if (context.inventoryConsume) {
+          // La feuille peut être devenue disponible plus tôt dans cette même
+          // passe. Vérifier ici, avant paiement, conserve ce fan-out ordonné.
+          if (context.slot) {
+            const tree = manager.trees?.get?.(mission.id);
+            const node = tree?.find?.(`${mission.id}:${context.slot}`);
+            if (!node || !tree.availableLeaves?.().includes(node)) return;
+          }
           const requirement = context.inventoryConsume;
           const keys = this.inventoryKeysForRequirement(requirement);
           const quantity = Math.max(0, Number(requirement.quantity) || 0);
@@ -7500,7 +7507,7 @@
       const keySet = new Set(requirements.flatMap((entry) => entry.inventoryKeys));
       const balances = Object.fromEntries([...keySet].map((key) => [
         key,
-        Math.max(0, Number(BF.progression?.availableInventory?.([key])) || 0)
+        Math.max(0, Number(BF.progression?.accessibleInventory?.([key])) || 0)
       ]));
 
       for (const requirement of requirements) {
@@ -9366,7 +9373,7 @@
           Math.max(0, Number(requirement.quantity) || 0) * requested;
         return Boolean(
           keys.length &&
-          BF.progression?.availableInventory?.(keys) >= quantity
+          BF.progression?.accessibleInventory?.(keys) >= quantity
         );
       });
     }

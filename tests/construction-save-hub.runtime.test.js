@@ -183,7 +183,9 @@ test('P3 confirmation explicite : gauche, hors plateau et jeton étranger ne con
 });
 
 test('P3 stock canonique : porté + camp + Kit protégés, consommation exactement une fois après reload', () => {
-  const f = fresh(); f.memory.state.researchUnlocks[rewards.camp] = { unlockedAt: 1 };
+  const f = fresh();
+  // Ce scénario exerce une dépense depuis un camp accessible.
+  f.BF.canAccessCampInventory = () => true; f.memory.state.researchUnlocks[rewards.camp] = { unlockedAt: 1 };
   f.BF.grantInventory('wood', 4); f.BF.allocateInventoryToExpedition('wood', 4); f.BF.grantCampStorage('wood', 6);
   assert.equal(f.BF.availableInventory('wood'), 10); assert.equal(f.BF.Research.startConstruction('camp'), true);
   assert.equal(confirm(f).onInstall(), true); assert.equal(f.BF.availableInventory('wood'), 0);

@@ -660,15 +660,27 @@
           (Number(this.state.campStorage[key]) || 0), 0);
     }
 
+    accessibleInventory(keys) {
+      const buckets = BF.canAccessCampInventory?.() === true
+        ? [this.state.inventory, this.state.campStorage]
+        : [this.state.inventory];
+      return [...new Set((Array.isArray(keys) ? keys : [keys]).map(cleanKey))]
+        .reduce((total, key) => total + buckets.reduce((sum, bucket) =>
+          sum + Math.max(0, Number(bucket[key]) || 0), 0), 0);
+    }
+
     consumeInventoryPoolState(keys, amount = 1) {
       const safeKeys = [...new Set(
         (Array.isArray(keys) ? keys : [keys]).map(cleanKey)
       )];
       const requested = Math.max(0, Number(amount) || 0);
-      if (!requested || this.availableInventory(safeKeys) < requested) return null;
+      if (!requested || this.accessibleInventory(safeKeys) < requested) return null;
       let remaining = requested;
       const removedByKey = {};
-      [this.state.inventory, this.state.campStorage].forEach((bucket) => {
+      const buckets = BF.canAccessCampInventory?.() === true
+        ? [this.state.inventory, this.state.campStorage]
+        : [this.state.inventory];
+      buckets.forEach((bucket) => {
         safeKeys.forEach((key) => {
           if (!remaining) return;
           const available = Math.max(0, Number(bucket[key]) || 0);
@@ -880,6 +892,7 @@
   BF.grantInventory = (key, amount, detail) => registry.grantInventory(key, amount, detail);
   BF.grantCampStorage = (key, amount, detail) => registry.grantCampStorage(key, amount, detail);
   BF.consumeInventory = (key, amount) => registry.consumeInventory(key, amount);
+  BF.accessibleInventory = (keys) => registry.accessibleInventory(keys);
   BF.availableInventory = (keys) => registry.availableInventory(keys);
   BF.consumeInventoryPool = (keys, amount) =>
     registry.consumeInventoryPool(keys, amount);
