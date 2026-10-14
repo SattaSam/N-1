@@ -256,9 +256,10 @@ test('native manager/planner/ObjectM0/bridge interaction completes and acknowled
   f.manager.setPrimaryMission(id, true, 'player control'); f.manager.activeMissionIds = [id];
   const object = f.object('fern'); object.userData.worldAnchor = object;
   f.engine.currentMap.interactables = [object];
-  assert.equal(f.manager.update(10000), true);
+  const tick=Math.max(10000, performance.now()+1200, f.manager.retryAfter+1200);
+  assert.equal(f.manager.update(tick), true);
   assert.equal(f.engine.pendingInteraction, object); assert.equal(f.manager.currentAction?.missionId, id);
-  f.engine.updateInteraction(10000); f.engine.updateInteraction(35000);
+  f.engine.updateInteraction(tick); f.engine.updateInteraction(tick+25000);
   assert.equal(f.manager.trees.get(id).root.isComplete, true);
   assert.equal(f.memory.state.missionLifecycle[id].status, 'completed');
   assert.equal(f.manager.currentAction, null);

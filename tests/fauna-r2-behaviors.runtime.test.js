@@ -4,6 +4,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const path=require('node:path');
+const ROOT=process.env.BLUEFOX_ROOT||path.resolve(__dirname,'..');
 
 class V3{
   constructor(x=0,y=0,z=0){this.x=x;this.y=y;this.z=z;}
@@ -50,7 +51,7 @@ function runtime({period='day',sharedFacts=null}={}){
     console:{info(){},error(){},warn(){}},requestAnimationFrame(fn){raf=fn;return 1},
     document:{querySelector(){return {classList:{contains(){return period==='night'}}}}}};
   context.window=context;vm.createContext(context);
-  vm.runInContext(fs.readFileSync(path.join(__dirname,'..','engine','fauna-runtime.js'),'utf8'),context);
+  vm.runInContext(fs.readFileSync(path.join(ROOT,'engine','fauna-runtime.js'),'utf8'),context);
   const step=(sec,pos=null,speed=0)=>{
     perf=1000+sec*1000; epoch+=100;
     if(pos!=null) player.position.x=pos;
@@ -60,15 +61,28 @@ function runtime({period='day',sharedFacts=null}={}){
   return {BF,events,facts,player,hooks,step,setPeriod(next){BF.currentEngine.planetClock.gameMinutes=(next==='night'?18:10)*60;BF.currentEngine.planetClock.realTime=epoch;}};
 }
 
+// La pause est décidée par le runtime (traits + espèce + disposition), pas
+// par une durée fixe du banc. Aucune qualification ni preuve n'est injectée.
+function calmEncounter(h, animal, start=.2) {
+  let t=start;h.step(t,4.8,0);
+  while (!h.BF.FaunaRuntime.getState(animal).cautiousQualified && t<start+3) {
+    t+=.2;h.step(t,4.8,0);
+  }
+  assert.equal(h.BF.FaunaRuntime.getState(animal).cautiousQualified,true);
+  t+=.2;h.step(t,3,0);const accepted=t;
+  while(t<accepted+5.4){t+=.2;h.step(t,3,0);}
+  return t;
+}
+
 test('R2: approche prudente emet cautious_approach et calme apres 5 s',()=>{
   const h=runtime();
   const a=makeRoot('brouteur',0,0,'MSC-CUSTOM-NID-DE-FAUNE5');
   h.BF.FaunaRuntime.register(a,'brouteur');
   h.step(.2,6.5,2);h.step(.8,5.0,1.5);h.step(1.2,4.8,0);
-  for(let t=1.4;t<=2.6;t+=.2)h.step(t,4.8,0);
+  for(let t=1.4;t<=3.4;t+=.2)h.step(t,4.8,0);
   assert.ok(h.events.some(e=>e.detail.tags.includes('cautious_approach')));
-  h.step(3.0,3.0,0);
-  for(let t=3.2;t<=8.4;t+=.2)h.step(t,3.0,0);
+  h.step(4.0,3.0,0);
+  for(let t=4.2;t<=9.4;t+=.2)h.step(t,3.0,0);
   const calm=h.events.find(e=>e.detail.tags.includes('calm_nearby'));
   assert.ok(calm,'calm_nearby absent');
   assert.equal(calm.detail.period,'day');
@@ -88,15 +102,11 @@ test('R2: deux calmes jour/nuit produisent temporal_contrast et la deuxieme renc
   const h=runtime({period:'day'});
   const a=makeRoot('brouteur',0,0);a.userData.instanceId='same-animal';
   h.BF.FaunaRuntime.register(a,'brouteur');
-  // first cautious/calm
-  h.step(.2,4.8,0);for(let t=.4;t<=1.6;t+=.2)h.step(t,4.8,0);
-  h.step(2,3,0);for(let t=2.2;t<=7.4;t+=.2)h.step(t,3,0);
+  const end=calmEncounter(h,a);
   assert.ok(h.events.some(e=>e.detail.tags.includes('calm_nearby')));
-  // leave to reset
-  h.step(8,6.2,0);
+  h.step(end+.2,6.2,0);
   h.setPeriod('night');
-  h.step(8.2,4.8,0);for(let t=8.4;t<=9.6;t+=.2)h.step(t,4.8,0);
-  h.step(10,3,0);for(let t=10.2;t<=15.8;t+=.2)h.step(t,3,0);
+  calmEncounter(h,a,end+.4);
   assert.ok(h.events.some(e=>e.detail.tags.includes('temporal_contrast')),'temporal_contrast absent');
   assert.ok(h.events.some(e=>e.detail.tags.includes('familiar_encounter')),'familiar_encounter absent');
   assert.deepEqual(h.facts['fauna:periods:session:same-animal'],['day','night']);
@@ -144,8 +154,7 @@ test('R2: familiarite et contraste temporel survivent a un vrai respawn MSC avec
   const a=makeRoot('brouteur',0,0,'MSC-CUSTOM-NID-DE-FAUNE5');
   decorateStableSlot(a,'CUO_FAUNA_GRAZER:msc:MSC-CUSTOM-NID-DE-FAUNE5:3:AAA',3);
   first.BF.FaunaRuntime.register(a,'brouteur');
-  first.step(.2,4.8,0);for(let t=.4;t<=1.6;t+=.2)first.step(t,4.8,0);
-  first.step(2,3,0);for(let t=2.2;t<=7.6;t+=.2)first.step(t,3,0);
+  calmEncounter(first,a);
   assert.equal(shared[`fauna:calmEncounters:${stableIdentity}`],1);
   assert.deepEqual(shared[`fauna:periods:${stableIdentity}`],['day']);
   assert.equal(shared['fauna:calmEncounters:session:CUO_FAUNA_GRAZER:msc:MSC-CUSTOM-NID-DE-FAUNE5:3:AAA'],undefined);
@@ -154,8 +163,7 @@ test('R2: familiarite et contraste temporel survivent a un vrai respawn MSC avec
   const b=makeRoot('brouteur',0,0,'MSC-CUSTOM-NID-DE-FAUNE5');
   decorateStableSlot(b,'CUO_FAUNA_GRAZER:msc:MSC-CUSTOM-NID-DE-FAUNE5:3:BBB',3);
   second.BF.FaunaRuntime.register(b,'brouteur');
-  second.step(.2,4.8,0);for(let t=.4;t<=1.6;t+=.2)second.step(t,4.8,0);
-  second.step(2,3,0);for(let t=2.2;t<=7.6;t+=.2)second.step(t,3,0);
+  calmEncounter(second,b);
   assert.equal(shared[`fauna:calmEncounters:${stableIdentity}`],2);
   assert.deepEqual(shared[`fauna:periods:${stableIdentity}`],['day','night']);
   assert.ok(second.events.some(e=>e.detail.tags.includes('familiar_encounter')));
@@ -173,8 +181,7 @@ test('R2: deux slots persistants du meme CUO ne partagent pas leur familiarite',
     a.userData.microScenePivot={userData:{microSceneObjectIndex:index}};
     a.userData.catalogId='CUO_FAUNA_GRAZER';
     h.BF.FaunaRuntime.register(a,'brouteur');
-    h.step(.2,4.8,0);for(let t=.4;t<=1.6;t+=.2)h.step(t,4.8,0);
-    h.step(2,3,0);for(let t=2.2;t<=7.6;t+=.2)h.step(t,3,0);
+    calmEncounter(h,a);
     return h;
   };
   runCalm('grazer:AAA',0);

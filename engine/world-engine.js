@@ -3131,12 +3131,19 @@
         if (!faunaState) {
           this.cautiousInteraction = null;
         } else if (this.cautiousInteraction.phase === "withdraw") {
-          if (distance >= faunaState.resetDistance && !faunaState.calmEmitted && !faunaState.cautiousEmitted &&
-              !faunaState.parentalProtectEmitted) {
+          const tags = this.missionFaunaResultTags(object);
+          const resetDistance = this.cautiousInteraction.resetDistance || faunaState.resetDistance;
+          const observationReset =
+            (!tags.includes("behavior_observed") || !faunaState.behaviorObservedEmitted) &&
+            (!tags.includes("peaceful_group") || !faunaState.groupObservedEmitted) &&
+            (!tags.includes("flee") ||
+              (!faunaState.cautiousQualified && !faunaState.acceptedProximity && faunaState.state !== "flee"));
+          if (distance >= resetDistance && !faunaState.calmEmitted && !faunaState.cautiousEmitted &&
+              !faunaState.parentalProtectEmitted && observationReset) {
             this.cautiousInteraction = null;
             this.targetInteraction(object, true);
           } else if (!this.interactionApproachNavigationActive()) {
-            const retreat = this.interactionApproachPoint(object, 0, faunaState.resetDistance + 1.2);
+            const retreat = this.interactionApproachPoint(object, 0, resetDistance + 1.2);
             if (retreat?.point) this.character.setTarget(retreat.point, "walk");
           }
           this.interactionApproachStartedAt = now;
@@ -3241,16 +3248,24 @@
         ? faunaState?.cautiousEmitted
         : faunaTags.includes("parental_protect")
           ? faunaState?.parentalProtectEmitted
-          : calmStudy && faunaState?.calmEmitted;
+          : faunaTags.includes("behavior_observed")
+            ? faunaState?.behaviorObservedEmitted
+            : faunaTags.includes("peaceful_group")
+              ? faunaState?.groupObservedEmitted
+              : faunaTags.includes("flee")
+                ? faunaState && (faunaState.cautiousQualified || faunaState.acceptedProximity || faunaState.state === "flee")
+                : calmStudy && faunaState?.calmEmitted;
       if (spentEncounter) {
-        const retreat = this.interactionApproachPoint(object, 0, faunaState.resetDistance + 1.2);
+        const resetDistance = faunaTags.includes("peaceful_group")
+          ? faunaState.groupResetDistance : faunaState.resetDistance;
+        const retreat = this.interactionApproachPoint(object, 0, resetDistance + 1.2);
         if (!retreat?.point || this.character.setTarget(retreat.point, "walk") === false) {
           this.pendingInteraction = null;
           this.cautiousInteraction = null;
           this.missionManager?.cancelCurrentAction("interaction-inaccessible");
           return false;
         }
-        this.cautiousInteraction = { object, phase: "withdraw" };
+        this.cautiousInteraction = { object, phase: "withdraw", resetDistance };
         this.showWorldMarker(retreat.point);
         this.callbacks.onStatus("BlueFox prend du recul avant une nouvelle approche prudente.");
         return true;

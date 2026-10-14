@@ -70,6 +70,14 @@
     );
   };
 
+  const physicallyVisible = (root) => {
+    if (!root?.parent) return false;
+    for (let object = root; object; object = object.parent) {
+      if (object.visible === false) return false;
+    }
+    return true;
+  };
+
   const snapshot = (object) => ({
     object,
     position: object.position.clone(),
@@ -538,14 +546,19 @@
   };
 
   const emitCalmFacts = (state, elapsed, distance) => {
+    const speed = playerSpeed();
     if (
       !state.acceptedProximity ||
-      state.calmEmitted ||
       distance > APPROACH.acceptedDistance + APPROACH.acceptedTolerance ||
-      elapsed - state.acceptedSince < APPROACH.calmSeconds
-    ) return false;
-    const speed = playerSpeed();
-    if (speed != null && speed > 0.12) return false;
+      (speed != null && speed > 0.12)
+    ) {
+      // L'acceptation de l'approche reste acquise ; seule la durée de cette
+      // observation repart après un déplacement ou une sortie de sa portée.
+      state.acceptedSince = 0;
+      return false;
+    }
+    state.acceptedSince ||= elapsed;
+    if (state.calmEmitted || elapsed - state.acceptedSince < APPROACH.calmSeconds) return false;
 
     const period = worldPeriod();
     state.calmEmitted = emitBehavior(state, "calm_nearby", {
@@ -616,7 +629,8 @@
     const members = [];
     registry.forEach((root) => {
       const candidate = states.get(root);
-      if (!candidate || microSceneIdOf(root) !== sceneId) return;
+      if (!candidate?.enabled || !physicallyVisible(root) ||
+          microSceneIdOf(root) !== sceneId) return;
       if (persistentId && persistentSceneIdOf(root) !== persistentId) return;
       members.push(candidate);
     });
@@ -630,15 +644,20 @@
     const representative = members.slice().sort((left, right) =>
       instanceIdOf(left.root).localeCompare(instanceIdOf(right.root))
     )[0];
-    if (representative !== state) return false;
-    const types = new Set(members.map((member) => member.type));
-    if (types.size < 2) return false;
-    const distances = members.map((member) => distanceToPlayer(member.root));
-    const visible = distances.filter((distance) => distance >= 3.5 && distance <= 6);
+    if (representative !== state) {
+      state.groupObservedSince = 0;
+      state.groupObservedEmitted = false;
+      return false;
+    }
+    const visible = members.filter((member) => {
+      const distance = distanceToPlayer(member.root);
+      return distance >= 3.5 && distance <= APPROACH.vigilanceDistance;
+    });
+    const types = new Set(visible.map((member) => member.type));
     const fleeing = members.some((member) =>
       member.state === "flee" || elapsed < member.fleeUntil
     );
-    if (visible.length < 2 || fleeing) {
+    if (types.size < 2 || fleeing) {
       state.groupObservedSince = 0;
       state.groupObservedEmitted = false;
       return false;
@@ -648,7 +667,14 @@
       !state.groupObservedEmitted &&
       elapsed - state.groupObservedSince >= 5
     ) {
-      state.groupObservedEmitted = emitBehavior(state, "peaceful_group", {
+      // Le représentant garde l'unique minuterie du groupe. La preuve d'une
+      // action sélectionnée provient de son membre réellement observé, afin
+      // que le consommateur puisse acquitter cette même instance.
+      const pending = BF.currentEngine?.pendingInteraction;
+      const selected = pending?.userData?.requestedInteractionSource === "mission"
+        ? visible.find((member) => pending === member.root || pending?.userData?.worldAnchor === member.root)
+        : null;
+      state.groupObservedEmitted = emitBehavior(selected || state, "peaceful_group", {
         speciesCount: types.size,
         durationSeconds: 5,
         tags: ["fauna_behavior", "peaceful_group", "multi_species", "no_flee"]
@@ -928,7 +954,15 @@
   };
 
   const update = (state, elapsed) => {
-    if (!state.enabled || !state.root.parent || state.root.visible === false) return;
+    if (!state.enabled || !physicallyVisible(state.root)) {
+      state.acceptedSince = 0;
+      state.behaviorObservedSince = 0;
+      state.behaviorObservedState = "";
+      state.behaviorObservedEmitted = false;
+      state.groupObservedSince = 0;
+      state.groupObservedEmitted = false;
+      return;
+    }
     const distance = distanceToPlayer(state.root);
     if (updateToolUse(state, elapsed)) {
       animateParts(state, elapsed, distance);
@@ -992,6 +1026,20 @@
     setReputation,
     getState(root) {
       const state = states.get(root);
+      const members = state && microSceneIdOf(root) === "MSC-PEACEFUL-FAUNA-001"
+        ? peacefulSceneMembers(state) : [];
+      const representative = members.slice().sort((left, right) =>
+        instanceIdOf(left.root).localeCompare(instanceIdOf(right.root)))[0];
+      const groupObservedEmitted = representative?.groupObservedEmitted === true;
+      const observedMembers = members.filter((member) => {
+        const distance = distanceToPlayer(member.root);
+        return distance >= 3.5 && distance <= APPROACH.vigilanceDistance;
+      });
+      const groupResetDistance = groupObservedEmitted
+        ? Math.max(APPROACH.resetDistance, ...observedMembers.map((member) =>
+            Math.hypot(member.root.position.x - root.position.x, member.root.position.z - root.position.z) +
+            APPROACH.vigilanceDistance))
+        : APPROACH.resetDistance;
       return state ? Object.freeze({
         type: state.type,
         state: state.state,
@@ -1003,6 +1051,9 @@
         parentalProtectEmitted: state.parentalProtectEmitted,
         calmEmitted: state.calmEmitted,
         cautiousEmitted: state.cautiousEmitted,
+        behaviorObservedEmitted: state.behaviorObservedEmitted,
+        groupObservedEmitted,
+        groupResetDistance,
         resetDistance: APPROACH.resetDistance,
         acceptedProximity: state.acceptedProximity,
         acceptedSince: state.acceptedSince,

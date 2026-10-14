@@ -2526,7 +2526,7 @@
         this.interactionApproachStartedAt = now;
         return;
       }
-      if (faunaTags.some(tag => ["tool_use_cycle", "parental_protect"].includes(tag)) &&
+      if (faunaTags.includes("fauna_behavior") &&
           distance <= interactionDistance) {
         const node = this.missionManager?.trees?.get?.(object.userData.missionId)?.find?.(object.userData.missionNodeId);
         if (node && !node.isComplete) {
