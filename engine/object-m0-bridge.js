@@ -2347,7 +2347,17 @@
       // Dès que l'étude préalable de CE geste est satisfaite, la phase acquire
       // verrouille la même instance jusqu'à l'acquisition finale. Aucun nouvel
       // arbitrage de mission/BAC ne peut détourner la cible entre les deux.
-      const directive = acquiringSameTarget
+      // Une étude sélectionnée possède déjà sa mission et son nœud. Chercher
+      // une autre étude due ici détournerait son résultat et laisserait son
+      // currentAction occupée, même si le fan-out crédite la bonne mission.
+      // L'étude préalable d'une acquisition garde son arbitrage existant :
+      // son propriétaire final sera restauré pour collect/extract.
+      const selectedStudy = this.missionManager?.currentAction;
+      const standaloneMissionStudy = source === "mission" && !hasAcquisitionIntent &&
+        isStudyAction(selectedStudy?.type) &&
+        selectedStudy?.missionId === object.userData.missionId &&
+        selectedStudy?.nodeId === object.userData.missionNodeId;
+      const directive = acquiringSameTarget || standaloneMissionStudy
         ? null
         : activeStudyDirective(this, resolved);
 
