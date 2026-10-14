@@ -721,11 +721,82 @@
         id: safeId,
         quantity: detail.quantity,
         keys: [...(Array.isArray(keys) ? keys : [keys])],
+        removedByKey: { ...detail.removedByKey },
         at: Date.now()
       };
       this.save();
-      this.publishChange("inventory-pool-consumed", detail);
+      this.publishChange("inventory-pool-consumed", { ...detail, transactionId: safeId });
       return detail.quantity;
+    }
+
+    // Les transferts composés ont le même propriétaire que les paiements.
+    // Stock et reçu sont persistés ensemble avant toute notification externe.
+    nextInventoryTransactionId(prefix) {
+      let id;
+      do {
+        this.state.transactionSequence = Math.max(0, Number(this.state.transactionSequence) || 0) + 1;
+        id = `${prefix}:${this.state.transactionSequence}`;
+      } while (this.state.transactions[id]);
+      return id;
+    }
+
+    commitInventoryTransaction(transactionId, specification = {}) {
+      const id = String(transactionId || "").trim();
+      if (!id) return null;
+      if ([specification.debits, specification.credits].some(bucket => bucket != null &&
+          (typeof bucket !== "object" || Array.isArray(bucket) || Object.entries(bucket).some(
+            ([key, quantity]) => !String(key).trim() || !Number.isFinite(Number(quantity)) || Number(quantity) <= 0)))) return null;
+      const normalize = bucket => Object.fromEntries(Object.entries(bucket || {})
+        .map(([key, quantity]) => [cleanKey(key), Number(quantity)])
+        .filter(([, quantity]) => Number.isFinite(quantity) && quantity > 0));
+      const debits = normalize(specification.debits), credits = normalize(specification.credits);
+      const previous = this.state.transactions[id];
+      if (previous) {
+        const equal = (left, right) => Object.keys(left || {}).length === Object.keys(right).length &&
+          Object.entries(right).every(([key, quantity]) => left?.[key] === quantity);
+        return previous.kind === "inventory-transfer" && equal(previous.removedByKey, debits) &&
+          equal(previous.grantedByKey, credits) ? clone(previous) : null;
+      }
+      if (!Object.keys(debits).length && !Object.keys(credits).length) return null;
+      if (Object.entries(debits).some(([key, quantity]) =>
+          Math.max(0, Number(this.state.inventory[key]) || 0) < quantity)) return null;
+      const before = clone(this.state);
+      Object.entries(debits).forEach(([key, quantity]) => {
+        this.state.inventory[key] -= quantity;
+        this.increment(this.state.consumed, key, quantity);
+      });
+      Object.entries(credits).forEach(([key, quantity]) => {
+        this.increment(this.state.inventory, key, quantity);
+        if (AUTO_EXPEDITION_KEYS.has(key)) {
+          this.state.expeditionAllocation[key] = this.expeditionQuantity(key) + quantity;
+        }
+      });
+      this.normalizeExpeditionAllocation();
+      const receipt = { id, kind: "inventory-transfer", removedByKey: debits,
+        grantedByKey: credits, metadata: clone(specification.metadata || {}),
+        quantity: Object.values(credits).reduce((a, b) => a + b, 0), at: Date.now(), applied: false };
+      this.state.transactions[id] = receipt;
+      if (!this.save()) { this.state = before; return null; }
+      if (Object.keys(debits).length) this.publishChange("inventory-pool-consumed", {
+        transactionId: id, inventoryKeys: Object.keys(debits), removedByKey: debits,
+        quantity: Object.values(debits).reduce((a, b) => a + b, 0)
+      });
+      Object.entries(credits).forEach(([inventoryKey, quantity]) =>
+        this.publishChange("inventory-granted", { inventoryKey, quantity, transactionId: id,
+          source: receipt.metadata.source || receipt.metadata.owner || "system", missionId: receipt.metadata.missionId || null,
+          reason: receipt.metadata.fact || null,
+          mapId: receipt.metadata.mapId || null }));
+      return clone(receipt);
+    }
+
+    markInventoryTransactionApplied(transactionId) {
+      const receipt = this.state.transactions[String(transactionId || "")];
+      if (!receipt || receipt.kind !== "inventory-transfer") return false;
+      if (receipt.applied) return true;
+      receipt.applied = true;
+      if (this.save()) return true;
+      receipt.applied = false;
+      return false;
     }
 
     depositInventoryState(key, amount = 1) {

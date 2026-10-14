@@ -361,14 +361,75 @@
     }
 
     trackOrchidConsumption(detail = {}) {
-      if (String(detail.reason || "") !== "inventory-consumed") return false;
-      if (String(detail.event?.inventoryKey || "") !== "biocapital") return false;
-      const quantity = Math.max(0, Number(detail.event?.quantity) || 0);
+      const reason = String(detail.reason || "");
+      const event = detail.event || {};
+      const quantity = reason === "inventory-consumed" && event.inventoryKey === "biocapital"
+        ? Math.max(0, Number(event.quantity) || 0)
+        : reason === "inventory-pool-consumed"
+          ? Math.max(0, Number(event.removedByKey?.biocapital) || 0) : 0;
       if (!quantity) return false;
-      const balance = this.orchidBalance();
-      if (!balance) return false;
-      this.setMemoryFact(ORCHID_BALANCE_KEY, Math.max(0, balance - quantity));
+      const receipt = event.transactionId ? `orchid-debit:${event.transactionId}` : null;
+      const memory = this.manager.memory;
+      if (receipt && memory.hasEffectReceipt(receipt)) return false;
+      memory.setFact(ORCHID_BALANCE_KEY, Math.max(0, this.orchidBalance() - quantity));
+      if (receipt) memory.recordEffectReceipt(receipt, { quantity });
+      memory.save();
       return true;
+    }
+
+    reconcileOrchidDebits() {
+      for (const receipt of Object.values(BF.progression?.state?.transactions || {})) {
+        if (!(Number(receipt.removedByKey?.biocapital) > 0)) continue;
+        this.trackOrchidConsumption({ reason: "inventory-pool-consumed",
+          event: { transactionId: receipt.id, removedByKey: receipt.removedByKey } });
+      }
+    }
+
+    reconcileInventoryTransactions() {
+      if (this.transferReconciling || !BF.progression) return false;
+      this.transferReconciling = true;
+      let changed = false;
+      try {
+        this.reconcileOrchidDebits();
+        for (const receipt of Object.values(BF.progression.state.transactions || {})) {
+          const proof = receipt.metadata;
+          if (receipt.kind !== "inventory-transfer" || receipt.applied ||
+              proof?.owner !== "civilization") continue;
+          // Pendant la construction du Manager, le moteur peut encore pointer
+          // sur l'ancien propriétaire. Reprendre au cycle existant suivant,
+          // lorsque BibleRuntime et ce contrôleur utilisent la même instance.
+          if (proof.type !== "service" && BF.currentEngine?.missionManager !== this.manager) continue;
+          const memory = this.manager.memory;
+          const current = this.getRelation(proof.civilizationId);
+          if (proof.type === "service") {
+            this.setRelation(proof.civilizationId, current.rank, {
+              completedMissions: Math.max(current.completedMissions, proof.completedMissionsAfter) });
+            memory.recordEffectReceipt(proof.rewardReceipt, { missionId: proof.missionId,
+              civilizationId: proof.civilizationId, inventoryKey: proof.inventoryKey,
+              quantity: receipt.grantedByKey[proof.inventoryKey] });
+          } else if (proof.type === "trade") {
+            memory.setFact(this.tradeStockKey(proof.civilizationId), proof.stockAfter);
+            this.setRelation(proof.civilizationId, current.rank, { score: Math.max(current.score, proof.scoreAfter) });
+            // Le consommateur reçoit la preuve de ce transfert, pas un compteur historique.
+            global.dispatchEvent?.(new CustomEvent("bluefox:civilization-trade-completed", {
+              detail: { ...proof.event, transactionId: receipt.id, eligibleSlots: proof.eligibleSlots }
+            }));
+          } else if (proof.type === "blueprint") {
+            BF.bibleRuntime?.unlockResearchRewards(proof.researchReward);
+            if (!BF.Research?.isUnlocked?.(proof.blueprintId)) continue;
+          } else continue;
+          if (!memory.flush(true)) continue;
+          if (!BF.progression.markInventoryTransactionApplied(receipt.id)) continue;
+          if (proof.type === "blueprint") {
+            global.dispatchEvent?.(new CustomEvent("bluefox:civilization-blueprint-acquired", {
+              detail: { civilizationId: proof.civilizationId, blueprintId: proof.blueprintId, label: proof.label }
+            }));
+            this.maybeSuggestTeleportation();
+          }
+          changed = true;
+        }
+      } finally { this.transferReconciling = false; }
+      return changed;
     }
 
     resourceCatalog() {
@@ -408,6 +469,9 @@
     }
 
     tradeResource(civilizationId, offerKey, offerQuantity, receiveKey, receiveQuantity) {
+      this.reconcileInventoryTransactions();
+      if (this.transferReconciling || Object.values(BF.progression?.state?.transactions || {}).some(r =>
+          r.kind === "inventory-transfer" && !r.applied && r.metadata?.owner === "civilization")) return { ok: false, reason: "pending" };
       const relation = this.getRelation(civilizationId);
       if (!["friendly", "honored"].includes(relation.rank)) return { ok: false, reason: "reputation" };
       const catalog = new Map(this.resourceCatalog().map((entry) => [entry.key, entry]));
@@ -426,24 +490,20 @@
         const projected = Number(capacity.count) - offered + received;
         if (projected > Number(capacity.capacity)) return { ok: false, reason: "capacity" };
       }
-      const removed = BF.consumeInventory?.(offer.key, offered) || 0;
-      if (removed !== offered) return { ok: false, reason: "consume" };
-      const granted = BF.grantInventory?.(receive.key, received, {
-        source: "civilization-trade",
-        civilizationId
-      }) || 0;
-      if (granted !== received) {
-        BF.grantInventory?.(offer.key, removed, { source: "civilization-trade-rollback", civilizationId });
-        return { ok: false, reason: "grant" };
-      }
-      stock[receive.key] = Math.max(0, Number(stock[receive.key]) - received);
-      stock[offer.key] = Math.max(0, Number(stock[offer.key]) || 0) + offered;
-      this.setMemoryFact(this.tradeStockKey(civilizationId), stock);
-      this.setRelation(civilizationId, relation.rank, { score: relation.score + Math.max(1, Math.floor(received * receive.value / 4)) });
-      global.dispatchEvent?.(new CustomEvent("bluefox:civilization-trade-completed", {
-        detail: { civilizationId, offerKey: offer.key, offerQuantity: offered, receiveKey: receive.key, receiveQuantity: received }
-      }));
-      return { ok: true, stock };
+      const event = { civilizationId, offerKey: offer.key, offerQuantity: offered,
+        receiveKey: receive.key, receiveQuantity: received };
+      stock[receive.key] -= received; stock[offer.key] = (Number(stock[offer.key]) || 0) + offered;
+      const receipt = BF.progression?.commitInventoryTransaction(
+        BF.progression.nextInventoryTransactionId("civilization-trade"), {
+          debits: { [offer.key]: offered }, credits: { [receive.key]: received },
+          metadata: { owner: "civilization", source: "civilization-trade", type: "trade", civilizationId, stockAfter: stock,
+            scoreAfter: relation.score + Math.max(1, Math.floor(received * receive.value / 4)), event,
+            eligibleSlots: BF.bibleRuntime?.civilizationTradeCompletionTargets?.(event) || [] }
+        });
+      if (!receipt) return { ok: false, reason: "consume" };
+      this.reconcileInventoryTransactions();
+      return receipt.applied || BF.progression.state.transactions[receipt.id]?.applied
+        ? { ok: true, stock } : { ok: false, reason: "pending" };
     }
 
     blueprint(civilizationId) {
@@ -456,6 +516,9 @@
     }
 
     purchaseBlueprint(civilizationId) {
+      this.reconcileInventoryTransactions();
+      if (this.transferReconciling || Object.values(BF.progression?.state?.transactions || {}).some(r =>
+          r.kind === "inventory-transfer" && !r.applied && r.metadata?.owner === "civilization")) return { ok: false, reason: "pending" };
       const blueprint = this.blueprint(civilizationId);
       const relation = this.getRelation(civilizationId);
       if (!blueprint) return { ok: false, reason: "blueprint" };
@@ -469,34 +532,20 @@
       }
       const runtime = BF.bibleRuntime;
       if (!runtime?.unlockResearchRewards) return { ok: false, reason: "research" };
-      const removed = BF.consumeInventory?.(cost.inventoryKey, cost.quantity) || 0;
-      if (removed !== cost.quantity) return { ok: false, reason: "consume" };
-      const unlocked = runtime.unlockResearchRewards({
+      const researchReward = {
         id: `CIV-TRADE-${civilizationId.toUpperCase()}`,
-        rewards: [{
-          id: blueprint.id,
-          type: blueprint.type,
-          category: "civilization-technology",
-          label: blueprint.label,
-          description: blueprint.description,
-          fabrication: blueprint.fabrication
-        }]
+        rewards: [{ id: blueprint.id, type: blueprint.type, category: "civilization-technology",
+          label: blueprint.label, description: blueprint.description, fabrication: blueprint.fabrication }]
+      };
+      const receipt = BF.progression?.commitInventoryTransaction(`civilization-blueprint:${blueprint.id}`, {
+        debits: { [cost.inventoryKey]: cost.quantity },
+        metadata: { owner: "civilization", type: "blueprint", civilizationId,
+          blueprintId: blueprint.id, label: blueprint.label, researchReward }
       });
-      if (!unlocked || !BF.Research?.isUnlocked?.(blueprint.id)) {
-        BF.grantInventory?.(cost.inventoryKey, removed, {
-          source: "civilization-blueprint-rollback",
-          civilizationId
-        });
-        if (cost.provenance === "prismatic_orchid") {
-          this.setMemoryFact(ORCHID_BALANCE_KEY, this.orchidBalance() + removed);
-        }
-        return { ok: false, reason: "unlock" };
-      }
-      global.dispatchEvent?.(new CustomEvent("bluefox:civilization-blueprint-acquired", {
-        detail: { civilizationId, blueprintId: blueprint.id, label: blueprint.label }
-      }));
-      this.maybeSuggestTeleportation();
-      return { ok: true, blueprintId: blueprint.id };
+      if (!receipt) return { ok: false, reason: "consume" };
+      this.reconcileInventoryTransactions();
+      return BF.Research.isUnlocked(blueprint.id)
+        ? { ok: true, blueprintId: blueprint.id } : { ok: false, reason: "pending" };
     }
 
     maybeSuggestTeleportation() {
@@ -711,36 +760,27 @@
     }
 
     reconcileServiceRewards() {
+      if (this.rewardReconciling) return false;
+      this.rewardReconciling = true;
       let changed = false;
-      SERVICE_DEFINITIONS.forEach((definition) => {
-        const lifecycle = this.manager?.memory?.state?.missionLifecycle?.[definition.id];
-        if (lifecycle?.status !== "completed") return;
-        const service = definition.npcService;
-        const receipt = serviceRewardReceipt(definition.id, lifecycle.completedAt);
-        if (this.manager.memory?.hasEffectReceipt?.(receipt)) return;
-        const granted = BF.grantInventory?.(
-          service.rewardInventoryKey,
-          service.rewardQuantity,
-          {
-            source: "npc-service-reward",
-            missionId: definition.id,
-            civilizationId: service.civilizationId
-          }
-        );
-        if (!granted) return;
-        const relation = this.getRelation(service.civilizationId);
-        this.setRelation(service.civilizationId, relation.rank, {
-          completedMissions: relation.completedMissions + 1
+      try {
+        changed = this.reconcileInventoryTransactions();
+        SERVICE_DEFINITIONS.forEach(definition => {
+          const lifecycle = this.manager.memory.state.missionLifecycle[definition.id];
+          if (lifecycle?.status !== "completed") return;
+          const service = definition.npcService;
+          const rewardReceipt = serviceRewardReceipt(definition.id, lifecycle.completedAt);
+          if (this.manager.memory.hasEffectReceipt(rewardReceipt)) return;
+          const receipt = BF.progression?.commitInventoryTransaction(rewardReceipt, {
+            credits: { [service.rewardInventoryKey]: service.rewardQuantity },
+            metadata: { owner: "civilization", source: "npc-service-reward", type: "service", missionId: definition.id,
+              civilizationId: service.civilizationId, inventoryKey: service.rewardInventoryKey,
+              completedMissionsAfter: this.getRelation(service.civilizationId).completedMissions + 1,
+              rewardReceipt }
+          });
+          if (receipt) changed = this.reconcileInventoryTransactions() || changed;
         });
-        this.manager.memory?.recordEffectReceipt?.(receipt, {
-          missionId: definition.id,
-          civilizationId: service.civilizationId,
-          inventoryKey: service.rewardInventoryKey,
-          quantity: service.rewardQuantity
-        });
-        changed = true;
-      });
-      if (changed) this.manager?.memory?.save?.();
+      } finally { this.rewardReconciling = false; }
       return changed;
     }
 

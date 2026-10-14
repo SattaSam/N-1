@@ -3002,8 +3002,30 @@
       return true;
     }
 
+    civilizationTradeCompletionTargets(detail = {}) {
+      const targets = [];
+      for (const mission of this.allMissions()) {
+        if (!this.missionLifecycle(mission.id).active) continue;
+        const available = this.manager()?.trees?.get?.(mission.id)?.availableLeaves?.() || [];
+        for (const requirement of asArray(mission.civilizationTradeRequirements)) {
+          if (requirement.slot && this.civilizationTradeRequirementMatches(requirement, detail) &&
+              available.some(n => n.id === `${mission.id}:${requirement.slot}`)) {
+            targets.push({ missionId: mission.id, slot: requirement.slot });
+          }
+        }
+      }
+      return targets;
+    }
+
     onCivilizationTradeCompleted(detail = {}) {
       let changed = false;
+      if (detail.transactionId) {
+        for (const target of asArray(detail.eligibleSlots)) {
+          changed = this.progressRuntimeValidationSlot(target.missionId, target.slot, 1,
+            `civilization-trade:${detail.transactionId}`) || changed;
+        }
+        return changed;
+      }
       for (const mission of this.allMissions()) {
         if (!this.missionLifecycle(mission.id).active) continue;
         for (const requirement of asArray(mission?.civilizationTradeRequirements)) {
@@ -3328,13 +3350,15 @@
       return changed;
     }
 
-    progressRuntimeValidationSlot(missionId, slot, amount = 1) {
+    progressRuntimeValidationSlot(missionId, slot, amount = 1, evidenceId = null) {
       const manager = this.manager();
       const tree = manager?.trees?.get?.(missionId);
       const node = tree?.find?.(`${missionId}:${slot}`);
       if (!node || node.isComplete) return false;
       if (!tree.availableLeaves?.().includes?.(node)) return false;
+      if (evidenceId && asArray(node.historyValues).includes(evidenceId)) return false;
       if (!node.increment?.(Math.max(1, Number(amount) || 1))) return false;
+      if (evidenceId) node.pushHistoryValue(evidenceId);
       tree.refresh?.();
       manager.memory?.saveTree?.(tree);
       manager.syncLifecycleFromTrees?.();
@@ -3577,64 +3601,82 @@
       return Object.values(state?.remaining || {}).reduce((sum, amount) => sum + Math.max(0, Number(amount) || 0), 0);
     }
 
+    reconcileReserveTransactions(missionId = null) {
+      const manager = this.manager();
+      if (!manager?.memory || this.reserveReconciling) return false;
+      this.reserveReconciling = true;
+      let changed = false;
+      try {
+        for (const receipt of Object.values(BF.progression?.state?.transactions || {})) {
+          const proof = receipt.metadata;
+          if (receipt.kind !== "inventory-transfer" || receipt.applied ||
+              proof?.owner !== "persistent-reserve" ||
+              (missionId && proof.missionId !== missionId)) continue;
+          const mission = this.byId.get(proof.missionId);
+          const context = asArray(mission?.proximityContexts).find(c =>
+            c.reserve && c.fact === proof.fact && c.slot === proof.slot);
+          const tree = manager.trees?.get?.(proof.missionId);
+          const node = tree?.find?.(`${proof.missionId}:${proof.slot}`);
+          if (!context || !node || (!node.isComplete && !tree.availableLeaves().includes(node))) continue;
+          const current = manager.memory.getFact(proof.fact, {}) || {};
+          manager.memory.setFact(proof.fact, { ...proof.reserveAfter,
+            lastDepositedAt: Math.max(Number(current.lastDepositedAt) || 0,
+              Number(proof.reserveAfter.lastDepositedAt) || 0) });
+          const missing = Math.max(0, Number(proof.progressAfter) - Number(node.progress));
+          if (missing && !this.progressRuntimeValidationSlot(proof.missionId, proof.slot, missing)) continue;
+          if (manager.memory.flush(true) && BF.progression.markInventoryTransactionApplied(receipt.id)) changed = true;
+        }
+      } finally { this.reserveReconciling = false; }
+      return changed;
+    }
+
     withdrawPersistentReserve(mission, context) {
       const manager = this.manager();
+      this.reconcileReserveTransactions(mission?.id);
+      if (Object.values(BF.progression?.state?.transactions || {}).some(r =>
+          r.kind === "inventory-transfer" && !r.applied &&
+          r.metadata?.owner === "persistent-reserve" && r.metadata?.fact === context.fact)) return false;
       const tree = manager?.trees?.get?.(mission?.id);
       const node = tree?.find?.(`${mission.id}:${context.slot}`);
-      if (!manager?.memory || !node || node.isComplete) return false;
-      if (!tree.availableLeaves?.().includes?.(node)) return false;
-
-      const state = this.reserveFactState({ ...context, missionId: mission.id });
-      if (!state || state.exhausted) return false;
+      if (!manager?.memory || !node || node.isComplete || !tree.availableLeaves().includes(node)) return false;
+      const original = this.reserveFactState({ ...context, missionId: mission.id });
+      if (!original || original.exhausted) return false;
+      const state = clone(original);
       const capacity = BF.getInventoryCapacityState?.() || {};
       let free = Math.max(0, (Number(capacity.capacity) || 0) - (Number(capacity.count) || 0));
       if (!free) {
         const now = Date.now();
         if (now - Math.max(0, Number(state.lastFullMessageAt) || 0) >= 15000) {
-          state.lastFullMessageAt = now;
-          state.updatedAt = now;
-          manager.memory.setFact?.(context.fact, state);
-          manager.memory.save?.();
+          state.lastFullMessageAt = now; state.updatedAt = now;
+          manager.memory.setFact(context.fact, state); manager.memory.save();
           BF.currentEngine?.callbacks?.onAction?.(context.reserve.fullMessage || "Il reste des ressources utilisables, mais je ne peux pas en emporter plus. Je reviendrai plus tard.");
         }
         return false;
       }
-
-      const activeKeys = Object.keys(state.remaining).filter((key) => Number(state.remaining[key]) > 0);
-      let moved = 0;
-      while (free > 0 && activeKeys.some((key) => Number(state.remaining[key]) > 0)) {
-        const availableKeys = activeKeys.filter((key) => Number(state.remaining[key]) > 0);
-        for (const key of availableKeys) {
-          if (free <= 0) break;
-          const remaining = Math.max(0, Number(state.remaining[key]) || 0);
-          if (!remaining) continue;
-          const share = Math.max(1, Math.ceil(free / availableKeys.length));
-          const take = Math.min(remaining, share, free);
-          const granted = BF.grantInventory?.(key, take, {
-            source: "persistent-reserve",
-            reason: context.fact,
-            missionId: mission.id,
-            mapId: BF.currentEngine?.currentMapId
-          }) || 0;
-          if (!granted) continue;
-          state.remaining[key] = remaining - granted;
-          free -= granted;
-          moved += granted;
+      const credits = {}, keys = Object.keys(state.remaining);
+      while (free > 0 && keys.some(key => state.remaining[key] > 0)) {
+        const available = keys.filter(key => state.remaining[key] > 0);
+        for (const key of available) {
+          const take = Math.min(state.remaining[key], Math.max(1, Math.ceil(free / available.length)), free);
+          if (!take) continue;
+          credits[key] = (credits[key] || 0) + take; state.remaining[key] -= take; free -= take;
         }
       }
+      const moved = Object.values(credits).reduce((a, b) => a + b, 0);
       if (!moved) return false;
-
-      state.updatedAt = Date.now();
-      state.lastWithdrawnAt = state.updatedAt;
+      state.updatedAt = Date.now(); state.lastWithdrawnAt = state.updatedAt;
       state.exhausted = this.reserveRemainingTotal(state) <= 0;
-      manager.memory.setFact?.(context.fact, state);
-      manager.memory.save?.();
-      this.progressRuntimeValidationSlot(mission.id, context.slot, moved);
-      if (state.exhausted) {
-        BF.currentEngine?.callbacks?.onAction?.(context.reserve.exhaustedMessage || "J’ai récupéré tout ce qui pouvait encore servir. Le reste est trop dégradé pour être exploitable.");
-      } else {
-        BF.currentEngine?.callbacks?.onAction?.(context.reserve.partialMessage || "Il reste des ressources utilisables ici. Je reviendrai quand mon sac aura de nouveau de la place.");
-      }
+      const receipt = BF.progression?.commitInventoryTransaction(
+        `${mission.id}:reserve:${context.fact}:${this.reserveRemainingTotal(original)}`, {
+          credits, metadata: { owner: "persistent-reserve", missionId: mission.id,
+            slot: context.slot, fact: context.fact, mapId: BF.currentEngine?.currentMapId,
+            reserveAfter: state, progressAfter: Number(node.progress) + moved }
+        });
+      if (!receipt) return false;
+      this.reconcileReserveTransactions(mission.id);
+      BF.currentEngine?.callbacks?.onAction?.(state.exhausted
+        ? context.reserve.exhaustedMessage || "J’ai récupéré tout ce qui pouvait encore servir."
+        : context.reserve.partialMessage || "Il reste des ressources utilisables ici. Je reviendrai après avoir vidé mon sac.");
       return true;
     }
 
@@ -4180,7 +4222,8 @@
       const manager = this.manager();
       const player = engine?.character?.root?.position;
       if (!engine || !manager?.memory || !player) return false;
-      let changed = this.reviewDiscoveryProximity();
+      let changed = this.reconcileReserveTransactions();
+      changed = this.reviewDiscoveryProximity() || changed;
       // Acquitter l'étude globale déjà sélectionnée après son approche réelle.
       // Ne choisir aucune étape suivante et ne détourner aucun mouvement joueur.
       const action = manager.currentAction;

@@ -1,5 +1,5 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert'),path=require('path');
-const ROOT=path.resolve(__dirname,'..');
+const ROOT=process.env.BLUEFOX_ROOT||path.resolve(__dirname,'..');
 const listeners={},defs={},facts={},lifecycles={},receipts={};
 class CE{constructor(type,init={}){this.type=type;this.detail=init.detail||{}}}
 const inventory={energy_crystal:25,biocapital:40,fiber:20,crystal:10};
@@ -18,9 +18,10 @@ const window={console,Date,Math,CustomEvent:CE,setTimeout(fn){fn();return 1},add
  Research:{isUnlocked(id){return Boolean(unlocked[id])}},bibleRuntime:{unlockResearchRewards(mission){let changed=0;for(const reward of mission.rewards||[]){if(!unlocked[reward.id]){unlocked[reward.id]=true;changed++}}return changed}},
  currentEngine:null
 }};window.window=window;
-const ctx=vm.createContext(window);vm.runInContext(fs.readFileSync(path.join(ROOT,'engine/mission-catalog.js'),'utf8'),ctx);
+const centralStore=new Map();window.localStorage={getItem:k=>centralStore.get(k)||null,setItem:(k,v)=>centralStore.set(k,String(v)),removeItem:k=>centralStore.delete(k)};
+const ctx=vm.createContext(window);vm.runInContext(fs.readFileSync(path.join(ROOT,'engine/progression-registry.js'),'utf8'),ctx);window.BlueFox3D.progression.state.inventory=inventory;vm.runInContext(fs.readFileSync(path.join(ROOT,'engine/mission-catalog.js'),'utf8'),ctx);
 const BF=window.BlueFox3D;
-const memory={state:{missionLifecycle:lifecycles},getFact:(k,d)=>k in facts?facts[k]:d,setFact:(k,v)=>{facts[k]=v;return v},save(){},hasEffectReceipt:k=>Boolean(receipts[k]),recordEffectReceipt:(k,v)=>{receipts[k]=v;return true}};
+const memory={state:{missionLifecycle:lifecycles},getFact:(k,d)=>k in facts?facts[k]:d,setFact:(k,v)=>{facts[k]=v;return v},save(){},flush(){return true},hasEffectReceipt:k=>Boolean(receipts[k]),recordEffectReceipt:(k,v)=>{receipts[k]=v;return true}};
 const manager={memory,definition:id=>defs[id]||null,startMission(){return false}};
 const ctl=new BF.Missions.MissionCatalogController(manager);manager.catalogController=ctl;BF.currentEngine={missionManager:manager,currentMapId:'none',callbacks:{onAction(){}}};
 const canonicalCatalog=ctl.resourceCatalog();assert(canonicalCatalog.some(entry=>entry.key==='energy_crystal'));assert(canonicalCatalog.some(entry=>entry.key==='fiber'));objectDefs.push({label:'Décor non récoltable',rarity:'common',gameplay:{collectable:false},interaction:{actions:['inspect']},resource:{inventoryKey:'not_tradeable'}});assert.equal(ctl.resourceCatalog().some(entry=>entry.key==='not_tradeable'),false);

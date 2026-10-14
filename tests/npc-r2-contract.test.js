@@ -1,5 +1,5 @@
 const fs=require('fs'),path=require('path'),assert=require('assert');
-const ROOT=path.resolve(__dirname,'..');
+const ROOT=process.env.BLUEFOX_ROOT||path.resolve(__dirname,'..');
 const rt=fs.readFileSync(path.join(ROOT,'engine/npc-runtime.js'),'utf8');
 const events=fs.readFileSync(path.join(ROOT,'engine/object-event-registry.js'),'utf8');
 const catalog=fs.readFileSync(path.join(ROOT,'engine/mission-catalog.js'),'utf8');
@@ -13,7 +13,7 @@ assert(catalog.includes('MissionCatalogController'),'existing catalog owner not 
 assert(catalog.includes('civilization:relation:'),'persistent relation fact key missing');
 assert(catalog.includes('honoredAcceptedThreshold'),'HONORED threshold must be configurable/exposed');
 assert(catalog.includes('passivePriorityAxis: "civilization"'),'Civilisation BAC axis missing');
-assert(catalog.includes('BF.grantInventory?.'),'physical mission reward must use canonical inventory grant');
+assert(catalog.includes('BF.progression?.commitInventoryTransaction'),'physical mission reward must use a durable transaction of the canonical inventory owner');
 assert(catalog.includes('rearmRepeatableMission'),'service missions must reuse repeatable lifecycle');
 for (const bad of ['ContactRuntime','CivilizationMissionManager','PathPlanner']) assert(!catalog.includes(bad),`parallel owner leaked: ${bad}`);
 console.log('PASS npc-r2-contract');

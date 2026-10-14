@@ -1,5 +1,5 @@
 const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('assert');
-const ROOT=path.resolve(__dirname,'..');
+const ROOT=process.env.BLUEFOX_ROOT||path.resolve(__dirname,'..');
 const listeners={};
 class CE{constructor(type,init={}){this.type=type;this.detail=init.detail||{}}}
 const defs={}; const facts={}; const lifecycles={}; const receipts={}; const rewards=[]; const speech=[];
@@ -17,10 +17,13 @@ const window={
   }
 }; window.window=window; window.performance={now:()=>1000};
 window.npcRoot={userData:{instanceId:'npc-1'}};
-vm.runInContext(fs.readFileSync(path.join(ROOT,'engine/mission-catalog.js'),'utf8'),vm.createContext(window));
+const centralStore=new Map();window.localStorage={getItem:k=>centralStore.get(k)||null,setItem:(k,v)=>centralStore.set(k,String(v)),removeItem:k=>centralStore.delete(k)};
+const ctx=vm.createContext(window);vm.runInContext(fs.readFileSync(path.join(ROOT,'engine/progression-registry.js'),'utf8'),ctx);
+vm.runInContext(fs.readFileSync(path.join(ROOT,'engine/mission-catalog.js'),'utf8'),ctx);
 const BF=window.BlueFox3D;
 assert.equal(Object.keys(defs).filter(id=>id.startsWith('NPC-SERVICE-')).length,6,'six static service definitions expected');
-const memory={state:{missionLifecycle:lifecycles},getFact:(k,d)=>k in facts?facts[k]:d,setFact:(k,v)=>{facts[k]=v;return v},save(){},hasEffectReceipt:k=>Boolean(receipts[k]),recordEffectReceipt:(k,v)=>{receipts[k]=v;return true}};
+window.addEventListener('bluefox:progression-changed',event=>{if(event.detail?.reason==='inventory-granted')rewards.push(event.detail.event)});
+const memory={state:{missionLifecycle:lifecycles},getFact:(k,d)=>k in facts?facts[k]:d,setFact:(k,v)=>{facts[k]=v;return v},save(){},flush(){return true},hasEffectReceipt:k=>Boolean(receipts[k]),recordEffectReceipt:(k,v)=>{receipts[k]=v;return true}};
 const manager={memory,definition:id=>defs[id]||null,rearmRepeatableMission(id){if(lifecycles[id]?.status!=='completed')return false;lifecycles[id].status='available';lifecycles[id].repeatCount=(lifecycles[id].repeatCount||0)+1;return true},startMission(id){if(!defs[id])return false;lifecycles[id]={...(lifecycles[id]||{}),status:'active',activatedAt:Date.now()};return true}};
 const Controller=BF.Missions.MissionCatalogController; const ctl=new Controller(manager); BF.currentEngine={missionManager:{catalogController:ctl}};
 // Neutral contact never offers a mission.
