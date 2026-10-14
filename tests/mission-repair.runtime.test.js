@@ -174,7 +174,7 @@ test('relecture stock interdite pendant la transaction de consommation', () => {
 });
 test('Research Blueprint ouvre le placement sans créer définition, arbre ou lifecycle', () => {
   for (const kind of ['camp', 'refuge', 'base', 'workbench']) {
-    const f = fixture(); f.memory.state.siteProgression = {}; f.BF.progression.availableInventory = () => 10000;
+    const f = fixture(); f.memory.state.siteProgression = {}; f.BF.progression.availableInventory = f.BF.progression.accessibleInventory = () => 10000;
     if (kind === 'refuge') established(f, 'T03', 'camp', 1);
     if (kind === 'base') established(f, 'GAME-shelter', 'refuge', 2);
     if (kind === 'workbench') established(f, 'GAME-base', 'base', 3);
@@ -189,10 +189,10 @@ test('Research Blueprint ouvre le placement sans créer définition, arbre ou li
 });
 test('Blueprint bloqué sans matériaux ; revalidation à la confirmation', () => {
   const f = fixture(); f.memory.state.siteProgression = {}; f.memory.state.researchUnlocks['camp-establish-v1'] = { unlockedAt: 1 };
-  f.BF.progression.availableInventory = () => 0; assert.equal(f.runtime.startConstruction('camp', { mapId: 'crystal' }), false);
-  let placement; f.BF.progression.availableInventory = () => 100; f.runtime.beginMicroScenePlacement = spec => { placement = spec; return true; };
+  f.BF.progression.availableInventory = f.BF.progression.accessibleInventory = () => 0; assert.equal(f.runtime.startConstruction('camp', { mapId: 'crystal' }), false);
+  let placement; f.BF.progression.availableInventory = f.BF.progression.accessibleInventory = () => 100; f.runtime.beginMicroScenePlacement = spec => { placement = spec; return true; };
   assert.equal(f.runtime.startConstruction('camp', { mapId: 'crystal' }), true);
-  f.BF.progression.availableInventory = () => 0;
+  f.BF.progression.availableInventory = f.BF.progression.accessibleInventory = () => 0;
   assert.equal(placement.onInstall({ anchor: { x: 1, z: 1 } }, Symbol()), false);
 });
 test('ANN-ARCH-W01 se révèle sur une revisite physique après les prérequis', () => {

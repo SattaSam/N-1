@@ -3501,6 +3501,7 @@
         requires: Object.freeze(["reachToolUseContext"]),
         params: Object.freeze({ requiredMapFact: "tutorialExcursion:FAU-10", requiredMapField: "generatedTargetMapId",
           subject: "fauna",
+          distinctBy: "none",
           microSceneId: "MSC-FAUNA-TOOL-USE-001",
           tagsAll: Object.freeze(["fauna_behavior", "tool_use_cycle"])
         })
@@ -11664,8 +11665,8 @@
     trigger:Object.freeze({type:"exploration.map_discovered",count:1,uniqueOnly:true,featuredMicroSceneIdsAny:Object.freeze(["MSC-CUSTOM-SHADOW-NOCTURAL"])}),
     bindActivationMap:true, priority:218, passivePriorityAxis:"research", ponderation:1.3, autoPrimaryEligible:true,
     sequence:Object.freeze([
-      Object.freeze({slot:"firstLook",title:"Observer la présence nocturne sans la faire fuir",action:"observe",target:1,sameTarget:true,params:Object.freeze({cuoType:"nocturnal_animal",microSceneId:"MSC-CUSTOM-SHADOW-NOCTURAL",tagsAll:Object.freeze(["fauna_behavior","period_night"]),requiredMapFact:"bibleActivation:OPP-FAU-01",requiredMapField:"mapId"})}),
-      Object.freeze({slot:"secondLook",title:"Retrouver le même animal après son déplacement",action:"observe",target:1,requires:Object.freeze(["firstLook"]),sameTarget:true,params:Object.freeze({cuoType:"nocturnal_animal",microSceneId:"MSC-CUSTOM-SHADOW-NOCTURAL",tagsAll:Object.freeze(["fauna_behavior","period_night"]),requiredMapFact:"bibleActivation:OPP-FAU-01",requiredMapField:"mapId"})})
+      Object.freeze({slot:"firstLook",title:"Observer la présence nocturne sans la faire fuir",action:"observe",target:1,sameTarget:true,params:Object.freeze({cuoType:"nocturnal_animal",microSceneId:"MSC-CUSTOM-SHADOW-NOCTURAL",tagsAll:Object.freeze(["fauna_behavior","calm_nearby","period_night"]),requiredMapFact:"bibleActivation:OPP-FAU-01",requiredMapField:"mapId"})}),
+      Object.freeze({slot:"secondLook",title:"Retrouver le même animal après son déplacement",action:"observe",target:1,requires:Object.freeze(["firstLook"]),sameTarget:true,params:Object.freeze({cuoType:"nocturnal_animal",microSceneId:"MSC-CUSTOM-SHADOW-NOCTURAL",tagsAll:Object.freeze(["fauna_behavior","calm_nearby","period_night"]),requiredMapFact:"bibleActivation:OPP-FAU-01",requiredMapField:"mapId"})})
     ]),
     narrative:Object.freeze({revealed:Object.freeze(["Deux yeux reflètent la nuit. Je peux peut-être rester assez calme pour qu’ils ne disparaissent pas." ]),completed:Object.freeze(["Il s’est déplacé, mais il est resté là. Pendant quelques secondes, nous nous sommes observés tous les deux."])})
   });

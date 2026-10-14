@@ -273,7 +273,9 @@
       grazerStart: state.root.position.clone(),
       ballStart: ball.position.clone(),
       direction: ball.position.clone().sub(state.root.position).setY(0).normalize(),
-      rollDistance: 0
+      rollDistance: 0,
+      observed: distanceToPlayer(state.root) <= APPROACH.vigilanceDistance &&
+        playerSpeed() != null && playerSpeed() <= 0.12
     };
     if (state.toolUse.direction.lengthSq() < 0.01) state.toolUse.direction.set(1, 0, 0);
   };
@@ -297,6 +299,9 @@
     if (!state.toolUse || state.toolUse.ball !== ball) beginToolUse(state, ball, elapsed);
     const tool = state.toolUse;
     const age = elapsed - tool.phaseStarted;
+    const speed = playerSpeed();
+    tool.observed = tool.observed && distanceToPlayer(state.root) <= APPROACH.vigilanceDistance &&
+      speed != null && speed <= 0.12;
     state.state = "tool_use";
 
     if (tool.phase === "approach") {
@@ -330,10 +335,16 @@
       tool.rollDistance = distance;
       if (t >= 1) {
         state.toolUseCycleCount += 1;
-        emitBehavior(state, "tool_use_cycle", {
-          cycle: state.toolUseCycleCount,
-          toolInstanceId: ball.userData?.instanceId || null
-        });
+        // Le cycle physique existe à toute distance ; sa preuve d'observation
+        // n'existe que lorsque BlueFox le regarde réellement, immobile et près.
+        const observerDistance = distanceToPlayer(state.root);
+        if (tool.observed && observerDistance <= APPROACH.vigilanceDistance) {
+          emitBehavior(state, "tool_use_cycle", {
+            cycle: state.toolUseCycleCount,
+            distance: observerDistance,
+            toolInstanceId: ball.userData?.instanceId || null
+          });
+        }
         tool.phase = "recover";
         tool.phaseStarted = elapsed;
       }
@@ -371,7 +382,16 @@
       behavior,
       ...(detail.tags || [])
     ])];
+    const pending = BF.currentEngine?.pendingInteraction;
+    const selected = pending?.userData?.requestedInteractionSource === "mission" &&
+      (pending === state.root || pending?.userData?.worldAnchor === state.root);
+    const owner = selected ? {
+      missionId: pending.userData.missionId,
+      missionNodeId: pending.userData.missionNodeId,
+      interactionSource: "mission"
+    } : {};
     BF.ObjectEvents.emit(type, state.root, {
+      ...owner,
       subject: "fauna",
       kind: "fauna_behavior",
       state: behavior,
@@ -660,6 +680,7 @@
     const protectorToYoung = state.root.position.distanceTo(young.root.position);
     if (playerToYoung > 4.6 || protectorToYoung > 7.5) {
       state.parentalProtectSince = 0;
+      state.parentalProtectEmitted = false;
       state.parentalYoung = null;
       return false;
     }
@@ -979,6 +1000,7 @@
         cautiousQualified: state.cautiousQualified,
         approachDisposition: state.approachDisposition,
         reputation: getReputation(state.type),
+        parentalProtectEmitted: state.parentalProtectEmitted,
         calmEmitted: state.calmEmitted,
         cautiousEmitted: state.cautiousEmitted,
         resetDistance: APPROACH.resetDistance,

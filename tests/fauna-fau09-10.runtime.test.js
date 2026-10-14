@@ -3,6 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const path=require('node:path');
+const ROOT=process.env.BLUEFOX_ROOT||path.resolve(__dirname,'..');
 
 class V3{
   constructor(x=0,y=0,z=0){this.x=x;this.y=y;this.z=z;}
@@ -26,7 +27,7 @@ function runtime({tool=false}={}){
     currentEngine:{currentMapId:'map-a',character:{root:player,speed:0},THREE:{Vector3:V3},missionManager:{memory:{state:{missionLifecycle:life}}}}};
   const context={window:null,BlueFox3D:BF,performance:{now:()=>now},Date,Math,Set,WeakMap,Object,console:{info(){},error(){}},
     requestAnimationFrame(fn){raf=fn;return 1},document:{querySelector(){return {classList:{contains(){return false}}}}}};context.window=context;vm.createContext(context);
-  vm.runInContext(fs.readFileSync(path.join(__dirname,'..','engine','fauna-runtime.js'),'utf8'),context);
+  vm.runInContext(fs.readFileSync(path.join(ROOT,'engine','fauna-runtime.js'),'utf8'),context);
   const step=(sec)=>{now=1000+sec*1000;const cb=raf;cb();};
   return {BF,hooks,events,player,sceneParent,step};
 }
@@ -50,6 +51,7 @@ test('FAU-09: un protecteur se deplace et emet parental_protect dans la MSC pare
 
 test('FAU-10: deux cycles physiques de poussee emettent deux tool_use_cycle',()=>{
   const h=runtime({tool:true});
+  h.player.position.set(4,0,0); // BlueFox observe les deux cycles dès leur début.
   const grazer=root('brouteur',-1.55,0,'MSC-FAUNA-TOOL-USE-001');
   const ball=root('fauna_straw_ball',0,0,'MSC-FAUNA-TOOL-USE-001');
   grazer.parent=ball.parent=h.sceneParent;
@@ -65,7 +67,7 @@ test('FAU-10: deux cycles physiques de poussee emettent deux tool_use_cycle',()=
 
 test('catalogue FAU-09/10 exige les comportements reels apres generation de MSC',()=>{
   const context={window:null,BlueFox3D:{}};context.window=context;vm.createContext(context);
-  vm.runInContext(fs.readFileSync(path.join(__dirname,'..','data','bible-catalog.js'),'utf8'),context);
+  vm.runInContext(fs.readFileSync(path.join(ROOT,'data','bible-catalog.js'),'utf8'),context);
   const byId=id=>context.BlueFox3D.BibleCatalog.find(m=>m.id===id);
   const f9=byId('FAU-09'),f10=byId('FAU-10');
   assert.ok(f9&&f10);

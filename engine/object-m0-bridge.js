@@ -1609,6 +1609,13 @@
   );
 
   const selectObservable = (engine, action, options = {}) => {
+    const tags = asArray(action?.params?.tagsAll);
+    const period = BF.FaunaRuntime?.currentPeriod?.();
+    const night = tags.includes("period_night"), day = tags.includes("period_day");
+    // Un seul filtre décrit le moment de l'observation ; les deux peuvent
+    // décrire un résultat de comparaison, pas une période courante impossible.
+    if (tags.includes("fauna_behavior") && period && night !== day &&
+        ((night && period !== "night") || (day && period !== "day"))) return null;
     const missionNode = engine?.missionManager?.trees
       ?.get?.(action?.missionId)
       ?.find?.(action?.nodeId) || null;
@@ -2518,6 +2525,16 @@
         this.character.stop();
         this.interactionApproachStartedAt = now;
         return;
+      }
+      if (faunaTags.some(tag => ["tool_use_cycle", "parental_protect"].includes(tag)) &&
+          distance <= interactionDistance) {
+        const node = this.missionManager?.trees?.get?.(object.userData.missionId)?.find?.(object.userData.missionNodeId);
+        if (node && !node.isComplete) {
+          this.character.stop();
+          this.character.facePoint(anchorPosition);
+          this.interactionApproachStartedAt = now;
+          return;
+        }
       }
       if (!this.interactionStartedAt && distance > interactionDistance) {
         if (this.interactionApproachNavigationActive?.()) {

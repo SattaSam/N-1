@@ -7276,8 +7276,9 @@
       }
       const canFinalize = this.canFinalizeMission(missionId);
       const kind = this.constructionPlacementEffect(mission)?.kind;
-      const shelterTarget = this.completionShelterTarget(mission);
-      const targetMapId = this.missionTargetMapId(mission) || shelterTarget?.mapId;
+      const pickup = !canFinalize && this.resourcePickupTarget(mission);
+      const shelterTarget = pickup || this.completionShelterTarget(mission);
+      const targetMapId = pickup?.mapId || this.missionTargetMapId(mission) || shelterTarget?.mapId;
       const message = kind === "refuge"
         ? `Rendez-vous sur ${targetMapId} pour installer le refuge.`
         : kind === "camp"
@@ -7285,7 +7286,8 @@
           : standaloneConsumes && !this.inventoryEffectsReady(mission)
             ? "Les ressources missionnelles requises doivent encore être réunies."
             : "Une validation dans le monde est encore requise.";
-      return { managed: true, canFinalize, message, targetMapId: targetMapId || null, shelterTarget };
+      return { managed: true, canFinalize, message, targetMapId: targetMapId || null, shelterTarget,
+        resourcePickup: Boolean(pickup) };
     }
 
     resolveSpawnOrigin(effect) {
@@ -7497,22 +7499,80 @@
       return [...keys];
     }
 
-    inventoryConsumptionPlan(consumes = []) {
+    remainingMissionConsumes(mission) {
+      const receiptId = `${this.repeatableEffectKey(mission)}:completion:v${mission.version || 1}`;
+      const transactions = BF.getProgressionState?.()?.transactions || {};
+      return asArray(mission.effects).filter(effect => effect.type === "inventory.consume")
+        .map((effect, index) => {
+          const keys = this.inventoryKeysForRequirement(effect);
+          const quantity = Math.max(0, Number(effect.quantity) || 0);
+          const receipt = transactions[`${receiptId}:consume:${index}`];
+          if (!receipt) return { ...effect, quantity, paid: 0 };
+          const recordedKeys = [...new Set(asArray(receipt.keys))];
+          const valid = Number(receipt.quantity) === quantity &&
+            recordedKeys.length === keys.length && keys.every(key => recordedKeys.includes(key));
+          return { ...effect, quantity: valid ? 0 : quantity, paid: valid ? quantity : 0,
+            invalidReceipt: !valid };
+        });
+    }
+
+    resourcePickupTarget(mission) {
+      const consumes = this.remainingMissionConsumes(mission);
+      if (this.inventoryConsumptionPlan(consumes, { source: "bag" }).ready ||
+          !this.inventoryConsumptionPlan(consumes, { source: "total" }).ready) return null;
+      return this.completionShelterTarget({}, { type: "proximity.shelter",
+        scope: "any-established", shelterKinds: ["camp", "refuge", "base", "workbench"],
+        inventoryAccess: true, useSiteInteractionRadius: true });
+    }
+
+    withdrawCompletionResources(missionId) {
+      const mission = this.byId.get(missionId);
+      const tree = this.manager()?.trees?.get?.(missionId);
+      if (!mission || !tree?.root?.isComplete || !this.missionLifecycle(missionId).active ||
+          BF.canAccessCampInventory?.() !== true) return false;
+      const plan = this.inventoryConsumptionPlan(this.remainingMissionConsumes(mission), { source: "total" });
+      if (!plan.ready) return false;
+      const state = BF.getProgressionState?.() || {};
+      // Retirer uniquement ce qui manque au sac selon la même allocation que
+      // le paiement. Le stock partagé reste sous l'autorité du registre.
+      const moves = Object.entries(plan.balances).map(([key, remaining]) => ({ key,
+        quantity: Math.max(0, (Number(state.inventory?.[key]) || 0) +
+          (Number(state.campStorage?.[key]) || 0) - remaining - (Number(state.inventory?.[key]) || 0))
+      }));
+      let moved = 0;
+      for (const entry of moves) if (entry.quantity > 0) {
+        moved += BF.withdrawInventory?.(entry.key, entry.quantity) || 0;
+      }
+      return moved > 0;
+    }
+
+    inventoryConsumptionPlan(consumes = [], options = {}) {
       const requirements = asArray(consumes)
         .filter((effect) => effect?.type === "inventory.consume")
-        .map((effect) => ({
+        .map((effect, index) => ({
+          index,
+          paid: Math.max(0, Number(effect.paid) || 0),
+          invalidReceipt: effect.invalidReceipt === true,
           quantity: Math.max(0, Number(effect.quantity) || 0),
           inventoryKeys: this.inventoryKeysForRequirement(effect)
-        }));
+        })).filter(requirement => requirement.quantity > 0 || requirement.invalidReceipt || !requirement.paid);
       const keySet = new Set(requirements.flatMap((entry) => entry.inventoryKeys));
       const balances = Object.fromEntries([...keySet].map((key) => [
         key,
-        Math.max(0, Number(BF.progression?.accessibleInventory?.([key])) || 0)
+        options.source === "bag"
+          ? Math.max(0, Number(BF.getProgressionState?.()?.inventory?.[key]) || 0)
+          : Math.max(0, Number(options.source === "total"
+              ? BF.progression?.availableInventory?.([key])
+              : BF.progression?.accessibleInventory?.([key])) || 0)
       ]));
 
+      const missingByIndex = [];
+      let ready = true;
       for (const requirement of requirements) {
-        if (!requirement.quantity || !requirement.inventoryKeys.length) {
-          return { ready: false, balances };
+        if (requirement.invalidReceipt || !requirement.quantity || !requirement.inventoryKeys.length) {
+          missingByIndex[requirement.index] = requirement.quantity || 1;
+          ready = false;
+          continue;
         }
         let remaining = requirement.quantity;
         for (const key of requirement.inventoryKeys) {
@@ -7522,15 +7582,14 @@
           balances[key] = available - removed;
           remaining -= removed;
         }
-        if (remaining > 0) return { ready: false, balances };
+        missingByIndex[requirement.index] = remaining;
+        if (remaining > 0) ready = false;
       }
-      return { ready: true, balances };
+      return { ready, balances, missingByIndex };
     }
 
     inventoryEffectsReady(mission) {
-      const consumes = asArray(mission?.effects)
-        .filter((effect) => effect?.type === "inventory.consume");
-      return !consumes.length || this.inventoryConsumptionPlan(consumes).ready;
+      return this.inventoryConsumptionPlan(this.remainingMissionConsumes(mission)).ready;
     }
 
     standaloneInventoryConsumeMission(mission) {
@@ -7567,8 +7626,7 @@
         ? this.byId.get(String(missionOrId))
         : missionOrId;
       if (!mission) return null;
-      const consumes = asArray(mission.effects)
-        .filter((effect) => effect?.type === "inventory.consume");
+      const consumes = this.remainingMissionConsumes(mission);
       if (!consumes.length) {
         return {
           missionId: mission.id,
@@ -7577,14 +7635,20 @@
           requirements: []
         };
       }
+      const plan = this.inventoryConsumptionPlan(consumes);
       const requirements = consumes.map((consume, index) => {
         const inventoryKeys = this.inventoryKeysForRequirement(consume);
         const required = Math.max(0, Number(consume.quantity) || 0);
         const available = inventoryKeys.length
           ? Math.max(0, Number(BF.progression?.availableInventory?.(inventoryKeys)) || 0)
           : 0;
-        const missing = Math.max(0, required - available);
+        const accessible = inventoryKeys.length
+          ? Math.max(0, Number(BF.progression?.accessibleInventory?.(inventoryKeys)) || 0) : 0;
+        const missing = plan.missingByIndex?.[index] ?? Math.max(0, required - accessible);
         return {
+          paid: consume.paid || 0,
+          accessible,
+          invalidReceipt: consume.invalidReceipt === true,
           index,
           inventoryKey: consume.inventoryKey || null,
           subject: consume.subject || null,
@@ -7597,7 +7661,7 @@
       });
       return {
         missionId: mission.id,
-        ready: requirements.every((entry) => entry.missing <= 0),
+        ready: plan.ready,
         missingTotal: requirements.reduce((sum, entry) => sum + entry.missing, 0),
         requirements
       };
@@ -7606,7 +7670,7 @@
     constructionResourceSignature(status) {
       if (!status) return "";
       return status.requirements
-        .map((entry) => `${entry.index}:${entry.available}/${entry.required}`)
+        .map((entry) => `${entry.index}:${entry.available}:${entry.accessible}:${entry.paid}/${entry.required}`)
         .join("|");
     }
 
@@ -8353,7 +8417,7 @@
       const establish = effects.find((effect) => effect.type === "site.establish");
       const cheatInventoryBypass =
         options.source === "debug-cheat" && options.cheatInventoryBypass === true;
-      if (!cheatInventoryBypass && !this.inventoryConsumptionPlan(consumes).ready) return false;
+      if (!cheatInventoryBypass && !this.inventoryConsumptionPlan(this.remainingMissionConsumes(mission)).ready) return false;
 
       if (!establish) {
         if (effects.some((effect) => effect.type !== "inventory.consume")) return false;

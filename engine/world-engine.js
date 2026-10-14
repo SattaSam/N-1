@@ -3131,7 +3131,8 @@
         if (!faunaState) {
           this.cautiousInteraction = null;
         } else if (this.cautiousInteraction.phase === "withdraw") {
-          if (distance >= faunaState.resetDistance && !faunaState.calmEmitted && !faunaState.cautiousEmitted) {
+          if (distance >= faunaState.resetDistance && !faunaState.calmEmitted && !faunaState.cautiousEmitted &&
+              !faunaState.parentalProtectEmitted) {
             this.cautiousInteraction = null;
             this.targetInteraction(object, true);
           } else if (!this.interactionApproachNavigationActive()) {
@@ -3238,7 +3239,9 @@
       const faunaState = this.faunaInteractionState(object);
       const spentEncounter = faunaTags.includes("cautious_approach")
         ? faunaState?.cautiousEmitted
-        : calmStudy && faunaState?.calmEmitted;
+        : faunaTags.includes("parental_protect")
+          ? faunaState?.parentalProtectEmitted
+          : calmStudy && faunaState?.calmEmitted;
       if (spentEncounter) {
         const retreat = this.interactionApproachPoint(object, 0, faunaState.resetDistance + 1.2);
         if (!retreat?.point || this.character.setTarget(retreat.point, "walk") === false) {
@@ -4270,6 +4273,12 @@
       const point = new this.THREE.Vector3(Number(site.anchor.x), 0, Number(site.anchor.z));
       if (this.character.root.position.distanceTo(point) <= site.radius) {
         if (gateState.prerequisiteOnly === true) return BF.canAccessCampInventory?.() === true;
+        if (gateState.resourcePickup === true) {
+          if (!runtime?.withdrawCompletionResources?.(missionId)) return false;
+          this.missionManager.syncLifecycleFromTrees?.();
+          this.missionManager.publish?.();
+          return true;
+        }
         if (site.requireDeposit) return runtime?.depositCompletionSamples?.(missionId) === true;
         this.missionManager.syncLifecycleFromTrees?.();
         this.missionManager.publish?.();
