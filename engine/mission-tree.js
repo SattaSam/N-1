@@ -53,7 +53,12 @@
           this.params.sequenceSlot !== definition.params.sequenceSlot ||
           this.target !== Math.max(1, Number(definition.target) || 1) ||
           this.optional !== Boolean(definition.optional) ||
-          JSON.stringify(this.requires) !== JSON.stringify(definition.requires || [])) return;
+          (JSON.stringify(this.requires) !== JSON.stringify(definition.requires || []) &&
+            !(this.optional && !(definition.requires || []).length))) return;
+
+      // Une option sans dépendance explicite redevient disponible en runtime,
+      // sans réécrire ses anciennes dépendances sérialisées ni ses preuves.
+      this._runtimeRequires = this.optional && !(definition.requires || []).length ? [] : null;
 
       const params = JSON.parse(JSON.stringify(definition.params || {}));
       // Ces champs sont écrits par MissionManager après résolution du travel.
@@ -97,7 +102,7 @@
     }
 
     prerequisitesMet(root) {
-      const ownRequirementsMet = this.requires.every(
+      const ownRequirementsMet = (this._runtimeRequires || this.requires).every(
         (id) => root.find(id)?.isComplete
       );
       return ownRequirementsMet && (

@@ -1277,6 +1277,74 @@
       })));
     }).sort((a, b) => a.distance - b.distance || a.zoneIndex - b.zoneIndex);
   };
+  // Réparer uniquement les cibles imposées que le garde physique retirerait.
+  // Le tirage et tous les objets survivants restent inchangés : aucun second
+  // peuplement, nouvel identifiant ou appel RNG pendant cette récupération.
+  ObjectSpawner.relocateRequiredMapObjects = (THREE, instances, invalid, scenes, options) => {
+    const required = new Map();
+    for (const entry of options.definition?.generator?.requiredObjects || []) {
+      const type = entry.type || BF.ObjectLibrary.getById?.(entry.objectId)?.type;
+      if (type) required.set(type, Math.max(required.get(type) || 0, Math.max(1, Number(entry.count) || 1)));
+    }
+    if (!required.size || !invalid.some(record => required.has(record.type))) return;
+    const removed = new Set(invalid);
+    const counts = new Map();
+    instances.filter(record => !removed.has(record)).forEach(record =>
+      counts.set(record.type, (counts.get(record.type) || 0) + 1));
+    const regions = options.walkableRegions?.length ? options.walkableRegions :
+      (options.zoneRegions || []).map(({ center, halfSize = 27 }) => ({
+        minX: center.x - halfSize, maxX: center.x + halfSize,
+        minZ: center.z - halfSize, maxZ: center.z + halfSize
+      }));
+    const reservations = (scenes || []).map(scene => {
+      const footprint = ObjectSpawner.microSceneFootprint(THREE, scene);
+      const p = scene.instanceRoot?.getWorldPosition(new THREE.Vector3());
+      return footprint && p ? { minX: p.x + footprint.minX, maxX: p.x + footprint.maxX,
+        minZ: p.z + footprint.minZ, maxZ: p.z + footprint.maxZ } : null;
+    }).filter(Boolean);
+    const exits = Object.values(options.resolvedExits || {});
+    const entry = options.definition?.entry;
+    const points = [...(entry ? [{ ...entry, clearance: 4.2 }] : []),
+      ...exits.map(p => ({ ...p, clearance: 4.2 })),
+      ...(options.landmarks || []).map(([, x, z]) => ({ x, z, clearance: 1.8 }))];
+    const paths = [...(entry ? exits.map(end => ({ start: entry, end })) : []),
+      ...(options.internalZonePaths || [])];
+    const removedRoots = new Set(invalid.map(record => record.root));
+    for (const record of invalid) {
+      if ((counts.get(record.type) || 0) >= (required.get(record.type) || 0)) continue;
+      const radius = Math.max(0.1, Number(BF.ObjectLibrary.getMapPlacement(record.type)?.radius) || 0.5);
+      const old = record.root.getWorldPosition(new THREE.Vector3());
+      const large = BF.ObjectLibrary.getMapPlacement(record.type)?.volume === "large" ||
+        BF.ObjectLibrary.get(record.type)?.obstacle === true;
+      const center = { x: (options.bounds.minX + options.bounds.maxX) / 2,
+        z: (options.bounds.minZ + options.bounds.maxZ) / 2 };
+      const candidates = ObjectSpawner.microScenePlacementCandidates(
+        { minX: -radius, maxX: radius, minZ: -radius, maxZ: radius }, regions, options.bounds);
+      const point = candidates.find(({ point: p }) =>
+        !([4, 6].includes(regions.length) && large &&
+          (Math.abs(p.x - center.x) < radius + 3.6 || Math.abs(p.z - center.z) < radius + 3.6)) &&
+        !points.some(q => Math.hypot(p.x - q.x, p.z - q.z) < radius + q.clearance) &&
+        !paths.some(({ start, end }) => segmentDistanceSquared(start, end, p.x, p.z) < (radius + 2.65) ** 2) &&
+        !reservations.some(box => p.x + radius + 0.28 > box.minX && p.x - radius - 0.28 < box.maxX &&
+          p.z + radius + 0.28 > box.minZ && p.z - radius - 0.28 < box.maxZ) &&
+        !(options.colliders || []).some(c => c.owner !== record.root && !removedRoots.has(c.owner) &&
+          Math.hypot(p.x - Number(c.position?.x ?? c.x ?? 0), p.z - Number(c.position?.z ?? c.z ?? 0)) <
+            radius + Number(c.radius || 0) + 0.28)
+      )?.point;
+      if (!point) continue;
+      const position = new THREE.Vector3(point.x, old.y, point.z);
+      record.root.position.copy(record.root.parent?.worldToLocal?.(position) || position);
+      record.position = { x: record.root.position.x, y: record.root.position.y, z: record.root.position.z };
+      record.root.updateWorldMatrix(true, true);
+      for (const collider of options.colliders || []) {
+        if (collider.owner !== record.root) continue;
+        if (collider.position) { collider.position.x += point.x - old.x; collider.position.z += point.z - old.z; }
+        else { collider.x += point.x - old.x; collider.z += point.z - old.z; }
+      }
+      removedRoots.delete(record.root);
+      counts.set(record.type, (counts.get(record.type) || 0) + 1);
+    }
+  };
   // Après matérialisation des habitats, raccorder les PNJ prescrits à leur
   // civilisation. Les MSC, identités et preuves restent inchangées.
   ObjectSpawner.placeMissionNpcsNearHabitats = (THREE, built) => {

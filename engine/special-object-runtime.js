@@ -85,6 +85,80 @@
     state.lastRuntimeAt = Date.now();
     global.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   };
+  const pendingDroneTransactions = new Set();
+  let droneTransactionsRestored = false;
+  const restoreDroneTransactions = () => {
+    // index.html charge ce runtime avant ProgressionRegistry. Attendre son
+    // propriétaire au premier cycle réel, sans perdre les reçus du reload.
+    if (droneTransactionsRestored || !BF.progression) return;
+    for (const receipt of Object.values(BF.progression.state.transactions || {})) {
+      if (receipt.kind === "inventory-transfer" && !receipt.applied &&
+          receipt.metadata?.owner === "special-object") pendingDroneTransactions.add(receipt.id);
+    }
+    droneTransactionsRestored = true;
+  };
+  let reconcilingDroneTransactions = false;
+  const reconcileDroneTransactions = () => {
+    restoreDroneTransactions();
+    if (!pendingDroneTransactions.size) return true;
+    if (reconcilingDroneTransactions || !BF.currentEngine?.currentMapId) return false;
+    reconcilingDroneTransactions = true;
+    try {
+      for (const id of pendingDroneTransactions) {
+        const receipt = BF.progression.state.transactions[id], proof = receipt?.metadata;
+        if (!proof || receipt.applied) { pendingDroneTransactions.delete(id); continue; }
+        const type = proof.droneType;
+        const before = JSON.parse(JSON.stringify(state));
+        let drone = droneByAnyId(proof.droneId)?.drone;
+        if (drone?.inventoryTransactionId !== id) {
+          if (proof.operation === "craft") {
+            drone = JSON.parse(JSON.stringify(proof.record));
+            if (type === "harvest_drone") harvestFleet().push(drone);
+            else state.drones[type] = drone;
+          } else if (proof.operation === "repair" && drone?.failure?.id === proof.failure.id) {
+            drone.failure = null;
+            drone.active = true;
+            drone.repairedAt = proof.repairedAt;
+            drone.lastActionAt = proof.repairedAt;
+            drone.inventoryTransactionId = id;
+          } else continue;
+          if (type === "harvest_drone") state.drones.harvest_drone = {
+            ...state.drones.harvest_drone, crafted: true, count: harvestFleet().length,
+            active: harvestFleet().some(entry => entry.active)
+          };
+        }
+        try { saveState(); }
+        catch { Object.assign(state, before); continue; }
+        const events = proof.operation === "craft"
+          ? [[BF.ObjectEvents?.types.OBJECT_CRAFTED, { recipe: RECIPES[type], state: "kit-ready" }],
+             [BF.ObjectEvents?.types.DRONE_ACTIVATED, { state: "kit-ready", accumulatorConsumed: true }]]
+          : [[BF.ObjectEvents?.types.OBJECT_REPAIRED || "OBJECT_REPAIRED", {
+              failureId: proof.failure.id, failureIndex: proof.failure.index,
+              instanceId: proof.failure.instanceId, requirements: proof.failure.requirements, state: "repaired"
+            }]];
+        if (proof.operation === "repair") syncFailureVisual(drone, type);
+        for (const [eventType, detail] of events) {
+          if (!eventType || BF.progression.state.history.some(event =>
+            event.type === eventType && event.detail?.transactionId === id)) continue;
+          const root = proof.operation === "craft"
+            ? collect(BF.currentEngine?.currentMap?.group).find(entry => entry.type === type)?.root || null
+            : deployedDroneVisual(type, proof.droneId);
+          emitDroneEvent(eventType, root, {
+            ...detail, transactionId: id, mapId: proof.mapId, droneType: type, droneId: proof.droneId
+          });
+        }
+        const memory = BF.currentEngine?.missionManager?.memory;
+        if (memory?.flush && !memory.flush(true)) continue;
+        if (!BF.progression.markInventoryTransactionApplied(id)) continue;
+        pendingDroneTransactions.delete(id);
+        announce(proof.operation === "craft"
+          ? `${type === "scout_drone" ? "Drone éclaireur" : "Drone récolteur"} assemblé et rangé dans le Kit d’expédition.`
+          : `${type === "scout_drone" ? "Le Scout" : `Le Harvest ${drone.id}`} est réparé et reprend son activité.`);
+        global.dispatchEvent(new CustomEvent("bluefox:special-objects-changed", { detail: snapshot() }));
+      }
+      return pendingDroneTransactions.size === 0;
+    } finally { reconcilingDroneTransactions = false; }
+  };
   const instanceKey = (root) => {
     const anchor = root.userData.specialBehavior?.anchor || root.position;
     const type = root.userData.libraryType || root.userData.catalogId || "object";
@@ -1061,7 +1135,8 @@
   let lastBehaviorUpdate = 0;
   const update = (scene, elapsed) => {
     updateTeleportFx();
-    runOfflineCatchup();
+    const dronesReady = reconcileDroneTransactions();
+    if (dronesReady) runOfflineCatchup();
     ensureDeployedDroneVisual("scout_drone");
     harvestFleet().forEach((drone) =>
       ensureDeployedDroneVisual("harvest_drone", drone.id)
@@ -1080,7 +1155,7 @@
     lastBehaviorUpdate = now;
     const allEntries = worldEntries(entries);
     updateRespawns(allEntries);
-    updateDrones(allEntries);
+    if (dronesReady) updateDrones(allEntries);
     updateTeleporterGuidance();
   };
 
@@ -1107,11 +1182,17 @@
     return Object.entries(recipe).every(([key, amount]) => (BF.availableInventory?.(key) || 0) >= amount);
   };
   const craftDrone = (type) => {
+    restoreDroneTransactions();
+    const retry = [...pendingDroneTransactions].some(id => {
+      const proof = BF.progression.state.transactions[id]?.metadata;
+      return proof?.operation === "craft" && proof.droneType === type;
+    });
+    if (!reconcileDroneTransactions()) return false;
+    if (retry) return true;
     if (!canCraft(type)) {
       announce("Assemblage impossible : ressources, Base ou proximité insuffisantes.");
       return false;
     }
-    Object.entries(RECIPES[type]).forEach(([key, amount]) => BF.consumeInventoryPool?.(key, amount));
     let craftedRecord;
     if (type === "harvest_drone") {
       craftedRecord = {
@@ -1130,14 +1211,8 @@
         failureCount: 0,
         failure: null
       };
-      harvestFleet().push(craftedRecord);
-      state.drones.harvest_drone = {
-        crafted: true,
-        count: harvestFleet().length,
-        active: harvestFleet().some((entry) => entry.active)
-      };
     } else {
-      craftedRecord = state.drones[type] = {
+      craftedRecord = {
         crafted: true,
         active: false,
         inKit: true,
@@ -1150,23 +1225,18 @@
         failure: null
       };
     }
-    saveState();
-    const root = collect(BF.currentEngine?.currentMap?.group).find((entry) => entry.type === type)?.root || null;
-    emitDroneEvent(BF.ObjectEvents?.types.OBJECT_CRAFTED, root, {
-      droneType: type,
-      droneId: craftedRecord?.id || type,
-      recipe: RECIPES[type],
-      state: "kit-ready"
+    const transactionId = BF.progression?.nextInventoryTransactionId?.("drone-craft");
+    if (!transactionId) return false;
+    craftedRecord.inventoryTransactionId = transactionId;
+    const receipt = BF.progression.commitInventoryTransaction(transactionId, {
+      debits: RECIPES[type], source: "accessible",
+      metadata: { owner: "special-object", operation: "craft", droneType: type,
+        droneId: craftedRecord.id || type, mapId: BF.currentEngine?.currentMapId,
+        record: craftedRecord }
     });
-    emitDroneEvent(BF.ObjectEvents?.types.DRONE_ACTIVATED, root, {
-      droneType: type,
-      droneId: craftedRecord?.id || type,
-      state: "kit-ready",
-      accumulatorConsumed: true
-    });
-    announce(`${type === "scout_drone" ? "Drone éclaireur" : "Drone récolteur"} assemblé et rangé dans le Kit d’expédition.`);
-    global.dispatchEvent(new CustomEvent("bluefox:special-objects-changed", { detail: snapshot() }));
-    return true;
+    if (!receipt) return false;
+    pendingDroneTransactions.add(transactionId);
+    return reconcileDroneTransactions();
   };
 
   const setDroneActive = (type, active) => {
@@ -2126,6 +2196,13 @@
   };
 
   const repairDrone = (droneId) => {
+    restoreDroneTransactions();
+    const retry = [...pendingDroneTransactions].some(id => {
+      const proof = BF.progression.state.transactions[id]?.metadata;
+      return proof?.operation === "repair" && proof.droneId === droneId;
+    });
+    if (!reconcileDroneTransactions()) return false;
+    if (retry) return true;
     const found = droneByAnyId(droneId);
     if (!found?.drone?.failure) return false;
     const { drone, type } = found;
@@ -2145,37 +2222,16 @@
       announce("BlueFox n’a pas sur lui toutes les ressources nécessaires pour réparer ce drone.");
       return false;
     }
-    for (const [key, amount] of requirements) {
-      if ((BF.consumeInventory?.(key, amount) || 0) !== amount) return false;
-    }
-    const repairedFailure = { ...failure, requirements: { ...failure.requirements } };
-    drone.failure = null;
-    drone.active = true;
-    drone.repairedAt = Date.now();
-    drone.lastActionAt = drone.repairedAt;
-    if (type === "harvest_drone") {
-      state.drones.harvest_drone ||= { crafted: true };
-      state.drones.harvest_drone.active = harvestFleet().some((entry) => entry.active);
-    }
-    syncFailureVisual(drone, type);
-    saveState();
-    emitDroneEvent(
-      BF.ObjectEvents?.types?.OBJECT_REPAIRED || "OBJECT_REPAIRED",
-      deployedDroneVisual(type, drone.id || type),
-      {
-        droneType: type,
-        droneId: drone.id || type,
-        failureId: repairedFailure.id,
-        failureIndex: repairedFailure.index,
-        mapId,
-        instanceId: repairedFailure.instanceId,
-        requirements: { ...repairedFailure.requirements },
-        state: "repaired"
-      }
-    );
-    announce(`${type === "scout_drone" ? "Le Scout" : `Le Harvest ${drone.id}`} est réparé et reprend son activité.`);
-    global.dispatchEvent(new CustomEvent("bluefox:special-objects-changed", { detail: snapshot() }));
-    return true;
+    const transactionId = `drone-repair:${failure.id}`;
+    const repairedAt = Date.now();
+    const receipt = BF.progression?.commitInventoryTransaction(transactionId, {
+      debits: Object.fromEntries(requirements),
+      metadata: { owner: "special-object", operation: "repair", droneType: type,
+        droneId: drone.id || type, mapId, failure: { ...failure }, repairedAt }
+    });
+    if (!receipt) return false;
+    pendingDroneTransactions.add(transactionId);
+    return reconcileDroneTransactions();
   };
 
   const onDroneStudyEvent = (event) => {

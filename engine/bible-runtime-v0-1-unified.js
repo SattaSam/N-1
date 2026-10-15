@@ -1224,6 +1224,9 @@
             : (() => {
                 // Une étape facultative ne verrouille jamais implicitement la suite.
                 // Les dépendances explicites restent intégralement souveraines.
+                // Elle ne doit pas non plus attendre la dernière étape obligatoire,
+                // qui termine déjà la mission avant que l'option puisse être jouée.
+                if (step.optional === true) return [];
                 let previous = index - 1;
                 while (previous >= 0 && steps[previous].optional === true) previous -= 1;
                 return previous >= 0 ? [nodeIds[previous]] : [];

@@ -175,8 +175,11 @@
       // valide son volume ; le garde des objets isolés ne peut pas la découper.
       const sceneMembers = new Set((this.microSceneInstances || [])
         .flatMap((scene) => scene.records || []));
-      const invalid = created.filter((record) =>
+      let invalid = created.filter((record) =>
         !sceneMembers.has(record) && !record.instanceRoot && !insideAnyRegion(record));
+      BF.ObjectSpawner.relocateRequiredMapObjects?.(this.THREE, this.instances, invalid,
+        this.microSceneInstances, options);
+      invalid = invalid.filter(record => !insideAnyRegion(record));
       invalid.forEach((record) => {
         record.root?.removeFromParent?.();
         if (Array.isArray(options.interactables) && record.instance?.hitbox) {

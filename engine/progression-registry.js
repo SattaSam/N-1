@@ -601,12 +601,13 @@
       const safeKey = cleanKey(key);
       const quantity = Math.max(0, Number(amount) || 0);
       if (!quantity) return 0;
+      const before = clone(this.state);
       this.increment(this.state.inventory, safeKey, quantity);
       if (AUTO_EXPEDITION_KEYS.has(safeKey)) {
         const allocation = this.state.expeditionAllocation || (this.state.expeditionAllocation = {});
         allocation[safeKey] = this.expeditionQuantity(safeKey) + quantity;
       }
-      this.save();
+      if (!this.save()) { this.state = before; return 0; }
       this.publishChange("inventory-granted", {
         inventoryKey: safeKey,
         quantity,
@@ -622,9 +623,10 @@
       const safeKey = cleanKey(key);
       const quantity = Math.max(0, Number(amount) || 0);
       if (!quantity) return 0;
+      const before = clone(this.state);
       this.increment(this.state.campStorage, safeKey, quantity);
       this.increment(this.state.deposited, safeKey, quantity);
-      this.save();
+      if (!this.save()) { this.state = before; return 0; }
       this.publishChange("camp-storage-granted", {
         inventoryKey: safeKey,
         quantity,
@@ -642,11 +644,17 @@
       const requested = Math.max(0, Number(amount) || 0);
       const available = Number(this.state.inventory[safeKey]) || 0;
       const removed = Math.min(available, requested);
+      if (!removed) return 0;
+      const before = clone(this.state);
       this.state.inventory[safeKey] = available - removed;
       this.increment(this.state.consumed, safeKey, removed);
       this.normalizeExpeditionAllocation();
-      this.save();
+      const transactionId = this.nextInventoryTransactionId("inventory-consumed");
+      this.state.transactions[transactionId] = { id: transactionId,
+        quantity: removed, keys: [safeKey], removedByKey: { [safeKey]: removed }, at: Date.now() };
+      if (!this.save()) { this.state = before; return 0; }
       this.publishChange("inventory-consumed", {
+        transactionId,
         inventoryKey: safeKey,
         quantity: removed
       });
@@ -702,29 +710,29 @@
     }
 
     consumeInventoryPool(keys, amount = 1) {
-      const detail = this.consumeInventoryPoolState(keys, amount);
-      if (!detail) return 0;
-      this.save();
-      this.publishChange("inventory-pool-consumed", detail);
-      return detail.quantity;
+      return this.consumeInventoryPoolOnce(this.nextInventoryTransactionId("inventory-pool-consumed"), keys, amount);
     }
 
     consumeInventoryPoolOnce(transactionId, keys, amount = 1) {
-      const safeId = cleanKey(transactionId);
+      const safeId = String(transactionId || "").trim();
       if (!safeId) return 0;
-      if (this.state.transactions[safeId]) {
-        return Number(this.state.transactions[safeId].quantity) || 0;
+      const safeKeys = [...new Set((Array.isArray(keys) ? keys : [keys]).map(cleanKey))];
+      const previous = this.state.transactions[safeId];
+      if (previous) {
+        return previous.quantity === Number(amount) && previous.keys?.length === safeKeys.length &&
+          safeKeys.every(key => previous.keys.includes(key)) ? previous.quantity : 0;
       }
+      const before = clone(this.state);
       const detail = this.consumeInventoryPoolState(keys, amount);
       if (!detail) return 0;
       this.state.transactions[safeId] = {
         id: safeId,
         quantity: detail.quantity,
-        keys: [...(Array.isArray(keys) ? keys : [keys])],
+        keys: safeKeys,
         removedByKey: { ...detail.removedByKey },
         at: Date.now()
       };
-      this.save();
+      if (!this.save()) { this.state = before; return 0; }
       this.publishChange("inventory-pool-consumed", { ...detail, transactionId: safeId });
       return detail.quantity;
     }
@@ -750,19 +758,23 @@
         .map(([key, quantity]) => [cleanKey(key), Number(quantity)])
         .filter(([, quantity]) => Number.isFinite(quantity) && quantity > 0));
       const debits = normalize(specification.debits), credits = normalize(specification.credits);
+      const source = specification.source || "bag";
+      if (!["bag", "accessible"].includes(source)) return null;
       const previous = this.state.transactions[id];
       if (previous) {
         const equal = (left, right) => Object.keys(left || {}).length === Object.keys(right).length &&
           Object.entries(right).every(([key, quantity]) => left?.[key] === quantity);
-        return previous.kind === "inventory-transfer" && equal(previous.removedByKey, debits) &&
+        return previous.kind === "inventory-transfer" && (previous.source || "bag") === source && equal(previous.removedByKey, debits) &&
           equal(previous.grantedByKey, credits) ? clone(previous) : null;
       }
       if (!Object.keys(debits).length && !Object.keys(credits).length) return null;
-      if (Object.entries(debits).some(([key, quantity]) =>
-          Math.max(0, Number(this.state.inventory[key]) || 0) < quantity)) return null;
+      if (Object.entries(debits).some(([key, quantity]) => (source === "accessible"
+          ? this.accessibleInventory([key]) : Math.max(0, Number(this.state.inventory[key]) || 0)) < quantity)) return null;
       const before = clone(this.state);
       Object.entries(debits).forEach(([key, quantity]) => {
-        this.state.inventory[key] -= quantity;
+        const carried = Math.min(quantity, Math.max(0, Number(this.state.inventory[key]) || 0));
+        this.state.inventory[key] = Math.max(0, Number(this.state.inventory[key]) || 0) - carried;
+        if (quantity > carried) this.state.campStorage[key] -= quantity - carried;
         this.increment(this.state.consumed, key, quantity);
       });
       Object.entries(credits).forEach(([key, quantity]) => {
@@ -772,7 +784,7 @@
         }
       });
       this.normalizeExpeditionAllocation();
-      const receipt = { id, kind: "inventory-transfer", removedByKey: debits,
+      const receipt = { id, kind: "inventory-transfer", source, removedByKey: debits,
         grantedByKey: credits, metadata: clone(specification.metadata || {}),
         quantity: Object.values(credits).reduce((a, b) => a + b, 0), at: Date.now(), applied: false };
       this.state.transactions[id] = receipt;
@@ -814,8 +826,9 @@
     }
 
     depositInventory(key, amount = 1) {
+      const before = clone(this.state);
       const detail = this.depositInventoryState(key, amount);
-      this.save();
+      if (!this.save()) { this.state = before; return 0; }
       this.publishChange("inventory-deposited", detail);
       return detail.quantity;
     }
@@ -825,9 +838,10 @@
       const requested = Math.max(0, Number(amount) || 0);
       const stored = Number(this.state.campStorage[safeKey]) || 0;
       const moved = Math.min(stored, requested);
+      const before = clone(this.state);
       this.state.campStorage[safeKey] = stored - moved;
       this.increment(this.state.inventory, safeKey, moved);
-      this.save();
+      if (!this.save()) { this.state = before; return 0; }
       this.publishChange("inventory-withdrawn", {
         inventoryKey: safeKey,
         quantity: moved
@@ -836,6 +850,7 @@
     }
 
     depositAllInventory() {
+      const before = clone(this.state);
       let moved = 0;
       const changes = Object.entries({ ...this.state.inventory }).map(([key, amount]) => {
         const detail = this.depositInventoryState(key, Number(amount) || 0);
@@ -843,7 +858,7 @@
         return detail;
       });
       if (changes.length) {
-        this.save();
+        if (!this.save()) { this.state = before; return 0; }
         changes.forEach((detail) =>
           this.publishChange("inventory-deposited", detail)
         );
