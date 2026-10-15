@@ -4225,7 +4225,8 @@
       const manager = this.manager();
       const player = engine?.character?.root?.position;
       if (!engine || !manager?.memory || !player) return false;
-      let changed = this.reconcileReserveTransactions();
+      let changed = this.reconcileResearchTransactions();
+      changed = this.reconcileReserveTransactions() || changed;
       changed = this.reviewDiscoveryProximity() || changed;
       // Acquitter l'étude globale déjà sélectionnée après son approche réelle.
       // Ne choisir aucune étape suivante et ne détourner aucun mouvement joueur.
@@ -5701,12 +5702,43 @@
       return changed;
     }
 
+    captureSiteEstablishedEvent(detail = {}) {
+      const manager = this.manager();
+      // A durable installation may be replayed before its producer's ack.
+      // Preserve the initial fan-out, never qualify a newly unlocked consumer
+      // using an older physical installation. Node history owns each credit.
+      const evidenceId = detail.transactionId ? `site-established:${detail.transactionId}` : null;
+      const previous = evidenceId && manager?.memory?.state?.effectReceipts?.[evidenceId];
+      const targets = previous?.targets || this.allMissions().flatMap(entry => {
+        const validation = entry?.runtimeValidation || {};
+        const slot = validation.type === "bal03-deployed-beacon" ? validation.slot || "deployBeacon"
+          : validation.type === "long-expedition" ? validation.beaconSlot : null;
+        const factKey = validation.type === "bal03-deployed-beacon"
+          ? validation.requiredMapFact : validation.beaconMapFact;
+        if (!slot || !factKey || !this.missionLifecycle(entry.id).active) return [];
+        const field = validation.type === "bal03-deployed-beacon" ? validation.requiredMapField || "mapId" : "mapId";
+        const fact = manager?.memory?.getFact?.(factKey, null);
+        const mapId = String(fact?.[field] || fact?.mapId || fact?.toMapId || "");
+        const tree = manager?.trees?.get?.(entry.id), node = tree?.find?.(`${entry.id}:${slot}`);
+        const excluded = validation.excludeBeaconMapFact && manager?.memory?.getFact?.(validation.excludeBeaconMapFact, null)?.mapId;
+        return mapId && mapId === String(detail.mapId || "") && mapId !== String(excluded || "") &&
+          tree?.availableLeaves?.().includes(node) ? [`${entry.id}:${slot}`] : [];
+      });
+      if (evidenceId && !previous) manager?.memory?.recordEffectReceipt?.(evidenceId, {
+        transactionId: detail.transactionId, mapId: detail.mapId, targets
+      });
+
+      return { evidenceId, targets };
+    }
+
     onSiteEstablished(detail = {}) {
       let changed = this.reconcileObsoleteConstructionMissions({
         mapId: detail.mapId || BF.currentEngine?.currentMapId || ""
       }) > 0;
       if (String(detail.kind || "") !== "deployed_beacon") return changed;
       const manager = this.manager();
+
+      const { evidenceId, targets } = this.captureSiteEstablishedEvent(detail);
 
       const mission = this.byId.get("BAL-03");
       if (mission && this.missionLifecycle(mission.id).active) {
@@ -5715,11 +5747,12 @@
           const fact = manager?.memory?.getFact?.(validation.requiredMapFact, null);
           const field = String(validation.requiredMapField || "mapId");
           const targetMapId = String(fact?.[field] || fact?.mapId || "");
-          if (targetMapId && String(detail.mapId || "") === targetMapId) {
+          if (targetMapId && String(detail.mapId || "") === targetMapId &&
+              targets.includes(`${mission.id}:${validation.slot || "deployBeacon"}`)) {
             changed = this.progressRuntimeValidationSlot(
               mission.id,
               validation.slot || "deployBeacon",
-              1
+              1, evidenceId
             ) || changed;
           }
         }
@@ -5737,7 +5770,8 @@
           const excluded = manager?.memory?.getFact?.(validation.excludeBeaconMapFact, null)?.mapId;
           if (excluded && String(excluded) === actualMapId) continue;
         }
-        const progressed = this.progressRuntimeValidationSlot(entry.id, String(validation.beaconSlot), 1);
+        if (!targets.includes(`${entry.id}:${validation.beaconSlot}`)) continue;
+        const progressed = this.progressRuntimeValidationSlot(entry.id, String(validation.beaconSlot), 1, evidenceId);
         if (!progressed) continue;
         if (validation.beaconFact) {
           manager?.memory?.setFact?.(validation.beaconFact, {
@@ -9233,7 +9267,7 @@
         nextStage: nextStage ? clone(nextStage) : null,
         locationReady,
         resourcesReady,
-        canRun: Boolean(nextStage && locationReady && resourcesReady),
+        canRun: Boolean(nextStage && locationReady && resourcesReady && !this.researchReconciling && !this.pendingResearchTransactions().length),
         reason
       };
     }
@@ -9271,67 +9305,116 @@
       return true;
     }
 
-    consumeExperimentRequirements(stage) {
-      if (!this.experimentRequirementsReady(stage)) return false;
-      for (const requirement of asArray(stage?.requirements)) {
-        const keys = this.inventoryKeysForRequirement(requirement);
-        const quantity = Math.max(0, Number(requirement.quantity) || 0);
-        if (!keys.length || !quantity) return false;
-        const removed = BF.consumeInventoryPool?.(keys, quantity) || 0;
-        if (removed !== quantity) return false;
+    pendingResearchTransactions() {
+      return Object.values(BF.progression?.state?.transactions || {}).filter(receipt =>
+        receipt.kind === "inventory-transfer" && !receipt.applied && receipt.metadata?.owner === "research");
+    }
+
+    researchPaymentPlan(requirements, count = 1) {
+      const consumes = asArray(requirements).map(requirement => ({
+        ...requirement, type: "inventory.consume", quantity: Number(requirement.quantity) * count
+      }));
+      const plan = this.inventoryConsumptionPlan(consumes);
+      const debits = {};
+      for (const key of Object.keys(plan.balances)) {
+        const removed = Math.max(0, Number(BF.progression?.accessibleInventory?.([key])) || 0) - plan.balances[key];
+        if (removed > 0) debits[key] = removed;
       }
-      return true;
+      return { ready: consumes.length > 0 && plan.ready, debits };
+    }
+
+    reconcileResearchTransactions(transactionId = null) {
+      if (this.researchReconciling) return false;
+      const memory = this.ensureResearchMemory();
+      if (!BF.progression) return false;
+      this.researchReconciling = true;
+      let changed = false;
+      try {
+        for (const receipt of this.pendingResearchTransactions()) {
+          if (transactionId && receipt.id !== transactionId) continue;
+          const proof = receipt.metadata, id = `research-result:${receipt.id}`;
+          if (proof.operation === "recipe" && proof.objectId === "ration" &&
+              BF.Rations?.add?.(proof.quantity, proof.automatic ? "bac-craft" : "research-craft",
+                { transactionId: receipt.id }) !== proof.quantity) continue;
+          if (!["recipe", "experiment"].includes(proof.operation)) continue;
+          if (proof.operation === "experiment" && !memory?.flush) continue;
+          if (memory?.flush && !memory.hasEffectReceipt(id)) {
+            const before = clone(memory.state);
+            if (proof.operation === "experiment") {
+              const experiments = this.experimentMemory(), previous = experiments[proof.themeId] || {};
+              experiments[proof.themeId] = { ...previous,
+                count: Math.max(Number(previous.count) || 0, proof.stage),
+                completedStages: [...new Set([...(previous.completedStages || []), proof.stage])], updatedAt: receipt.at };
+              if (proof.knowledge?.id && !memory.state.researchUnlocks[proof.knowledge.id]) {
+                memory.state.researchUnlocks[proof.knowledge.id] = {
+                  ...proof.knowledge, type: "research.knowledge", category: proof.themeId,
+                  source: "scientific-experiment", experimentTheme: proof.themeId,
+                  experimentStage: proof.stage, unlockedAt: receipt.at
+                };
+              }
+            }
+            memory.recordEffectReceipt(id, { transactionId: receipt.id, operation: proof.operation });
+            if (!memory.flush(true)) { memory.state = before; continue; }
+          } else if (memory?.flush?.(true) === false) continue;
+          // Canonical consumers read persisted ration totals / knowledge. Replays
+          // therefore cannot count a second production or pay a second stage.
+          if (proof.operation === "recipe") {
+            this.reconcileRuntimeCounters();
+            const detail = { ...proof, transactionId: receipt.id, at: receipt.at };
+            global.dispatchEvent?.(new CustomEvent("bluefox:research-crafted", { detail }));
+            global.dispatchEvent?.(new CustomEvent("bluefox:mission-craft", {
+              detail: { ...detail, recipe: proof.rewardId }
+            }));
+          } else {
+            this.manager()?.reevaluatePendingActivations?.();
+            if (proof.knowledge?.id) global.dispatchEvent?.(new CustomEvent("bluefox:research-unlocked", {
+              detail: { ...proof.knowledge, type: "research.knowledge", source: "scientific-experiment",
+                experimentTheme: proof.themeId, transactionId: receipt.id }
+            }));
+            global.dispatchEvent?.(new CustomEvent("bluefox:experiment-completed", {
+              detail: { themeId: proof.themeId, stage: proof.stage, knowledgeId: proof.knowledge?.id || null,
+                source: proof.source, transactionId: receipt.id, at: receipt.at }
+            }));
+          }
+          this.manager()?.catalogController?.schedule?.();
+          this.manager()?.publish?.();
+          if (memory?.flush?.(true) === false || !BF.progression.markInventoryTransactionApplied(receipt.id)) continue;
+          changed = true;
+        }
+      } finally { this.researchReconciling = false; }
+      return transactionId ? BF.progression.state.transactions[transactionId]?.applied === true : changed;
     }
 
     runExperiment(themeId, options = {}) {
-      const theme = this.experimentDefinition(themeId);
-      const state = this.experimentState(themeId);
-      if (!theme || !state?.nextStage || !state.canRun) return false;
-      const stage = state.nextStage;
-      if (!this.consumeExperimentRequirements(stage)) return false;
-
-      const memory = this.ensureResearchMemory();
-      const experiments = this.experimentMemory();
-      if (!memory || !experiments) return false;
-      const previous = experiments[theme.id] || {};
-      experiments[theme.id] = {
-        ...previous,
-        count: Number(stage.stage),
-        completedStages: [...new Set([...(previous.completedStages || []), Number(stage.stage)])],
-        updatedAt: Date.now()
-      };
-      memory.save?.();
-      this.unlockExperimentKnowledge(theme, stage);
-
-      const lines = asArray(stage.narratives).filter(Boolean);
-      const text = lines.length
-        ? lines[Math.floor(Math.random() * lines.length)]
-        : `L'expérimentation ${theme.label} progresse.`;
-      this.queueNarrativeLine({
-        id: `experiment:${theme.id}:${stage.stage}:${Date.now()}`,
-        title: `Expérimentation — ${theme.label}`,
-        text,
-        mapId: BF.currentEngine?.currentMapId || null,
-        zoneId: BF.currentEngine?.currentZoneIndex ?? null,
-        important: Boolean(stage.knowledge)
-      });
-      BF.currentEngine?.callbacks?.onStatus?.(
-        stage.knowledge?.label
-          ? `Connaissance acquise : ${stage.knowledge.label}.`
-          : `${theme.label} : expérimentation ${stage.stage}/5 validée.`
-      );
-      this.manager()?.reevaluatePendingActivations?.();
-      this.manager()?.catalogController?.schedule?.();
-      this.manager()?.publish?.();
-      global.dispatchEvent?.(new CustomEvent("bluefox:experiment-completed", {
-        detail: {
-          themeId: theme.id,
-          stage: Number(stage.stage),
-          knowledgeId: stage.knowledge?.id || null,
-          source: options.source || "research-menu",
-          at: Date.now()
+      if (this.researchReconciling) return false;
+      const pending = this.pendingResearchTransactions();
+      if (pending.length) {
+        const receipt = pending.find(r => r.metadata.operation === "experiment" && r.metadata.themeId === themeId);
+        return receipt ? this.reconcileResearchTransactions(receipt.id) : false;
+      }
+      const theme = this.experimentDefinition(themeId), state = this.experimentState(themeId);
+      if (!theme || !state?.canRun) return false;
+      const stage = state.nextStage, plan = this.researchPaymentPlan(stage.requirements);
+      if (!plan.ready) return false;
+      const id = BF.progression.nextInventoryTransactionId("research-experiment");
+      // Receipt and all inputs share one registry write, before any result.
+      this.researchReconciling = true;
+      let receipt;
+      try { receipt = BF.progression.commitInventoryTransaction(id, {
+        source: "accessible", debits: plan.debits, metadata: {
+          owner: "research", operation: "experiment", themeId: theme.id, stage: Number(stage.stage),
+          knowledge: stage.knowledge ? clone(stage.knowledge) : null,
+          source: options.source || "research-menu", mapId: BF.currentEngine?.currentMapId || null
         }
-      }));
+      }); } finally { this.researchReconciling = false; }
+      if (!receipt || !this.reconcileResearchTransactions(id)) return false;
+      const lines = asArray(stage.narratives).filter(Boolean);
+      this.queueNarrativeLine({ id: `experiment:${id}`, title: `Expérimentation — ${theme.label}`,
+        text: lines.length ? lines[Math.floor(Math.random() * lines.length)] : `L'expérimentation ${theme.label} progresse.`,
+        mapId: BF.currentEngine?.currentMapId || null, zoneId: BF.currentEngine?.currentZoneIndex ?? null,
+        important: Boolean(stage.knowledge) });
+      BF.currentEngine?.callbacks?.onStatus?.(stage.knowledge?.label
+        ? `Connaissance acquise : ${stage.knowledge.label}.` : `${theme.label} : expérimentation ${stage.stage}/5 validée.`);
       return true;
     }
 
@@ -9474,82 +9557,38 @@
       ) {
         return false;
       }
-      const requirements = Array.isArray(reward.requirements)
-        ? reward.requirements
-        : [];
-      return requirements.every((requirement) => {
-        const keys = this.inventoryKeysForRequirement(requirement);
-        const quantity =
-          Math.max(0, Number(requirement.quantity) || 0) * requested;
-        return Boolean(
-          keys.length &&
-          BF.progression?.accessibleInventory?.(keys) >= quantity
-        );
-      });
+      if (this.researchReconciling || this.pendingResearchTransactions().length) return false;
+      const output = reward.output || {}, objectId = output.objectId || output.inventoryKey;
+      if (!objectId) return false;
+      if (objectId === "ration") {
+        const rations = BF.Rations?.snapshot?.();
+        if (!rations || rations.rations + Math.max(1, Number(output.quantity) || 1) * requested > rations.maxRations) return false;
+      }
+      return this.researchPaymentPlan(reward.requirements, requested).ready;
     }
 
     craftResearchReward(id, count = 1, options = {}) {
-      const reward = this.researchRewardById(id);
-      const requested = Math.max(1, Math.floor(Number(count) || 1));
+      if (this.researchReconciling) return 0;
+      const pending = this.pendingResearchTransactions();
+      if (pending.length) {
+        const receipt = pending.find(r => r.metadata.operation === "recipe" && r.metadata.rewardId === id);
+        return receipt && this.reconcileResearchTransactions(receipt.id) ? receipt.metadata.quantity : 0;
+      }
+      const reward = this.researchRewardById(id), requested = Math.max(1, Math.floor(Number(count) || 1));
       if (!this.canCraftResearchReward(id, requested, options)) return 0;
-
-      const requirements = Array.isArray(reward.requirements)
-        ? reward.requirements
-        : [];
-      for (const requirement of requirements) {
-        const keys = this.inventoryKeysForRequirement(requirement);
-        const quantity =
-          Math.max(0, Number(requirement.quantity) || 0) * requested;
-        const removed = BF.consumeInventoryPool?.(keys, quantity) || 0;
-        if (removed !== quantity) return 0;
-      }
-
-      const output = reward.output || {};
-      const objectId = output.objectId || output.inventoryKey || null;
-      const outputQuantity =
-        Math.max(1, Number(output.quantity) || 1) * requested;
-      let created = 0;
-      if (objectId === "ration" && BF.Rations?.add) {
-        created = BF.Rations.add(
-          outputQuantity,
-          options.automatic ? "bac-craft" : "research-craft"
-        );
-      } else if (objectId && BF.progression?.addInventory) {
-        BF.progression.addInventory(objectId, outputQuantity);
-        BF.progression.save?.();
-        BF.progression.publishChange?.("research-crafted", {
-          inventoryKey: objectId,
-          quantity: outputQuantity,
-          researchRewardId: reward.id
-        });
-        created = outputQuantity;
-      }
-
-      if (!created) return 0;
-      const detail = {
-        rewardId: reward.id,
-        category: reward.category || null,
-        objectId,
-        quantity: created,
-        automatic: options.automatic === true,
-        source: options.source || "research-menu",
-        at: Date.now()
-      };
-      global.dispatchEvent?.(
-        new CustomEvent("bluefox:research-crafted", { detail })
-      );
-      global.dispatchEvent?.(
-        new CustomEvent("bluefox:mission-craft", {
-          detail: {
-            recipe: reward.id,
-            objectId,
-            quantity: created,
-            automatic: options.automatic === true,
-            at: detail.at
-          }
-        })
-      );
-      return created;
+      const plan = this.researchPaymentPlan(reward.requirements, requested);
+      const output = reward.output, objectId = output.objectId || output.inventoryKey;
+      const quantity = Math.max(1, Number(output.quantity) || 1) * requested;
+      const transactionId = BF.progression.nextInventoryTransactionId("research-recipe");
+      this.researchReconciling = true;
+      let receipt;
+      try { receipt = BF.progression.commitInventoryTransaction(transactionId, {
+        source: "accessible", debits: plan.debits, credits: objectId === "ration" ? {} : { [objectId]: quantity },
+        metadata: { owner: "research", operation: "recipe", rewardId: reward.id,
+          category: reward.category || null, objectId, quantity, automatic: options.automatic === true,
+          source: options.source || "research-menu", mapId: BF.currentEngine?.currentMapId || null }
+      }); } finally { this.researchReconciling = false; }
+      return receipt && this.reconcileResearchTransactions(transactionId) ? quantity : 0;
     }
 
     applyActivationInventoryCredits(mission) {
@@ -9729,6 +9768,7 @@
     }
 
     connect() {
+      this.reconcileResearchTransactions();
       if (!this.unsubscribeObjectEvents && BF.ObjectEvents?.subscribe) {
         this.unsubscribeObjectEvents =
           BF.ObjectEvents.subscribe((event) =>

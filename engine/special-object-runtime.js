@@ -1135,6 +1135,7 @@
   let lastBehaviorUpdate = 0;
   const update = (scene, elapsed) => {
     updateTeleportFx();
+    reconcileBeaconTransactions();
     const dronesReady = reconcileDroneTransactions();
     if (dronesReady) runOfflineCatchup();
     ensureDeployedDroneVisual("scout_drone");
@@ -2106,7 +2107,82 @@
     return markers;
   };
 
+  let beaconReconciling = false;
+  const pendingBeaconIds = new Set();
+  let beaconTransactionsRestored = false;
+  const pendingBeaconTransactions = () => {
+    // As with drones, wait for ProgressionRegistry (loaded later in index.html),
+    // then scan persisted receipts once rather than traversing history every frame.
+    if (!beaconTransactionsRestored && BF.progression) {
+      for (const receipt of Object.values(BF.progression.state.transactions || {})) {
+        if (receipt.kind === "inventory-transfer" && !receipt.applied &&
+            receipt.metadata?.owner === "special-beacon") pendingBeaconIds.add(receipt.id);
+      }
+      beaconTransactionsRestored = true;
+    }
+    const pending = [];
+    for (const id of pendingBeaconIds) {
+      const receipt = BF.progression?.state?.transactions?.[id];
+      if (!receipt || receipt.applied) pendingBeaconIds.delete(id);
+      else pending.push(receipt);
+    }
+    return pending;
+  };
+
+  const reconcileBeaconTransactions = () => {
+    if (beaconReconciling) return false;
+    const engine = BF.currentEngine, memory = engine?.missionManager?.memory;
+    if (!engine?.currentMap || !memory?.state || !BF.progression) return false;
+    beaconReconciling = true;
+    let changed = false;
+    try {
+      for (const receipt of pendingBeaconTransactions()) {
+        const proof = receipt.metadata, refundId = `${receipt.id}:refund`;
+        if (BF.progression.state.transactions[refundId]) {
+          BF.progression.markInventoryTransactionApplied(refundId);
+          BF.progression.markInventoryTransactionApplied(receipt.id);
+          continue;
+        }
+        if (proof.mapId !== String(engine.currentMapId || "")) continue;
+        const definition = BF.maps?.[proof.mapId];
+        if (!definition || !engine.THREE) continue;
+        const record = JSON.parse(JSON.stringify(proof.record));
+        const spawned = BF.PersistentMicroScenes?.spawnRecord?.(engine.THREE, engine.currentMap, definition, record);
+        if (!spawned) {
+          // A normal placement refusal keeps the existing refund semantics.
+          // Refund and receipt are committed together; interruption cannot refund twice.
+          const refund = BF.progression.commitInventoryTransaction(refundId, {
+            credits: { deployed_beacon: 1 }, metadata: { owner: "special-beacon-refund", paymentId: receipt.id }
+          });
+          if (refund) {
+            BF.progression.markInventoryTransactionApplied(refundId);
+            BF.progression.markInventoryTransactionApplied(receipt.id);
+          }
+          continue;
+        }
+        BF.PersistentMicroScenes?.ensure?.(definition, record);
+        sceneCache.delete(engine.currentMap.group);
+        const detail = { missionId: record.missionId, mapId: proof.mapId, kind: "deployed_beacon",
+          instanceId: record.instanceId, transactionId: receipt.id };
+        // Persist the physical site and its canonical recipient snapshot together,
+        // before publishing an event that may advance/unlock other missions.
+        BF.bibleRuntime?.captureSiteEstablishedEvent?.(detail);
+        if (memory.flush?.(true) === false) continue;
+        global.dispatchEvent(new CustomEvent("bluefox:site-established", { detail }));
+        if (memory.flush?.(true) === false || !BF.progression.markInventoryTransactionApplied(receipt.id)) continue;
+        changed = true;
+        announce("Balise BlueFox implantée. Sa tête violette identifie ce relais comme une installation personnelle.");
+        global.dispatchEvent(new CustomEvent("bluefox:special-objects-changed", { detail: snapshot() }));
+      }
+    } finally { beaconReconciling = false; }
+    return changed;
+  };
+
   const installBeaconAt = (placement, options = {}) => {
+    if (beaconReconciling) return false;
+    const pending = pendingBeaconTransactions().filter(r =>
+      r.metadata.mapId === String(options.mapId || BF.currentEngine?.currentMapId || ""));
+    if (pending.length) return reconcileBeaconTransactions();
     const engine = BF.currentEngine;
     const mapId = String(options.mapId || engine?.currentMapId || "");
     const definition = BF.maps?.[mapId];
@@ -2143,35 +2219,24 @@
       spawnOnce: true,
       createdAt: Date.now()
     };
-    const removed = BF.consumeInventory?.("deployed_beacon", 1) || 0;
-    if (removed !== 1) return false;
-    const spawned = BF.PersistentMicroScenes?.spawnRecord?.(
-      engine.THREE,
-      engine.currentMap,
-      definition,
-      record
-    );
-    if (!spawned) {
-      BF.progression?.addInventory?.("deployed_beacon", 1);
-      BF.progression?.save?.();
-      BF.progression?.publishChange?.("beacon-placement-refund", { mapId, quantity: 1 });
-      return false;
-    }
-    // spawnRecord persiste déjà le record via MissionMemory ; ensure l'inscrit
-    // aussi immédiatement dans la définition runtime afin que les consommateurs
-    // (marqueur Planète, relais drone) le voient sans attendre un reload/hydrate.
-    BF.PersistentMicroScenes?.ensure?.(definition, record);
-    sceneCache.delete(engine.currentMap.group);
-    update(engine.currentMap.group, Number(engine.clock?.elapsedTime) || 0);
-    announce("Balise BlueFox implantée. Sa tête violette identifie ce relais comme une installation personnelle.");
-    global.dispatchEvent(new CustomEvent("bluefox:special-objects-changed", { detail: snapshot() }));
-    global.dispatchEvent(new CustomEvent("bluefox:site-established", {
-      detail: { missionId: options.missionId || "BAL-03", mapId, kind: "deployed_beacon" }
-    }));
-    return true;
+    const transactionId = BF.progression?.nextInventoryTransactionId("beacon-install");
+    if (!transactionId) return false;
+    pendingBeaconIds.add(transactionId);
+    beaconReconciling = true;
+    let receipt;
+    try { receipt = BF.progression.commitInventoryTransaction(transactionId, {
+      source: "bag", debits: { deployed_beacon: 1 },
+      metadata: { owner: "special-beacon", mapId, record }
+    }); } finally { beaconReconciling = false; }
+    return Boolean(receipt && reconcileBeaconTransactions());
   };
 
   const deployBeacon = (options = {}) => {
+    if (beaconReconciling) return false;
+    const pending = pendingBeaconTransactions();
+    if (pending.some(r => r.metadata.mapId === String(BF.currentEngine?.currentMapId || ""))) {
+      return reconcileBeaconTransactions();
+    }
     const engine = BF.currentEngine;
     const mapId = String(engine?.currentMapId || "");
     if (!mapId || (BF.getExpeditionQuantity?.("deployed_beacon") || 0) < 1) return false;

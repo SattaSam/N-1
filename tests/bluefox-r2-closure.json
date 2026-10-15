@@ -1,0 +1,1102 @@
+{
+  "head": "476f120a1e7303f62b1bbb0b3a571d0bf9fcd50b",
+  "headTree": "e0b06e0e757a7fee1667acc2e542f10592a028d4",
+  "headFiles": {
+    "00_AI_PROJECT_RULES.md": {
+      "algorithm": "git-blob-sha1",
+      "hash": "5eb06b722182afc4ca92b9eca47535f62dac8810"
+    },
+    "index.html": {
+      "algorithm": "git-blob-sha1",
+      "hash": "d884a04d940cc255599163cdee04f0c2fee50d2c"
+    },
+    "journal.css": {
+      "algorithm": "git-blob-sha1",
+      "hash": "40e3bc639b9912082c05dd38bb56f3a5f19075f5"
+    },
+    "game.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "61269a9d0b914954ececd7bedcc39d33aa9e975a"
+    },
+    "map-assets.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "c64c67f699c935f56440a3f0ebd8ae9141d47d36"
+    },
+    "docs/GAMEPLAY_CONTRACT_ADDENDUM_2026-08-28.md": {
+      "algorithm": "git-blob-sha1",
+      "hash": "752cf3123a93492147ece831702576823d6dba23"
+    },
+    "docs/TP_AUTONOMY_CONTRACT_2026-09-14.md": {
+      "algorithm": "git-blob-sha1",
+      "hash": "59c4cdeaee8b66062dfc7568106a0a48bcc89b0c"
+    },
+    "docs/ARCHITECTURE_TECHNIQUE.md": {
+      "algorithm": "git-blob-sha1",
+      "hash": "48a1a1e91cc8de425ed4743d2cfabea7aa9c2831"
+    },
+    "docs/ROADMAP_TODO.md": {
+      "algorithm": "git-blob-sha1",
+      "hash": "f40c0e1cc00c2cec84f4367c5012d019c160c3f3"
+    },
+    "docs/README.txt": {
+      "algorithm": "git-blob-sha1",
+      "hash": "2b5250389f026c959a49e1971ffe000862232447"
+    },
+    "docs/DEV_HISTORIQUE.md": {
+      "algorithm": "git-blob-sha1",
+      "hash": "e5f2a23e63a106b94ba0e438a07b2c4bf835fd54"
+    },
+    "docs/MASTER.md": {
+      "algorithm": "git-blob-sha1",
+      "hash": "7a95eb436fdf04740c40e51d9713ce7873f31991"
+    },
+    "map-test/index.html": {
+      "algorithm": "git-blob-sha1",
+      "hash": "08b5b5c10427b6ad231704b9d7b00331736326eb"
+    },
+    "Images/images-catalog.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "a311b386712ea813bd38b08497e07a2cfd1fce73"
+    },
+    "engine/object-library-p2-1.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "02dc2785828198ac09373b3401acbe73f2a189a3"
+    },
+    "engine/fauna-no-spin-r6.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "ce89ae12e246e8db90f85e55480abcc92875e4e5"
+    },
+    "engine/map-generator-bible-overrides-v19.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "88cd603141b92783731d0af95daed58c6b2a6907"
+    },
+    "engine/progression-multisystem.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "4ad7ec6d3af00c23118b9206498e3ffabf76ac68"
+    },
+    "engine/inventory-ui-bridge.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "5e9d27f363d3f94261e43d97840b1fd24ab4444d"
+    },
+    "engine/biome-rules.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "c2337c129f0c1d4718ff60e4551f864370cca6d1"
+    },
+    "engine/mission-ui-bridge.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "36297fff5a019cdefcb4738782ac612fa0c95a28"
+    },
+    "engine/micro-scenes.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "ce90f539e3fd31e4b1d78beae1b6ca6ec8d20a11"
+    },
+    "engine/sequence-actions-bridge.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "fdc07eb203908669ce149b67e22c0d577afba4b8"
+    },
+    "engine/map-generation-rules.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "b9eb0b926c517025c738988ee2f262416426b27a"
+    },
+    "engine/object-spawner.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "a65a2df580bbde33b47d44a13feeb6846213bc69"
+    },
+    "engine/world-engine.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "f0b34e7b12606dcd6923039de465b7ccc3cff88b"
+    },
+    "engine/mission-aware-analysis.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "cc108a51606762a1a221ce873e9e5a494224ce19"
+    },
+    "engine/map-population-hierarchy.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "3223c0bd332dd5f72754eebaada05a78210f0523"
+    },
+    "engine/behavior-arbitration-core.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "a00ecd29b0d4c005f2429f85e845a03e2a96201c"
+    },
+    "engine/world-topology-v3.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "f6dc322b9e561825a90d54157bec63d916dc1724"
+    },
+    "engine/survival-rations-ai-v0-3.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "8f22f679c056458622132fd5ec3803f71bf06ee2"
+    },
+    "engine/micro-scene-integrity-r6.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "ba26fb12d1247b3de1152949bb4fc4c9ec0c499b"
+    },
+    "engine/mission-tree.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "90eaba9891909fd3fcb74fc2b73f22fa65fd78e2"
+    },
+    "engine/mission-empty-core.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "5cacb7d4062ba3c0427ecd2f516b8c0ba4d6347f"
+    },
+    "engine/context-msc-bridge.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "fd9412dd394f8c63567374be0a8fadac2a5df4ea"
+    },
+    "engine/mission-memory.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "c4d4bcdf302426ff5e0f2ed06fe4ee97113f6c51"
+    },
+    "engine/cuo-catalog-consistency-r3.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "20c577f699aa3dd0fe3efc4e98a84aec50b5ffcf"
+    },
+    "engine/bible-exploration-world-v19.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "36cbc508596fa8225ff1fdd422166c0a11ca74b4"
+    },
+    "engine/bible-exploration-micro-scenes-v19.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "37d03c31db51ab704e30936b8a3f878df45b4ae5"
+    },
+    "engine/offline-progression.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "ad0d5df739430a6271f4cae3851c7af742d21cb5"
+    },
+    "engine/object-library-flora-patch.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "12a69bb6f41511304e0735a88e132688c79bb6cc"
+    },
+    "engine/micro-scene-pivot-r6.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "b03f8c7f8963dcf79e909c9b1c348049bdf2f9e3"
+    },
+    "engine/inventory-ui-clean-v0-2.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "1c3833cbb48a8e30e4f7e654383b6bf5a70ce78b"
+    },
+    "engine/persistent-micro-scenes-v20.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "526a3fa02b6564f975b310d789d10ee99737c7b4"
+    },
+    "engine/custom-micro-scenes-runtime.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "c9fe602e8bec59a42bf4bf579de17e772b2338d9"
+    },
+    "engine/bible-contract-v0-1.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "34f6629b03e8d7a3b6dcc0ba06dea50ee2d59255"
+    },
+    "engine/npc-runtime.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "b49f2e18695d3df0a90c7ced982b6dab19bd4556"
+    },
+    "engine/bible-runtime-v0-1-unified.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "02b7748bca499bd8b02ea996cd0822244f0e5684"
+    },
+    "engine/object-m0-bridge.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "734eb350a115fc1efd0ccf392466eb55abeee758"
+    },
+    "engine/object-library.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "8d03c98b9fad272a79474fb63317aebcee5d887e"
+    },
+    "engine/map-registry.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "acea667026e8915e098e345a7fcc00b2e9be693b"
+    },
+    "engine/mission-planner.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "577f1c48dfc40a2949c18046dc9c7fe45558b0c3"
+    },
+    "engine/progression-registry.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "794c5ad31a5dc0e341f81c1666e3c71a86e15ffe"
+    },
+    "engine/map-integrity-v20.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "e7dcb174bb8c02f933cf10a0b3a225045b1f2979"
+    },
+    "engine/map-exploration-tracker.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "c600eff004ae96538b1996becfed7cee62356fab"
+    },
+    "engine/travel-cycle-bridge.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "7fdc0240b52558951d07a8c4ae02c04f67077891"
+    },
+    "engine/ui-enhancements.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "2d5424d7f396bbaad921ce30a44ee337843e3f45"
+    },
+    "engine/explore-scope-bridge.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "7248dd26a73841af20fb1e78e0e3117c95ec6aaf"
+    },
+    "engine/mission-manager.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "06fa26cdd785aec2c36256abbcf6477b23692472"
+    },
+    "engine/fauna-runtime.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "2c10e47df81610d965a40944a2650a497db2e8b3"
+    },
+    "engine/object-library-height-r6.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "ffb283bc4ae226e13606ede0a214d9ded9f09521"
+    },
+    "engine/mission-types.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "8cac983ebb1d7f1978ab048dd9c22ff3d0d3db17"
+    },
+    "engine/bluefox3d-core.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "7a7de437c75c202df1cc461d62541e17a17279f9"
+    },
+    "engine/runtime-budget.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "37e18b22ea771997957248a7a2969b64678af572"
+    },
+    "engine/bible-map-prescription-v19.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "287ee245d26ebe1aab356c0758bde0c2d970c440"
+    },
+    "engine/legacy-msc-adjust-r6.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "bc949ad4fb8cb4b800f5e7974a506877c9c199d6"
+    },
+    "engine/environment-geometry-fix.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "6bfc517991c6da714df64c8c1ea9ef7c87d80d88"
+    },
+    "engine/map-generator.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "a999f9aaae931c5938e187082435fc9fd328f0b3"
+    },
+    "engine/mission-manager-bible-fix-v19.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "0d93891f8d8f948ddd5e934bdc604af972e0f665"
+    },
+    "engine/mission-target-arbitration-v19-12.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "352e293d5903fe77f0c2d2cda2757235deabb233"
+    },
+    "engine/special-object-runtime.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "f72b19b49a455f39693a0a99661dd9a6cfb9cd92"
+    },
+    "engine/mission-catalog.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "18c64844dc72441c2af467ab1ea82809e7f0a1a1"
+    },
+    "engine/path-planner.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "a8edaf8c4174c17c4447b90dfe0d892c8428cc77"
+    },
+    "engine/save-ui-bridge.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "1c3004278f8eac6a26d07f6eedd032b2cfb9c8ea"
+    },
+    "engine/custom-map-registry.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "25ceade5b7c0f2a414c8c10c5e211061c3fdbf96"
+    },
+    "engine/inventory-capacity-ai.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "be43d73c2145ae42b54c1adc4fcf00ec166037c9"
+    },
+    "engine/behavior-arbitration-integration.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "08913c659df2e8f79ef4490330c45c832b065de5"
+    },
+    "engine/character-controller.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "54a5a2da127b75827b5f5644185d5fc01d0de409"
+    },
+    "engine/survival-rations-v0-3.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "150b5d6638da59dd29e9db08328b51f4c0e20d4c"
+    },
+    "engine/biome-population-policy-r3.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "19e27180fe43c6daaf9ecd94048b9f6b2d47e04d"
+    },
+    "engine/mission-runtime-integration-v19-7.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "ba10dbc2992bdba0670f81d9289cff824b51272f"
+    },
+    "engine/bible-validation-v0-1.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "a0a41efee96e0516e42e35d6cbdda522b218b0bc"
+    },
+    "engine/object-event-registry.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "752bc001f170e49dabffe77086fd436630b5c5fd"
+    },
+    "engine/action-bridge.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "db7b472063a36c1bc0440548075d2d0073c074e8"
+    },
+    "engine/phenomenon-runtime.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "400c89aec72605b55f758b1f02929d98a7715b0a"
+    },
+    "engine/map-generation-no5-v20-1.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "821fb9890d78895473ea26fc6d25bfaad3fdfd53"
+    },
+    "engine/survival-ai-bridge.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "7a26030a911fa35a67cfbb56d76d2172381b30c3"
+    },
+    "engine/start-map-crystal.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "09aa87a7eb29a968bb53b203dd6cbfbbaf107ac4"
+    },
+    "cuo-lab/index.html": {
+      "algorithm": "git-blob-sha1",
+      "hash": "29e7420ec3ce6000e1f5f379d274e3bcaef591a6"
+    },
+    "data/custom-micro-scenes-arch-r4.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "96e97ebe9e86d10560e891ef2144f9606149e7a5"
+    },
+    "data/custom-micro-scenes-opp.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "79bc4731d08e3bfba9499a3b52331061b6a6e20a"
+    },
+    "data/bible-catalog.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "857cdef33f8f8d287d0f3306312b6869376d427d"
+    },
+    "data/custom-micro-scenes-remarkable-r1.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "c94d3a0534248a20ebca1833a22ec539c0e17669"
+    },
+    "data/custom-maps.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "d776d933a12d0a2811dce08c98ddfd6cc0ea1f9b"
+    },
+    "data/civilization-cities.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "855984dd98c98ec71eb22e4d9cbfe2e20250db39"
+    },
+    "data/custom-micro-scenes-remarkable-r2.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "ffec479f69c345abdbc2eb60d5d129711f4e4934"
+    },
+    "data/bible-patterns.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "c03b3b63c83cbd7242c7e979a0ff004fc0f4acf7"
+    },
+    "data/custom-micro-scenes.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "e89da29235a55ae685fdecd91f6b4001731b9cff"
+    },
+    "tests/cpu-progression-write-coalescing.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "3c75c153bace2c9a658cfebd3db211c7a62e63df"
+    },
+    "tests/cpu-boundary-position.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "510fbb9cef38e20cb83b5d7e116e5a9e2647cb40"
+    },
+    "tests/r4b-repair-queue.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "81292884263dd8a678dacb938d7076b35414bbb1"
+    },
+    "tests/exploration-mission-routing.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "fcff3d0bac15e7bc96873b20f58f38f67c4f0f7b"
+    },
+    "tests/mission-contract-continuity.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "f489658d66d3d9ad333a90a4b7639902b44c02af"
+    },
+    "tests/construction-save-hub.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "879d20b8e62638a9399108059f2bbb70c943b8fb"
+    },
+    "tests/save-mission-rehydration.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "34c8ab6f25d2ef9ce89e6d0cbfdab414a399929f"
+    },
+    "tests/save-state-integrity.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "fca3c7e3da9b2a8c40019ca07d6570fa698562ab"
+    },
+    "tests/cpu-observation-p4.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "73dffe42af8597910a48f0fa214033db2027f615"
+    },
+    "tests/r-phen-2a-catalog.contract.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "642c04ca5ad3f5f2abbe7b95ca9d08167555430c"
+    },
+    "tests/npc-r3-contact-role.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "fdc03a6c66e6efa3d16aaf179a9e4fabcd39ea9e"
+    },
+    "tests/r-tp-b-travel-source.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "e6d424ba09ffef3c97605de13b6957505969e13a"
+    },
+    "tests/population-guarantees-p1.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "0b2459010131fa639f3aa1024df9a4f548c74934"
+    },
+    "tests/mission-chain-integrity.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "a0ed7fd5a8bc6a954d5eb9e1641dcc9f1a2ba8d1"
+    },
+    "tests/mission-completion-owner-chain.integration.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "fa339d6d6d0f19e4f8540e7e2466b2aec6b33bbf"
+    },
+    "tests/rstab-pending-activation.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "5479e0b7c9e22406955c876c79d7a397571a9d8c"
+    },
+    "tests/opp-npc-runtime.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "d45cbf0e3387d834b816f06c5ccd76bdf8f031d1"
+    },
+    "tests/r-end-b-runtime.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "d28198a7a45bd27b142f1cd7f5584a786c95122d"
+    },
+    "tests/npc-r2-integration.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "2579f9ccfdf285f54b94c20274b50eca51cb0fcc"
+    },
+    "tests/npc-r43-arch-r5-regression.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "b9413e3cc29170debdba6627a430c8fb13a227b8"
+    },
+    "tests/npc-r1-contract.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "9a9c595641079391cb48a416c3febb1d810701dc"
+    },
+    "tests/r-tp-a-nonregression.catalog.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "02a78e53219c85b29bd74bf52ba4a98b3eaa1c5d"
+    },
+    "tests/mission-step-relation-industrial.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "bbf18a241e984f2f58b4c325a9234fbae76affcc"
+    },
+    "tests/r-mission-routing-fallback.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "c03d7f3013ddcff6496dbfcc8a619aa0034d4630"
+    },
+    "tests/pass2a-mission-arbitration.regression.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "7084175628d90164f1f3238640365e7301319ee2"
+    },
+    "tests/mission-repair.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "3f39ff7be7ee7706875a9937abca2388e7521573"
+    },
+    "tests/r4b-offline-failure-threshold.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "970cc787266d4033100f66e0c7f1f27618f3817d"
+    },
+    "tests/r-tp-r2-mission-authority.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "611fbfea6a6f17180415247708fc816caf2a5aa2"
+    },
+    "tests/tutorial-continuity-post-r3.integration.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "5f42f2c68ef0babc78ab748165c09a01cdd39b6b"
+    },
+    "tests/npc-r3-rock-city-layout.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "7afaba922104b7229126497199e45438c41e8cc3"
+    },
+    "tests/npc-r2-contact-runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "87369d56d71e976e5801677ce8523348cb717def"
+    },
+    "tests/fauna-observation-continuity.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "e481dedf26991d1698bdaf18de8b3bcd519c73d8"
+    },
+    "tests/npc-r1-runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "15a5482b9e9a6ae785af3a3761adb6b84c9af507"
+    },
+    "tests/r-exp-long-a-mission-optin.contract.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "ce74dd98cb3d8799150024b00ba9bb61cddbd076"
+    },
+    "tests/ann-imi.contract.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "3cd042fec3f5fbd96cf6ee522476d7adb7b0a8f6"
+    },
+    "tests/r-tp-a-catalog.contract.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "1c389da70c099d03f3ea5503de075931090e326c"
+    },
+    "tests/npc-r3-trade-runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "17deaaaee55c509ad2f2cde14fee9fb2f004c884"
+    },
+    "tests/r-exp-long-b-mission-manager.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "fd3f1626044fb20988d48d76cf4027961588aea8"
+    },
+    "tests/fauna-r2-behaviors.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "5db63783b05508377bba2c2aad43f4441f1dcf7b"
+    },
+    "tests/mission-required-population.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "736d74cf14629645245ba43eaf4489072e8d346b"
+    },
+    "tests/r4a-stock-backed-total.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "ea46f51ad90fbdcb2b9918bcc1727dde03da1c7e"
+    },
+    "tests/r-tp-b-ui.contract.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "4a330f9ce42d114e120b6f7baf2ec8977ea29291"
+    },
+    "tests/rstab-execution-recovery.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "48391e8718d6dee2a508c6ed1b5932897a43fb32"
+    },
+    "tests/r-end-b-catalog.contract.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "df6dc9cbb2931afb058b5277d618e9c7e56ff69d"
+    },
+    "tests/pass1-lifecycle-tutorial.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "2d9093a4176aaa94591ad9f30adb7043b88c1838"
+    },
+    "tests/r-phen-final-navigation.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "1875baeb61255c0362d4b1e149e888ed805d9a37"
+    },
+    "tests/r-mission-generated-continuity.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "ae5b1d61196e2cfec84193cb08598c65481829f1"
+    },
+    "tests/r-exp-long-b-catalog.contract.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "5b12664e5fb81e5bca4fae71b03c6a71c1e842ef"
+    },
+    "tests/fauna-autonomy-r1.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "9d714fda5837f663a8cd9e77f3a40c09ded6ae57"
+    },
+    "tests/mission-relay-autoprimary.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "49600b9368ed78459cc382de8645771c641f2fec"
+    },
+    "tests/sur07-conservation.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "a561585d6fc701dc5dc9a04697909a24ebe6b2dd"
+    },
+    "tests/r-end-b-world.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "1e2d1ec96b6a5340be10030a1fa084bb72614746"
+    },
+    "tests/mission-transverse-durability.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "499c077cfa133040ce2afd7f64a316ae50b428ac"
+    },
+    "tests/mission-causality-spatial.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "92b5974993ab43be898d080281360d7cf825f886"
+    },
+    "tests/fauna-approach-r1.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "0a1c9426059f5a9ba583aabfdcd40849e8708ca4"
+    },
+    "tests/mission-physical-contracts.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "65fbc457e0932b0afbd5c9ef1a55261a9c38b0e2"
+    },
+    "tests/mission-double-interaction.sentinel.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "2760f2a002ad6e12e2b6e1a67445536a03ea82b2"
+    },
+    "tests/r-tp-r3-beacon-interaction-transition.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "12d89c269bd05fc8b8631922ae853cd88bd4e66f"
+    },
+    "tests/cpu-topology-idempotence.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "6124a337f38cdebf73b3119ea7b0a0fdb1b104bd"
+    },
+    "tests/r-tp-b-astrology-collider.contract.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "d196c784951686f77495d0d1f897a4f50b255033"
+    },
+    "tests/r-phen-final-catalog.contract.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "c6b7ef8c637b75a427951212c349346aefcae093"
+    },
+    "tests/r-tp-a-runnability.contract.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "f20dee88bb7b00d578d4d3228e0a55b768cc4c94"
+    },
+    "tests/mission-eligibility-stock-fauna.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "ad41971b9311cf6a8a631a3687f2309d193c7462"
+    },
+    "tests/r-exp-long-b-runtime.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "6dcd29ca21bf8aa8f6de449491551d343b5d6669"
+    },
+    "tests/npc-r3-barter-runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "0ae83e6d1b13ce65bbdf089d539f14432b4f0cb6"
+    },
+    "tests/r-mission-authority-compat.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "ff1b9f6dded6a69a8701409253455ef35d311e5f"
+    },
+    "tests/mission-travel-narration.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "5628e54280df162b09517ce3d13a247e6a4cd934"
+    },
+    "tests/mission-payment-behavior-resumption.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "dab594985309166c443f1895b0b277823864baba"
+    },
+    "tests/r-end-a-runtime.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "32e54e6573f10fe88d23b6d7b4d2a7bc9832e11c"
+    },
+    "tests/r-end-a-mission-manager.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "0318e365ffd521a3d09a9c2affdf91d0ca3e25fe"
+    },
+    "tests/tutorial-t10-loc.integration.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "f7c1fed0a3ff70df4e878f40a9b598f4e4ecd68a"
+    },
+    "tests/mission-completion-fanout-deferred.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "24624ac8d643861c970d152c07d2d2f6d36f327b"
+    },
+    "tests/fauna-autonomy-integrated.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "baa6acd641e555ef4e37dfa6f1865b095163fe97"
+    },
+    "tests/fauna-runtime-regression.contract.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "837a17101283e6cca4cc7e3fd5a551fe808461dc"
+    },
+    "tests/r4b-persistence.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "a7ab73c229d1b297c901b43e3283f5b39540fe25"
+    },
+    "tests/r-tp-a-persistent-placement.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "f7d2d3fbaf5e51f8150893a27896192b0e990463"
+    },
+    "tests/npc-r2-catalog-runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "e13a2aedebc9af2a5fca5f353690b6da46b47ac2"
+    },
+    "tests/r-tp-a-objectm0.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "4a2b8a595090d2e77479d73680755e5c83f5a466"
+    },
+    "tests/r-exp-long-a-mission-optimal-route.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "3baa8e4823f3a1696c7c29c3781ec9bf294f7861"
+    },
+    "tests/r-mission-proximity-compile.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "1cd8d8dfdc09726db2ddf2a5471db4f7ec218abd"
+    },
+    "tests/r-tp-b-world.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "4e5f56b8ad0bcd698e85bf6ca83a154480aff1b4"
+    },
+    "tests/tutorial-guidance-action-dismiss.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "30caf44bcb672044ef90d94998f12355463df0d2"
+    },
+    "tests/mission-study-ownership.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "777321df0ea6405a9569f4b7724d63a9dfe322e2"
+    },
+    "tests/site-establish-finalization-guard.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "ba3e6b13aa87f2bb30d485947fd54f0014e46264"
+    },
+    "tests/r4a-expedition-consumer-protection.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "65b558dc4ce6ff40b6bb434e6583cd3480baa35c"
+    },
+    "tests/r-tp-a-compile.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "5baa8c89a3dbb8fce9f4b87ccf54f2a31c5837dc"
+    },
+    "tests/r-tp-after-progress.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "48efcb5338dbbae6b0f1ce81861f941bada8a0d3"
+    },
+    "tests/research-unlock-nonregression.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "7b6510e45873b72a3f5d1afee1c6d838b3f8bc27"
+    },
+    "tests/r-phen-final-compile.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "c729bd6c08a9c23fba8ea6e80819d22b4fd30523"
+    },
+    "tests/pass2-priority-authority.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "5affee7a41d87e91fc791d9d25f0a1b2fb157a33"
+    },
+    "tests/npc-r4-animation-runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "3023e2a0441fa743982d72647f76fcebf2095d08"
+    },
+    "tests/fauna-fau09-10.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "4745d7349374bc9aeddd20b81265009d6490ee85"
+    },
+    "tests/r-end-b-mission-manager.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "fc78310dd658e65d049ad052149dc1b9254d4245"
+    },
+    "tests/rstab-nonregression.static.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "d5bd21b0904a44b397bebd9ae589df322cf35fad"
+    },
+    "tests/objectm0-t01-t02.pending.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "891fcf96d86bbf365092278585dea6c4619e86f3"
+    },
+    "tests/rsave-r2-snapshot-integrity.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "b398214420d1218f6193081306aa9c2856a9fb54"
+    },
+    "tests/r-phen-2a-compile.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "ab9b2527680a80359e682e28922e65faf11afd81"
+    },
+    "tests/mission-completion-fanout-real-manager.integration.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "52d3711dd8e2d03f8faa888639df0a4b660310b4"
+    },
+    "tests/mission-transfer-resumption.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "2ed429dca7f2bea262b9f71833dd91b3e429b48f"
+    },
+    "tests/npc-r45-contact-regression.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "7c08bc22ae3f9b1d247647a6c81f727d091ae201"
+    },
+    "tests/r-phen-2a-navigation.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "a465fce189f9835e4aa7935fe27a652687fcc992"
+    },
+    "tests/r-phen-1-scout-mission-source.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "5d554cda6b280726ee7341c81354fc2b9d337d1e"
+    },
+    "tests/r-tp-b-fx.contract.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "976469a6e14e28c29258878f43c2fb383d892f53"
+    },
+    "tests/mission-step-relation.integration.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "33120dc07c997646d2322eb96dcee28cc227eecd"
+    },
+    "tests/r-end-a-ui.static.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "4e2866cd4c08bc2b51a0bd3cfe1db188cbbf20e7"
+    },
+    "tests/bible-mission-actions.integration.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "22b776e359e6c9515dcf67673f7ef3a211a00a73"
+    },
+    "tests/rstab-mission-runnability.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "cf10f94a3da254bc6bbf914104a2efc14824f846"
+    },
+    "tests/local-interaction-site-contract.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "3ae7826b4d0ea3c69bef2a9b068f9b766fe087ee"
+    },
+    "tests/r2-drone-beacon.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "a5806ce56c6fe7fa89b34810b55f0552d438ee11"
+    },
+    "tests/population-generation-r2.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "83d582c51ed9ac55867f77aaee6f2e8efa4323b1"
+    },
+    "tests/r4a-bal02-research-expedition.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "0829945014b400d13f1a3ae6c2811f338e84c01c"
+    },
+    "tests/r-tp-b-exploration.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "46ab46faaf5e8cba7a223222bb8f821de143a10b"
+    },
+    "tests/npc-r3-merchant-spawn.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "f240874530918f819c6123c09b4f9e2766a91d70"
+    },
+    "tests/r4b-field-repair.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "cc9be8958cb7c8682f7c48d0d6453045c3025105"
+    },
+    "tests/npc-r45-relational-approach.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "2640ee2190e6de8f87f119f9d2d9387968196855"
+    },
+    "tests/tests_camp_harness.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "a8a124adc21d3082ce2594e5bb119af239a7299c"
+    },
+    "tests/mission-optional-window.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "f654c4eb7770721280e57bfe6372e6f674520906"
+    },
+    "tests/r-phen-final-objectm0.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "e3359c8266d8e941db15e190e268c028c28c2d58"
+    },
+    "tests/r-exp-long-a-tp-routing.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "3a4fc7450262f77c453ae44fe5189629d11ddbf3"
+    },
+    "tests/r-end-a-catalog.contract.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "7054faacf6de3764104d7bea3523d6a3a6885963"
+    },
+    "tests/r-tp-bc-catalog.contract.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "e71359b630091da2489276c952aace591e150694"
+    },
+    "tests/mission-travel-facts.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "c935068638c97959433375b46d3625786589e8c2"
+    },
+    "tests/r-phen-2b0-map-distinct.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "03c61273016562ed5dc4a7b2cd942a8703be4a1d"
+    },
+    "tests/r-phen-2a-objectm0.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "9d73a85a3dfddef35eaf24523ec565e08f0842b8"
+    },
+    "tests/npc-r43-spawn-runtime-integration.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "b89ec573ae31be1be6c49767fbc19fb524540529"
+    },
+    "tests/r-exp-long-a-tp-network.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "b353ec8daedae120036fbab4f8756dfef039f2a0"
+    },
+    "tests/research-reload-reconciliation.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "bdbcf240e8f78c7d9e6b0ea8921a6568ce1ad6b0"
+    },
+    "tests/rsave-r2-scoped-rehydration.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "a112f7dcc19da8a85d4eda1c07537d83601eefa6"
+    },
+    "tests/r-tp-b-special-runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "3ca634463f14a8e766cc639e643c55e41aa5a651"
+    },
+    "tests/r-end-b-world.static.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "aabfa55b0fbcc27837202c0b466cce54e7e9d961"
+    },
+    "tests/r3-drn-missions.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "b7461f740788967d76c20ff397b2427aa9c5a11f"
+    },
+    "tests/npc-r2-contract.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "f3300145bdd8d891956959da40d4cd16186df068"
+    },
+    "tests/ann-arch-w-site.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "a8531aec0f4e3f9e62e656e531e4fdaf4c9dd183"
+    },
+    "tests/r-end-b-progression.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "98c70b94839786adc4ab5c772db80727af033781"
+    },
+    "tests/r-tp-carn-storm-coexistence.contract.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "8c7effe1bff395fb469ce1b6704e46312df372e9"
+    },
+    "tests/save-load-unload-lock.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "a7e56625278028f1bdc8979b7eb45682ed6bd1e1"
+    },
+    "tests/mission-site-temporal-retry.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "866629646f850c9c0d3c0a28ed03e5e7f595dba0"
+    },
+    "tests/r-exp-long-b-scope.contract.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "f641293c911030837f915e2d6d430ca71432b439"
+    },
+    "tests/tests_camp_obsolescence_matrix.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "e3f4a6c8d427760b59fb905ae76b6ce8b11d8ee5"
+    },
+    "tests/npc-r1-regression-common.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "c7481927599a3d8e935ffb579552621217b837de"
+    },
+    "tests/population-persistence.runtime.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "521e47d79fa3e095b3e05cdbadee619af70a9aad"
+    },
+    "tests/r-tp-after-catalog.contract.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "1f9e126e5ae2da2711773285f66ff357b9e97049"
+    },
+    "tests/npc-r3-contract.test.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "2b84ae1157bb649afcc55aea56c62872817c59d0"
+    },
+    "tools/bluefox-local-server.ps1": {
+      "algorithm": "git-blob-sha1",
+      "hash": "fb08a48a6c74b0cd07b32f73a076bcda42a4752b"
+    },
+    "assets/MSC_saves/MSC-CUSTOM-SMART-CAMP.json": {
+      "algorithm": "git-blob-sha1",
+      "hash": "dd17455acbf02cc2a3c559dae18f857e77df1802"
+    },
+    "cuo-lab/vendor/three.core.min.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "817982e9e6c075f171e387327c17e165da89db1d"
+    },
+    "cuo-lab/vendor/three.module.min.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "8c8fb206263dd21f4c95920ef403be50935a69e2"
+    },
+    "engine/vegetation-performance.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "8819dd0c717a091ac8875df7bae291ce39af65c2"
+    },
+    "engine/passive-object-runtime.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "7669055ad0d19d8e53bcac9a2b616f824ef82725"
+    },
+    "engine/fauna-tool-ball-return-r2.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "5e647d9270500c25f11293a4372c9425f9b0f46c"
+    },
+    "engine/flora-runtime.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "13ede73b2c6f7ab6f88d8bff8ced003e61caebf8"
+    },
+    "engine/flora-wind-runtime.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "6dd8b4a53d2cd2c26b4eaf1160879c532bc3f298"
+    },
+    "engine/spore-static-r3.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "f109555196a3a5a02af9d55a7b43245299f3599e"
+    },
+    "engine/procedural-variants.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "e453b6dbfe6b8d502c6f68c7ed1b35d95fa00368"
+    },
+    "engine/camera-controller.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "1d07a13398c9d8babf0aa9ea01018b750fe26015"
+    },
+    "engine/camera-extended-look.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "02d84f5ae7dda2828dee9a3c678c18634b3d7dff"
+    },
+    "engine/plateau-underlay-r3.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "3a855cd68808729e5296bcbf2a829e7fa5256c79"
+    },
+    "data/music-catalog.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "cd74a60e787570ca99f3357eeb518d3ac8032468"
+    },
+    "engine/adaptive-music-engine-v1.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "f08a7d2ec897438374e73ccb05e20db6a17b5b6c"
+    },
+    "engine/adaptive-music-gameplay-bridge-v1.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "e8e5c7cee747c09b14c8caf8dc80df9d9cd696b3"
+    },
+    "engine/adaptive-music-ui-v1.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "21fe8fca90c0f1ced8098cd94d514ba6e8f14c10"
+    },
+    "engine/ui-hotfix-v3.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "ff174125d03a03acf045958c82ed7a5ad05ee95b"
+    },
+    "engine/topology-persistence-bridge.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "19ccdd7d6bb833bb12110315885d1cc4d262d6d4"
+    },
+    "engine/settings-ui-bridge.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "e7d20c9959bc1bb26a0fe08fb2b14d17f621854e"
+    },
+    "engine/planet-topology-ui.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "546cddd9a0ea487c45a73da1590b04f94bf50b88"
+    },
+    "engine/planet-globe-ui.js": {
+      "algorithm": "git-blob-sha1",
+      "hash": "1a6981fa5163707b8963526b652d917c9d73fe37"
+    }
+  },
+  "patchFiles": {
+    "engine/bible-runtime-v0-1-unified.js": {
+      "algorithm": "sha256",
+      "hash": "dd9383c4fea26a0d6dbf84e325a523f9dc8635f6d55a2009ea5b738775a86f98"
+    },
+    "engine/special-object-runtime.js": {
+      "algorithm": "sha256",
+      "hash": "f2ed6257e2b03079a75496c47b8e1116cd8a2dce00c7296c5bcddba3ea102f41"
+    },
+    "engine/survival-rations-v0-3.js": {
+      "algorithm": "sha256",
+      "hash": "394c181a79937e5052fbd17c23062be3d0d97c9c825a346fd18bade266be4abc"
+    },
+    "tests/mission-research-beacon-durability.runtime.test.js": {
+      "algorithm": "sha256",
+      "hash": "b2d4e85f86ec1a11ba20eaebe4b21d674498542db6e58fa6ede25b587e367e86"
+    },
+    "tests/mission-transaction-boundaries-r2.runtime.test.js": {
+      "algorithm": "sha256",
+      "hash": "8ed4d50efc236cd07981dc801d591486f6c225294731c1698d065aab2a1f8856"
+    },
+    "tests/bluefox-r2-closure-hook.cjs": {
+      "algorithm": "sha256",
+      "hash": "4554a8654a430b767f2284f81e8589a65c0be27048d0fed8809cebbca3c5ce41"
+    },
+    "tests/bluefox-r2-strict.cjs": {
+      "algorithm": "sha256",
+      "hash": "ef1b22830ec91cbe6a8cd466043f8d064c398e07b49511a992f1da1a397b92a0"
+    }
+  },
+  "scopeSuites": [
+    "tests/mission-research-beacon-durability.runtime.test.js",
+    "tests/mission-transaction-boundaries-r2.runtime.test.js",
+    "tests/r-tp-r3-beacon-interaction-transition.runtime.test.js",
+    "tests/mission-eligibility-stock-fauna.runtime.test.js",
+    "tests/cpu-progression-write-coalescing.runtime.test.js",
+    "tests/fauna-r2-behaviors.runtime.test.js",
+    "tests/mission-causality-spatial.runtime.test.js",
+    "tests/mission-contract-continuity.runtime.test.js"
+  ]
+}

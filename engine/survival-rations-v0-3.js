@@ -16,6 +16,7 @@
     rations: 0,
     craftedTotal: 0,
     consumedTotal: 0,
+    credits: {},
     updatedAt: Date.now()
   });
 
@@ -33,6 +34,7 @@
       }
       return {
         ...base,
+        credits: saved.credits && typeof saved.credits === "object" ? saved.credits : {},
         rations: clamp(saved.rations, 0, MAX_RATIONS),
         craftedTotal: Math.max(
           0,
@@ -57,39 +59,24 @@
     autoDeposit: false
   });
 
-  const saveState = (reason = "save") => {
-    state.rations = clamp(
-      state.rations,
-      0,
-      MAX_RATIONS
-    );
-    state.updatedAt = Date.now();
-    global.localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(state)
-    );
-    global.dispatchEvent(
-      new CustomEvent("bluefox:rations-changed", {
-        detail: {
-          reason,
-          state: snapshot()
-        }
-      })
-    );
-    return snapshot();
-  };
-
-  const add = (count = 1, reason = "grant") => {
-    const before = state.rations;
-    state.rations = clamp(
-      state.rations + Math.max(0, Number(count) || 0),
-      0,
-      MAX_RATIONS
-    );
-    const added = state.rations - before;
+  const add = (count = 1, reason = "grant", options = {}) => {
+    const quantity = Math.max(0, Number(count) || 0);
+    const id = String(options.transactionId || "");
+    const previous = id && state.credits[id];
+    if (previous) return previous.quantity === quantity ? quantity : 0;
+    if (id && state.rations + quantity > MAX_RATIONS) return 0;
+    const before = clone(state);
+    state.rations = clamp(state.rations + quantity, 0, MAX_RATIONS);
+    const added = state.rations - before.rations;
     if (added > 0) {
       state.craftedTotal += added;
-      saveState(reason);
+      state.updatedAt = Date.now();
+      if (id) state.credits[id] = { quantity: added, at: Date.now() };
+      try { global.localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+      catch { state = before; return 0; }
+      global.dispatchEvent(new CustomEvent("bluefox:rations-changed", {
+        detail: { reason, transactionId: id || null, state: snapshot() }
+      }));
     }
     return added;
   };
@@ -111,9 +98,15 @@
     );
     if (!removed) return 0;
 
+    const before = clone(state);
     state.rations -= removed;
     state.consumedTotal += removed;
-    saveState(options.reason || "consume");
+    state.updatedAt = Date.now();
+    try { global.localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    catch { state = before; return 0; }
+    global.dispatchEvent(new CustomEvent("bluefox:rations-changed", {
+      detail: { reason: options.reason || "consume", state: snapshot() }
+    }));
 
     global.dispatchEvent(
       new CustomEvent("bluefox:ration-consumed", {
