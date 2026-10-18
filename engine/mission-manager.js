@@ -2161,12 +2161,29 @@
         const sites = typeof BF.getKnownSites === "function" ? BF.getKnownSites({}) : [];
         sites.forEach((site) => {
           if (!discovered.has(String(site.mapId))) return;
+          const persistentMicroSceneId = String(site.persistentMicroSceneId ||
+            String(site.siteId || "").replace(/^persistent:/, ""));
+          const mapIndicators = historicCounter
+            ? BF.getMapProgressionIndicators?.(String(site.mapId)) : null;
           Object.entries(site.instances || {}).forEach(([instanceId, detail]) => {
+            let physicalInstanceId = instanceId;
+            if (historicCounter && String(instanceId).startsWith("slot:")) {
+              // GeographicKnowledge stores MSC slots as `slot:N`, not the
+              // physical instanceId used by observations.historical. A slot
+              // alias alone must never count as a distinct unobserved object.
+              const slot = String(instanceId).slice(5);
+              const candidateId = persistentMicroSceneId && /^\d+$/.test(slot)
+                ? `${persistentMicroSceneId}:${slot}` : "";
+              const physical = candidateId && mapIndicators?.uniqueInstances?.[candidateId];
+              physicalInstanceId = physical &&
+                String(physical.objectId || "") === String(detail?.objectId || "")
+                ? candidateId : "";
+            }
+            if (!physicalInstanceId) return;
             if (matchesKnownObject(String(site.mapId), detail?.objectId, {
-              instanceId, microSceneId: site.microSceneId,
+              instanceId: physicalInstanceId, microSceneId: site.microSceneId,
               siteId: site.siteId,
-              persistentMicroSceneId: site.persistentMicroSceneId ||
-                String(site.siteId || "").replace(/^persistent:/, "")
+              persistentMicroSceneId
             })) matchingMaps.add(String(site.mapId));
           });
         });
