@@ -1,0 +1,13 @@
+const fs=require('fs'),assert=require('assert'),path=require('path');
+const source=fs.readFileSync(path.join(__dirname,'../engine/mission-manager.js'),'utf8');
+const start=source.indexOf('    knownDestinationCandidates(travel,');
+const end=source.indexOf('    validatePersistedKnownDestination(',start);
+assert(start>0&&end>start);
+const BF={getKnownSites:()=>Array.from({length:35},(_,i)=>({mapId:'map'+i,siteId:'site'+i,knownInstanceCount:1,instances:{}}))};
+const method=Function('BF','return ({'+source.slice(start,end)+'}).knownDestinationCandidates')(BF);
+const ctx={engine:{currentMapId:'map0',discoveredMaps:new Set(Array.from({length:35},(_,i)=>'map'+i)),findKnownRoute:(a,b)=>[a,b]},trees:new Map(),normalizeKnownDestinationToken:x=>String(x||''),mapMatchesKnownBiome:()=>true};
+const criteria={siteId:'test'};
+const short=method.call(ctx,{},criteria,12);
+const all=method.call(ctx,{},criteria,Number.MAX_SAFE_INTEGER);
+assert(short.length<=12);assert.equal(all.length,35);assert(all.some(x=>x.mapId==='map34'));
+console.log(JSON.stringify({result:'PASS',limited:short.length,exhaustive:all.length,lateDestinationFound:true}));

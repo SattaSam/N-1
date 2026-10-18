@@ -602,6 +602,28 @@
       : null;
   };
 
+  // LOC-11 : l'identité P3 et la carte doivent désigner la même occurrence.
+  // Les anciennes preuves incohérentes sont conservées, mais ne peuvent ni
+  // terminer l'analyse ni immobiliser définitivement sa reprise physique.
+  const loc11ProofOnMissionMap = (proof, missionId) => {
+    const scopedMap = String(missionId || "").split("@").slice(1).join("@");
+    if (!scopedMap || String(proof?.mapId || "") !== scopedMap) return false;
+    const instanceId = String(proof?.instanceId || "");
+    const match = /^(generated-[^:]+):population:[^:]+:[1-9]\d*$/.exec(instanceId);
+    return !match || match[1] === scopedMap;
+  };
+
+  const loc11NeedsReferenceRecovery = (tree, missionId) => {
+    if (String(missionId || "").split("@")[0] !== "LOC-11") return false;
+    const observe = tree?.findSequenceSlot?.("observe");
+    const analyze = tree?.findSequenceSlot?.("analyze");
+    if (!observe?.isComplete || !analyze || analyze.isComplete) return false;
+    const proofs = parsedRelationEvidence(observe);
+    return proofs.length > 0 && !proofs.some(proof =>
+      Boolean(proof.instanceId && proof.objectId && proof.cuoType) &&
+      loc11ProofOnMissionMap(proof, missionId));
+  };
+
   const missionEvidenceForAction = (engine, action) => {
     const contract = evidenceContractForAction(engine, action);
     if (!contract) return null;
@@ -620,17 +642,35 @@
         if (!proof.instanceId || !proof.objectId || !proof.mapId ||
             !relationMatches(contract.tree, contract.node, proof)) return false;
         const definition = BF.ObjectLibrary?.getById?.(String(proof.objectId).toUpperCase());
-        if (!definition) return false;
         const params = contract.node.params || {};
-        const metadata = { ...definitionMissionMetadata(definition), ...proof,
-          microSceneId: source.params?.microSceneId || null };
-        if (!metadataMatchesMissionCriteria(metadata, studyTargetCriteria(params), { skipSubject: true }) ||
-            !matchesStudySubject(definition, params.subject)) return false;
+        const loc11 = String(action.missionId || "").split("@")[0] === "LOC-11";
+        // LOC-11 : l'observation *déjà validée dans ce même arbre* constitue
+        // la source canonique de l'analyse de continuation. Ne pas la rendre
+        // inexécutable à cause d'une requalification ultérieure du catalogue
+        // (tags, famille ou disparition d'une définition). Aucune autre mission
+        // ne bénéficie de cette exception, et relationMatches() conserve
+        // SAME-INSTANCE sur l'identifiant prouvé, sans crédit par type.
+        const scopedMap = String(action.missionId || "").split("@").slice(1).join("@");
+        const historicalLoc11 = loc11 && scopedMap &&
+          loc11ProofOnMissionMap(proof, action.missionId) &&
+          String(proof.instanceId || "").trim() &&
+          String(proof.objectId || "").trim() &&
+          String(proof.cuoType || "").trim();
+        if (!historicalLoc11) {
+          if (!definition) return false;
+          const metadata = { ...definitionMissionMetadata(definition), ...proof,
+            microSceneId: source.params?.microSceneId || null };
+          if (!metadataMatchesMissionCriteria(metadata, studyTargetCriteria(params), { skipSubject: true }) ||
+              !matchesStudySubject(definition, params.subject)) return false;
+        }
         const requiredMap = params.requiredMapFact
           ? engine.missionManager.memory?.getFact?.(params.requiredMapFact)?.[params.requiredMapField || "mapId"]
           : params.mapId;
         if ((params.requiredMapFact || params.mapId) &&
             (!requiredMap || String(requiredMap) !== String(proof.mapId))) return false;
+        // La preuve d'observation de CE noeud prime sur un ancien binding
+        // de cible pouvant avoir été réattribué depuis l'observation.
+        if (loc11) return loc11ProofOnMissionMap(proof, action.missionId);
         return eventMatchesBoundTarget(engine.missionManager, action.missionId,
           { ...proof, detail: { cuoType: proof.cuoType } });
       });
@@ -640,8 +680,17 @@
       // disparition/collecte de l'instance, sans recréer l'objet.
       if (sameTypeOnSourceMap(contract.tree, contract.node, reference)) {
         const physical = selectObservable(engine, action, { activatePassive: false });
-        if (physical?.userData?.active &&
-            !interactionState(resolveMissionCandidate(physical)).collected) return null;
+        const physicalResolved = physical ? resolveMissionCandidate(physical) : null;
+        // LOC-11 doit poursuivre sur l'instance observée, jamais sur une
+        // ressource de même type apparue ailleurs ou après reconstruction.
+        // Si cette instance n'existe plus, la continuation canonique par
+        // preuve reste disponible ; aucune nouvelle observation n'est créditée.
+        const isLoc11 = String(action.missionId || "").split("@")[0] === "LOC-11";
+        const sameLoc11Instance = !isLoc11 || (physicalResolved &&
+          samePhysicalInstance(reference,
+            relationEvidenceFromResolved(physicalResolved, engine.currentMapId)));
+        if (physical?.userData?.active && sameLoc11Instance &&
+            !interactionState(physicalResolved).collected) return null;
       }
     }
     return {
@@ -753,7 +802,10 @@
       const same = sameBy.every((field) =>
         relationFieldMatches(field, reference, evidence)
       );
-      if (!same && !sameTypeOnSourceMap(tree, node, evidence)) return false;
+      // LOC-11 impose SAME-INSTANCE : l'exception de remplacement par
+      // une ressource du même type ne vaut que pour les autres contrats.
+      const loc11 = String(tree?.id || "").split("@")[0] === "LOC-11";
+      if (!same && (loc11 || !sameTypeOnSourceMap(tree, node, evidence))) return false;
       return differentBy.every((field) =>
         Boolean(String(reference[field] || "")) &&
         Boolean(String(evidence[field] || "")) &&
@@ -800,6 +852,23 @@
       String(step?.params?.evidenceMode || "").trim() === "sample" &&
       String(step?.params?.evidenceFromSlot || "").trim() === slot
     );
+  };
+
+  // LOC-11 seulement : une identité P3 de population porte explicitement
+  // sa carte d'origine. Ne jamais créditer sur une autre carte un événement
+  // dont le contexte et l'identité se contredisent. Les anciens identifiants
+  // temporels et les MSC n'ont pas ce format et restent inchangés.
+  const loc11EventIdentityCoherent = (missionId, event) => {
+    if (String(missionId || "").split("@")[0] !== "LOC-11") return true;
+    const id = String(event?.instanceId || event?.detail?.instanceId || "");
+    const match = /^(generated-[^:]+):population:[^:]+:[1-9]\d*$/.exec(id);
+    const missionMap = String(missionId || "").split("@").slice(1).join("@");
+    const eventMap = String(event?.mapId || "");
+    // Le fan-out LOC-11 ne peut attribuer un événement d'une autre carte
+    // même si son identifiant et son contexte sont cohérents entre eux.
+    // Ne touche ni les autres missions ni les preuves historiques.
+    if (missionMap && eventMap !== missionMap) return false;
+    return !match || (Boolean(eventMap) && eventMap === match[1]);
   };
 
   const rememberRelationEvidence = (tree, node, event) => {
@@ -953,6 +1022,20 @@
   };
 
   const eventMatchesBoundTarget = (manager, missionId, event) => {
+    // LOC-11 : après une observation réellement créditée dans cette mission,
+    // sa preuve SAME-INSTANCE est plus précise qu'un ancien binding local.
+    // L'exception est impossible pour une autre instance ou une autre map.
+    if (String(missionId || "").split("@")[0] === "LOC-11") {
+      const tree = manager?.trees?.get?.(missionId);
+      const observe = tree?.findSequenceSlot?.("observe");
+      const actual = relationEvidenceFromEvent(event);
+      if (observe?.isComplete && parsedRelationEvidence(observe).length) {
+        return loc11ProofOnMissionMap(actual, missionId) &&
+          parsedRelationEvidence(observe).some(proof =>
+            loc11ProofOnMissionMap(proof, missionId) &&
+            samePhysicalInstance(proof, actual));
+      }
+    }
     const bound = manager?.memory?.getFact?.(`bibleTarget:${missionId}`);
     if (!bound || (!bound.instanceId && !bound.objectId && !bound.cuoType && !bound.missionSceneMissionId)) return true;
     if (bound.mapId && String(event.mapId || "") !== String(bound.mapId)) return false;
@@ -1077,7 +1160,14 @@
     if (!trees.size) return 0;
     trees.forEach((tree, missionId) => {
       if (excludedMissionIds.has(String(missionId || ""))) return;
-      if (!eventMatchesBoundTarget(manager, missionId, event)) return;
+      const recoveryAction = current?.missionId === missionId &&
+        String(event?.detail?.missionId || "") === String(missionId) &&
+        String(event?.detail?.missionNodeId || "") === String(current?.nodeId || "") &&
+        String(event?.instanceId || "") === String(current?.instanceId || "") &&
+        Boolean(event?.instanceId) &&
+        loc11NeedsReferenceRecovery(tree, missionId) &&
+        loc11ProofOnMissionMap(relationEvidenceFromEvent(event), missionId);
+      if (!recoveryAction && !eventMatchesBoundTarget(manager, missionId, event)) return;
 
       // L'acquittement de l'action physique est indépendant de la progression
       // logique du nœud. Un fan-out ownerless peut avoir complété la feuille (et
@@ -1089,6 +1179,7 @@
         if (
           currentNode &&
           requiredMapMatches(manager, currentNode, event.mapId) &&
+          loc11EventIdentityCoherent(missionId, event) &&
           requiredSiteMatchesEvent(manager, currentNode, event) &&
           (eventMatchesNode(event, currentNode, missionId, tree) ||
             (current.backgroundEnvironment === true && currentNode.params?.backgroundProgressOnly === true &&
@@ -1117,7 +1208,30 @@
       ) return;
 
       let treeChanged = false;
+      // Ancienne preuve inter-carte : l'unique reprise admissible est une
+      // observation physique identifiée, sur la carte de cette mission.
+      // L'historique reste intact ; on y ajoute la nouvelle observation,
+      // puis on attend un second geste pour l'analyse SAME-INSTANCE.
+      let recoveredLoc11Observation = false;
+      if (recoveryAction &&
+          [BF.ObjectEvents?.types.OBJECT_INSPECTED,
+           BF.ObjectEvents?.types.PHENOMENON_OBSERVED,
+           BF.ObjectEvents?.types.OBJECT_ANALYZED].includes(event.type) &&
+          loc11EventIdentityCoherent(missionId, event)) {
+        const observe = tree.findSequenceSlot?.("observe");
+        const eventWithoutOwner = {
+          ...event, detail: { ...(event.detail || {}), missionNodeId: null }
+        };
+        if (observe && eventMatchesNode(eventWithoutOwner, observe, missionId, tree) &&
+            rememberRelationEvidence(tree, observe, event)) {
+          recoveredLoc11Observation = true;
+          currentMatched = true;
+          treeChanged = true;
+        }
+      }
       tree.availableLeaves().forEach((node) => {
+        if (recoveredLoc11Observation) return;
+        if (!loc11EventIdentityCoherent(missionId, event)) return;
         if (!requiredMapMatches(manager, node, event.mapId)) return;
         if (!requiredSiteMatchesEvent(manager, node, event)) return;
         if (rememberMissingPeriodReference(tree, node, event)) {
@@ -1644,11 +1758,19 @@
       ...(engine.currentMap?.interactables || []),
       ...passiveObjects
     ];
+    const loc11Tree = manager?.trees?.get?.(action?.missionId);
+    const recoverLoc11 = loc11NeedsReferenceRecovery(loc11Tree, action?.missionId) &&
+      String(action?.nodeId || "") === String(loc11Tree?.findSequenceSlot?.("analyze")?.id || "") &&
+      String(engine.currentMapId || "") === String(action.missionId).split("@").slice(1).join("@");
     const candidates = [...new Set(sourceObjects)]
       .map((object) => {
         const passiveMissionStudy = passiveSet.has(object);
-        if (!object.userData.active && !passiveMissionStudy) return null;
         const resolved = resolveMissionCandidate(object);
+        // ENV player study: hydrate an instance's existing acquisition cooldown
+        // before deciding whether it is currently available. This preserves the
+        // canonical respawn owner and never forces an early reactivation.
+        if (environmentStudy) interactionState(resolved);
+        if (!object.userData.active && !passiveMissionStudy) return null;
         const definition = resolved.definition;
         const tree = engine?.missionManager?.trees?.get?.(action.missionId);
         const node = tree?.find?.(action.nodeId);
@@ -1658,7 +1780,7 @@
         if (node?.params?.siteProgressionKind) return null;
         if (!requiredMapMatches(engine?.missionManager, node, engine?.currentMapId)) return null;
         if (!requiredSiteMatchesResolved(engine?.missionManager, node, resolved, engine?.currentMapId)) return null;
-        if (!relationMatches(tree, node, relationEvidenceFromResolved(resolved, engine?.currentMapId))) return null;
+        if (!recoverLoc11 && !relationMatches(tree, node, relationEvidenceFromResolved(resolved, engine?.currentMapId))) return null;
         const distinctValue = distinctValueFromResolved(node, resolved, engine?.currentMapId);
         if (!environmentStudy && (worldEventTargetCredited(node, {
           ...identityOf(resolved), mapId: engine?.currentMapId
@@ -1670,10 +1792,13 @@
           { skipSubject: true }
         )) return null;
         if (!matchesStudySubject(definition, action.params?.subject)) return null;
-        if (!matchesBoundTarget(engine, action.missionId, resolved)) return null;
-        const priority = unstudiedPriority(
-          resolved, action.params || {}, action.missionId
-        );
+        if (!recoverLoc11 && !matchesBoundTarget(engine, action.missionId, resolved)) return null;
+        // ENV inventory ownership: the frozen per-map coverage, not a study
+        // performed for another mission, decides whether this instance is new.
+        // Preserve the legacy novelty contract for all other mission families.
+        const priority = environmentStudy || recoverLoc11
+          ? 0
+          : unstudiedPriority(resolved, action.params || {}, action.missionId);
         if (priority === -Infinity) return null;
         return { object, resolved, priority };
       })

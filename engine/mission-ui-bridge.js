@@ -723,6 +723,7 @@
         ]
       ),
       hudCompleted: transientCompleted.map((mission) => mission.missionId),
+      pendingExperimentationIntent: state.pendingExperimentationIntent || null,
       missions: (state.missions || []).map((mission) => [
         mission.missionId,
         mission.status,
@@ -765,6 +766,14 @@
         `Prochaine priorité après l’action en cours : ${state.pendingPrimaryMissionTitle || state.pendingPrimaryMissionId}`
       ));
     }
+    const pendingExperiment = state.pendingExperimentationIntent;
+    if (pendingExperiment) {
+      const hint = pendingExperimentationHint(state, pendingExperiment.missionId);
+      if (hint) panel.appendChild(createTextElement(
+        "small", "mission-experimentation-hint",
+        `${pendingExperiment.missionTitle || pendingExperiment.missionId} — ${hint}`
+      ));
+    }
     const activeMissions = [...(state.missions || [])]
       .filter((mission) => mission.lifecycleStatus === "active")
       .filter((mission) =>
@@ -804,6 +813,9 @@
       const body = document.createElement("div");
       body.className = "mission-card-entry-body";
       if (mission.description) body.appendChild(createTextElement("p", "", mission.description));
+      const experimentHint = pendingExperimentationHint(state, mission.missionId);
+      if (experimentHint) body.appendChild(createTextElement("small", "mission-experimentation-hint", experimentHint));
+
       if (missionReturnDestinations(mission).length) {
         body.appendChild(createTextElement("small", "m2-construction-shortage mission-return-hint",
           "Action joueur requise — retour vers le lieu disponible dans le menu Missions."));
@@ -866,6 +878,25 @@
 
   }
 
+  // Presentation only: the mission manager already exposes this pending
+  // prerequisite. Do not create or activate a second mission here.
+  function pendingExperimentationHint(state, missionId) {
+    const pending = state?.pendingExperimentationIntent;
+    if (!pending || String(pending.missionId) !== String(missionId)) return null;
+    const knowledge = String(pending.knowledgeLabel || pending.knowledgeId || "connaissance requise");
+    const experiment = BF.Research?.experimentationForKnowledge?.(pending.knowledgeId) || null;
+    const themeId = experiment?.theme?.id || pending.experimentThemeId;
+    const stage = themeId ? BF.Research?.experimentationState?.(themeId) : null;
+    let instruction = "Consulte le menu Recherche pour poursuivre l’expérimentation.";
+    if (stage?.nextStage && stage.locationReady === false) {
+      const place = stage.nextStage.location === "workbench" ? "un établi compatible" : "un camp compatible";
+      instruction = `Rejoins ${place}, puis ouvre le menu Recherche pour mener l’expérimentation.`;
+    } else if (stage?.resourcesReady === false) {
+      instruction = "Réunis d’abord les ressources nécessaires, puis ouvre le menu Recherche.";
+    }
+    return `Prérequis de recherche : ${knowledge}. ${instruction}`;
+  }
+
   function missionList(state) {
     const merged = new Map((state.catalog || []).map((mission) => [
       mission.missionId,
@@ -896,7 +927,8 @@
     const browserSignature = JSON.stringify({
       filters: browserFilters, status: browserStatus, currentMapId: state.currentMapId,
       guidance: state.missionGuidanceEnabled, resumeAt: state.missionGuidanceResumeAt,
-      list, resources: [...constructionResourceStatusByMission.entries()]
+      list, pendingExperimentationIntent: state.pendingExperimentationIntent || null,
+      resources: [...constructionResourceStatusByMission.entries()]
     });
     if (browser._bluefoxMissionSignature === browserSignature) return;
     browser._bluefoxMissionSignature = browserSignature;
@@ -938,6 +970,15 @@
     });
     guidance.append(guidanceStatus, guidanceButton);
     browser.appendChild(guidance);
+    const pendingExperiment = state.pendingExperimentationIntent;
+    if (pendingExperiment) {
+      const hint = pendingExperimentationHint(state, pendingExperiment.missionId);
+      if (hint) browser.appendChild(createTextElement(
+        "small", "mission-experimentation-hint",
+        `${pendingExperiment.missionTitle || pendingExperiment.missionId} — ${hint}`
+      ));
+    }
+
 
     const tabs = document.createElement("nav");
     tabs.className = "mission-browser-tabs";
@@ -1028,6 +1069,8 @@
         if (mission.description) {
           body.appendChild(createTextElement("p", "", mission.description));
         }
+        const experimentHint = pendingExperimentationHint(state, mission.missionId);
+        if (experimentHint) body.appendChild(createTextElement("small", "mission-experimentation-hint", experimentHint));
         if (mission.locationMapId && BF.maps?.[mission.locationMapId]?.name) {
           body.appendChild(createTextElement("small", "mission-browser-location",
             `Lieu : ${BF.maps[mission.locationMapId].name}`));

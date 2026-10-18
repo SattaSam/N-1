@@ -400,6 +400,9 @@
       // complet avant la population ordinaire, sans gonfler son budget.
       const sceneReservations = options.microSceneReservations || [];
       const occupied = [];
+      // Réservations historiques, alimentées par le même stockage de placement
+      // que celui utilisé pour restaurer les instances P3.
+      const historicReservations = [];
       const placementPreferences = {
         // Les volumes rouges structurent les lisières et masquent les raccords
         // entre plateaux. Le centre reste volontairement dégagé afin que les
@@ -437,11 +440,16 @@
             (radius + 2.65) * (radius + 2.65)
         );
       };
-      const isOccupied = (x, z, radius) =>
+      const isOccupied = (x, z, radius, incomingType = null) =>
         sceneReservations.some((box) =>
           x + radius + 0.28 > box.minX && x - radius - 0.28 < box.maxX &&
           z + radius + 0.28 > box.minZ && z - radius - 0.28 < box.maxZ
         ) || occupied.some((item) =>
+          Math.hypot(x - item.x, z - item.z) < radius + item.radius + 0.28
+        ) || historicReservations.some((item) =>
+          // Ne pas bloquer la position propre d’une instance déjà connue.
+          !(incomingType === item.type && item.instanceId ===
+            `${definition.id}:population:${incomingType}:${populationInstanceSequence + 1}`) &&
           Math.hypot(x - item.x, z - item.z) < radius + item.radius + 0.28
         );
       const randomPosition = (minimumDistance, maximumDistance, radius, type = "frond", mustPlace = false) => {
@@ -509,7 +517,7 @@
             x < minX + outerSafety || x > maxX - outerSafety ||
             z < minZ + outerSafety || z > maxZ - outerSafety
           ) continue;
-          if (!isReserved(x, z, radius, type) && !isOccupied(x, z, radius)) return { x, z };
+          if (!isReserved(x, z, radius, type) && !isOccupied(x, z, radius, type)) return { x, z };
         }
         if (mustPlace) {
           // Même propriétaire, mêmes règles de validité : après la voie RNG
@@ -530,7 +538,7 @@
                   x < minX + outerSafety || x > maxX - outerSafety ||
                   z < minZ + outerSafety || z > maxZ - outerSafety
                 ) continue;
-                if (!isReserved(x, z, radius, type) && !isOccupied(x, z, radius)) {
+                if (!isReserved(x, z, radius, type) && !isOccupied(x, z, radius, type)) {
                   return { x, z };
                 }
               }
@@ -548,21 +556,57 @@
       // Utiliser cet ordre pour stabiliser l'identité des objets reconstruits
       // sans créer de registre persistant parallèle.
       let populationInstanceSequence = 0;
+      // Placements physiques de première apparition : la sauvegarde canonique
+      // capture déjà les clés bluefox_ de localStorage (save-ui-bridge).
+      // Le registre est propre à la carte et n'altère pas les identités P3.
+      const placementKey = `bluefox_population_placements_v1_${encodeURIComponent(String(definition.id))}`;
+      let savedPlacements = {};
+      try {
+        const raw = JSON.parse(global.localStorage?.getItem(placementKey) || "null");
+        if (raw && raw.version === 1 && raw.objects && typeof raw.objects === "object" &&
+            !Array.isArray(raw.objects)) savedPlacements = raw.objects;
+      } catch (_) { /* Première visite ou ancienne sauvegarde endommagée. */ }
+      const currentPlacements = { ...savedPlacements };
+      const spawnedPopulationIds = new Set();
+      // Les objets nouveaux ne doivent pas occuper les emplacements acquis
+      // même si leur génération précède la réinstanciation de l'ancien objet.
+      Object.entries(savedPlacements).forEach(([instanceId, pose]) => {
+        const prefix = `${definition.id}:population:`;
+        const suffix = instanceId.startsWith(prefix) ? instanceId.slice(prefix.length) : "";
+        const match = /^([^:]+):([1-9]\d*)$/.exec(suffix);
+        if (!match || !pose || !Number.isFinite(pose.x) || !Number.isFinite(pose.z)) return;
+        const savedType = match[1];
+        if (!BF.ObjectLibrary.get(savedType)) return;
+        historicReservations.push({ instanceId, type: savedType, x: pose.x, z: pose.z,
+          radius: placement(savedType).radius });
+      });
+      const finiteTransform = (value) => value &&
+        [value.x, value.y, value.z, value.rotation].every(Number.isFinite);
       const contextText = `${definition.generator?.biomeId || ""} ${definition.name || ""} ${definition.description || ""} ${(definition.traits || []).map((trait) => `${trait.id || ""} ${trait.label || ""}`).join(" ")}`.toLocaleLowerCase("fr").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       const floatingContext = /flott|suspend|levitat|ilot|island/.test(contextText);
       const frozenIdentity = `${definition.generator?.biomeId || ""} ${definition.profile || ""} ${definition.name || ""} ${(definition.traits || []).map((trait) => trait.id || "").join(" ")}`.toLocaleLowerCase("fr").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       const frozenRockContext = /(?:^|\s)(?:frozen|ice|snow|glace|glaciaire|banquise|neige|toundra)(?:\s|$)/.test(frozenIdentity);
       const snowRockTypes = new Set(["rock", "strong_rock", "large_rock"]);
-      const placeObject = (type, x, z, variant = 0, rotation = 0) => {
+      const placeObject = (type, x, z, variant = 0, rotation = 0, historicInstanceId = null) => {
         const height = type === "mobile_islet"
           ? 2.5 + floatingHeightIndex++ * 2.4
           : type === "fog_bank" && floatingContext
             ? (elevatedFogIndex++ % 2 ? 5.5 : 1.2)
             : 0;
+        const instanceId = historicInstanceId ||
+          `${definition.id}:population:${type}:${populationInstanceSequence + 1}`;
+        const stored = savedPlacements[instanceId];
+        // Réutiliser uniquement une transformation exacte de cette instance.
+        // Le placement enregistré précède hitboxes, collisions et occupation.
+        const restored = finiteTransform(stored) ? stored : null;
+        const finalPosition = restored
+          ? { x: stored.x, y: stored.y, z: stored.z }
+          : { x, y: height, z };
+        const finalRotation = restored ? stored.rotation : rotation;
         const record = this.spawn(type, {
-          position: { x, y: height, z },
-          variant,
-          rotation,
+          position: finalPosition,
+          variant: restored && Number.isInteger(stored.variant) ? stored.variant : variant,
+          rotation: finalRotation,
           force: true,
           scene: group,
           palette: definition.palette,
@@ -570,8 +614,14 @@
           // P3 remplace ici un ID temporel préexistant. Le marqueur permet au
           // compteur legacy miroir de continuer comme avant sans changer l’ID P3.
           legacyTemporalIdentity: true,
-          instanceId: `${definition.id}:population:${type}:${++populationInstanceSequence}`
+          instanceId: historicInstanceId || `${definition.id}:population:${type}:${populationInstanceSequence + 1}`
         });
+        if (!historicInstanceId) populationInstanceSequence += 1;
+        spawnedPopulationIds.add(instanceId);
+        if (!restored) currentPlacements[instanceId] = {
+          x: finalPosition.x, y: finalPosition.y, z: finalPosition.z,
+          rotation: finalRotation, variant
+        };
         const object = record.instance;
         placedTypeCounts.set(type, (placedTypeCounts.get(type) || 0) + 1);
         if (type === "mobile_islet") standaloneFloatingIsletCount += 1;
@@ -591,7 +641,7 @@
           object.root.userData.snowCoveredRock = true;
         }
         object.root.userData.libraryType = type;
-        occupied.push({ x, z, radius: placement(type).radius });
+        occupied.push({ x: finalPosition.x, z: finalPosition.z, radius: placement(type).radius });
         const animationPhase = next() * Math.PI * 2;
         if (type !== "debris") {
           animatedObjects.push({ root: object.root, type, phase: animationPhase });
@@ -605,7 +655,7 @@
         object.colliders.forEach((collider) => {
           const position = collider.offset.clone().applyAxisAngle(
             new this.THREE.Vector3(0, 1, 0),
-            rotation
+            finalRotation
           ).add(object.root.position);
           colliders.push({ position, radius: collider.radius, owner: object.root });
         });
@@ -799,7 +849,7 @@
           const x = region.center.x + offsetX;
           const z = region.center.z + offsetZ;
           const radius = placement("giant_mushroom").radius;
-          if (isReserved(x, z, radius, "giant_mushroom") || isOccupied(x, z, radius)) continue;
+          if (isReserved(x, z, radius, "giant_mushroom") || isOccupied(x, z, radius, "giant_mushroom")) continue;
           const object = placeObject(
             "giant_mushroom",
             x,
@@ -849,7 +899,7 @@
           const x = center.x + Math.cos(angle) * distance;
           const z = center.z + Math.sin(angle) * distance;
           const radius = placement("rock").radius;
-          if (!isAnchor && (isReserved(x, z, radius, "rock") || isOccupied(x, z, radius))) continue;
+          if (!isAnchor && (isReserved(x, z, radius, "rock") || isOccupied(x, z, radius, "rock"))) continue;
           const volumeRoll = next();
           const variant = isAnchor || volumeRoll < 0.75 ? 2 : volumeRoll < 0.93 ? 1 : 0;
           const object = placeObject("rock", x, z, variant, next() * Math.PI * 2);
@@ -908,7 +958,7 @@
           const x = center.x + Math.cos(angle) * distance;
           const z = center.z + Math.sin(angle) * distance;
           const radius = placement(memberKind).radius;
-          if (!isAnchor && (isReserved(x, z, radius, memberKind) || isOccupied(x, z, radius))) continue;
+          if (!isAnchor && (isReserved(x, z, radius, memberKind) || isOccupied(x, z, radius, memberKind))) continue;
           const object = placeObject(
             memberKind, x, z, (placedResources + member) % 3, next() * Math.PI * 2
           );
@@ -994,7 +1044,7 @@
             const x = center.x + Math.cos(angle) * distance;
             const z = center.z + Math.sin(angle) * distance;
             const radius = placement(type).radius;
-            if (!isAnchor && (isReserved(x, z, radius, type) || isOccupied(x, z, radius))) continue;
+            if (!isAnchor && (isReserved(x, z, radius, type) || isOccupied(x, z, radius, type))) continue;
             const object = placeObject(
               type, x, z, (placed + familyIndex + member) % 3, next() * Math.PI * 2
             );
@@ -1181,6 +1231,27 @@
         if (type === "electrostatic_storm" && (placedTypeCounts.get(type) || 0) >= 6) return;
         placeObject(type, x, z, variant, rotation);
       });
+      // Reconstituer les anciennes instances absentes de la population recalculée.
+      // Leur identifiant et leur pose viennent exclusivement du stockage de la
+      // première apparition ; elles n'avancent pas le compteur P3 des nouveautés.
+      // Les objets historiques ne sont pas des substituts pour les preuves d'une
+      // autre instance, et ne doivent pas être recréés si leur type a disparu.
+      for (const reservation of historicReservations) {
+        if (spawnedPopulationIds.has(reservation.instanceId)) continue;
+        const pose = savedPlacements[reservation.instanceId];
+        if (!finiteTransform(pose)) continue;
+        if (!BF.ObjectLibrary.get(reservation.type)) continue;
+        placeObject(reservation.type, pose.x, pose.z,
+          Number.isInteger(pose.variant) ? pose.variant : 0,
+          pose.rotation, reservation.instanceId);
+      }
+      // Un seul enregistrement par construction de carte, sans écrire à
+      // chaque objet. Les nouvelles instances s'ajoutent sans déplacer les anciennes.
+      try {
+        global.localStorage?.setItem(placementKey, JSON.stringify({
+          version: 1, objects: currentPlacements
+        }));
+      } catch (_) { /* Stockage indisponible : génération historique conservée. */ }
       return {
         occupied,
         plateauCount,

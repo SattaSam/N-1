@@ -1860,7 +1860,7 @@
       );
     }
 
-    knownDestinationCandidates(travel, criteria = this.knownDestinationCriteria(travel)) {
+    knownDestinationCandidates(travel, criteria = this.knownDestinationCriteria(travel), limit = 12) {
       if (!criteria) return [];
       const currentMapId = String(this.engine?.currentMapId || "");
       if (!currentMapId) return [];
@@ -1927,7 +1927,7 @@
             Number(site.knownInstanceCount) >= Number(criteria.minKnownInstances)
           )
           .filter(siteHasUsefulDistinctObject)
-          .slice(0, 24)
+          .slice(0, limit === Number.MAX_SAFE_INTEGER ? undefined : 24)
           .map((site) => ({
             mapId: String(site.mapId),
             siteId: site.siteId || null,
@@ -2148,7 +2148,7 @@
           left.routeHops - right.routeHops ||
           String(left.siteId || left.mapId).localeCompare(String(right.siteId || right.mapId))
         )
-        .slice(0, 12);
+        .slice(0, Math.max(1, Number.isFinite(limit) ? limit : 12));
     }
 
     validatePersistedKnownDestination(travel, criteria, previous) {
@@ -2170,6 +2170,21 @@
       if (!discovered.has(targetMapId)) return null;
       if (criteria.mapId && String(criteria.mapId) !== targetMapId) return null;
       if (criteria.biome && !this.mapMatchesKnownBiome(targetMapId, criteria.biome)) return null;
+      // La route et la mémoire géographique ne suffisent pas à garantir qu'une
+      // destination issue d'une feuille missionnelle possède encore une cible
+      // éligible. Réutiliser le matching canonique (crédit, instance, map,
+      // relation) sans transformer une destination connue en interaction.
+      // Les destinations imposées sans sourceNodeId conservent leur contrat.
+      if (criteria.sourceNodeId) {
+        const eligible = this.knownDestinationCandidates(
+          travel, criteria, Number.MAX_SAFE_INTEGER
+        ).some((entry) =>
+          String(entry.mapId || "") === targetMapId &&
+          (!String(previous.targetSiteId || "") ||
+            String(entry.siteId || "") === String(previous.targetSiteId || ""))
+        );
+        if (!eligible) return null;
+      }
 
       const route = targetMapId === currentMapId
         ? [currentMapId]

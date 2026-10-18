@@ -72,6 +72,11 @@
       const records = list(definition);
       const existing = records.find((entry) => recordId(definition, entry) === id);
       if (existing) {
+        // A stale progression snapshot must not erase an already resolved
+        // physical transform stored in the map definition. A resolved site
+        // remains authoritative for an unresolved definition (reload case).
+        if (existing.resolvedAt && existing.anchor &&
+            (!site.resolvedAt || !site.anchor)) return;
         Object.assign(existing, clone(site));
         return;
       }
@@ -416,7 +421,9 @@
     }
 
     const canonical = canonicalPlacement(definition, record.microSceneId);
-    if (canonical) {
+    // Once physically resolved, a persistent instance keeps its saved transform.
+    // Canonical placements only initialize an occurrence lacking a resolved anchor.
+    if (canonical && !(record.resolvedAt && record.anchor)) {
       record.anchor = canonical.anchor;
       record.rotation = canonical.rotation;
       record.fixedAnchor = true;
@@ -610,9 +617,9 @@
       record = normalized;
       records.push(record);
     } else {
-      // Une prescription réaffirmée sans nouvel ancrage ne déplace pas une
-      // occurrence déjà résolue lors de la génération ou du placement joueur.
-      if (record.resolvedAt && record.anchor && !normalized.anchor) {
+      // An already materialized occurrence must not move when a mission
+      // reasserts its specification (even with a newly proposed anchor).
+      if (record.resolvedAt && record.anchor) {
         normalized.anchor = clone(record.anchor);
         normalized.rotation = Number(record.rotation) || 0;
         normalized.fixedAnchor = record.fixedAnchor === true;

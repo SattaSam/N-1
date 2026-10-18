@@ -2185,6 +2185,12 @@
     resumePersistentNavigation() {
       const intent = this.persistentNavigationIntent;
       if (!intent || this.transitioning) return false;
+      // Une expérimentation différée ne reprend pas une route concurrente
+      // tant que la Top1 explicitement choisie dispose d'un travail exécutable.
+      // La demande reste mémorisée et pourra reprendre dès que Top1 est stérile.
+      if (intent.source === "pending-experimentation" &&
+          this.missionManager?.isPlayerSelectedPrimary?.() === true &&
+          this.missionManager?.hasPrimaryMissionAuthority?.() === true) return false;
       if (intent.source === "mission-player-action") {
         if (!BF.bibleRuntime?.missionPlayerActionNode?.(intent.missionId)) {
           this.missionManager?.cancelPlayerActionReturn?.();
@@ -2421,6 +2427,15 @@
     }
 
     navigateNextRouteStep() {
+      // Une route différée peut reprendre après un changement d'autorité :
+      // l'expérimentation attend tant que la Top1 joueur est runnable.
+      if (this.persistentNavigationIntent?.source === "pending-experimentation" &&
+          this.missionManager?.isPlayerSelectedPrimary?.() === true &&
+          this.missionManager?.hasPrimaryMissionAuthority?.() === true) {
+        this.navigationRoute = [];
+        this.pendingGate = null;
+        return false;
+      }
       // Une routine est une autorité physique : un callback de route différé ne
       // doit jamais relancer la locomotion pendant un repos. La route et
       // l'intention restent intactes et seront reprises à la fin de la routine.

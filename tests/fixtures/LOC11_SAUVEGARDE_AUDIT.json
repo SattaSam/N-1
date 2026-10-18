@@ -1,0 +1,450 @@
+{
+  "head": "065ea856f573c789bc1ee11c110f2e72a716aaee",
+  "loc11_total": 20,
+  "loc11_complete": 10,
+  "loc11_observed_unanalyzed": 10,
+  "loc11_identity_mismatch": [
+    "LOC-11@generated-5269cd00-0004",
+    "LOC-11@generated-5269cd00-0001"
+  ],
+  "loc11_detail": [
+    {
+      "mission": "LOC-11@generated-5269cd00-0004",
+      "status": "available",
+      "observe": 1,
+      "analyze": 0,
+      "evidence": [
+        {
+          "objectId": "bio-adap-s-001",
+          "cuoType": "adaptive_plant",
+          "family": "biomass",
+          "subject": "flora",
+          "category": "resources",
+          "period": "",
+          "mapId": "generated-5269cd00-0004",
+          "instanceId": "generated-5269cd00-0005:population:adaptive_plant:32",
+          "legacyInstanceSequence": 32,
+          "persistentMicroSceneId": ""
+        }
+      ],
+      "map_identity_mismatch": true
+    },
+    {
+      "mission": "LOC-11@generated-5269cd00-0006",
+      "status": "completed",
+      "observe": 1,
+      "analyze": 1,
+      "evidence": [
+        {
+          "objectId": "bio-adap-s-001",
+          "cuoType": "adaptive_plant",
+          "family": "biomass",
+          "subject": "flora",
+          "category": "resources",
+          "period": "",
+          "mapId": "generated-5269cd00-0006",
+          "instanceId": "generated-5269cd00-0006:population:adaptive_plant:176",
+          "legacyInstanceSequence": 176,
+          "persistentMicroSceneId": ""
+        }
+      ],
+      "map_identity_mismatch": false
+    },
+    {
+      "mission": "LOC-11@generated-5269cd00-0007",
+      "status": "active",
+      "observe": 1,
+      "analyze": 0,
+      "evidence": [
+        {
+          "objectId": "bio-adap-s-001",
+          "cuoType": "adaptive_plant",
+          "family": "biomass",
+          "subject": "flora",
+          "category": "resources",
+          "period": "",
+          "mapId": "generated-5269cd00-0007",
+          "instanceId": "generated-5269cd00-0007:population:adaptive_plant:26",
+          "legacyInstanceSequence": 26,
+          "persistentMicroSceneId": ""
+        }
+      ],
+      "map_identity_mismatch": false
+    },
+    {
+      "mission": "LOC-11@generated-5269cd00-0008",
+      "status": "completed",
+      "observe": 1,
+      "analyze": 1,
+      "evidence": [
+        {
+          "objectId": "doc-bio-fluv-s-001",
+          "cuoType": "fluorescent_vegetation",
+          "family": "biocapital",
+          "subject": "flora",
+          "category": "flora",
+          "period": "",
+          "mapId": "generated-5269cd00-0008",
+          "instanceId": "generated-5269cd00-0008:population:fluorescent_vegetation:58",
+          "legacyInstanceSequence": 73,
+          "persistentMicroSceneId": ""
+        }
+      ],
+      "map_identity_mismatch": false
+    },
+    {
+      "mission": "LOC-11@generated-5269cd00-0010",
+      "status": "completed",
+      "observe": 1,
+      "analyze": 1,
+      "evidence": [
+        {
+          "objectId": "bio-carn-l-001",
+          "cuoType": "carnivorous_plant",
+          "family": "flora",
+          "subject": "flora",
+          "category": "flora",
+          "period": "",
+          "mapId": "generated-5269cd00-0010",
+          "instanceId": "generated-5269cd00-0010:SUR-02:MSC-PREDATOR-FLORA-001:1",
+          "legacyInstanceSequence": 2,
+          "persistentMicroSceneId": "generated-5269cd00-0010:SUR-02:MSC-PREDATOR-FLORA-001"
+        }
+      ],
+      "map_identity_mismatch": false
+    },
+    {
+      "mission": "LOC-11@generated-5269cd00-0011",
+      "status": "available",
+      "observe": 1,
+      "analyze": 0,
+      "evidence": [
+        {
+          "objectId": "bio-lune-s-001",
+          "cuoType": "lunar_vine",
+          "family": "flora",
+          "subject": "flora",
+          "category": "decors_nature",
+          "period": "",
+          "mapId": "generated-5269cd00-0011",
+          "instanceId": "generated-5269cd00-0011:population:lunar_vine:89",
+          "legacyInstanceSequence": 89,
+          "persistentMicroSceneId": ""
+        }
+      ],
+      "map_identity_mismatch": false
+    },
+    {
+      "mission": "LOC-11@generated-5269cd00-0012",
+      "status": "available",
+      "observe": 1,
+      "analyze": 0,
+      "evidence": [
+        {
+          "objectId": "bio-lune-s-001",
+          "cuoType": "lunar_vine",
+          "family": "flora",
+          "subject": "flora",
+          "category": "decors_nature",
+          "period": "",
+          "mapId": "generated-5269cd00-0012",
+          "instanceId": "BIO-LUNE-S-001:mvbajyes:11",
+          "legacyInstanceSequence": 101,
+          "persistentMicroSceneId": ""
+        }
+      ],
+      "map_identity_mismatch": false
+    },
+    {
+      "mission": "LOC-11@generated-5269cd00-0019",
+      "status": "available",
+      "observe": 1,
+      "analyze": 0,
+      "evidence": [
+        {
+          "objectId": "res-azur-m-001",
+          "cuoType": "azure_ferrite",
+          "family": "ore",
+          "subject": "mineral",
+          "category": "resources",
+          "period": "",
+          "mapId": "generated-5269cd00-0019",
+          "instanceId": "generated-5269cd00-0019:population:azure_ferrite:41",
+          "legacyInstanceSequence": 41,
+          "persistentMicroSceneId": ""
+        }
+      ],
+      "map_identity_mismatch": false
+    },
+    {
+      "mission": "LOC-11@generated-5269cd00-0001",
+      "status": "completed",
+      "observe": 1,
+      "analyze": 1,
+      "evidence": [
+        {
+          "objectId": "doc-bio-fluv-s-001",
+          "cuoType": "fluorescent_vegetation",
+          "family": "biocapital",
+          "subject": "flora",
+          "category": "flora",
+          "period": "",
+          "mapId": "generated-5269cd00-0001",
+          "instanceId": "generated-5269cd00-0008:population:fluorescent_vegetation:58",
+          "legacyInstanceSequence": 73,
+          "persistentMicroSceneId": ""
+        }
+      ],
+      "map_identity_mismatch": true
+    },
+    {
+      "mission": "LOC-11@generated-5269cd00-0018",
+      "status": "completed",
+      "observe": 1,
+      "analyze": 1,
+      "evidence": [
+        {
+          "objectId": "res-sono-m-001",
+          "cuoType": "resonant_basalt",
+          "family": "ore",
+          "subject": "mineral",
+          "category": "resources",
+          "period": "",
+          "mapId": "generated-5269cd00-0018",
+          "instanceId": "generated-5269cd00-0018:population:rock:5",
+          "legacyInstanceSequence": 13,
+          "persistentMicroSceneId": ""
+        }
+      ],
+      "map_identity_mismatch": false
+    },
+    {
+      "mission": "LOC-11@generated-5269cd00-0020",
+      "status": "active",
+      "observe": 1,
+      "analyze": 0,
+      "evidence": [
+        {
+          "objectId": "res-sono-m-001",
+          "cuoType": "resonant_basalt",
+          "family": "ore",
+          "subject": "mineral",
+          "category": "resources",
+          "period": "",
+          "mapId": "generated-5269cd00-0020",
+          "instanceId": "generated-5269cd00-0020:population:resonant_basalt:148",
+          "legacyInstanceSequence": 148,
+          "persistentMicroSceneId": ""
+        }
+      ],
+      "map_identity_mismatch": false
+    },
+    {
+      "mission": "LOC-11@generated-5269cd00-0023",
+      "status": "completed",
+      "observe": 1,
+      "analyze": 1,
+      "evidence": [
+        {
+          "objectId": "res-magn-m-001",
+          "cuoType": "magnetic_ore",
+          "family": "ore",
+          "subject": "mineral",
+          "category": "resources",
+          "period": "",
+          "mapId": "generated-5269cd00-0023",
+          "instanceId": "generated-5269cd00-0023:population:magnetic_ore:49",
+          "legacyInstanceSequence": 49,
+          "persistentMicroSceneId": ""
+        }
+      ],
+      "map_identity_mismatch": false
+    },
+    {
+      "mission": "LOC-11@generated-5269cd00-0022",
+      "status": "available",
+      "observe": 1,
+      "analyze": 0,
+      "evidence": [
+        {
+          "objectId": "res-magn-m-001",
+          "cuoType": "magnetic_ore",
+          "family": "ore",
+          "subject": "mineral",
+          "category": "resources",
+          "period": "",
+          "mapId": "generated-5269cd00-0022",
+          "instanceId": "RES-MAGN-M-001:mvbcwa83:2",
+          "legacyInstanceSequence": 2,
+          "persistentMicroSceneId": ""
+        }
+      ],
+      "map_identity_mismatch": false
+    },
+    {
+      "mission": "LOC-11@generated-5269cd00-0025",
+      "status": "completed",
+      "observe": 1,
+      "analyze": 1,
+      "evidence": [
+        {
+          "objectId": "res-ener-m-001",
+          "cuoType": "energy_crystal",
+          "family": "energy_crystal",
+          "subject": "mineral",
+          "category": "resources",
+          "period": "",
+          "mapId": "generated-5269cd00-0025",
+          "instanceId": "generated-5269cd00-0025:GEO-07:MSC-CHARGED-CRYSTALS-001:0",
+          "legacyInstanceSequence": 1,
+          "persistentMicroSceneId": "generated-5269cd00-0025:GEO-07:MSC-CHARGED-CRYSTALS-001"
+        }
+      ],
+      "map_identity_mismatch": false
+    },
+    {
+      "mission": "LOC-11@generated-5269cd00-0026",
+      "status": "available",
+      "observe": 1,
+      "analyze": 0,
+      "evidence": [
+        {
+          "objectId": "res-ener-m-001",
+          "cuoType": "energy_crystal",
+          "family": "energy_crystal",
+          "subject": "mineral",
+          "category": "resources",
+          "period": "",
+          "mapId": "generated-5269cd00-0026",
+          "instanceId": "generated-5269cd00-0026:GEO-07:MSC-CHARGED-CRYSTALS-001:0",
+          "legacyInstanceSequence": 1,
+          "persistentMicroSceneId": "generated-5269cd00-0026:GEO-07:MSC-CHARGED-CRYSTALS-001"
+        }
+      ],
+      "map_identity_mismatch": false
+    },
+    {
+      "mission": "LOC-11@generated-5269cd00-0027",
+      "status": "completed",
+      "observe": 1,
+      "analyze": 1,
+      "evidence": [
+        {
+          "objectId": "res-ener-m-001",
+          "cuoType": "energy_crystal",
+          "family": "energy_crystal",
+          "subject": "mineral",
+          "category": "resources",
+          "period": "",
+          "mapId": "generated-5269cd00-0027",
+          "instanceId": "generated-5269cd00-0027:GEO-07:MSC-CHARGED-CRYSTALS-001:0",
+          "legacyInstanceSequence": 1,
+          "persistentMicroSceneId": "generated-5269cd00-0027:GEO-07:MSC-CHARGED-CRYSTALS-001"
+        }
+      ],
+      "map_identity_mismatch": false
+    },
+    {
+      "mission": "LOC-11@generated-5269cd00-0021",
+      "status": "available",
+      "observe": 1,
+      "analyze": 0,
+      "evidence": [
+        {
+          "objectId": "res-magn-m-001",
+          "cuoType": "magnetic_ore",
+          "family": "ore",
+          "subject": "mineral",
+          "category": "resources",
+          "period": "",
+          "mapId": "generated-5269cd00-0021",
+          "instanceId": "generated-5269cd00-0021:population:magnetic_ore:29",
+          "legacyInstanceSequence": 31,
+          "persistentMicroSceneId": ""
+        }
+      ],
+      "map_identity_mismatch": false
+    },
+    {
+      "mission": "LOC-11@generated-5269cd00-0028",
+      "status": "available",
+      "observe": 1,
+      "analyze": 0,
+      "evidence": [
+        {
+          "objectId": "doc-bio-fluv-s-001",
+          "cuoType": "fluorescent_vegetation",
+          "family": "biocapital",
+          "subject": "flora",
+          "category": "flora",
+          "period": "",
+          "mapId": "generated-5269cd00-0028",
+          "instanceId": "generated-5269cd00-0028:ENE-03:MSC-LOCAL-STORM-001:2",
+          "legacyInstanceSequence": 3,
+          "persistentMicroSceneId": "generated-5269cd00-0028:ENE-03:MSC-LOCAL-STORM-001"
+        }
+      ],
+      "map_identity_mismatch": false
+    },
+    {
+      "mission": "LOC-11@generated-5269cd00-0029",
+      "status": "completed",
+      "observe": 1,
+      "analyze": 1,
+      "evidence": [
+        {
+          "objectId": "doc-nat-mush-l-001",
+          "cuoType": "giant_mushroom",
+          "family": "biomass",
+          "subject": "flora",
+          "category": "natural_decor",
+          "period": "",
+          "mapId": "generated-5269cd00-0029",
+          "instanceId": "generated-5269cd00-0029:population:giant_mushroom:2",
+          "legacyInstanceSequence": 2,
+          "persistentMicroSceneId": ""
+        }
+      ],
+      "map_identity_mismatch": false
+    },
+    {
+      "mission": "LOC-11@generated-5269cd00-0031",
+      "status": "completed",
+      "observe": 1,
+      "analyze": 1,
+      "evidence": [
+        {
+          "objectId": "bio-ther-s-001",
+          "cuoType": "thermosap_moss",
+          "family": "biocapital",
+          "subject": "flora",
+          "category": "resources",
+          "period": "",
+          "mapId": "generated-5269cd00-0031",
+          "instanceId": "generated-5269cd00-0031:ENE-06:MSC-ECO-THERM-001:1",
+          "legacyInstanceSequence": 2,
+          "persistentMicroSceneId": "generated-5269cd00-0031:ENE-06:MSC-ECO-THERM-001"
+        }
+      ],
+      "map_identity_mismatch": false
+    }
+  ],
+  "base_blob_shas": {
+    "engine/mission-manager.js": "06fa26cdd785aec2c36256abbcf6477b23692472",
+    "engine/bible-runtime-v0-1-unified.js": "602706e9123f9727865f5269f10e7a7f5b33bd1f",
+    "engine/map-generator.js": "a999f9aaae931c5938e187082435fc9fd328f0b3",
+    "engine/mission-memory.js": "c4d4bcdf302426ff5e0f2ed06fe4ee97113f6c51",
+    "engine/persistent-micro-scenes-v20.js": "526a3fa02b6564f975b310d789d10ee99737c7b4",
+    "engine/progression-registry.js": "794c5ad31a5dc0e341f81c1666e3c71a86e15ffe",
+    "engine/action-bridge.js": "db7b472063a36c1bc0440548075d2d0073c074e8",
+    "engine/world-engine.js": "f0b34e7b12606dcd6923039de465b7ccc3cff88b",
+    "engine/mission-ui-bridge.js": "36297fff5a019cdefcb4738782ac612fa0c95a28",
+    "engine/object-m0-bridge.js": "734eb350a115fc1efd0ccf392466eb55abeee758",
+    "engine/map-registry.js": "acea667026e8915e098e345a7fcc00b2e9be693b",
+    "engine/behavior-arbitration-integration.js": "08913c659df2e8f79ef4490330c45c832b065de5",
+    "engine/object-spawner.js": "a65a2df580bbde33b47d44a13feeb6846213bc69",
+    "data/bible-catalog.js": "857cdef33f8f8d287d0f3306312b6869376d427d",
+    "data/bible-patterns.js": "c03b3b63c83cbd7242c7e979a0ff004fc0f4acf7"
+  },
+  "note": "Non-execution E2E; les identites non coherentes ne prouvent pas une absence physique."
+}
