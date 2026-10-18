@@ -2182,9 +2182,23 @@
       this.persistNavigationIntent();
     }
 
+    // Les trajets missionnels persistés ne prennent pas le pas sur une
+    // nouvelle Top1 joueur locale déjà exécutable. Le manager conserve
+    // l'autorité de la runnabilité ; WorldEngine ne fait que différer la route.
+    shouldDeferStaleMissionNavigation(intent = this.persistentNavigationIntent) {
+      const manager = this.missionManager;
+      if (!intent || intent.source !== "mission" || !intent.missionId ||
+          !manager?.primaryMissionId ||
+          String(intent.missionId) === String(manager.primaryMissionId) ||
+          manager.isPlayerSelectedPrimary?.() !== true ||
+          manager.isMissionExclusiveToCurrentMap?.(manager.primaryMissionId) !== true) return false;
+      return manager.hasRunnablePrimaryMission?.() === true;
+    }
+
     resumePersistentNavigation() {
       const intent = this.persistentNavigationIntent;
       if (!intent || this.transitioning) return false;
+      if (this.shouldDeferStaleMissionNavigation(intent)) return false;
       // Une expérimentation différée ne reprend pas une route concurrente
       // tant que la Top1 explicitement choisie dispose d'un travail exécutable.
       // La demande reste mémorisée et pourra reprendre dès que Top1 est stérile.
@@ -2249,6 +2263,7 @@
         this.missionManager?.cancelPlayerActionReturn?.();
       }
       this.setPersistentNavigationIntent(detail);
+      if (this.shouldDeferStaleMissionNavigation()) return;
       if (this.transitioning) return;
       if (this.pendingInteraction || this.currentRoutine || this.missionManager?.currentAction) {
         this.callbacks.onStatus(
@@ -2427,6 +2442,15 @@
     }
 
     navigateNextRouteStep() {
+      if (this.shouldDeferStaleMissionNavigation()) {
+        // Aucun franchissement nouveau ; la destination reste persistée.
+        this.navigationRoute = [];
+        if (!this.pendingTeleport?.inFlight) {
+          this.pendingGate = null;
+          this.pendingTeleport = null;
+        }
+        return false;
+      }
       // Une route différée peut reprendre après un changement d'autorité :
       // l'expérimentation attend tant que la Top1 joueur est runnable.
       if (this.persistentNavigationIntent?.source === "pending-experimentation" &&
