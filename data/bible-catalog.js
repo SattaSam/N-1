@@ -1448,6 +1448,7 @@
 
   const gameCivilization1 = Object.freeze({
     id: "GAME-civilization_1",
+    allowsAutonomousHistoricalObservation: true,
     title: "Les mêmes marques",
     description: "Après le Refuge, relire l'historique des stèles puis comparer plusieurs exemplaires pour vérifier qu'elles appartiennent au même ensemble.",
     pattern: "SEQUENCE_ACTIONS",
@@ -1456,6 +1457,8 @@
     prerequisites: Object.freeze(["GAME-shelter"]),
     priority: 67,
     passivePriorityAxis: "research",
+    navigation: Object.freeze({ autonomousUnknownTravel: true }),
+    mapGeneration: Object.freeze({ size: "random", biome: "random", requiredObjects: Object.freeze([Object.freeze({ type: "stele", count: 1, contextRole: "civilizationSearch" })]) }),
     sequence: Object.freeze([
       Object.freeze({ slot: "steles", title: "Avoir observé 10 stèles", action: "observe", target: 10, requires: Object.freeze([]), params: Object.freeze({ cuoType: "stele", catalogManaged: true }) }),
       Object.freeze({ slot: "compare", title: "Analyser 2 stèles pour comparer leurs motifs", action: "analyze", target: 2, requires: Object.freeze(["steles"]), params: Object.freeze({ cuoType: "stele" }) })

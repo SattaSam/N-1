@@ -261,6 +261,36 @@
       return true;
     }
 
+    // Dedicated physical dispatch for explicitly authorized historical Top1.
+    // ObjectM0 wraps execute() for ordinary CUO actions and intentionally
+    // rejects catalogManaged leaves; it still owns targetInteraction + events.
+    executeHistoricalObservation(action, now) {
+      if (!action?.delegatedHistoricalObservation || this.isEngineBusy() ||
+          String(this.engine.currentMapId || "") !== String(action.targetMapId || "")) return false;
+      const target = (this.engine.currentMap?.interactables || []).find(object => {
+        if (!object?.userData?.active) return false;
+        const anchor = object.userData.worldAnchor || object;
+        return String(object.userData.instanceId || anchor?.userData?.instanceId || "") ===
+          String(action.targetInstanceId || "");
+      });
+      if (!target) return false;
+      target.userData.requestedInteraction = "observe";
+      target.userData.requestedInteractionSource = "mission";
+      target.userData.missionSubject = action.params?.subject || null;
+      target.userData.missionNodeId = action.nodeId;
+      target.userData.missionId = action.missionId;
+      const accepted = this.engine.targetInteraction(target);
+      if (accepted === false) {
+        target.userData.requestedInteraction = null;
+        target.userData.requestedInteractionSource = null;
+        target.userData.missionSubject = null;
+        target.userData.missionNodeId = null;
+        target.userData.missionId = null;
+        return false;
+      }
+      return true;
+    }
+
     execute(action, now) {
       if (!action || this.isEngineBusy()) return false;
       const engine = this.engine;

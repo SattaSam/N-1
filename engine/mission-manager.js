@@ -662,6 +662,53 @@
       }
     }
 
+    // A player-selected historical observation may request a *physical* CUO
+    // interaction. The Bible runtime alone owns the historical counter.
+    // This is deliberately not a generic catalogManaged executor.
+    historicalObservationPhysicalAction(missionId, tree, node, now, requireAvailable = true) {
+      const mission = this.definition(missionId);
+      if (missionId !== this.primaryMissionId || !this.isPlayerSelectedPrimary() ||
+          mission?.allowsAutonomousHistoricalObservation !== true ||
+          node?.params?.catalogManaged !== true || node.isComplete ||
+          Missions.normalizeActionType(node.type) !== Missions.ActionType.OBSERVE) return null;
+      const counter = (mission.runtimeCounters || []).find(entry =>
+        entry?.slot === node.params?.sequenceSlot &&
+        entry.source === "observations.historical" &&
+        entry.cuoType && String(entry.cuoType) === String(node.params?.cuoType));
+      if (!counter || typeof BF.matchesKnownMissionObject !== "function") return null;
+      const mapId = String(this.engine?.currentMapId || "");
+      if (!mapId) return null;
+      const history = BF.bibleRuntime?.historicalObservationEvidence?.()?.byObject || new Map();
+      const observedHere = BF.getMultiProgressionState?.()?.mapIndicators?.[mapId]?.phenomenaObserved || {};
+      const matches = [];
+      for (const object of this.engine?.currentMap?.interactables || []) {
+        if (!object?.userData || (requireAvailable && !object.userData.active)) continue;
+        const anchor = object.userData.worldAnchor || object;
+        const instanceId = String(object.userData.instanceId || anchor?.userData?.instanceId || "");
+        const objectId = String(object.userData.catalogId || anchor?.userData?.catalogId || "");
+        if (!instanceId || !objectId || observedHere[instanceId]) continue;
+        const definition = BF.ObjectLibrary?.getById?.(objectId);
+        if (!definition || String(definition.type) !== String(counter.cuoType)) continue;
+        if (history.get(objectId)?.has(`${mapId}:${instanceId}`)) continue;
+        if (!BF.matchesKnownMissionObject(tree, node, { mapId, instanceId, objectId })) continue;
+        if (requireAvailable && typeof this.engine.canInteractWith === "function" &&
+            !this.engine.canInteractWith(object, now)) continue;
+        const point = this.engine.interactionWorldPosition?.(object) || object.position;
+        const player = this.engine.character?.root?.position;
+        const distance = player && point ? Math.hypot(player.x-point.x, player.z-point.z) : Infinity;
+        matches.push({ instanceId, distance });
+      }
+      matches.sort((a, b) => a.distance - b.distance);
+      const target = matches[0];
+      return target ? {
+        missionId, nodeId: node.id, type: Missions.ActionType.OBSERVE,
+        title: node.title, params: { ...node.params },
+        delegatedHistoricalObservation: true,
+        targetInstanceId: target.instanceId, targetMapId: mapId,
+        issuedAt: Date.now()
+      } : null;
+    }
+
     missionRunnableAction(missionId, tree, context, now = performance.now(), options = {}) {
       if (!tree || tree.root?.isComplete) return null;
       const attemptedNodes = new Set();
@@ -729,7 +776,11 @@
         // comme interaction missionnelle générique : ne pas créer ici une
         // currentAction que personne ne pourra clôturer.
         const plannedNode = tree.find?.(planned.nodeId) || null;
-        if (plannedNode?.params?.catalogManaged === true && !planned.backgroundEnvironment) continue;
+        if (plannedNode?.params?.catalogManaged === true && !planned.backgroundEnvironment) {
+          const historical = this.historicalObservationPhysicalAction(missionId, tree, plannedNode, now);
+          if (historical) return historical;
+          continue;
+        }
         // Une mission de progression de fond consomme les événements canoniques
         // par fan-out ; elle ne crée pas d'initiative physique autonome. Lire le
         // contrat depuis la définition courante permet aussi de corriger les arbres
@@ -1091,11 +1142,17 @@
       // active. Après épuisement du local et du connu, réutiliser le voyage
       // inconnu canonique, uniquement si le catalogue l'autorise explicitement.
       if (mission?.navigation?.autonomousUnknownTravel === true &&
-          this.missionIsBackgroundProgressOnly(missionId) &&
           missionId === this.primaryMissionId && this.isPlayerSelectedPrimary() &&
+          !this.missionHasKnownLocalDestination(missionId, mission, availableMapStates, currentMapId) &&
           availableMapStates.some(({ node, state }) =>
             !state?.constrained &&
-            (node.params?.envHistoricalFamily || node.params?.envWorldMastery))) {
+            (this.missionIsBackgroundProgressOnly(missionId)
+              ? (node.params?.envHistoricalFamily || node.params?.envWorldMastery)
+              : (node.params?.catalogManaged === true &&
+                 Array.isArray(mission.runtimeCounters) &&
+                 mission.runtimeCounters.some(counter =>
+                   counter.slot === node.params?.sequenceSlot &&
+                   counter.source === "observations.historical"))))) {
         return {
           missionId,
           mission,
@@ -1730,6 +1787,14 @@
         this.missionHasHistoricalCollectionObjective(missionId)
       ) return false;
       const tree = this.trees.get(missionId) || null;
+      if (mission?.allowsAutonomousHistoricalObservation === true &&
+          missionId === this.primaryMissionId && this.isPlayerSelectedPrimary()) {
+        // A previously observed instance is not a reason to retain the map.
+        // An unobserved instance in cooldown remains a valid local opportunity.
+        return (availableMapStates || []).some(({ node }) =>
+          Boolean(this.historicalObservationPhysicalAction(
+            missionId, tree, node, performance.now(), false)));
+      }
       return (availableMapStates || []).some(({ node, state }) => {
         if (!node || node.isComplete || this.missionContextMapConsumed(node, currentMapId)) return false;
         if (
@@ -2073,10 +2138,23 @@
       if (sourceNodeId) {
         if (!sourceNode || typeof BF.matchesKnownMissionObject !== "function") return [];
         const localObjectLookup = new Map();
-        const matchesKnownObject = (mapId, objectId, detail = {}) =>
-          BF.matchesKnownMissionObject(sourceTree, sourceNode, {
+        const historicCounter = this.definition(travel?.missionId)
+          ?.allowsAutonomousHistoricalObservation === true &&
+          sourceNode?.params?.catalogManaged === true &&
+          (this.definition(travel?.missionId)?.runtimeCounters || []).some(counter =>
+            counter?.source === "observations.historical" &&
+            counter?.slot === sourceNode.params?.sequenceSlot);
+        const matchesKnownObject = (mapId, objectId, detail = {}) => {
+          // A type-only legacy memory cannot prove a *new* distinct stele.
+          // Other missions keep the old permissive fallback.
+          if (historicCounter && !detail.instanceId) return false;
+          if (historicCounter && detail.instanceId &&
+              BF.getMultiProgressionState?.()?.mapIndicators?.[mapId]
+                ?.phenomenaObserved?.[detail.instanceId]) return false;
+          return BF.matchesKnownMissionObject(sourceTree, sourceNode, {
             ...detail, mapId, objectId
           }, localObjectLookup);
+        };
         // Une MSC connue apporte ses instances/contexte. Les objets de population
         // viennent du même mapIndicators canonique déjà consommé pour les familles.
         const matchingMaps = new Set();
@@ -4310,6 +4388,13 @@
         : null;
     }
 
+    clearHistoricalObservationListener() {
+      if (typeof this._historicalObservationUnsubscribe === "function") {
+        this._historicalObservationUnsubscribe();
+      }
+      this._historicalObservationUnsubscribe = null;
+    }
+
     executeSelectedMissionAction(selected, now) {
       if (!selected?.action) return false;
       const action = {
@@ -4331,10 +4416,55 @@
         }));
       }
       if (!tree || this.currentAction) return false;
+      this.clearHistoricalObservationListener();
       // Une exécution peut émettre et clôturer son événement immédiatement.
       this.currentAction = action;
       this.memory.remember("action-started", action);
-      if (!this.bridge.execute(action, now)) {
+      // The object event is the canonical physical proof. ObjectM0 deliberately
+      // never credits catalogManaged leaves; only acknowledge this one physical
+      // action here, leaving the historical count to BibleRuntime.
+      if (action.delegatedHistoricalObservation === true) {
+        if (typeof BF.ObjectEvents?.subscribe !== "function" ||
+            typeof this.bridge.executeHistoricalObservation !== "function") {
+          this.currentAction = null;
+          return false;
+        }
+        this.clearHistoricalObservationListener();
+        const onObservation = (event) => {
+          if (this.currentAction !== action) {
+            this.clearHistoricalObservationListener();
+            return;
+          }
+          const supported = [BF.ObjectEvents.types.PHENOMENON_OBSERVED,
+            BF.ObjectEvents.types.OBJECT_INSPECTED,
+            BF.ObjectEvents.types.OBJECT_ANALYZED,
+            BF.ObjectEvents.types.OBJECT_SEEN];
+          if (!supported.includes(event?.type) ||
+              String(event.mapId || "") !== action.targetMapId ||
+              String(event.instanceId || "") !== action.targetInstanceId ||
+              String(event.detail?.missionId || "") !== action.missionId ||
+              String(event.detail?.missionNodeId || "") !== action.nodeId) return;
+          this.clearHistoricalObservationListener();
+          this.memory.remember(action.type, {
+            ...(event.detail || {}), eventId: event.id,
+            instanceId: event.instanceId, mapId: event.mapId,
+            delegatedHistoricalObservation: true
+          });
+          this.memory.remember("action-completed", action);
+          this.clearExecutionRecovery(action);
+          this.currentAction = null;
+          this.retryAfter = performance.now() + 650;
+          this.idleRetryUntil = 0;
+          this.memory.save?.();
+          this.publish();
+        };
+        this._historicalObservationUnsubscribe = BF.ObjectEvents.subscribe(onObservation);
+      }
+      const executed = action.delegatedHistoricalObservation === true
+        ? this.bridge.executeHistoricalObservation(action, now)
+        : this.bridge.execute(action, now);
+      if (!executed) {
+        this.clearHistoricalObservationListener();
         if (this.currentAction === action) this.currentAction = null;
         this.recordExecutionFailure(action, "execute-false", now);
         return false;
@@ -4485,6 +4615,7 @@
             "engine-idle-with-current-action",
             now
           );
+          this.clearHistoricalObservationListener();
           this.currentAction = null;
           this.retryAfter = now + 650;
           this.idleRetryUntil = 0;
@@ -4955,6 +5086,7 @@
 
     cancelCurrentAction(reason = "cancelled", options = {}) {
       if (!this.currentAction) return;
+      this.clearHistoricalObservationListener();
       const cancelledAction = this.currentAction;
       const failedTarget =
         options?.failedTarget ||
@@ -5194,6 +5326,7 @@
     }
 
     dispose() {
+      this.clearHistoricalObservationListener();
       this.enabled = false;
       global.removeEventListener("bluefox:mission-trigger", this.onMissionTrigger);
       this.catalogController?.dispose();
