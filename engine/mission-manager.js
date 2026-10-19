@@ -464,6 +464,9 @@
       this.activeMissionId = missionId;
       this.tree = this.trees.get(missionId);
       this.selectionReason = reason;
+      // Persist the authority source separately from transient status messages.
+      // This is set only on an effective selection, never on a queued switch.
+      this.ensureLifecycle(missionId, "active").playerSelectedPrimary = playerDirective;
       this.pendingPrimaryMissionId = null;
       this.pendingPrimaryMissionReason = null;
       this.ensureLifecycle(missionId, "active").status = "active";
@@ -3582,6 +3585,8 @@
       if (!this.primaryMissionId || !this.tree || this.tree.root?.isComplete) return false;
       const lifecycle = this.memory.state.missionLifecycle?.[this.primaryMissionId];
       if (lifecycle?.status !== "active") return false;
+      if (lifecycle.playerSelectedPrimary === true) return true;
+      if (lifecycle.playerSelectedPrimary === false) return false;
       const reason = String(lifecycle.selectionReason || this.selectionReason || "");
       return reason === "Priorité suggérée par le joueur.";
     }
@@ -3607,8 +3612,7 @@
         this.hasPendingMissionReturn(this.primaryMissionId) &&
         !backgroundOnlyPrimary
       ) {
-        this.selectionReason =
-          "Intention de transition missionnelle persistante ; l’arbitrage local reste borné à la map courante.";
+        // A pending transition must not rewrite the persisted origin of Top1.
         return false;
       }
       if (!force && replacingActivePrimary && !backgroundOnlyPrimary) {
