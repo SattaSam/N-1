@@ -3591,13 +3591,34 @@
       return reason === "Priorité suggérée par le joueur.";
     }
 
+    // A mission whose only available work is a manual Research/blueprint
+    // placement cannot monopolize Top1. Keep its lifecycle and player origin.
+    missionAwaitsPlayerPlacement(missionId = this.primaryMissionId) {
+      const tree = this.trees.get(missionId);
+      if (!tree || tree.root?.isComplete ||
+          this.ensureLifecycle(missionId).status !== "active") return false;
+      const leaves = tree.availableLeaves?.() || [];
+      if (!leaves.length || !leaves.every(node => node?.params?.siteProgressionKind)) return false;
+      const runtime = BF.bibleRuntime;
+      if (typeof runtime?.constructionAvailability !== "function") return false;
+      return leaves.every(node => {
+        const mapId = String(node.params.mapId || this.engine.currentMapId || "");
+        const availability = runtime.constructionAvailability(
+          node.params.siteProgressionKind, mapId, { source: "autonomy" }
+        );
+        return availability?.allowed === false &&
+          availability.reason === "Positionnement disponible dans Recherche.";
+      });
+    }
+
     selectBestPrimary(now = performance.now(), force = false) {
       const replacingActivePrimary = this.hasActivePrimaryMission();
       if (
         this.currentAction ||
         (replacingActivePrimary && this.bridge.isEngineBusy())
       ) return false;
-      if (this.isPlayerSelectedPrimary()) {
+      const playerPlacementBlocked = this.missionAwaitsPlayerPlacement();
+      if (this.isPlayerSelectedPrimary() && !playerPlacementBlocked) {
         this.selectionReason = "Priorité suggérée par le joueur.";
         return false;
       }
@@ -3610,12 +3631,13 @@
       );
       if (
         this.hasPendingMissionReturn(this.primaryMissionId) &&
-        !backgroundOnlyPrimary
+        !backgroundOnlyPrimary &&
+        !playerPlacementBlocked
       ) {
         // A pending transition must not rewrite the persisted origin of Top1.
         return false;
       }
-      if (!force && replacingActivePrimary && !backgroundOnlyPrimary) {
+      if (!force && replacingActivePrimary && !backgroundOnlyPrimary && !playerPlacementBlocked) {
         // La runnabilité locale décide quelle mission peut agir maintenant,
         // pas quelle intention globale occupe le Top 1. R-STAB autorise déjà
         // une secondaire à relayer une primaire momentanément stérile sans la
@@ -3623,6 +3645,9 @@
         // forcée (completion, pause, échec) ou par un choix explicite.
         return false;
       }
+      // A refused change must not be retried on each update tick.
+      if (playerPlacementBlocked && !force &&
+          this.lastPriorityReviewAt > 0 && now - this.lastPriorityReviewAt < 5000) return false;
       const context = this.bridge.context();
       const candidates = this.activeMissionIds
         .filter((id) => {
@@ -3631,25 +3656,58 @@
             lifecycle.autoPrimaryEligible !== false;
         })
         .filter((id) => this.missionPriorityQueueEligible(id, context))
+        .filter((id) => !this.missionAwaitsPlayerPlacement(id))
         .map((id) => this.assessMissionPriority(id, context))
         .filter(Boolean)
         .sort((left, right) => right.score - left.score);
-      const best = candidates[0];
+      // A manual placement gate can yield Top1 only to executable work;
+      // a high numerical priority alone is not sufficient.
+      const runnableCandidates = playerPlacementBlocked
+        ? candidates.filter((candidate) => {
+            const assessment = this.assessMission(candidate.missionId, context);
+            return Boolean(assessment?.action || assessment?.delegatedRuntimeAction ||
+              (candidate.transition && this.missionTransitionExecutable(candidate.transition)));
+          })
+        : candidates;
+      const best = runnableCandidates[0];
       if (!best) return false;
       const current = candidates.find((candidate) =>
         candidate.missionId === this.primaryMissionId
       );
-      if (!force && current && best.score < current.score + 20) return false;
+      if (!force && !playerPlacementBlocked && current && best.score < current.score + 20) return false;
       if (best.missionId === this.primaryMissionId) {
         this.selectionReason = best.reasons.join(", ") || "mission principale conservée";
         return false;
       }
       this.lastPriorityReviewAt = now;
-      return this.setPrimaryMission(
+      const changed = this.setPrimaryMission(
         best.missionId,
         false,
         `Priorité automatique : ${best.reasons.join(", ")}.`
       );
+      if (changed && playerPlacementBlocked) {
+        // Keep the blocked player-gated mission in the shortlist (not abandoned).
+        // Use the existing persisted shortlist when present; never create a
+        // separate scheduler or override the chosen mission's lifecycle.
+        const blockedMissionId = this.activeMissionIds.find(id => id !== best.missionId &&
+          this.missionAwaitsPlayerPlacement(id));
+        // Reserve one Top4 slot for the demoted player-gated mission before
+        // filling the remaining slots with executable candidates.
+        const nextIds = [best.missionId,
+          ...runnableCandidates.filter(candidate => candidate.missionId !== best.missionId)
+            .slice(0, blockedMissionId ? 2 : 3)
+            .map(candidate => candidate.missionId),
+          blockedMissionId
+        ].filter(Boolean);
+        const shortlist = [...new Set(nextIds)].slice(0, 4);
+        if (Array.isArray(this.memory?.state?.prioritizedMissionIds)) {
+          this.memory.state.prioritizedMissionIds = shortlist;
+        }
+        if (Array.isArray(this.prioritizedMissionIds)) {
+          this.prioritizedMissionIds = shortlist;
+        }
+      }
+      return changed;
     }
 
 
