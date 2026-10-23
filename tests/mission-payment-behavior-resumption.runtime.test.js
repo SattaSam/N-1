@@ -138,3 +138,60 @@ test('resource pickup uses the inventory primary site even after an attached wor
  assert.equal(f.runtime.storeSite(site),true);
  const gate=f.runtime.completionGateState(m.id);assert.equal(gate.shelterTarget?.siteId,site.id);assert.equal(gate.targetMapId,'known-camp');
 });
+
+test('cautious fauna approach recovers after active navigation stalls for 25 seconds', async()=>{
+ const f=await H.live();world(f);const object=f.object('brouteur');let cancelled='';
+ f.engine.pendingInteraction=object;
+ f.engine.cautiousInteraction={object,phase:'approach',finalApproachPoint:f.engine.character.root.position.clone()};
+ f.engine.faunaInteractionState=()=>({cautiousQualified:false,resetDistance:7,state:'approach'});
+ f.engine.missionFaunaResultTags=()=>[];
+ f.engine.interactionProfile=()=>({label:'créature',approachText:'approche'});
+ f.engine.interactionApproachNavigationActive=()=>true;
+ f.engine.missionManager.cancelCurrentAction=reason=>{cancelled=reason;};
+ f.engine.updateCautiousInteraction(object,1000,8);
+ assert.equal(f.engine.cautiousInteraction.stalledSince,1000);
+ assert.equal(f.engine.updateCautiousInteraction(object,25999,8),true);
+ assert.equal(f.engine.pendingInteraction,object,'do not cancel before the timeout');
+ assert.equal(f.engine.updateCautiousInteraction(object,26000,8),true);
+ assert.equal(f.engine.pendingInteraction,null);
+ assert.equal(f.engine.cautiousInteraction,null);
+ assert.equal(cancelled,'interaction-inaccessible');
+});
+
+test('cautious fauna approach timeout restarts only after real character movement', async()=>{
+ const f=await H.live();world(f);const object=f.object('brouteur');let cancelled='';
+ f.engine.pendingInteraction=object;
+ f.engine.cautiousInteraction={object,phase:'approach',finalApproachPoint:f.engine.character.root.position.clone()};
+ f.engine.faunaInteractionState=()=>({cautiousQualified:false,resetDistance:7,state:'approach'});
+ f.engine.missionFaunaResultTags=()=>[];
+ f.engine.interactionProfile=()=>({label:'créature',approachText:'approche'});
+ f.engine.interactionApproachNavigationActive=()=>true;
+ f.engine.missionManager.cancelCurrentAction=reason=>{cancelled=reason;};
+ f.engine.updateCautiousInteraction(object,1000,8);
+ f.engine.character.root.position.x+=1;
+ f.engine.updateCautiousInteraction(object,20000,8);
+ f.engine.updateCautiousInteraction(object,44000,8);
+ assert.equal(f.engine.pendingInteraction,object,'a progressing approach must remain active');
+ f.engine.updateCautiousInteraction(object,45000,8);
+ assert.equal(f.engine.pendingInteraction,null,'recover after 25 seconds without further progress');
+ assert.equal(cancelled,'interaction-inaccessible');
+});
+
+test('cautious fauna withdrawal recovers when retreat navigation remains active without moving', async()=>{
+ const f=await H.live();world(f);const object=f.object('brouteur');let cancelled='';
+ f.engine.pendingInteraction=object;
+ f.engine.cautiousInteraction={object,phase:'withdraw',resetDistance:7};
+ f.engine.faunaInteractionState=()=>({cautiousQualified:false,acceptedProximity:false,resetDistance:7,
+   calmEmitted:false,cautiousEmitted:false,parentalProtectEmitted:false,state:'flee'});
+ f.engine.missionFaunaResultTags=()=>[];
+ f.engine.interactionProfile=()=>({label:'créature',approachText:'approche'});
+ f.engine.interactionApproachNavigationActive=()=>true;
+ f.engine.interactionApproachPoint=()=>({point:f.engine.character.root.position.clone()});
+ f.engine.missionManager.cancelCurrentAction=reason=>{cancelled=reason;};
+ f.engine.updateCautiousInteraction(object,1000,4);
+ assert.equal(f.engine.updateCautiousInteraction(object,25999,4),true);
+ assert.equal(f.engine.pendingInteraction,object,'le retrait garde sa chance jusqu’au délai maximal');
+ assert.equal(f.engine.updateCautiousInteraction(object,26000,4),true);
+ assert.equal(f.engine.pendingInteraction,null);
+ assert.equal(cancelled,'interaction-inaccessible');
+});

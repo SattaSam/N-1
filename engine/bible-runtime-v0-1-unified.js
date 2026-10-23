@@ -1667,7 +1667,26 @@
           ? definitions.get(objectId) : this.environmentDefinition(objectId);
         if (this.environmentFamilyMatches(familyName, definition)) total += 1;
       });
-      return total;
+      // ProgressionMultiSystem conserve une deuxième preuve durable indexée
+      // par map et identité physique. Elle peut restaurer un registre central
+      // partiel, sans créditer les simples présences ou les MSC non observées.
+      const observedInstances = new Set();
+      const indicators = BF.getMultiProgressionState?.()?.mapIndicators || {};
+      Object.entries(indicators).forEach(([mapId, bucket]) => {
+        Object.keys(bucket?.phenomenaObserved || {}).forEach((instanceId) => {
+          const objectId = String(bucket?.uniqueInstances?.[instanceId]?.objectId || "");
+          if (!objectId) return;
+          if (definitions && !definitions.has(objectId)) {
+            definitions.set(objectId, this.environmentDefinition(objectId));
+          }
+          const definition = definitions
+            ? definitions.get(objectId) : this.environmentDefinition(objectId);
+          if (this.environmentFamilyMatches(familyName, definition)) {
+            observedInstances.add(`${mapId}:${instanceId}`);
+          }
+        });
+      });
+      return Math.max(total, observedInstances.size);
     }
 
     buildObservationResolver(engine = BF.currentEngine) {
@@ -7797,8 +7816,12 @@
           Math.max(0, Number(node.target) || 0),
           counts.get(family)
         );
-        if (Number(node.progress || 0) === absolute) return;
-        node.progress = absolute;
+        // Un inventaire historique est monotone : un registre restauré
+        // partiellement ne peut pas invalider des observations déjà validées.
+        // Le nœud missionnel reste la preuve persistée de sa progression.
+        const preserved = Math.max(Number(node.progress || 0), absolute);
+        if (Number(node.progress || 0) === preserved) return;
+        node.progress = preserved;
         tree.refresh?.();
         manager.memory?.saveTree?.(tree);
         changed = true;

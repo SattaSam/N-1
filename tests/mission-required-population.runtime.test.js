@@ -227,3 +227,14 @@ for(const definition of definitions)for(let seed=1;seed<=20;seed++)test(`${defin
   }
  }
 });
+
+for(let seed=1;seed<=20;seed++)test(`GAME-civilization_1 seed ${seed}: prescribed stele exists as a physical interaction instance`,()=>{
+ const def=copy(definitions[0]);def.seed=seed;def.generator.bibleMissionId='GAME-civilization_1';
+ def.generator.requiredObjects=[{type:'stele',count:1,contextRole:'civilizationSearch'}];
+ const current=populate(def);
+ assert(current.rows.some(row=>row.type==='stele'),'the generated rows must contain the prescribed stele');
+ const instance=current.s.instances.find(record=>record.root.userData.functional?.type==='stele');
+ assert(instance,'the prescribed stele must be instantiated, not only listed in metadata');
+ assert.notEqual(instance.root.userData.active,false,'the spawned CUO must remain interactable');
+ assert(instance.root.userData.instanceId,'the physical instance needs a stable identity for distinct observation credit');
+});

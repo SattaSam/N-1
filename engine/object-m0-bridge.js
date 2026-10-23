@@ -802,10 +802,10 @@
       const same = sameBy.every((field) =>
         relationFieldMatches(field, reference, evidence)
       );
-      // LOC-11 impose SAME-INSTANCE : l'exception de remplacement par
-      // une ressource du même type ne vaut que pour les autres contrats.
-      const loc11 = String(tree?.id || "").split("@")[0] === "LOC-11";
-      if (!same && (loc11 || !sameTypeOnSourceMap(tree, node, evidence))) return false;
+      // LOC-11 permet une confirmation par une autre occurrence de la même
+      // ressource sur la map liée, quand l'instance observée n'est plus
+      // disponible. Le type et la map restent contrôlés par le contrat.
+      if (!same && !sameTypeOnSourceMap(tree, node, evidence)) return false;
       return differentBy.every((field) =>
         Boolean(String(reference[field] || "")) &&
         Boolean(String(evidence[field] || "")) &&
@@ -1023,8 +1023,9 @@
 
   const eventMatchesBoundTarget = (manager, missionId, event) => {
     // LOC-11 : après une observation réellement créditée dans cette mission,
-    // sa preuve SAME-INSTANCE est plus précise qu'un ancien binding local.
-    // L'exception est impossible pour une autre instance ou une autre map.
+    // sa preuve locale est plus précise qu'un ancien binding. Une instance
+    // différente n'est admissible que si le contrat LOC-11 l'autorise pour
+    // le même type de ressource sur la même carte.
     if (String(missionId || "").split("@")[0] === "LOC-11") {
       const tree = manager?.trees?.get?.(missionId);
       const observe = tree?.findSequenceSlot?.("observe");
@@ -1033,7 +1034,8 @@
         return loc11ProofOnMissionMap(actual, missionId) &&
           parsedRelationEvidence(observe).some(proof =>
             loc11ProofOnMissionMap(proof, missionId) &&
-            samePhysicalInstance(proof, actual));
+            (samePhysicalInstance(proof, actual) ||
+              sameTypeOnSourceMap(tree, null, actual)));
       }
     }
     const bound = manager?.memory?.getFact?.(`bibleTarget:${missionId}`);

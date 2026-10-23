@@ -35,9 +35,11 @@ async function prescription(targetId, direction, completedIds = []) {
       lifecycle[mission.id] = { status: 'completed' };
     }
   }
+  lifecycle[targetId] = { status: 'active' };
   for (const id of completedIds) lifecycle[id] = { status: 'completed' };
   const facts = new Map();
   const manager = {
+    primaryMissionId: targetId,
     memory: {
       state: { missionLifecycle: lifecycle },
       getFact(key, fallback) { return facts.has(key) ? facts.get(key) : fallback; },
@@ -57,9 +59,17 @@ async function prescription(targetId, direction, completedIds = []) {
   };
   BF.currentEngine = engine;
   await BF.mount({ engine });
-  await engine.generateUnknownPassage(direction, {});
+  await engine.generateUnknownPassage(direction, { bibleMissionId: targetId });
   return captured;
 }
+
+test('GAME-civilization_1 transmet sa prescription de stèle au générateur de map', async () => {
+  const p = await prescription('GAME-civilization_1', 'east');
+  assert.equal(p?.missionId, 'GAME-civilization_1');
+  assert.deepEqual(JSON.parse(JSON.stringify(p?.requiredObjects)), [
+    { type: 'stele', count: 1, contextRole: 'civilizationSearch' }
+  ]);
+});
 
 test('ARCH-03: prescription garantit deux stèles', async () => {
   const p = await prescription('ARCH-03', 'north', ['ARCH-01','ARCH-02']);

@@ -665,12 +665,13 @@
       }
     }
 
-    // A player-selected historical observation may request a *physical* CUO
-    // interaction. The Bible runtime alone owns the historical counter.
-    // This is deliberately not a generic catalogManaged executor.
+    // An explicitly opted-in historical observation may request a *physical*
+    // CUO interaction whether Top1 was selected by the player or by BAC.
+    // The Bible runtime alone owns the historical counter; this is not a
+    // generic catalogManaged executor.
     historicalObservationPhysicalAction(missionId, tree, node, now, requireAvailable = true) {
       const mission = this.definition(missionId);
-      if (missionId !== this.primaryMissionId || !this.isPlayerSelectedPrimary() ||
+      if (missionId !== this.primaryMissionId ||
           mission?.allowsAutonomousHistoricalObservation !== true ||
           node?.params?.catalogManaged !== true || node.isComplete ||
           Missions.normalizeActionType(node.type) !== Missions.ActionType.OBSERVE) return null;
@@ -1145,7 +1146,8 @@
       // active. Après épuisement du local et du connu, réutiliser le voyage
       // inconnu canonique, uniquement si le catalogue l'autorise explicitement.
       if (mission?.navigation?.autonomousUnknownTravel === true &&
-          missionId === this.primaryMissionId && this.isPlayerSelectedPrimary() &&
+          missionId === this.primaryMissionId &&
+          (this.isPlayerSelectedPrimary() || mission?.allowsAutonomousHistoricalObservation === true) &&
           !this.missionHasKnownLocalDestination(missionId, mission, availableMapStates, currentMapId) &&
           availableMapStates.some(({ node, state }) =>
             !state?.constrained &&
@@ -1791,7 +1793,7 @@
       ) return false;
       const tree = this.trees.get(missionId) || null;
       if (mission?.allowsAutonomousHistoricalObservation === true &&
-          missionId === this.primaryMissionId && this.isPlayerSelectedPrimary()) {
+          missionId === this.primaryMissionId) {
         // A previously observed instance is not a reason to retain the map.
         // An unobserved instance in cooldown remains a valid local opportunity.
         return (availableMapStates || []).some(({ node }) =>

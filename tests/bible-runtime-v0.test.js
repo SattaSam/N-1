@@ -102,6 +102,45 @@ test("les fiches cumulatives se compilent dans le runtime unifié", () => {
   assert.ok(BF.Missions.getDefinition("COL-FIBER-20"));
 });
 
+test("la réconciliation ENV conserve une progression persistée face à un registre partiel", () => {
+  const window = runtimeFixture();
+  const BF = window.BlueFox3D;
+  const missionId = "ENV-RELIC-20";
+  const node = { id: `${missionId}:study`, target: 20, progress: 13 };
+  const tree = { find: (id) => id === node.id ? node : null, refresh() {} };
+  const manager = {
+    memory: { state: { missionLifecycle: { [missionId]: { status: "active" } } }, saveTree() {} },
+    trees: new Map([[missionId, tree]]), syncLifecycleFromTrees() {},
+    reevaluatePendingActivations() {}, catalogController: { schedule() {} }
+  };
+  BF.currentEngine = { missionManager: manager };
+  let recorded = 3;
+  let multiRecorded = 3;
+  const progressionSnapshot = () => ({ discoveries: { instances: Object.fromEntries(
+    Array.from({ length: recorded }, (_, index) => [`relic-${index}`, { objectId: "RUI-STEL-L-001" }])
+  ) } });
+  BF.progression = { snapshot: progressionSnapshot };
+  BF.getProgressionState = progressionSnapshot;
+  BF.getMultiProgressionState = () => ({ mapIndicators: { mapA: {
+    uniqueInstances: Object.fromEntries(Array.from({ length: multiRecorded }, (_, index) =>
+      [`stele-${index}`, { objectId: "RUI-STEL-L-001" }])),
+    phenomenaObserved: Object.fromEntries(Array.from({ length: multiRecorded }, (_, index) =>
+      [`stele-${index}`, { at: index + 1 }]))
+  } } });
+  BF.ObjectLibrary = { getById: (id) => ({ id, type: "stele", category: "relic",
+    interaction: { actions: ["observe", "analyze"] }, situation: { tags: ["ruin"] } }) };
+
+  assert.equal(BF.bibleRuntime.reconcileEnvironmentHistorical(), false);
+  assert.equal(node.progress, 13);
+  multiRecorded = 14;
+  assert.equal(BF.bibleRuntime.reconcileEnvironmentHistorical(), true);
+  assert.equal(node.progress, 14, "les identités observées du MultiSystem restaurent les preuves manquantes");
+  recorded = 2;
+  multiRecorded = 2;
+  assert.equal(BF.bibleRuntime.reconcileEnvironmentHistorical(), false);
+  assert.equal(node.progress, 14, "une nouvelle restauration partielle ne peut pas effacer le progrès validé");
+});
+
 test("collecte -> activation -> progression -> état public -> narration", () => {
   const window = runtimeFixture();
   const { BF, manager } = attachManager(window);

@@ -3169,48 +3169,78 @@
         const faunaState = this.faunaInteractionState(object);
         if (!faunaState) {
           this.cautiousInteraction = null;
-        } else if (this.cautiousInteraction.phase === "withdraw") {
-          const tags = this.missionFaunaResultTags(object);
-          const resetDistance = this.cautiousInteraction.resetDistance || faunaState.resetDistance;
-          const observationReset =
-            (!tags.includes("behavior_observed") || !faunaState.behaviorObservedEmitted) &&
-            (!tags.includes("peaceful_group") || !faunaState.groupObservedEmitted) &&
-            (!tags.includes("flee") ||
-              (!faunaState.cautiousQualified && !faunaState.acceptedProximity && faunaState.state !== "flee"));
-          if (distance >= resetDistance && !faunaState.calmEmitted && !faunaState.cautiousEmitted &&
-              !faunaState.parentalProtectEmitted && observationReset) {
-            this.cautiousInteraction = null;
-            this.targetInteraction(object, true);
-          } else if (!this.interactionApproachNavigationActive()) {
-            const retreat = this.interactionApproachPoint(object, 0, resetDistance + 1.2);
-            if (retreat?.point) this.character.setTarget(retreat.point, "walk");
-          }
-          this.interactionApproachStartedAt = now;
-          return true;
-        } else if (faunaState.cautiousQualified === true) {
-          const finalApproachPoint = this.cautiousInteraction.finalApproachPoint;
-          this.cautiousInteraction = null;
-          this.interactionApproachStartedAt = now;
-          this.character.setTarget(finalApproachPoint, "walk");
-          this.showWorldMarker(finalApproachPoint);
-          this.callbacks.onStatus(profile.approachText);
-          return true;
         } else {
-          if (this.cautiousInteraction.phase === "approach") {
+          const cautious = this.cautiousInteraction;
+          if (["approach", "withdraw"].includes(cautious.phase)) {
+            // Navigation can remain active while the character is stationary.
+            // Position progress also protects a valid route around an obstacle.
+            const position = this.character?.root?.position;
+            const previousPosition = cautious.lastProgressPosition;
+            const moved = Boolean(position && previousPosition &&
+              Math.hypot(position.x - previousPosition.x, position.z - previousPosition.z) > 0.15);
+            const previousDistance = Number(cautious.lastInteractionDistance);
+            const distanceProgress = Number.isFinite(previousDistance) &&
+              (cautious.phase === "withdraw"
+                ? distance > previousDistance + 0.15
+                : distance < previousDistance - 0.15);
+            if (!Number.isFinite(Number(cautious.stalledSince)) || moved || distanceProgress) {
+              cautious.stalledSince = now;
+            }
+            if (position) cautious.lastProgressPosition = { x: position.x, z: position.z };
+            cautious.lastInteractionDistance = distance;
+            if (now - cautious.stalledSince >= 25000) {
+              this.pendingInteraction = null;
+              this.cautiousInteraction = null;
+              this.interactionApproachStartedAt = 0;
+              this.interactionApproachAttempts = 0;
+              this.character.stop();
+              this.missionManager?.cancelCurrentAction("interaction-inaccessible");
+              return true;
+            }
+          }
+
+          if (cautious.phase === "withdraw") {
+            const tags = this.missionFaunaResultTags(object);
+            const resetDistance = cautious.resetDistance || faunaState.resetDistance;
+            const observationReset =
+              (!tags.includes("behavior_observed") || !faunaState.behaviorObservedEmitted) &&
+              (!tags.includes("peaceful_group") || !faunaState.groupObservedEmitted) &&
+              (!tags.includes("flee") ||
+                (!faunaState.cautiousQualified && !faunaState.acceptedProximity && faunaState.state !== "flee"));
+            if (distance >= resetDistance && !faunaState.calmEmitted && !faunaState.cautiousEmitted &&
+                !faunaState.parentalProtectEmitted && observationReset) {
+              this.cautiousInteraction = null;
+              this.targetInteraction(object, true);
+            } else if (!this.interactionApproachNavigationActive()) {
+              const retreat = this.interactionApproachPoint(object, 0, resetDistance + 1.2);
+              if (retreat?.point) this.character.setTarget(retreat.point, "walk");
+            }
+            this.interactionApproachStartedAt = now;
+            return true;
+          }
+
+          if (faunaState.cautiousQualified === true) {
+            const finalApproachPoint = cautious.finalApproachPoint;
+            this.cautiousInteraction = null;
+            this.interactionApproachStartedAt = now;
+            this.character.setTarget(finalApproachPoint, "walk");
+            this.showWorldMarker(finalApproachPoint);
+            this.callbacks.onStatus(profile.approachText);
+            return true;
+          }
+
+          if (cautious.phase === "approach") {
             if (distance >= 3.8 && distance <= 5.4) {
               this.character.stop();
-              this.cautiousInteraction.phase = "wait";
-              this.cautiousInteraction.waitStartedAt = now;
+              cautious.phase = "wait";
+              cautious.waitStartedAt = now;
               return true;
             }
             if (now - this.interactionApproachStartedAt > 6500) {
               if (this.interactionApproachNavigationActive()) {
                 // Le délai sert de point de contrôle, jamais de preuve d'échec.
-                // CharacterController conserve l'autorité tant que le trajet vit.
                 this.interactionApproachStartedAt = now;
               } else {
-                // Cible mobile ou ancien point d'approche atteint : recalculer sans
-                // déclarer l'interaction inaccessible sur la seule durée écoulée.
                 this.targetInteraction(object, true);
               }
             }
@@ -3218,7 +3248,7 @@
           }
 
           this.character.stop();
-          if (now - Number(this.cautiousInteraction.waitStartedAt || now) > 6500) {
+          if (now - Number(cautious.waitStartedAt || now) > 6500) {
             this.interactionApproachAttempts += 1;
             if (this.interactionApproachAttempts <= 3) {
               this.targetInteraction(object, true);
