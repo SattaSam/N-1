@@ -3522,6 +3522,48 @@
       };
     }
 
+    cheatMissionChoicePlan(missionId) {
+      const mission = this.runtimeMissionForCheat(missionId);
+      if (!mission) return null;
+      const validation = mission.runtimeValidation || {};
+      if (validation.type === "mission-choice" || validation.type === "arch38-civilization-choice") {
+        return {
+          slot: String(validation.slot || validation.contactSlot || "").trim(),
+          type: validation.type
+        };
+      }
+      return null;
+    }
+
+    resolveCheatMissionChoice(missionId) {
+      const id = String(missionId || "").trim();
+      const mission = this.runtimeMissionForCheat(id);
+      if (!mission) return true;
+      const validation = mission.runtimeValidation || {};
+      if (validation.type === "mission-choice") {
+        const state = this.missionChoiceState(id);
+        if (state?.resolved) return true;
+        const selected = state?.options?.[0]?.id;
+        return Boolean(state?.available && selected && this.submitMissionChoice(id, selected));
+      }
+      if (validation.type === "arch38-civilization-choice") {
+        const existing = this.manager()?.memory?.getFact?.("civilization:arch-selected", null);
+        if (existing?.civilizationId) return true;
+        const transaction = this.captureCheatWorldTransaction();
+        const accepted = this.handleCivilizationArchObjectEvent({
+          type: BF.ObjectEvents?.types?.NPC_CONTACTED || "NPC_CONTACTED",
+          detail: {
+            interactionSource: "manual",
+            civilizationId: "translucent",
+            cuoType: "npc_translucent"
+          }
+        });
+        if (!accepted) this.rollbackCheatWorldTransaction(transaction);
+        return accepted;
+      }
+      return true;
+    }
+
     submitMissionChoice(missionId, choiceId) {
       const state = this.missionChoiceState(missionId);
       if (!state?.available) return false;
@@ -6795,16 +6837,6 @@
         };
       }
       if (!mission) return { ok: true, missionId: id };
-
-      const choice = this.missionChoiceState(id);
-      if (choice && !choice.resolved) {
-        return {
-          ok: false,
-          missionId: id,
-          reason: "player-choice-required",
-          message: "TRICHE : cette mission attend d'abord un choix explicite du joueur."
-        };
-      }
 
       const establish = this.constructionPlacementEffect(mission);
       if (establish) {

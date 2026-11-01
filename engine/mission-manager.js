@@ -5067,6 +5067,11 @@
         };
       }
 
+      // Les choix missionnels ont un effet causal (faits, relations, triggers).
+      // Le mode triche choisit la première option déclarée via le validateur
+      // propriétaire au lieu de marquer directement sa feuille comme terminée.
+      const cheatChoice = BF.bibleRuntime?.cheatMissionChoicePlan?.(missionId) || null;
+
       // Transaction cheat : l'arbre est modifié temporairement en mémoire pour
       // permettre à BibleRuntime de vérifier/matérialiser les effets qui
       // dépendent de slots completed, mais rien n'est persisté avant succès.
@@ -5093,6 +5098,7 @@
       const now = Date.now();
       tree.root.walk((node) => {
         if (!node?.isLeaf || node.isComplete) return;
+        if (cheatChoice?.slot && node.id === `${missionId}:${cheatChoice.slot}`) return;
         let cursor = node;
         let required = true;
         while (cursor && cursor !== tree.root) {
@@ -5109,6 +5115,18 @@
         node.completedAt ||= now;
       });
       tree.refresh();
+
+      if (cheatChoice?.slot &&
+          BF.bibleRuntime?.resolveCheatMissionChoice?.(missionId) !== true) {
+        restoreTreeSnapshot();
+        this.publish();
+        return {
+          ok: false,
+          missionId,
+          reason: "mission-choice-resolution-failed",
+          message: `TRICHE : le choix requis pour « ${tree.title} » n’a pas pu être enregistré.`
+        };
+      }
 
       if (!tree.root.isComplete) {
         restoreTreeSnapshot();
